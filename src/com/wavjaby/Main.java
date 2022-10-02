@@ -38,7 +38,7 @@ public class Main {
         HttpsServer server = new HttpsServer("key/key.keystore", "key/key.properties");
         server.start(443);
 
-        server.createContext("/", req -> exec.submit(() -> {
+        server.createContext("/NCKU", req -> exec.submit(() -> {
             String path = req.getRequestURI().getPath();
             Headers responseHeader = req.getResponseHeaders();
             OutputStream response = req.getResponseBody();
@@ -88,6 +88,7 @@ public class Main {
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers headers = req.getRequestHeaders();
             OutputStream response = req.getResponseBody();
+            System.out.println(req.getRequestHeaders().get("Referer"));
 
             try {
                 // unpack cookie
@@ -106,9 +107,27 @@ public class Main {
                 packLoginCookie(responseHeader, orgCookie, cookieStore);
                 packAuthCookie(responseHeader, cookieStore);
 
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                List<String> clientUrl = req.getRequestHeaders().get("Referer");
+                if (clientUrl.size() == 0)
+                    responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                else {
+                    String url = clientUrl.get(0);
+                    int index = url.indexOf("//");
+                    if (index != -1) {
+                        index = url.indexOf('/', index + 2);
+                        if (index != -1)
+                            responseHeader.set("Access-Control-Allow-Origin", url.substring(0, index));
+                        else
+                            responseHeader.set("Access-Control-Allow-Origin", url);
+                    }
+                }
+
+                System.out.println(req.getResponseHeaders().entrySet());
+
+//                responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                responseHeader.set("Access-Control-Allow-Credentials", "true");
                 responseHeader.set("Content-Type", "application/json; charset=utf-8");
+                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
                 response.write(dataByte);
                 req.close();
@@ -140,9 +159,10 @@ public class Main {
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginCookie(responseHeader, orgCookie, cookieStore);
 
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                responseHeader.set("Access-Control-Allow-Credentials", "true");
                 responseHeader.set("Content-Type", "application/json; charset=utf-8");
+                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
                 response.write(dataByte);
                 req.close();
@@ -173,22 +193,8 @@ public class Main {
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginCookie(responseHeader, orgCookie, cookieStore);
 
-                System.out.println(req.getRequestHeaders().get("Referer"));
-                List<String> clientUrl = req.getRequestHeaders().get("Referer");
-                if (clientUrl.size() == 0)
-                    responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
-                else {
-                    String url = clientUrl.get(0);
-                    int index = url.indexOf("//");
-                    if (index != -1) {
-                        index = url.indexOf('/', index + 2);
-                        if (index != -1)
-                            responseHeader.set("Access-Control-Allow-Origin", url.substring(0, index));
-                        else
-                            responseHeader.set("Access-Control-Allow-Origin", url);
-                    }
-                }
-
+                responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                responseHeader.set("Access-Control-Allow-Credentials", "true");
                 responseHeader.set("Content-Type", "application/json; charset=utf-8");
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
