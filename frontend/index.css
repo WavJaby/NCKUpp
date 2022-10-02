@@ -1,0 +1,64 @@
+:root {
+    --table-border: #383D3F;
+}
+
+.root {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.navbar {
+    background: var(--navbar-bg-color);
+    width: 100%;
+    height: 40px;
+    position: sticky;
+    top: 0;
+}
+
+.loginField {
+    margin: 5px;
+}
+
+button.loginField {
+    float: right;
+}
+
+.loginBtn {
+    height: 40px;
+    float: right;
+}
+
+.loginBtn:focus {
+    box-shadow: none;
+}
+
+.loginWindow {
+    position: absolute;
+    top: 40px;
+    right: 0;
+}
+
+table {
+    margin: 10px;
+    border-collapse: collapse;
+}
+
+table tr {
+    border-width: 1px 0;
+    border-color: var(--table-border);
+    border-style: solid;
+}
+
+table > thead td {
+    background-color: #282B2C;
+}
+
+table td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 0.5em;
+    border-width: 0 1px;
+    border-color: var(--table-border);
+    border-style: solid;
+}
