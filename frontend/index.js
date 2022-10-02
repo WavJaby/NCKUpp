@@ -1,3 +1,5 @@
+const apiEndPoint = 'https://simon.chummydns.com/api';
+
 document.body.appendChild((function () {
     // 登入
     const loginBtn = button('loginBtn', '登入', onLoginButtonClick);
@@ -13,7 +15,7 @@ document.body.appendChild((function () {
     const courseTable = CourseScheduleTable();
 
     // check login
-    fetch('/api/login').then(i => i.json()).then(
+    fetch(apiEndPoint + '/login').then(i => i.json()).then(
         /**@param{{login:boolean}}i*/i => {
             onLogin(i.login);
         });
@@ -43,7 +45,7 @@ document.body.appendChild((function () {
     }
 
     function logOut() {
-        fetch('/api/logout').then(
+        fetch(apiEndPoint + '/logout').then(
             /**@param{{login:boolean}}i*/i => {
                 onLogin(i.login);
             });
@@ -91,7 +93,7 @@ function CourseScheduleTable() {
 
         const tbody = courseTable.createTBody();
 
-        fetch('/api/courseSchedule').then(i => i.json()).then(
+        fetch(apiEndPoint + '/courseSchedule').then(i => i.json()).then(
             ({id, name, credits, schedule, err}) => {
                 if (err) return;
 
@@ -140,7 +142,7 @@ function LoginWindow(onLogin) {
         button('loginField', '登入', () => {
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
             console.log(usr)
-            fetch('/api/login', {
+            fetch(apiEndPoint + '/login', {
                 method: 'POST',
                 body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
             }).then(i => i.json()).then(

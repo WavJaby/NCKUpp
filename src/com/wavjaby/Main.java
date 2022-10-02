@@ -15,7 +15,6 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,9 +27,9 @@ public class Main {
     public static final String courseNckuOrg = "https://" + courseNcku;
     public static final String portalNckuOrg = "https://" + portalNcku;
 
-    public static final String accessControlAllowOrigin = "https://localhost";
+    public static final String accessControlAllowOrigin = "https://wavjaby.github.io";
 
-    public static final String cookieDomain = "localhost";
+    public static final String cookieDomain = "wavjaby.github.io";
     ExecutorService exec = Executors.newCachedThreadPool();
 
     Main() {
@@ -368,7 +367,7 @@ public class Main {
             if (courseNckuCookies.containsKey("SSO"))
                 outCookie.append(courseNckuCookies.get("SSO"));
             String out = outCookie.toString();
-            outCookie.append("; Domain=" + cookieDomain);
+            outCookie.append("; Path=/NCKU; Domain=" + cookieDomain);
             if (orgCookie == null || !out.endsWith(orgCookie))
                 headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
@@ -392,7 +391,7 @@ public class Main {
             outCookie.append('|');
             if (portalNckuCookies.containsKey("MSISLoopDetectionCookie"))
                 outCookie.append(portalNckuCookies.get("MSISLoopDetectionCookie"));
-            outCookie.append("; Path=/api/login; Domain=" + cookieDomain);
+            outCookie.append("; Path=/NCKU/api/login; Domain=" + cookieDomain);
             headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
