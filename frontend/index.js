@@ -1,4 +1,4 @@
-const apiEndPoint = 'https://localhost/api';
+let apiEndPoint = 'https://localhost/api';
 
 document.body.appendChild((function () {
     // 登入
