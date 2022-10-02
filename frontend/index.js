@@ -1,4 +1,4 @@
-const apiEndPoint = 'https://simon.chummydns.com/api';
+const apiEndPoint = 'https://localhost/api';
 
 document.body.appendChild((function () {
     // 登入
@@ -15,7 +15,7 @@ document.body.appendChild((function () {
     const courseTable = CourseScheduleTable();
 
     // check login
-    fetch(apiEndPoint + '/login').then(i => i.json()).then(
+    fetch(apiEndPoint + '/login', {credentials: 'same-origin'}).then(i => i.json()).then(
         /**@param{{login:boolean}}i*/i => {
             onLogin(i.login);
         });
@@ -45,7 +45,7 @@ document.body.appendChild((function () {
     }
 
     function logOut() {
-        fetch(apiEndPoint + '/logout').then(
+        fetch(apiEndPoint + '/logout', {credentials: 'same-origin'}).then(
             /**@param{{login:boolean}}i*/i => {
                 onLogin(i.login);
             });
@@ -93,7 +93,7 @@ function CourseScheduleTable() {
 
         const tbody = courseTable.createTBody();
 
-        fetch(apiEndPoint + '/courseSchedule').then(i => i.json()).then(
+        fetch(apiEndPoint + '/courseSchedule', {credentials: 'same-origin'}).then(i => i.json()).then(
             ({id, name, credits, schedule, err}) => {
                 if (err) return;
 
@@ -144,6 +144,7 @@ function LoginWindow(onLogin) {
             console.log(usr)
             fetch(apiEndPoint + '/login', {
                 method: 'POST',
+                credentials: 'same-origin',
                 body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
             }).then(i => i.json()).then(
                 /**@param{{login:boolean, err:string, msg:string, warn:string}}i*/i => {

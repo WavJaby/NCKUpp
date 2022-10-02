@@ -27,9 +27,10 @@ public class Main {
     public static final String courseNckuOrg = "https://" + courseNcku;
     public static final String portalNckuOrg = "https://" + portalNcku;
 
-    public static final String accessControlAllowOrigin = "https://wavjaby.github.io";
-
-    public static final String cookieDomain = "wavjaby.github.io";
+    public static final String accessControlAllowOrigin = "https://simon.chummydns.com";
+    public static final String cookieDomain = "simon.chummydns.com";
+    //    public static final String accessControlAllowOrigin = "https://localhost";
+//    public static final String cookieDomain = "localhost";
     ExecutorService exec = Executors.newCachedThreadPool();
 
     Main() {
@@ -44,7 +45,7 @@ public class Main {
             System.out.println(path);
 
             try {
-                if (path.equals("/")) {
+                if (path.equals("/NCKU")) {
                     responseHeader.set("Content-Type", "text/html; charset=utf-8");
                     File file = new File("./index.html");
 
@@ -172,9 +173,24 @@ public class Main {
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginCookie(responseHeader, orgCookie, cookieStore);
 
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+                System.out.println(req.getRequestHeaders().get("Referer"));
+                List<String> clientUrl = req.getRequestHeaders().get("Referer");
+                if (clientUrl.size() == 0)
+                    responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                else {
+                    String url = clientUrl.get(0);
+                    int index = url.indexOf("//");
+                    if (index != -1) {
+                        index = url.indexOf('/', index + 2);
+                        if (index != -1)
+                            responseHeader.set("Access-Control-Allow-Origin", url.substring(0, index));
+                        else
+                            responseHeader.set("Access-Control-Allow-Origin", url);
+                    }
+                }
+
                 responseHeader.set("Content-Type", "application/json; charset=utf-8");
-                responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin);
+                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
                 response.write(dataByte);
                 req.close();
@@ -292,7 +308,7 @@ public class Main {
         for (String cookie : cookieIn) {
             int startIndex;
             if ((startIndex = cookie.indexOf("authData=")) != -1) {
-                cookie = cookie.substring(startIndex + 10);
+                cookie = cookie.substring(startIndex + 9);
                 int start = 0, end;
                 if ((end = cookie.indexOf("|")) == -1) continue;
                 portalNckuCookieIn.add("MSISAuth=" + cookie.substring(start, end));
@@ -367,7 +383,7 @@ public class Main {
             if (courseNckuCookies.containsKey("SSO"))
                 outCookie.append(courseNckuCookies.get("SSO"));
             String out = outCookie.toString();
-            outCookie.append("; Path=/NCKU; Domain=" + cookieDomain);
+            outCookie.append("; Path=/; SameSite=None; Secure; Domain=" + cookieDomain);
             if (orgCookie == null || !out.endsWith(orgCookie))
                 headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
@@ -391,7 +407,7 @@ public class Main {
             outCookie.append('|');
             if (portalNckuCookies.containsKey("MSISLoopDetectionCookie"))
                 outCookie.append(portalNckuCookies.get("MSISLoopDetectionCookie"));
-            outCookie.append("; Path=/NCKU/api/login; Domain=" + cookieDomain);
+            outCookie.append("; Path=/api/login; SameSite=None; Secure; Domain=" + cookieDomain);
             headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
@@ -422,6 +438,12 @@ public class Main {
                     outData.append("login", true);
                     return true;
                 }
+
+//                URI uri = new URI(portalNckuOrg);
+//                cookieStore.getCookies().stream()
+//                        .filter(i -> i != null && (i.getName().equals("MSISAuth") || i.getName().equals("MSISAuthenticated")))
+//                        .collect(Collectors.toList())
+//                        .forEach(i -> cookieStore.remove(uri, i));
 
                 Connection.Response toPortal = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
                         .cookieStore(cookieStore)
@@ -475,6 +497,8 @@ public class Main {
                     return false;
                 }
 
+//                System.out.println(loginRes.body());
+//                System.out.println(loginRes.url());
                 // redirect to home page
                 String redirect = loginRes.header("refresh");
                 int redirectUrlStart;
@@ -501,6 +525,7 @@ public class Main {
             }
         } catch (Exception e) {
             outData.append("err", "[Login] Unknown error: " + e);
+            e.printStackTrace();
             return false;
         }
     }
