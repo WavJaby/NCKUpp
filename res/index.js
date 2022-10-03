@@ -3,7 +3,7 @@ const apiEndPoint = location.host === 'localhost' ? 'https://localhost/api' : 'h
 document.body.appendChild((function () {
     // 登入
     const loginBtn = button('loginBtn', '登入', onLoginButtonClick);
-    const loginWindow = LoginWindow(onLogin);
+    const loginWindow = LoginWindow(onLoginStateChange);
     let login = false;
 
     // 下拉選單
@@ -14,15 +14,10 @@ document.body.appendChild((function () {
     // 課表
     const courseTable = CourseScheduleTable();
 
-    fetch(apiEndPoint + '/search', {credentials: 'include'}).then(i => i.json()).then(
-        /**@param{{login:boolean}}i*/i => {
-            console.log(i)
-        });
-
     // check login
-    fetch(apiEndPoint + '/login', {credentials: 'include'}).then(i => i.json()).then(
+    fetch(apiEndPoint + '/login').then(i => i.json()).then(
         /**@param{{login:boolean}}i*/i => {
-            onLogin(i.login);
+            onLoginStateChange(i.login);
         });
 
     function onLoginButtonClick() {
@@ -36,24 +31,39 @@ document.body.appendChild((function () {
         }
     }
 
-    function onLogin(isLogin) {
+    function logOut() {
+        fetch(apiEndPoint + '/logout').then(
+            /**@param{{login:boolean}}i*/i => {
+                onLoginStateChange(i.login);
+            });
+    }
+
+
+    function onLoginStateChange(isLogin) {
         login = isLogin;
         if (isLogin) {
             loginBtn.textContent = '登出';
-            courseTable.fetchCourseTable();
             if (navBar.contains(loginWindow))
                 navBar.removeChild(loginWindow);
+            onLogin();
         } else {
             loginBtn.textContent = '登入';
-            courseTable.clearCourseTable();
+            onLogout();
         }
     }
 
-    function logOut() {
-        fetch(apiEndPoint + '/logout', {credentials: 'include'}).then(
-            /**@param{{login:boolean}}i*/i => {
-                onLogin(i.login);
-            });
+    function onLogin() {
+        courseTable.fetchCourseTable();
+        for (let i = 0; i < 7; i++) {
+            fetch(apiEndPoint + '/search?wk=' + (i + 1)).then(i => i.json()).then(
+                /**@param{{login:boolean}}i*/i => {
+                    console.log(i)
+                }).catch(j=>console.log(i, j));
+        }
+    }
+
+    function onLogout() {
+        courseTable.clearCourseTable();
     }
 
     return div('root',
@@ -98,7 +108,7 @@ function CourseScheduleTable() {
 
         const tbody = courseTable.createTBody();
 
-        fetch(apiEndPoint + '/courseSchedule', {credentials: 'include'}).then(i => i.json()).then(
+        fetch(apiEndPoint + '/courseSchedule').then(i => i.json()).then(
             ({id, name, credits, schedule, err}) => {
                 if (err) return;
 

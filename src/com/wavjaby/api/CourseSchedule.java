@@ -28,9 +28,9 @@ import static com.wavjaby.Main.pool;
 
 public class CourseSchedule implements HttpHandler {
     @Override
-    public void handle(HttpExchange req) throws IOException {
+    public void handle(HttpExchange req) {
         pool.submit(() -> {
-            System.out.println("[Schedule] Get schedule");
+            long startTime = System.currentTimeMillis();
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers requestHeaders = req.getRequestHeaders();
@@ -61,7 +61,7 @@ public class CourseSchedule implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("Done");
+            System.out.println("[Schedule] Get schedule " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 

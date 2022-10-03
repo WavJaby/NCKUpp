@@ -7,7 +7,6 @@ import com.wavjaby.json.JsonBuilder;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -24,9 +23,9 @@ import static com.wavjaby.Main.pool;
 
 public class Logout implements HttpHandler {
     @Override
-    public void handle(HttpExchange req) throws IOException {
+    public void handle(HttpExchange req) {
         pool.submit(() -> {
-            System.out.println("[Login] Logout");
+            long startTime = System.currentTimeMillis();
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers requestHeaders = req.getRequestHeaders();
@@ -58,7 +57,7 @@ public class Logout implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("Done");
+            System.out.println("[Logout] Logout " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 

@@ -93,12 +93,16 @@ public class Cookie {
             if (courseNckuCookies.containsKey("SSO"))
                 outCookie.append(courseNckuCookies.get("SSO"));
             String out = outCookie.toString();
-            outCookie.append("; Path=/; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl));
+            outCookie.append("; Path=/; SameSite=None; Secure; Domain=").append(getCookieDomain(refererUrl));
             if (orgCookie == null || !out.endsWith(orgCookie))
                 headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static String getCookieInfoData(String refererUrl){
+        return "; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl);
     }
 
     public static void packAuthCookie(Headers headers, String refererUrl, CookieStore cookieStore) {
@@ -117,7 +121,7 @@ public class Cookie {
             outCookie.append('|');
             if (portalNckuCookies.containsKey("MSISLoopDetectionCookie"))
                 outCookie.append(portalNckuCookies.get("MSISLoopDetectionCookie"));
-            outCookie.append("; Path=/api/login; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl));
+            outCookie.append("; Path=/api/login; SameSite=None; Secure; Domain=").append(getCookieDomain(refererUrl));
             headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);

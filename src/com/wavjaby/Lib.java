@@ -34,8 +34,10 @@ public class Lib {
                     cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
             }
         }
-        if (cosPreCheckKey == null)
+        if (cosPreCheckKey == null) {
+            data.append("warn", "[CosPreCheck] CosPreCheck key not found");
             return;
+        }
 //        System.out.println("[CosPreCheck] make cosPreCheck");
 
         long now = System.currentTimeMillis() / 1000;
@@ -47,6 +49,7 @@ public class Lib {
                     .header("X-Requested-With", "XMLHttpRequest")
                     .requestBody("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"))
                     .execute();
+//            System.out.println(response.body());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

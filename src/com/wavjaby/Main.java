@@ -20,11 +20,11 @@ public class Main {
     public static final String portalNckuOrg = "https://" + portalNcku;
 
     public static final String[] accessControlAllowOrigin = {
-            "https://simon.chummydns.com",
+            "https://api.simon.chummydns.com",
             "https://wavjaby.github.io",
             "https://localhost",
     };
-    public static final String cookieDomain = "simon.chummydns.com";
+    public static final String cookieDomain = "api.simon.chummydns.com";
     public static ExecutorService pool = Executors.newCachedThreadPool();
 
 
@@ -33,14 +33,14 @@ public class Main {
         HttpsServer server = new HttpsServer("key/key.keystore", "key/key.properties");
         server.start(443);
 
-        server.createContext("/", req -> pool.submit(() -> {
+        server.createContext("/NCKU/", req -> pool.submit(() -> {
             String path = req.getRequestURI().getPath();
             Headers responseHeader = req.getResponseHeaders();
             OutputStream response = req.getResponseBody();
             System.out.println(path);
 
             try {
-                if (path.equals("/NCKU")) {
+                if (path.equals("/NCKU/")) {
                     responseHeader.set("Content-Type", "text/html; charset=utf-8");
                     File file = new File("./index.html");
 
@@ -52,7 +52,7 @@ public class Main {
                         response.write(buff, 0, len);
 
                 } else {
-                    File file = new File("./", path);
+                    File file = new File("./", path.substring(6));
                     if (!file.exists())
                         req.sendResponseHeaders(404, 0);
                     else {
@@ -85,6 +85,7 @@ public class Main {
         System.out.println("Server started");
     }
 
+    @SuppressWarnings("ALL")
     public static void main(String[] args) {
         new Main();
     }
