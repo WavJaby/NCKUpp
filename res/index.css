@@ -62,3 +62,18 @@ table td {
     border-color: var(--table-border);
     border-style: solid;
 }
+
+.activateCell {
+    cursor: pointer;
+}
+
+.courseInfoWindow {
+    background: rgba(0, 0, 0, 0.9);
+    width: 70%;
+    height: 70%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: pre-wrap;
+}

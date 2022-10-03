@@ -12,7 +12,8 @@ document.body.appendChild((function () {
     );
 
     // 課表
-    const courseTable = CourseScheduleTable();
+    const courseInfoWindow = CourseInfoWindow();
+    const courseTable = CourseScheduleTable(courseInfoWindow);
 
     // check login
     fetch(apiEndPoint + '/login', {credentials: "include"}).then(i => i.json()).then(
@@ -72,7 +73,17 @@ document.body.appendChild((function () {
     );
 })());
 
-function CourseScheduleTable() {
+function CourseInfoWindow() {
+    const courseInfoWindow = p("loading...", "courseInfoWindow");
+    window.addEventListener('mouseup', () => {
+        if (document.body.contains(courseInfoWindow))
+            document.body.removeChild(courseInfoWindow);
+    })
+
+    return courseInfoWindow;
+}
+
+function CourseScheduleTable(courseInfoWindow) {
     const courseTable = table('courseScheduleTable');
 
     courseTable.clearCourseTable = function () {
@@ -128,6 +139,8 @@ function CourseScheduleTable() {
                 for (let i = 0; i < (holiday ? 7 : 5) + 1; i++)
                     headRow.insertCell().textContent = weekTable[i];
 
+                const courseInfo = {};
+
                 // body
                 for (let i = 0; i < 17; i++) {
                     const row = tbody.insertRow();
@@ -137,14 +150,27 @@ function CourseScheduleTable() {
                         for (let j = 0; j < (holiday ? 7 : 5); j++) {
                             const cell = row.insertCell();
                             if (schedule[j][i].length > 0) {
-                                cell.innerHTML = schedule[j][i][0] + schedule[j][i][1] + '<br>' + schedule[j][i][2];
-                                fetch(apiEndPoint + '/search?serial=' + schedule[j][i][0], {credentials: "include"}).then(i => i.json())
-                                    .then(i => console.log(i));
+                                const serialID = schedule[j][i][0];
+                                courseInfo[serialID] = null;
+                                cell.innerHTML = serialID + schedule[j][i][1] + '<br>' + schedule[j][i][2];
+                                cell.classList.add('activateCell');
+                                cell.onclick = function () {
+                                    if (courseInfo[serialID]) {
+                                        courseInfoWindow.textContent =
+                                            JSON.stringify(courseInfo[serialID], null, 4);
+                                    }
+                                    document.body.appendChild(courseInfoWindow);
+                                }
                             }
                         }
                     }
                 }
 
+                // get course info
+                for (const serialID in courseInfo) {
+                    fetch(apiEndPoint + '/search?serial=' + serialID, {credentials: "include"}).then(i => i.json())
+                        .then(i => courseInfo[serialID] = i.data ? i.data[0] : null);
+                }
             });
     }
     return courseTable;
