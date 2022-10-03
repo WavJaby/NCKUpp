@@ -1,4 +1,4 @@
-const apiEndPoint = location.host === 'localhost' ? 'https://localhost/api' : 'https://simon.chummydns.com/api';
+const apiEndPoint = location.host === 'localhost' ? 'https://localhost/api' : 'https://api.simon.chummydns.com/api';
 
 document.body.appendChild((function () {
     // 登入
