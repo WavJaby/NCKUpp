@@ -54,12 +54,12 @@ document.body.appendChild((function () {
 
     function onLogin() {
         courseTable.fetchCourseTable();
-        for (let i = 0; i < 7; i++) {
-            fetch(apiEndPoint + '/search?wk=' + (i + 1)).then(i => i.json()).then(
-                /**@param{{login:boolean}}i*/i => {
-                    console.log(i)
-                }).catch(j=>console.log(i, j));
-        }
+        // for (let i = 0; i < 7; i++) {
+        //     fetch(apiEndPoint + '/search?wk=' + (i + 1)).then(i => i.json()).then(
+        //         /**@param{{login:boolean}}i*/i => {
+        //             console.log(i)
+        //         }).catch(j=>console.log(i, j));
+        // }
     }
 
     function onLogout() {
@@ -136,8 +136,11 @@ function CourseScheduleTable() {
                         time.innerHTML = timeTable[i][1];
                         for (let j = 0; j < (holiday ? 7 : 5); j++) {
                             const cell = row.insertCell();
-                            if (schedule[j][i].length > 0)
+                            if (schedule[j][i].length > 0) {
                                 cell.innerHTML = schedule[j][i][0] + schedule[j][i][1] + '<br>' + schedule[j][i][2];
+                                fetch(apiEndPoint + '/search?serial=' + schedule[j][i][0]).then(i => i.json())
+                                    .then(i => console.log(i));
+                            }
                         }
                     }
                 }

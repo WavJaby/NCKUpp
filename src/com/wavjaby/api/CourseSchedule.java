@@ -34,7 +34,6 @@ public class CourseSchedule implements HttpHandler {
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers requestHeaders = req.getRequestHeaders();
-            OutputStream response = req.getResponseBody();
             String refererUrl = getRefererUrl(requestHeaders);
 
             try {
@@ -55,6 +54,7 @@ public class CourseSchedule implements HttpHandler {
                 responseHeader.set("Content-Type", "application/json; charset=utf-8");
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+                OutputStream response = req.getResponseBody();
                 response.write(dataByte);
                 req.close();
             } catch (Exception e) {

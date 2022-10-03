@@ -12,6 +12,7 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -38,7 +39,6 @@ public class Search implements HttpHandler {
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers requestHeaders = req.getRequestHeaders();
-            OutputStream response = req.getResponseBody();
             String refererUrl = getRefererUrl(requestHeaders);
 
             try {
@@ -62,15 +62,17 @@ public class Search implements HttpHandler {
                 boolean success = false;
                 JsonBuilder data = new JsonBuilder();
                 if (queryString != null) {
-                    success = search(parseUrlEncodedForm(queryString), data, searchID, cookieStore);
+                    Map<String, String> query = parseUrlEncodedForm(queryString);
+                    success = search(query, data, searchID, cookieStore);
                 } else
                     data.append("err", "[Search] no query string found");
 
                 // set cookie
                 Headers responseHeader = req.getResponseHeaders();
-                responseHeader.add("Set-Cookie", "searchID=" +
-                        (searchID[0] == null || !success ? "" : searchID[0]) +
-                        "; Path=/api/search; " + getCookieInfoData(refererUrl));
+                responseHeader.add("Set-Cookie", (searchID[0] != null && success
+                        ? "searchID=" + searchID[0]
+                        : removeCookie("searchID")) +
+                        "; Path=/api/search" + getCookieInfoData(refererUrl));
                 packLoginCookie(responseHeader, orgCookie, refererUrl, cookieStore);
 
                 // send response
@@ -79,6 +81,7 @@ public class Search implements HttpHandler {
                 responseHeader.set("Content-Type", "application/json; charset=utf-8");
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+                OutputStream response = req.getResponseBody();
                 response.write(dataByte);
                 req.close();
             } catch (Exception e) {
@@ -91,26 +94,96 @@ public class Search implements HttpHandler {
 
     public boolean search(Map<String, String> query, JsonBuilder outData, String[] searchID, CookieStore cookieStore) {
         try {
+            String
+                    cosname = null,    // 課程名稱
+                    teaname = null,    // 教師姓名
+                    wk = null,         // 星期 1 ~ 7
+                    dept_no = null,    // 系所 A...
+                    degree = null,     // 年級 1 ~ 7
+                    cl = null;         // 節次 1 ~ 16 []
+
+            // get query
+            // extend
+            String getSerialNumber;
+            boolean all = query.containsKey("ALL");
+            if ((getSerialNumber = query.get("serial")) != null) {
+                int deptEnd = getSerialNumber.indexOf('-');
+                if (deptEnd == -1) {
+                    outData.append("err", "[Search] invalid serial number");
+                    return false;
+                }
+
+                dept_no = getSerialNumber.substring(0, deptEnd);
+            }
+            // regular
+            else if (!all) {
+                cosname = query.get("cosname");     // 課程名稱
+                teaname = query.get("teaname");     // 教師姓名
+                wk = query.get("wk");               // 星期 1 ~ 7
+                dept_no = query.get("dept");        // 系所 A...
+                degree = query.get("degree");       // 年級 1 ~ 7
+                cl = query.get("cl");               // 節次 1 ~ 16 []
+
+                if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
+                    outData.append("err", "[Search] no query string found");
+                    return false;
+                }
+            }
+
+            StringBuilder searchResult = new StringBuilder();
+            boolean success = true;
+            if (all) {
+                for (int i = 0; i < 7; i++)
+                    if (!postSearchDataAndGetResponse(
+                            null, null, String.valueOf(i + 1), null, null, null,
+                            getSerialNumber, searchID, cookieStore, outData, searchResult
+                    )) {
+                        success = false;
+                        break;
+                    }
+            } else
+                success = postSearchDataAndGetResponse(
+                        cosname, teaname, wk, dept_no, degree, cl,
+                        getSerialNumber, searchID, cookieStore, outData, searchResult
+                );
+
+
+            if (searchResult.length() > 0)
+                searchResult.setCharAt(0, '[');
+            else
+                searchResult.append('[');
+            searchResult.append(']');
+
+            if (success)
+                outData.append("data", searchResult.toString(), true);
+            return success;
+        } catch (Exception e) {
+            outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean postSearchDataAndGetResponse(
+            String cosname,
+            String teaname,
+            String wk,
+            String dept_no,
+            String degree,
+            String cl,
+            String getSerialNumber, String[] searchID, CookieStore cookieStore,
+            JsonBuilder outData, StringBuilder searchResultBuilder) {
+        try {
             // setup
             if (searchID[0] == null) {
                 final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
                         .cookieStore(cookieStore)
                         .execute().body();
                 cosPreCheck(body, cookieStore, outData);
-                if ((searchID[0] = getSearchID(body, outData)) == null) return false;
-            }
-
-            String
-                    cosname = query.get("cosname"),     // 課程名稱
-                    teaname = query.get("teaname"),     // 教師姓名
-                    wk = query.get("wk"),               // 星期 1 ~ 7
-                    dept_no = query.get("dept"),        // 系所 A...
-                    degree = query.get("degree"),       // 年級 1 ~ 7
-                    cl = query.get("cl");               // 節次 1 ~ 16 []
-
-            if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
-                outData.append("err", "[Search] no query string found");
-                return false;
+                if ((searchID[0] = getSearchID(body, outData)) == null) {
+                    outData.append("err", "[Search] can not get searchID");
+                    return false;
+                }
             }
 
             // search
@@ -160,7 +233,10 @@ public class Search implements HttpHandler {
             final String searchResultBody = searchResult.body();
             cosPreCheck(searchResultBody, cookieStore, outData);
 
-            searchID[0] = getSearchID(searchResultBody, outData);
+            if ((searchID[0] = getSearchID(searchResultBody, outData)) == null) {
+                outData.append("err", "[Search] can not get searchID");
+                return false;
+            }
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
@@ -179,36 +255,21 @@ public class Search implements HttpHandler {
             // parse table
             String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
             Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
-            outData.append("data", parseCourseTable((Element) tbody, searchResultBody), true);
 
+
+            parseCourseTable(
+                    (Element) tbody,
+                    getSerialNumber,
+                    searchResultBody,
+                    searchResultBuilder
+            );
             return true;
-        } catch (Exception e) {
-            outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        return false;
     }
 
-    public String getSearchID(String body, JsonBuilder outData) {
-        // get entry function
-        int searchFunctionStart = body.indexOf("function setdata()");
-        if (searchFunctionStart == -1) {
-            outData.append("err", "[Search] search function not found");
-            return null;
-        } else searchFunctionStart += 18;
-
-        int idStart, idEnd;
-        if ((idStart = body.indexOf("'id'", searchFunctionStart)) == -1 ||
-                (idStart = body.indexOf('\'', idStart + 4)) == -1 ||
-                (idEnd = body.indexOf('\'', idStart + 1)) == -1
-        ) {
-            outData.append("err", "[Search] search id not found");
-            return null;
-        }
-        return body.substring(idStart + 1, idEnd);
-    }
-
-    public String parseCourseTable(Element tbody, String searchResultBody) {
+    public void parseCourseTable(Element tbody, String getSerialNumber, String searchResultBody, StringBuilder result) {
         // find style
         List<String> styleList = new ArrayList<>();
         int styleStart, styleEnd = 0;
@@ -234,17 +295,40 @@ public class Search implements HttpHandler {
 
         // get course list
         Elements courseList = tbody.getElementsByTag("tr");
-        StringBuilder result = new StringBuilder();
         for (Element element : courseList) {
-            JsonBuilder jsonBuilder = new JsonBuilder();
-
             Elements section = element.getElementsByTag("td");
 
 //                String departmentName = section.get(0).ownText();
+
+            List<Node> section1 = section.get(1).childNodes();
+            // get serial number
+            String serialNumber = ((Element) section1.get(0)).text().trim();
+            if (getSerialNumber != null && !serialNumber.equals(getSerialNumber)) continue;
+
+            // get class code
+            String classCode = ((TextNode) section1.get(1)).text().trim();
+
+            // get attribute code
+            String attributeCode = ((TextNode) section1.get(3)).text().trim();
+            int end = attributeCode.lastIndexOf(']');
+            if (end != -1) attributeCode = attributeCode.substring(attributeCode.indexOf('[') + 1, end);
+
+            // get course name
             String courseName = section.get(4).getElementsByClass("course_name").get(0).text();
+
+            // get course note
             String courseNote = section.get(4).ownText().replace("\"", "\\\"");
+
+            // get course limit
             String courseLimit = section.get(4).getElementsByClass("cond").text().replace("\"", "\\\"");
+
+            // get course type
             String courseType = section.get(3).text();
+
+            // get teacher name
+            String teacherName = section.get(6).text();
+
+            // get course tags
             String tags;
             StringBuilder tagBuilder = new StringBuilder();
             for (Element tag : section.get(4).getElementsByClass("label"))
@@ -254,36 +338,53 @@ public class Search implements HttpHandler {
                 tagBuilder.setCharAt(0, '[');
                 tags = tagBuilder.append(']').toString();
             }
-            List<TextNode> cache = section.get(5).textNodes();
+
+            // get grade & classInfo & group
+            int classGrade = -1;
+            String classInfo = "";
+            String classGroup = "";
+            List<Node> section2 = section.get(2).childNodes();
+            int section2c = 0;
+            for (Node node : section2) {
+                if (!(node instanceof TextNode))
+                    // <br>
+                    section2c++;
+                else {
+                    // text
+                    String cache = ((TextNode) node).text().trim();
+                    if (cache.length() == 0) continue;
+                    if (section2c == 0)
+                        classGrade = Integer.parseInt(cache);
+                    else if (section2c == 1)
+                        classInfo = cache;
+                    else
+                        classGroup = cache;
+                }
+            }
+
+            // get credits & required
+            List<TextNode> section5 = section.get(5).textNodes();
             float credits;
             boolean required;
-            String cacheC;
-            if (cache.size() > 0 && (cacheC = cache.get(0).text().trim()).length() > 0) {
-                credits = Float.parseFloat(cacheC);
-                String cacheS = cache.get(1).text().trim();
-                required = cacheS.equals("必修") || cacheS.equals("Required");
+            String section5Str;
+            if (section5.size() > 0 && (section5Str = section5.get(0).text().trim()).length() > 0) {
+                credits = Float.parseFloat(section5Str);
+                String cache = section5.get(1).text().trim();
+                required = cache.equals("必修") || cache.equals("Required");
             } else {
                 credits = -1;
                 required = false;
             }
-            String teacherName = section.get(6).text();
 
-            List<Node> cache1 = section.get(1).childNodes();
-            String serialNumber = ((Element) cache1.get(0)).text().trim();
-            String classCode = ((TextNode) cache1.get(1)).text().trim();
-            String attributeCode = ((TextNode) cache1.get(3)).text().trim();
-            int end = attributeCode.lastIndexOf(']');
-            if (end != -1) attributeCode = attributeCode.substring(attributeCode.indexOf('[') + 1, end);
-
+            // get time
             String time;
-            String location;
-            List<TextNode> cache2 = section.get(8).textNodes();
-            String cache3;
-            if (cache2.size() > 0 && !(cache3 = cache2.get(0).text()).contains("未定") && !cache3.contains("Undecided")) {
+            List<TextNode> section8 = section.get(8).textNodes();
+            String section8Str;
+            if (section8.size() > 0 && !(section8Str = section8.get(0).text()).contains("未定") && !section8Str.contains("Undecided")) {
                 StringBuilder stringBuilder = new StringBuilder();
                 stringBuilder.append('[');
-                for (int i = 0; i < cache2.size(); i++) {
-                    String[] timeStr = cache2.get(i).text().trim().split("]");
+                for (int i = 0; i < section8.size(); i++) {
+                    String[] timeStr = section8.get(i).text().trim().split("]");
                     if (i > 0) stringBuilder.append(',');
                     if (timeStr.length == 1)
                         stringBuilder.append('"').append(timeStr[0].substring(1)).append('"');
@@ -291,22 +392,25 @@ public class Search implements HttpHandler {
                         stringBuilder.append('"').append(timeStr[0].substring(1)).append(timeStr[1]).append('"');
                 }
                 time = stringBuilder.append(']').toString();
-            } else time = null;
-            Elements cache4 = section.get(8).getElementsByTag("a");
-            if (cache4.size() > 0) {
+            } else time = "[]";
+
+            // get location
+            String location;
+            Elements section8a = section.get(8).getElementsByTag("a");
+            if (section8a.size() > 0) {
                 StringBuilder stringBuilder = new StringBuilder();
                 stringBuilder.append('[');
-                for (int i = 0; i < cache4.size(); i++) {
-                    String attribute = cache4.get(i).attributes().get("href");
+                for (int i = 0; i < section8a.size(); i++) {
+                    String attribute = section8a.get(i).attributes().get("href");
                     String[] j = attribute.substring(17, attribute.length() - 3).split("','");
                     if (i > 0) stringBuilder.append(',');
                     stringBuilder.append('"').append(j[0]).append(',').append(j[1]).append('"');
                 }
                 location = stringBuilder.append(']').toString();
-            } else location = null;
+            } else location = "[]";
 
+            // get selected & available
             String[] count;
-            // read count
             StringBuilder countBuilder = new StringBuilder();
             for (Node n : section.get(7).childNodes()) {
                 // need to check style
@@ -326,31 +430,55 @@ public class Search implements HttpHandler {
             int selected = count[0].length() > 0 ? Integer.parseInt(count[0]) : -1;
             String available = count.length > 1 ? count[1] : null;
 
+            // get moodle
+            String moodle = "";
+            Elements moodleEle = section.get(9).getElementsByAttributeValueStarting("href", "javascript:moodle");
+            if (moodleEle.size() == 1) {
+                String str = moodleEle.get(0).attr("href");
+                moodle = str.substring(19, str.length() - 3).replace("','", ",");
+            }
+
+            // output
+            JsonBuilder jsonBuilder = new JsonBuilder();
             jsonBuilder.append("sn", serialNumber);
-            jsonBuilder.append("cc", classCode);
             jsonBuilder.append("ac", attributeCode);
+            jsonBuilder.append("cc", classCode);
             jsonBuilder.append("cn", courseName);
-            jsonBuilder.append("ct", courseType);
             jsonBuilder.append("cr", courseNote);
             jsonBuilder.append("cl", courseLimit);
+            jsonBuilder.append("ct", courseType);
+            jsonBuilder.append("cf", classGrade);
+            jsonBuilder.append("ci", classInfo);
+            jsonBuilder.append("cg", classGroup);
             jsonBuilder.append("tn", teacherName);
-            jsonBuilder.append("t", tags, true);
+            jsonBuilder.append("tg", tags, true);
             jsonBuilder.append("c", floatFormat.format(credits), true);
             jsonBuilder.append("r", required);
             jsonBuilder.append("s", selected);
             jsonBuilder.append("a", available);
-            if (time == null) jsonBuilder.append("time", "null", true);
-            else jsonBuilder.append("time", time, true);
-            if (location == null) jsonBuilder.append("location", "null", true);
-            else jsonBuilder.append("location", location, true);
-
+            jsonBuilder.append("t", time, true);
+            jsonBuilder.append("l", location, true);
+            jsonBuilder.append("m", moodle);
             result.append(',').append(jsonBuilder);
         }
-        if (result.length() > 0) {
-            result.setCharAt(0, '[');
-            result.append(']');
-            return result.toString();
+    }
+
+    public String getSearchID(String body, JsonBuilder outData) {
+        // get entry function
+        int searchFunctionStart = body.indexOf("function setdata()");
+        if (searchFunctionStart == -1) {
+            outData.append("err", "[Search] search function not found");
+            return null;
+        } else searchFunctionStart += 18;
+
+        int idStart, idEnd;
+        if ((idStart = body.indexOf("'id'", searchFunctionStart)) == -1 ||
+                (idStart = body.indexOf('\'', idStart + 4)) == -1 ||
+                (idEnd = body.indexOf('\'', idStart + 1)) == -1
+        ) {
+            outData.append("err", "[Search] search id not found");
+            return null;
         }
-        return "[]";
+        return body.substring(idStart + 1, idEnd);
     }
 }

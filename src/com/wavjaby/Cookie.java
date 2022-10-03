@@ -101,8 +101,12 @@ public class Cookie {
         }
     }
 
-    public static String getCookieInfoData(String refererUrl){
+    public static String getCookieInfoData(String refererUrl) {
         return "; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl);
+    }
+
+    public static String removeCookie(String key) {
+        return key + "=; Max-Age=0";
     }
 
     public static void packAuthCookie(Headers headers, String refererUrl, CookieStore cookieStore) {
