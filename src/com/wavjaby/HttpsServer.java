@@ -82,7 +82,6 @@ public class HttpsServer {
                 }
             }
         });
-        server.setExecutor(null);
         server.start();
     }
 

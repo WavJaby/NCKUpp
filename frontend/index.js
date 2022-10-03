@@ -14,6 +14,11 @@ document.body.appendChild((function () {
     // 課表
     const courseTable = CourseScheduleTable();
 
+    fetch(apiEndPoint + '/search', {credentials: 'include'}).then(i => i.json()).then(
+        /**@param{{login:boolean}}i*/i => {
+            console.log(i)
+        });
+
     // check login
     fetch(apiEndPoint + '/login', {credentials: 'include'}).then(i => i.json()).then(
         /**@param{{login:boolean}}i*/i => {
