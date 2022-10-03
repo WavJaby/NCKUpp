@@ -15,7 +15,7 @@ document.body.appendChild((function () {
     const courseTable = CourseScheduleTable();
 
     // check login
-    fetch(apiEndPoint + '/login').then(i => i.json()).then(
+    fetch(apiEndPoint + '/login', {credentials: "include"}).then(i => i.json()).then(
         /**@param{{login:boolean}}i*/i => {
             onLoginStateChange(i.login);
         });
@@ -32,7 +32,7 @@ document.body.appendChild((function () {
     }
 
     function logOut() {
-        fetch(apiEndPoint + '/logout').then(
+        fetch(apiEndPoint + '/logout', {credentials: "include"}).then(
             /**@param{{login:boolean}}i*/i => {
                 onLoginStateChange(i.login);
             });
@@ -108,7 +108,7 @@ function CourseScheduleTable() {
 
         const tbody = courseTable.createTBody();
 
-        fetch(apiEndPoint + '/courseSchedule').then(i => i.json()).then(
+        fetch(apiEndPoint + '/courseSchedule', {credentials: "include"}).then(i => i.json()).then(
             ({id, name, credits, schedule, err}) => {
                 if (err) return;
 
@@ -138,7 +138,7 @@ function CourseScheduleTable() {
                             const cell = row.insertCell();
                             if (schedule[j][i].length > 0) {
                                 cell.innerHTML = schedule[j][i][0] + schedule[j][i][1] + '<br>' + schedule[j][i][2];
-                                fetch(apiEndPoint + '/search?serial=' + schedule[j][i][0]).then(i => i.json())
+                                fetch(apiEndPoint + '/search?serial=' + schedule[j][i][0], {credentials: "include"}).then(i => i.json())
                                     .then(i => console.log(i));
                             }
                         }
