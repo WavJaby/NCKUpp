@@ -255,7 +255,10 @@ public class Search implements HttpHandler {
                     for (int i = 0; i < cache2.size(); i++) {
                         if (i > 0) stringBuilder.append(',');
                         String[] timeStr = cache2.get(i).text().trim().split("]");
-                        stringBuilder.append('"').append(timeStr[0].substring(1)).append(timeStr[1]).append('"');
+                        if (timeStr.length == 1)
+                            stringBuilder.append('"').append(timeStr[0].substring(1)).append('"');
+                        else
+                            stringBuilder.append('"').append(timeStr[0].substring(1)).append(timeStr[1]).append('"');
                     }
                     time = stringBuilder.append(']').toString();
                 } else time = null;
