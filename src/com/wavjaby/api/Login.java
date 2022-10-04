@@ -12,8 +12,6 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import static com.wavjaby.Cookie.*;
@@ -33,11 +31,7 @@ public class Login implements HttpHandler {
 
             try {
                 // unpack cookie
-                List<String> cookieIn = requestHeaders.containsKey("Cookie")
-                        ? Arrays.asList(requestHeaders.get("Cookie").get(0).split(","))
-                        : null;
-                String orgCookie = unpackLoginCookie(cookieIn, cookieManager);
-                unpackAuthCookie(cookieIn, cookieManager);
+                String loginState = getDefaultLoginCookie(requestHeaders, cookieManager);
 
                 // login
                 JsonBuilder data = new JsonBuilder();
@@ -45,16 +39,17 @@ public class Login implements HttpHandler {
                 if (!success) data.append("login", false);
 
                 Headers responseHeader = req.getResponseHeaders();
-                packLoginCookie(responseHeader, orgCookie, refererUrl, cookieStore);
+                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
                 packAuthCookie(responseHeader, refererUrl, cookieStore);
-
-                setAllowOrigin(refererUrl, responseHeader);
-                responseHeader.set("Access-Control-Allow-Credentials", "true");
-                responseHeader.set("Content-Type", "application/json; charset=utf-8");
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+                responseHeader.set("Content-Type", "application/json; charset=utf-8");
+
+                // send response
+                setAllowOrigin(requestHeaders, responseHeader);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
                 OutputStream response = req.getResponseBody();
                 response.write(dataByte);
+                response.flush();
                 req.close();
             } catch (Exception e) {
                 req.close();

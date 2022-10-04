@@ -11,11 +11,8 @@ import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
 
-import static com.wavjaby.Cookie.packLoginCookie;
-import static com.wavjaby.Cookie.unpackLoginCookie;
+import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
@@ -33,25 +30,24 @@ public class Logout implements HttpHandler {
 
             try {
                 // unpack cookie
-                List<String> cookieIn = requestHeaders.containsKey("Cookie")
-                        ? Arrays.asList(requestHeaders.get("Cookie").get(0).split(","))
-                        : null;
-                String orgCookie = unpackLoginCookie(cookieIn, cookieManager);
+                String loginState = getDefaultCookie(requestHeaders, cookieManager);
 
                 // login
                 JsonBuilder data = new JsonBuilder();
                 boolean success = logout(data, cookieStore);
 
                 Headers responseHeader = req.getResponseHeaders();
-                packLoginCookie(responseHeader, orgCookie, refererUrl, cookieStore);
+                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
 
-                setAllowOrigin(refererUrl, responseHeader);
-                responseHeader.set("Access-Control-Allow-Credentials", "true");
-                responseHeader.set("Content-Type", "application/json; charset=utf-8");
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+                responseHeader.set("Content-Type", "application/json; charset=utf-8");
+
+                // send response
+                setAllowOrigin(requestHeaders, responseHeader);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
                 OutputStream response = req.getResponseBody();
                 response.write(dataByte);
+                response.flush();
                 req.close();
             } catch (Exception e) {
                 req.close();

@@ -16,12 +16,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
@@ -43,13 +46,11 @@ public class Search implements HttpHandler {
 
             try {
                 // unpack cookie
-                List<String> cookieIn = requestHeaders.containsKey("Cookie")
-                        ? Arrays.asList(requestHeaders.get("Cookie").get(0).split(","))
+                String[] cookieIn = requestHeaders.containsKey("Cookie")
+                        ? requestHeaders.get("Cookie").get(0).split(",")
                         : null;
-                String orgCookie = unpackLoginCookie(cookieIn, cookieManager);
+                String loginState = unpackLoginStateCookie(cookieIn, cookieManager);
                 String queryString = req.getRequestURI().getQuery();
-
-                // get cookie
                 String[] searchID = {null};
                 if (cookieIn != null)
                     for (String i : cookieIn)
@@ -73,16 +74,17 @@ public class Search implements HttpHandler {
                         ? "searchID=" + searchID[0]
                         : removeCookie("searchID")) +
                         "; Path=/api/search" + getCookieInfoData(refererUrl));
-                packLoginCookie(responseHeader, orgCookie, refererUrl, cookieStore);
+                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+
+                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+                responseHeader.set("Content-Type", "application/json; charset=utf-8");
 
                 // send response
-                setAllowOrigin(refererUrl, responseHeader);
-                responseHeader.set("Access-Control-Allow-Credentials", "true");
-                responseHeader.set("Content-Type", "application/json; charset=utf-8");
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+                setAllowOrigin(requestHeaders, responseHeader);
                 req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
                 OutputStream response = req.getResponseBody();
                 response.write(dataByte);
+                response.flush();
                 req.close();
             } catch (Exception e) {
                 req.close();
@@ -105,18 +107,18 @@ public class Search implements HttpHandler {
             // get query
             // extend
             String getSerialNumber;
-            boolean all = query.containsKey("ALL");
-            if ((getSerialNumber = query.get("serial")) != null) {
-                int deptEnd = getSerialNumber.indexOf('-');
-                if (deptEnd == -1) {
+            Map<String, String> serialIdNumber = null;
+            boolean getAll = query.containsKey("ALL"),
+                    getSerial = (getSerialNumber = query.get("serial")) != null;
+            if (getSerial) {
+                serialIdNumber = parseUrlEncodedForm(URLDecoder.decode(getSerialNumber, "UTF-8"));
+                if (serialIdNumber.size() == 0) {
                     outData.append("err", "[Search] invalid serial number");
                     return false;
                 }
-
-                dept_no = getSerialNumber.substring(0, deptEnd);
             }
             // regular
-            else if (!all) {
+            else if (!getAll) {
                 cosname = query.get("cosname");     // 課程名稱
                 teaname = query.get("teaname");     // 教師姓名
                 wk = query.get("wk");               // 星期 1 ~ 7
@@ -132,30 +134,48 @@ public class Search implements HttpHandler {
 
             StringBuilder searchResult = new StringBuilder();
             boolean success = true;
-            if (all) {
+            if (getAll) {
                 for (int i = 0; i < 7; i++)
                     if (!postSearchDataAndGetResponse(
                             null, null, String.valueOf(i + 1), null, null, null,
-                            getSerialNumber, searchID, cookieStore, outData, searchResult
+                            null, searchID, cookieStore, outData, searchResult
                     )) {
                         success = false;
                         break;
                     }
-            } else
+            } else if (getSerial) {
+                for (Map.Entry<String, String> i : serialIdNumber.entrySet()) {
+                    searchResult.setLength(0);
+                    if (!postSearchDataAndGetResponse(
+                            null, null, null, i.getKey(), null, null,
+                            Arrays.stream(i.getValue().split(",")).collect(Collectors.toSet()),
+                            searchID, cookieStore, outData, searchResult
+                    )) {
+                        success = false;
+                        break;
+                    }
+                    if (searchResult.length() > 0)
+                        searchResult.setCharAt(0, '[');
+                    else
+                        searchResult.append('[');
+                    searchResult.append(']');
+                    outData.append(i.getKey(), searchResult.toString(), true);
+                }
+            } else {
                 success = postSearchDataAndGetResponse(
                         cosname, teaname, wk, dept_no, degree, cl,
-                        getSerialNumber, searchID, cookieStore, outData, searchResult
+                        null, searchID, cookieStore, outData, searchResult
                 );
+            }
 
-
-            if (searchResult.length() > 0)
-                searchResult.setCharAt(0, '[');
-            else
-                searchResult.append('[');
-            searchResult.append(']');
-
-            if (success)
+            if (success && !getSerial) {
+                if (searchResult.length() > 0)
+                    searchResult.setCharAt(0, '[');
+                else
+                    searchResult.append('[');
+                searchResult.append(']');
                 outData.append("data", searchResult.toString(), true);
+            }
             return success;
         } catch (Exception e) {
             outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
@@ -171,7 +191,7 @@ public class Search implements HttpHandler {
             String dept_no,
             String degree,
             String cl,
-            String getSerialNumber, String[] searchID, CookieStore cookieStore,
+            Set<String> getSerialNumber, String[] searchID, CookieStore cookieStore,
             JsonBuilder outData, StringBuilder searchResultBuilder) {
         try {
             // setup
@@ -269,7 +289,7 @@ public class Search implements HttpHandler {
         }
     }
 
-    public void parseCourseTable(Element tbody, String getSerialNumber, String searchResultBody, StringBuilder result) {
+    public void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, StringBuilder result) {
         // find style
         List<String> styleList = new ArrayList<>();
         int styleStart, styleEnd = 0;
@@ -294,6 +314,7 @@ public class Search implements HttpHandler {
         }
 
         // get course list
+        int getCount = 0;
         Elements courseList = tbody.getElementsByTag("tr");
         for (Element element : courseList) {
             Elements section = element.getElementsByTag("td");
@@ -303,7 +324,13 @@ public class Search implements HttpHandler {
             List<Node> section1 = section.get(1).childNodes();
             // get serial number
             String serialNumber = ((Element) section1.get(0)).text().trim();
-            if (getSerialNumber != null && !serialNumber.equals(getSerialNumber)) continue;
+            if (getSerialNumber != null) {
+                if (getCount == getSerialNumber.size())
+                    return;
+                if (!getSerialNumber.contains(serialNumber.substring(serialNumber.indexOf('-') + 1)))
+                    continue;
+                getCount++;
+            }
 
             // get class code
             String classCode = ((TextNode) section1.get(1)).text().trim();

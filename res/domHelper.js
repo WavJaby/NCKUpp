@@ -1,6 +1,6 @@
 /**
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLElement
  * */
 function div(classN, ...options) {
@@ -11,8 +11,8 @@ function div(classN, ...options) {
 }
 
 /**
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLElement
  * */
 function nav(classN, ...options) {
@@ -23,9 +23,9 @@ function nav(classN, ...options) {
 }
 
 /**
- * @param classN {string|null} Class Name
+ * @param [classN] {string} Class Name
  * @param placeholder {string}
- * @param options Option for element
+ * @param [options] Option for element
  * @return HTMLInputElement
  * */
 function input(classN, placeholder, ...options) {
@@ -37,10 +37,10 @@ function input(classN, placeholder, ...options) {
 }
 
 /**
- * @param classN {string|null} Class Name
+ * @param [classN] {string} Class Name
  * @param text {string}
  * @param onClick {function|null}
- * @param options Option for element
+ * @param [options] Option for element
  * @return HTMLButtonElement
  * */
 function button(classN, text, onClick, ...options) {
@@ -53,8 +53,8 @@ function button(classN, text, onClick, ...options) {
 }
 
 /**
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLTableElement
  * */
 function table(classN, ...options) {
@@ -66,8 +66,8 @@ function table(classN, ...options) {
 
 /**
  * @param text {string}
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLElement
  * */
 function p(text, classN, ...options) {
@@ -80,8 +80,30 @@ function p(text, classN, ...options) {
 
 /**
  * @param text {string}
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
+ * @return HTMLElement
+ * */
+function span(text, classN, ...options) {
+    const element = document.createElement('span');
+    if (classN) element.className = classN;
+    if (text) element.textContent = text;
+    if (options.length) addOption(element, options);
+    return element;
+}
+
+/**
+ * @param text {string}
+ * @return Text
+ * */
+function text(text) {
+    return document.createTextNode(text);
+}
+
+/**
+ * @param text {string}
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLElement
  * */
 function h1(text, classN, ...options) {
@@ -94,8 +116,8 @@ function h1(text, classN, ...options) {
 
 /**
  * @param url {string}
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLElement
  * */
 function img(url, classN, ...options) {
@@ -108,8 +130,8 @@ function img(url, classN, ...options) {
 
 /**
  * @param url {string}
- * @param classN {string|null} Class Name
- * @param options Option for element
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
  * @return HTMLElement
  * */
 function svg(url, classN, ...options) {

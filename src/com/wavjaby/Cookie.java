@@ -12,7 +12,7 @@ import java.util.Map;
 import static com.wavjaby.Main.*;
 
 public class Cookie {
-    public static void unpackAuthCookie(List<String> cookieIn, CookieManager cookieManager) {
+    public static void unpackAuthCookie(String[] cookieIn, CookieManager cookieManager) {
         if (cookieIn == null) return;
         List<String> portalNckuCookieIn = new ArrayList<>();
         for (String cookie : cookieIn) {
@@ -40,7 +40,7 @@ public class Cookie {
         }
     }
 
-    public static String unpackLoginCookie(List<String> cookieIn, CookieManager cookieManager) {
+    public static String unpackLoginStateCookie(String[] cookieIn, CookieManager cookieManager) {
         if (cookieIn == null) return null;
         List<String> courseNckuCookieIn = new ArrayList<>();
         String originalCookie = null;
@@ -73,7 +73,7 @@ public class Cookie {
         }
     }
 
-    public static void packLoginCookie(Headers headers, String orgCookie, String refererUrl, CookieStore cookieStore) {
+    public static void packLoginStateCookie(Headers headers, String orgCookie, String refererUrl, CookieStore cookieStore) {
         try {
             StringBuilder outCookie = new StringBuilder();
             outCookie.append("loginData=");
@@ -101,14 +101,6 @@ public class Cookie {
         }
     }
 
-    public static String getCookieInfoData(String refererUrl) {
-        return "; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl);
-    }
-
-    public static String removeCookie(String key) {
-        return key + "=; Max-Age=0";
-    }
-
     public static void packAuthCookie(Headers headers, String refererUrl, CookieStore cookieStore) {
         try {
             StringBuilder outCookie = new StringBuilder();
@@ -130,6 +122,32 @@ public class Cookie {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+    public static String getDefaultCookie(Headers requestHeaders, CookieManager cookieManager) {
+        // unpack cookie
+        String[] cookieIn = requestHeaders.containsKey("Cookie")
+                ? requestHeaders.get("Cookie").get(0).split(",")
+                : null;
+        return unpackLoginStateCookie(cookieIn, cookieManager);
+    }
+
+    public static String getDefaultLoginCookie(Headers requestHeaders, CookieManager cookieManager) {
+        // unpack cookie
+        String[] cookieIn = requestHeaders.containsKey("Cookie")
+                ? requestHeaders.get("Cookie").get(0).split(",")
+                : null;
+        unpackAuthCookie(cookieIn, cookieManager);
+        return unpackLoginStateCookie(cookieIn, cookieManager);
+    }
+
+    public static String getCookieInfoData(String refererUrl) {
+        return "; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl);
+    }
+
+    public static String removeCookie(String key) {
+        return key + "=; Max-Age=0";
     }
 
     public static String getCookieDomain(String refererUrl) {

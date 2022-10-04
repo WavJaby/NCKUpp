@@ -1,9 +1,6 @@
 package com.wavjaby;
 
-import com.wavjaby.api.CourseSchedule;
-import com.wavjaby.api.Login;
-import com.wavjaby.api.Logout;
-import com.wavjaby.api.Search;
+import com.wavjaby.api.*;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,7 +16,6 @@ public class Main {
     public static final String[] accessControlAllowOrigin = {
             "https://api.simon.chummydns.com",
             "https://wavjaby.github.io",
-            "https://localhost",
     };
     public static final String cookieDomain = "api.simon.chummydns.com";
     public static ExecutorService pool = Executors.newCachedThreadPool();
@@ -35,6 +31,7 @@ public class Main {
         server.createContext("/api/logout", new Logout());
         server.createContext("/api/courseSchedule", new CourseSchedule());
         server.createContext("/api/search", new Search());
+        server.createContext("/api/moodle", new Moodle());
 
         System.out.println("Server started");
     }

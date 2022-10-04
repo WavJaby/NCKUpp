@@ -8,7 +8,9 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 
+import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.pool;
 
 public class FileHost implements HttpHandler {
@@ -18,18 +20,10 @@ public class FileHost implements HttpHandler {
             String path = req.getRequestURI().getPath();
             Headers responseHeader = req.getResponseHeaders();
             try {
+                InputStream in = null;
                 if (path.equals("/NCKU/")) {
                     responseHeader.set("Content-Type", "text/html; charset=utf-8");
-                    File file = new File("./index.html");
-
-                    InputStream in = Files.newInputStream(file.toPath());
-                    req.sendResponseHeaders(200, in.available());
-                    OutputStream response = req.getResponseBody();
-                    byte[] buff = new byte[1024];
-                    int len;
-                    while ((len = in.read(buff, 0, buff.length)) > 0)
-                        response.write(buff, 0, len);
-                    response.flush();
+                    in = Files.newInputStream(Paths.get("./index.html"));
                 } else {
                     File file = new File("./", path.substring(6));
                     if (!file.exists())
@@ -40,22 +34,25 @@ public class FileHost implements HttpHandler {
                         else if (path.endsWith(".css"))
                             responseHeader.set("Content-Type", "text/css; charset=utf-8");
 
-                        InputStream in = Files.newInputStream(file.toPath());
-                        req.sendResponseHeaders(200, in.available());
-                        OutputStream response = req.getResponseBody();
-                        byte[] buff = new byte[1024];
-                        int len;
-                        while ((len = in.read(buff, 0, buff.length)) > 0)
-                            response.write(buff, 0, len);
-                        response.flush();
+                        in = Files.newInputStream(file.toPath());
                     }
                 }
+                if (in != null) {
+                    setAllowOrigin(req.getRequestHeaders(), responseHeader);
+                    req.sendResponseHeaders(200, in.available());
+                    OutputStream response = req.getResponseBody();
+                    byte[] buff = new byte[1024];
+                    int len;
+                    while ((len = in.read(buff, 0, buff.length)) > 0)
+                        response.write(buff, 0, len);
+                    response.flush();
+                } else
+                    req.sendResponseHeaders(404, 0);
                 req.close();
             } catch (Exception e) {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println(path);
         });
     }
 }

@@ -16,6 +16,7 @@
     top: 0;
 }
 
+/*Login*/
 .loginField {
     margin: 5px;
 }
@@ -39,9 +40,15 @@ button.loginField {
     right: 0;
 }
 
-table {
+/*courseScheduleTable*/
+.courseScheduleTable {
     margin: 10px;
     border-collapse: collapse;
+}
+
+.courseScheduleInfo {
+    margin: 10px;
+    white-space: pre;
 }
 
 table tr {
@@ -57,13 +64,13 @@ table > thead td {
 table td {
     vertical-align: middle;
     text-align: center;
-    padding: 0.5em;
+    padding: 0.4em;
     border-width: 0 1px;
     border-color: var(--table-border);
     border-style: solid;
 }
 
-.activateCell {
+.courseScheduleTable .activateCell {
     cursor: pointer;
 }
 
@@ -76,4 +83,5 @@ table td {
     left: 50%;
     transform: translate(-50%, -50%);
     white-space: pre-wrap;
+    overflow-y: auto;
 }

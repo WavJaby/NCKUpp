@@ -88,15 +88,23 @@ public class Lib {
         }
     }
 
-    public static void setAllowOrigin(String refererUrl, Headers responseHeader) {
-        if (refererUrl == null) return;
+    public static void setAllowOrigin(Headers requestHeaders, Headers responseHeader) {
+        String refererUrl;
+        List<String> clientUrl = requestHeaders.get("Referer");
+        System.out.println(clientUrl);
+        if (clientUrl != null && clientUrl.size() > 0)
+            refererUrl = clientUrl.get(0);
+        else return;
+
         for (String i : accessControlAllowOrigin)
             if (refererUrl.startsWith(i)) {
                 responseHeader.set("Access-Control-Allow-Origin", i);
+                responseHeader.set("Access-Control-Allow-Credentials", "true");
                 return;
             }
 
         responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);
+        responseHeader.set("Access-Control-Allow-Credentials", "true");
     }
 
     public static String getRefererUrl(Headers requestHeaders) {
