@@ -24,7 +24,8 @@ public class HttpsServer {
         try {
             prop.load(Files.newInputStream(Paths.get(keystoreInfoPath)));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            return;
         }
         // load certificate
         char[] storepass = prop.getProperty("storePassword").toCharArray();

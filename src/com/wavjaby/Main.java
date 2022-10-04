@@ -17,11 +17,13 @@ public class Main {
             "https://api.simon.chummydns.com",
             "https://wavjaby.github.io",
     };
-    public static final String cookieDomain = "api.simon.chummydns.com";
+    public static final String cookieDomain = "simon.chummydns.com";
     public static ExecutorService pool = Executors.newCachedThreadPool();
 
 
     Main() {
+//        System.setProperty("javax.net.debug", "ssl,handshake");
+
         // server
         HttpsServer server = new HttpsServer("key/key.keystore", "key/key.properties");
         server.start(443);

@@ -260,5 +260,6 @@ function LoginWindow(onLogin) {
  * */
 function fetchApi(endpoint, option) {
     if (option) option.credentials = 'include';
+    else option = {credentials: 'include'};
     return fetch(apiEndPoint + endpoint, option).then(i => i.json());
 }
