@@ -45,7 +45,7 @@ public class CourseSchedule implements HttpHandler {
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
 
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=utf-8");
+                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
                 // send response
                 setAllowOrigin(requestHeaders, responseHeader);
@@ -54,7 +54,7 @@ public class CourseSchedule implements HttpHandler {
                 response.write(dataByte);
                 response.flush();
                 req.close();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 req.close();
                 e.printStackTrace();
             }

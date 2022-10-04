@@ -50,7 +50,6 @@ public class Search implements HttpHandler {
                         ? requestHeaders.get("Cookie").get(0).split(",")
                         : null;
                 String loginState = unpackLoginStateCookie(cookieIn, cookieManager);
-                String queryString = req.getRequestURI().getQuery();
                 String[] searchID = {null};
                 if (cookieIn != null)
                     for (String i : cookieIn)
@@ -62,6 +61,7 @@ public class Search implements HttpHandler {
                 // search
                 boolean success = false;
                 JsonBuilder data = new JsonBuilder();
+                String queryString = req.getRequestURI().getQuery();
                 if (queryString != null) {
                     Map<String, String> query = parseUrlEncodedForm(queryString);
                     success = search(query, data, searchID, cookieStore);
@@ -77,7 +77,7 @@ public class Search implements HttpHandler {
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
 
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=utf-8");
+                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
                 // send response
                 setAllowOrigin(requestHeaders, responseHeader);
@@ -86,7 +86,7 @@ public class Search implements HttpHandler {
                 response.write(dataByte);
                 response.flush();
                 req.close();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 req.close();
                 e.printStackTrace();
             }
@@ -224,6 +224,7 @@ public class Search implements HttpHandler {
 
             Connection.Response search = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=save_qry")
                     .cookieStore(cookieStore)
+                    .ignoreContentType(true)
                     .method(Connection.Method.POST)
                     .requestBody(builder.toString())
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
@@ -246,6 +247,7 @@ public class Search implements HttpHandler {
                     .method(Connection.Method.POST)
                     .requestBody(builder.toString())
                     .maxBodySize(20 * 1024 * 1024)
+                    .ignoreContentType(true)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
                     .execute();
@@ -283,10 +285,13 @@ public class Search implements HttpHandler {
                     searchResultBody,
                     searchResultBuilder
             );
+
             return true;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            outData.append("err", "[Search] Unknown error" + Arrays.toString(e.getStackTrace()));
+            e.printStackTrace();
         }
+        return false;
     }
 
     public void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, StringBuilder result) {
@@ -411,7 +416,9 @@ public class Search implements HttpHandler {
                 StringBuilder stringBuilder = new StringBuilder();
                 stringBuilder.append('[');
                 for (int i = 0; i < section8.size(); i++) {
-                    String[] timeStr = section8.get(i).text().trim().split("]");
+                    String text = section8.get(i).text().trim();
+                    if (text.length() == 0) continue;
+                    String[] timeStr = text.split("]");
                     if (i > 0) stringBuilder.append(',');
                     if (timeStr.length == 1)
                         stringBuilder.append('"').append(timeStr[0].substring(1)).append('"');

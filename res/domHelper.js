@@ -38,8 +38,8 @@ function input(classN, placeholder, ...options) {
 
 /**
  * @param [classN] {string} Class Name
- * @param text {string}
- * @param onClick {function|null}
+ * @param [text] {string}
+ * @param [onClick] {function|null}
  * @param [options] Option for element
  * @return HTMLButtonElement
  * */
@@ -60,6 +60,20 @@ function button(classN, text, onClick, ...options) {
 function table(classN, ...options) {
     const element = document.createElement('table');
     if (classN) element.className = classN;
+    if (options.length) addOption(element, options);
+    return element;
+}
+
+/**
+ * @param url {string} Url
+ * @param [classN] {string} Class Name
+ * @param [options] Option for element
+ * @return HTMLIFrameElement
+ * */
+function iframe(url, classN, ...options) {
+    const element = document.createElement('iframe');
+    if (classN) element.className = classN;
+    if (url) element.src = url;
     if (options.length) addOption(element, options);
     return element;
 }

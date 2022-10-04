@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/NCKU.iml" filepath="$PROJECT_DIR$/NCKU.iml" />
+      <module fileurl="file://$PROJECT_DIR$/NCKUpp.iml" filepath="$PROJECT_DIR$/NCKUpp.iml" />
     </modules>
   </component>
 </project>

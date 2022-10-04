@@ -7,10 +7,12 @@ import com.wavjaby.json.JsonBuilder;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.getRefererUrl;
@@ -40,7 +42,7 @@ public class Logout implements HttpHandler {
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
 
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=utf-8");
+                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
                 // send response
                 setAllowOrigin(requestHeaders, responseHeader);
@@ -49,7 +51,7 @@ public class Logout implements HttpHandler {
                 response.write(dataByte);
                 response.flush();
                 req.close();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 req.close();
                 e.printStackTrace();
             }
@@ -66,8 +68,8 @@ public class Logout implements HttpHandler {
             outData.append("login", toLogin.body().contains("/index.php?c=auth&m=logout"));
             return true;
         } catch (Exception e) {
-            outData.append("err", "[Login] Unknown error: " + e);
-            return false;
+            outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
+        return false;
     }
 }

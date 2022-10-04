@@ -1,5 +1,9 @@
 const apiEndPoint = location.host === 'localhost' ? 'https://localhost/api' : 'https://api.simon.chummydns.com/api';
 
+// 課表
+const courseInfoWindow = CourseInfoWindow();
+const courseTable = CourseScheduleTable();
+
 document.body.appendChild((function () {
     // 登入
     const loginBtn = button('loginBtn', '登入', onLoginButtonClick);
@@ -11,15 +15,10 @@ document.body.appendChild((function () {
         loginBtn,
     );
 
-    // 課表
-    const courseInfoWindow = CourseInfoWindow();
-    const courseTable = CourseScheduleTable(courseInfoWindow);
-
     // check login
-    fetch(apiEndPoint + '/login', {credentials: 'include'}).then(i => i.json()).then(
-        /**@param{{login:boolean}}i*/i => {
-            onLoginStateChange(i.login);
-        });
+    fetchApi('/login').then(/**@param{{login:boolean}}i*/i => {
+        onLoginStateChange(i.login);
+    });
 
     function onLoginButtonClick() {
         if (login)
@@ -33,10 +32,10 @@ document.body.appendChild((function () {
     }
 
     function logOut() {
-        fetch(apiEndPoint + '/logout', {credentials: 'include'}).then(
-            /**@param{{login:boolean}}i*/i => {
+        fetchApi('/logout').then(/**@param{{login:boolean}}i*/i => {
+            if (login !== i.login)
                 onLoginStateChange(i.login);
-            });
+        });
     }
 
 
@@ -55,12 +54,6 @@ document.body.appendChild((function () {
 
     function onLogin() {
         courseTable.fetchCourseTable();
-        // for (let i = 0; i < 7; i++) {
-        //     fetch(apiEndPoint + '/search?wk=' + (i + 1)).then(i => i.json()).then(
-        //         /**@param{{login:boolean}}i*/i => {
-        //             console.log(i)
-        //         }).catch(j=>console.log(i, j));
-        // }
     }
 
     function onLogout() {
@@ -74,16 +67,32 @@ document.body.appendChild((function () {
 })());
 
 function CourseInfoWindow() {
-    const courseInfoWindow = p('loading...', 'courseInfoWindow');
-    window.addEventListener('mouseup', () => {
-        if (document.body.contains(courseInfoWindow))
-            document.body.removeChild(courseInfoWindow);
-    })
+    const body = div();
+    const courseInfoWindow = div('courseInfoWindow',
+        button('closeButton', 'x', () => {
+            if (document.body.contains(courseInfoWindow))
+                document.body.removeChild(courseInfoWindow);
+        }),
+        body
+    );
+
+    courseInfoWindow.show = function () {
+        document.body.appendChild(courseInfoWindow);
+    }
+
+    courseInfoWindow.clear = function () {
+        body.innerHTML = '';
+    }
+
+    courseInfoWindow.add = function (element) {
+        body.appendChild(element);
+    }
 
     return courseInfoWindow;
 }
 
-function CourseScheduleTable(courseInfoWindow) {
+function CourseScheduleTable() {
+    // static
     const weekTable = ['#', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const timeTable = [
         ['0', '07:10<br/>08:00'],
@@ -106,11 +115,14 @@ function CourseScheduleTable(courseInfoWindow) {
     ];
     const nightTimeStart = 11;
 
+    // static element
     const scheduleTable = table('courseScheduleTable');
     const scheduleInfo = div('courseScheduleInfo');
     const scheduleData = div();
+    // data
+    const courseInfo = {};
 
-
+    // functions
     scheduleData.clearCourseTable = function () {
         scheduleData.removeChild(scheduleInfo);
         scheduleData.removeChild(scheduleTable);
@@ -120,9 +132,28 @@ function CourseScheduleTable(courseInfoWindow) {
     }
 
     scheduleData.fetchCourseTable = function () {
-        fetch(apiEndPoint + '/courseSchedule', {credentials: 'include'}).then(i => i.json()).then(buildScheduleTable);
+        fetchApi('/courseSchedule').then(buildScheduleTable);
         scheduleData.appendChild(scheduleInfo);
         scheduleData.appendChild(scheduleTable);
+    }
+
+    function cellClick(e) {
+        const info = courseInfo[e.target.serialID];
+        if (info) {
+            courseInfoWindow.clear();
+            courseInfoWindow.add(
+                button(null, 'moodle',
+                    () => {
+                        fetchApi('/extract?m=' + info.m).then(i => {
+                            if (i.data && i.data.status)
+                                window.open(i.data.url, '_blank');
+                        });
+                    }
+                )
+            );
+            courseInfoWindow.add(text(JSON.stringify(info, null, 4)));
+            courseInfoWindow.show();
+        }
     }
 
     function buildScheduleTable({id, name, credits, schedule, err}) {
@@ -132,7 +163,6 @@ function CourseScheduleTable(courseInfoWindow) {
         const tbody = scheduleTable.createTBody();
         const headRow = thead.insertRow();
 
-        console.log(schedule);
         let nightTime = false;
         let holiday = false;
         for (let i = nightTimeStart; i < 16; i++)
@@ -148,9 +178,8 @@ function CourseScheduleTable(courseInfoWindow) {
         for (let i = 0; i < (holiday ? 7 : 5) + 1; i++)
             headRow.insertCell().textContent = weekTable[i];
 
-        scheduleInfo.appendChild(text(id + ' ' + 'credits: ' + credits));
+        scheduleInfo.appendChild(text(id + ' ' + name + ' ' + 'credits: ' + credits));
 
-        const courseInfo = {};
         // body
         for (let i = 0; i < 17; i++) {
             const row = tbody.insertRow();
@@ -162,14 +191,10 @@ function CourseScheduleTable(courseInfoWindow) {
                     if (schedule[j][i].length > 0) {
                         const serialID = schedule[j][i][0];
                         courseInfo[serialID] = null;
-                        cell.innerHTML = serialID + schedule[j][i][1] + '<br>' + schedule[j][i][2];
                         cell.classList.add('activateCell');
-                        cell.onclick = function () {
-                            if (courseInfo[serialID])
-                                courseInfoWindow.textContent =
-                                    JSON.stringify(courseInfo[serialID], null, 4);
-                            document.body.appendChild(courseInfoWindow);
-                        }
+                        cell.innerHTML = serialID + schedule[j][i][1] + '<br>' + schedule[j][i][2];
+                        cell.serialID = serialID;
+                        cell.onclick = cellClick;
                     }
                 }
             }
@@ -192,13 +217,11 @@ function CourseScheduleTable(courseInfoWindow) {
         const courseFetchData = encodeURIComponent(courseFetchArr.join(spl));
 
         // fetch data
-        fetch(apiEndPoint + '/search?serial=' + courseFetchData, {credentials: 'include'})
-            .then(i => i.json())
-            .then(i => {
-                for (const entry of Object.entries(i))
-                    for (const course of entry[1])
-                        courseInfo[course.sn] = course;
-            });
+        fetchApi('/search?serial=' + courseFetchData).then(i => {
+            for (const entry of Object.entries(i))
+                for (const course of entry[1])
+                    courseInfo[course.sn] = course;
+        });
     }
 
     return scheduleData;
@@ -208,23 +231,34 @@ function LoginWindow(onLogin) {
     const username = input('loginField', '帳號', ['autocomplete', 'on']);
     const password = input('loginField', '密碼', ['type', 'password']);
 
+    let loading = false;
     return div('loginWindow',
         username,
         password,
         button('loginField', '登入', () => {
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-            console.log(usr)
-            fetch(apiEndPoint + '/login', {
-                method: 'POST',
-                credentials: 'include',
-                body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
-            }).then(i => i.json()).then(
-                /**@param{{login:boolean, err:string, msg:string, warn:string}}i*/i => {
+            if (!loading)
+                fetchApi('/login', {
+                    method: 'POST',
+                    body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
+                }).then(i => {
                     if (i.login)
                         onLogin(i.login);
                     if (i.err === 'loginErr')
                         alert(i.msg);
+                    loading = false;
                 });
+            loading = true;
         }),
     );
+}
+
+/**
+ * @param endpoint {string}
+ * @param [option] {{}}
+ * @return Promise<{err:string, msg:string, warn:string}>
+ * */
+function fetchApi(endpoint, option) {
+    if (option) option.credentials = 'include';
+    return fetch(apiEndPoint + endpoint, option).then(i => i.json());
 }

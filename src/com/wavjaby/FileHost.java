@@ -21,18 +21,18 @@ public class FileHost implements HttpHandler {
             Headers responseHeader = req.getResponseHeaders();
             try {
                 InputStream in = null;
-                if (path.equals("/NCKU/")) {
-                    responseHeader.set("Content-Type", "text/html; charset=utf-8");
+                if (path.equals("/NCKUpp/")) {
+                    responseHeader.set("Content-Type", "text/html; charset=UTF-8");
                     in = Files.newInputStream(Paths.get("./index.html"));
                 } else {
-                    File file = new File("./", path.substring(6));
+                    File file = new File("./", path.substring(8));
                     if (!file.exists())
                         req.sendResponseHeaders(404, 0);
                     else {
                         if (path.endsWith(".js"))
-                            responseHeader.set("Content-Type", "text/javascript; charset=utf-8");
+                            responseHeader.set("Content-Type", "text/javascript; charset=UTF-8");
                         else if (path.endsWith(".css"))
-                            responseHeader.set("Content-Type", "text/css; charset=utf-8");
+                            responseHeader.set("Content-Type", "text/css; charset=UTF-8");
 
                         in = Files.newInputStream(file.toPath());
                     }

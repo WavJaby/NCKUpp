@@ -76,11 +76,16 @@ public class Lib {
         try {
             for (String pair : pairs) {
                 int idx = pair.indexOf("=");
-                if (idx == -1) continue;
-                query.put(
-                        URLDecoder.decode(pair.substring(0, idx), "UTF-8"),
-                        URLDecoder.decode(pair.substring(idx + 1), "UTF-8")
-                );
+                if (idx == -1) {
+                    query.put(
+                            URLDecoder.decode(pair, "UTF-8"),
+                            null
+                    );
+                } else
+                    query.put(
+                            URLDecoder.decode(pair.substring(0, idx), "UTF-8"),
+                            URLDecoder.decode(pair.substring(idx + 1), "UTF-8")
+                    );
             }
             return query;
         } catch (UnsupportedEncodingException e) {
@@ -91,7 +96,7 @@ public class Lib {
     public static void setAllowOrigin(Headers requestHeaders, Headers responseHeader) {
         String refererUrl;
         List<String> clientUrl = requestHeaders.get("Referer");
-        System.out.println(clientUrl);
+        System.out.println("Referer: " + clientUrl);
         if (clientUrl != null && clientUrl.size() > 0)
             refererUrl = clientUrl.get(0);
         else return;
