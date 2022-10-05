@@ -19,19 +19,16 @@ public class HttpsServer {
     private TrustManagerFactory tmf;
     com.sun.net.httpserver.HttpsServer server;
 
-    HttpsServer(String keystoreFilePath, String keystoreInfoPath) {
-        Properties prop = new Properties();
+    HttpsServer(int port, String keystoreFilePath, String keystoreInfoPath) {
+        SSLContext sslContext;
         try {
+            Properties prop = new Properties();
             prop.load(Files.newInputStream(Paths.get(keystoreInfoPath)));
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        // load certificate
-        char[] storepass = prop.getProperty("storePassword").toCharArray();
-        char[] keypass = prop.getProperty("keyPassword").toCharArray();
+            // load certificate
+            char[] storepass = prop.getProperty("storePassword").toCharArray();
+            char[] keypass = prop.getProperty("keyPassword").toCharArray();
 //        String alias = prop.getProperty("alias");
-        try {
+
             // Initialise the keystore
             FileInputStream fIn = new FileInputStream(keystoreFilePath);
             KeyStore keystore = KeyStore.getInstance("JKS");
@@ -48,22 +45,15 @@ public class HttpsServer {
             // Set up the trust manager factory
             tmf = TrustManagerFactory.getInstance("SunX509");
             tmf.init(keystore);
-        } catch (UnrecoverableKeyException | CertificateException | KeyStoreException | IOException |
-                 NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-    }
 
-    public void start(int port) {
-        // create https server
-        SSLContext sslContext;
-        try {
+            // create https server
             server = com.sun.net.httpserver.HttpsServer.create(new InetSocketAddress(port), 0);
             // create ssl context
             sslContext = SSLContext.getInstance("TLSv1");
             // setup HTTPS context and parameters
             sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-        } catch (KeyManagementException | NoSuchAlgorithmException | IOException e) {
+        } catch (KeyManagementException | NoSuchAlgorithmException | IOException | KeyStoreException |
+                 UnrecoverableKeyException | CertificateException e) {
             e.printStackTrace();
             return;
         }
@@ -86,6 +76,9 @@ public class HttpsServer {
                 }
             }
         });
+    }
+
+    public void start() {
         server.setExecutor(null); // creates a default executor
         server.start();
     }

@@ -1,7 +1,10 @@
 package com.wavjaby;
 
+import com.sun.net.httpserver.HttpServer;
 import com.wavjaby.api.*;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,10 +26,15 @@ public class Main {
 
     Main() {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
+        HttpServer server;
+        try {
+            server = HttpServer.create(new InetSocketAddress(80), 0);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         // server
-        HttpsServer server = new HttpsServer("key/key.keystore", "key/key.properties");
-        server.start(443);
+//        HttpsServer server = new HttpsServer(443, "key/key.keystore", "key/key.properties");
 
         server.createContext("/NCKUpp/", new FileHost());
         server.createContext("/api/login", new Login());
@@ -35,6 +43,7 @@ public class Main {
         server.createContext("/api/search", new Search());
         server.createContext("/api/extract", new ExtractUrl());
 
+        server.start();
         System.out.println("Server started");
     }
 

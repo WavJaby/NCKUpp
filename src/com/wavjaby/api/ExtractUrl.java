@@ -90,7 +90,7 @@ public class ExtractUrl implements HttpHandler {
 
     private boolean getLocation(String requestData, CookieStore cookieStore, JsonBuilder data) {
         String[] query = requestData.split(",");
-        if (query.length != 3) {
+        if (query.length != 2) {
             data.append("err", "[Extract] invalid query data");
             return false;
         }

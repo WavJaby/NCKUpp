@@ -30,9 +30,11 @@ public class FileHost implements HttpHandler {
                         req.sendResponseHeaders(404, 0);
                     else {
                         if (path.endsWith(".js"))
-                            responseHeader.set("Content-Type", "text/javascript; charset=UTF-8");
+                            responseHeader.set("Content-Type", "application/javascript; charset=UTF-8");
                         else if (path.endsWith(".css"))
                             responseHeader.set("Content-Type", "text/css; charset=UTF-8");
+                        else if (path.endsWith(".svg"))
+                            responseHeader.set("Content-Type", "image/svg+xml; charset=UTF-8");
 
                         in = Files.newInputStream(file.toPath());
                     }

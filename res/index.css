@@ -51,9 +51,14 @@ button.loginField {
     white-space: pre;
 }
 
+table tr:first-child{
+    white-space: pre;
+}
+
 table tr {
     border-width: 1px 0;
     border-color: var(--table-border);
+    white-space: pre-wrap;
     border-style: solid;
 }
 
