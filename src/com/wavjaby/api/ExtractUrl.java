@@ -5,7 +5,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
+import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -72,7 +72,7 @@ public class ExtractUrl implements HttpHandler {
         }
 
         try {
-            String body = Jsoup.connect(courseNckuOrg + "/index.php?c=portal&m=moodle")
+            String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=moodle")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody((System.currentTimeMillis() / 1000) +
@@ -96,7 +96,7 @@ public class ExtractUrl implements HttpHandler {
         }
 
         try {
-            String body = Jsoup.connect(courseNckuOrg + "/index.php?c=portal&m=maps")
+            String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=maps")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody((System.currentTimeMillis() / 1000) +

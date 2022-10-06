@@ -22,6 +22,7 @@ import java.util.List;
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
+import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.pool;
 
 public class CourseSchedule implements HttpHandler {
@@ -63,7 +64,7 @@ public class CourseSchedule implements HttpHandler {
     }
 
     public boolean getCourseSchedule(CookieStore cookieStore, JsonBuilder data) {
-        Connection conn = HttpConnection.connect("https://course.ncku.edu.tw/index.php?c=cos32315")
+        Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos32315")
                 .cookieStore(cookieStore);
         Document root = null;
         try {

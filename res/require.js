@@ -1,6 +1,7 @@
 'use strict';
 var imagesExtension = ['.png', '.svg', '.gif', '.webp'];
 var module = {};
+var excludeStart = /\/\*ExcludeStart\*\//g;
 
 if (!window.fetch) {
     window.fetch = function (url, init) {
@@ -98,10 +99,14 @@ function require(url, recursive) {
         return image;
     } else if (contentType.startsWith('application/json'))
         return JSON.parse(result.body);
-    else if (contentType.startsWith('application/javascript')) {
+    else if (contentType.startsWith('text/css')) {
+        var style = document.createElement('style');
+        style.textContent = result.body;
+        return style;
+    } else if (contentType.startsWith('application/javascript')) {
         return eval(`(function () {
             var module = {};
-            ${result.body}
+            ${result.body.replace(excludeStart, '/*').replace(/require\('\.\//g, 'require(\'' + url.slice(0, pathEnd + 1))}
             return module.exports;
         })`)();
     } else
@@ -113,7 +118,7 @@ function require(url, recursive) {
  * @param [recursive] {boolean}
  * @return {Promise<any>}
  */
-function requireAsync(url, recursive) {
+function async_require(url, recursive) {
     if (imagesExtension.some(function (i) {
         return url.endsWith(i);
     })) {
@@ -130,11 +135,17 @@ function requireAsync(url, recursive) {
         var contentType = i.headers.get('Content-Type');
         if (contentType.startsWith('application/json'))
             return i.json();
-        else if (contentType.startsWith('application/javascript')) {
+        else if (contentType.startsWith('text/css')) {
+            var style = document.createElement('style');
+            return i.text().then(i => {
+                style.textContent = i;
+                return style;
+            });
+        } else if (contentType.startsWith('application/javascript')) {
             return i.text().then(function (i) {
                     return eval(`(function () {
                         var module = {};
-                        ${i}
+                        ${i.replace(excludeStart, '/*').replace(excludeEnd, '*/')}
                         return module.exports;
                     })`)();
                 }

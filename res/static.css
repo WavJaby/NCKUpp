@@ -2,7 +2,9 @@
 
 :root {
     --text-color: #e8e6e3;
-    --navbar-bg-color: #2F3136;
+    --button-bg-color: #5b5b5b;
+    --button-hover-color: #505050;
+    --button-active-color: #404040;
 }
 
 html, body {
@@ -23,7 +25,7 @@ body {
 }
 
 input {
-    background-color: #5b5b5b;
+    background-color: var(--button-bg-color);
     color: var(--text-color);
     border: none;
     padding: 5px;
@@ -33,7 +35,7 @@ input {
 }
 
 button {
-    background-color: #5b5b5b;
+    background-color: var(--button-bg-color);
     color: var(--text-color);
     border: none;
     padding: 5px 10px;
@@ -44,11 +46,11 @@ button {
 }
 
 button:hover {
-    background-color: #505050;
+    background-color: var(--button-hover-color);
 }
 
 button:active {
-    background-color: #404040;
+    background-color: var(--button-active-color);
 }
 
 textarea:focus, select:focus, input:focus, button:focus {

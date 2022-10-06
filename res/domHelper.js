@@ -1,14 +1,19 @@
 'use strict';
 
 function addOption(element, options) {
-    for (let i = 0; i < options.length; i++)
-        if (options[i] instanceof Element)
-            element.appendChild(options[i]);
-        else if (options[i] instanceof Function) {
-            const child = options[i](element);
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option instanceof Element)
+            element.appendChild(option);
+        // Show if
+        else if (option instanceof Function) {
+            const child = option(element);
             if (child) element.appendChild(child);
-        } else
-            element[options[i][0]] = options[i][1];
+        } else if (option instanceof Array)
+            element[option[0]] = option[1];
+        else
+            Object.assign(element, option);
+    }
 }
 
 /**
@@ -20,23 +25,29 @@ function Signal(init, state) {
     let thisListener;
     let thisData;
     let thisElement;
-    const isBool = typeof init === 'boolean';
+    const hasState = state !== null && state !== undefined;
+    const isBool = hasState && typeof init === 'boolean';
     thisData = init;
 
     this.__setElement = function (element) {
         thisElement = element;
-        return isBool ? state[thisData ? 1 : 0] : thisData;
+        return isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData;
     }
 
-    this.__addListener = function (listener) {
+    this.addListener = function (listener) {
         if (!thisListener) thisListener = [listener];
         else thisListener.push(listener);
+    }
+
+    this.removeListener = function (listener) {
+        const index = thisListener.indexOf(listener);
+        if (index !== -1) thisListener.splice(index, 1);
     }
 
     this.set = function (data) {
         thisData = data;
         if (thisElement)
-            thisElement.textContent = isBool ? state[thisData ? 1 : 0] : thisData;
+            thisElement.textContent = isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData;
         if (thisListener)
             for (const listener of thisListener)
                 listener(thisData);
@@ -45,28 +56,78 @@ function Signal(init, state) {
     this.get = function () {
         return thisData;
     }
+
+    this.getState = function () {
+        return isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData
+    }
+}
+
+/**
+ * @param defaultPage
+ * @param Routs
+ * */
+function QueryRouter(defaultPage, Routs) {
+    const routerRoot = div(null);
+    let lastState, lastPage;
+    (routerRoot.openPage = function (newPage) {
+        console.log(newPage)
+        if (lastPage === newPage) return;
+        lastPage = newPage;
+
+        history.pushState(null, document.title, './?' + newPage)
+        let state = Routs[newPage];
+        if (!state) return;
+        if (state instanceof Function)
+            Routs[newPage] = state = state();
+        if (lastState) {
+            if (state.onRender) state.onRender();
+            if (lastState.onDestroy) lastState.onDestroy();
+            routerRoot.replaceChild(state, lastState);
+        } else {
+            if (state.onRender) state.onRender();
+            routerRoot.appendChild(state);
+        }
+        lastState = state;
+    })(location.search.length < 2 ? defaultPage : location.search.slice(1))
+
+    routerRoot.getRoutesName = function () {
+        return Object.keys(Routs);
+    }
+
+    return routerRoot;
 }
 
 /**
  * @param signal
- * @param element {HTMLElement}
+ * @param element {HTMLElement|function}
  * */
 function ShowIf(signal, element) {
     let showState = signal.get();
     let parent;
-    signal.__addListener(function (show) {
+    signal.addListener(function (show) {
         if (showState !== show) {
             showState = show;
             if (show) {
+                if (element instanceof Function)
+                    element = element();
                 if (element.onRender)
                     element.onRender();
                 parent.appendChild(element);
+            } else if (!(element instanceof Function)) {
+                if (element.onDestroy)
+                    element.onDestroy();
+                parent.removeChild(element);
             }
-            else parent.removeChild(element);
         }
     });
     return function (parentElement) {
         parent = parentElement;
+        if (showState) {
+            if (element instanceof Function)
+                element = element();
+            if (element.onRender)
+                element.onRender();
+        }
         return showState ? element : null;
     }
 }
@@ -74,6 +135,7 @@ function ShowIf(signal, element) {
 module.exports = {
     Signal,
     ShowIf,
+    QueryRouter,
     /**
      * @param [classN] {string} Class Name
      * @param [options] Option for element
@@ -100,6 +162,30 @@ module.exports = {
 
     /**
      * @param [classN] {string} Class Name
+     * @param [options] Option for element
+     * @return HTMLUListElement
+     * */
+    ul(classN, ...options) {
+        const element = document.createElement('ul');
+        if (classN) element.className = classN;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param [classN] {string} Class Name
+     * @param [options] Option for element
+     * @return HTMLLIElement
+     * */
+    li(classN, ...options) {
+        const element = document.createElement('li');
+        if (classN) element.className = classN;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param [classN] {string} Class Name
      * @param placeholder {string}
      * @param [options] Option for element
      * @return HTMLInputElement
@@ -108,6 +194,7 @@ module.exports = {
         const element = document.createElement('input');
         if (classN) element.className = classN;
         if (placeholder) element.placeholder = placeholder;
+        if (onchange) element.onchange = onchange;
         if (options.length) addOption(element, options);
         return element;
     },
@@ -123,7 +210,7 @@ module.exports = {
         const element = document.createElement('button');
         if (classN) element.className = classN;
         if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
-        if (onClick) element.addEventListener('click', onClick);
+        if (onClick) element.onclick = onClick;
         if (options.length) addOption(element, options);
         return element;
     },
@@ -197,6 +284,24 @@ module.exports = {
     },
 
     /**
+     * @param [href] {string}
+     * @param [text] {string|Signal}
+     * @param [classN] {string} Class Name
+     * @param [onClick] {function|null}
+     * @param [options] Option for element
+     * @return HTMLAnchorElement
+     * */
+    a(href, text, classN, onClick, ...options) {
+        const element = document.createElement('a');
+        if (classN) element.className = classN;
+        if (href) element.href = href;
+        if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
+        if (onClick) element.onclick = onClick;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
      * @param text {string}
      * @return Text
      * */
@@ -225,7 +330,8 @@ module.exports = {
      * @return HTMLElement
      * */
     svg(url, classN, ...options) {
-        const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;
+        // const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;
+        const element = document.createElement('svg');
         if (classN) element.classList.add(classN)
         if (options.length) addOption(element, options);
         return element;

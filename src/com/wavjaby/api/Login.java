@@ -69,6 +69,7 @@ public class Login implements HttpHandler {
                 // GET
                 Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
                         .cookieStore(cookieStore)
+                        .ignoreContentType(true)
                         .execute();
                 boolean isLogin = toLogin.body().contains("/index.php?c=auth&m=logout");
                 if (isLogin) {
@@ -80,6 +81,7 @@ public class Login implements HttpHandler {
                 // check if already login
                 Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth")
                         .cookieStore(cookieStore)
+                        .ignoreContentType(true)
                         .execute();
                 if (toLogin.url().toString().endsWith("/index.php?c=portal") &&
                         toLogin.body().contains("/index.php?c=auth&m=logout")) {
@@ -98,6 +100,7 @@ public class Login implements HttpHandler {
             // start login
             Connection.Response toPortal = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
                     .cookieStore(cookieStore)
+                    .ignoreContentType(true)
                     .execute();
             String toPortalBody = toPortal.body();
             Connection.Response loginRes;
@@ -179,6 +182,7 @@ public class Login implements HttpHandler {
             if (result.contains("/index.php?c=auth&m=force_login")) {
                 outData.append("warn", "[Login] Force login");
                 result = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=force_login")
+                        .ignoreContentType(true)
                         .cookieStore(cookieStore)
                         .execute().body();
             }

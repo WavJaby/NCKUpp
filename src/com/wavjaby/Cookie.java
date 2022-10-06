@@ -93,7 +93,7 @@ public class Cookie {
             if (courseNckuCookies.containsKey("SSO"))
                 outCookie.append(courseNckuCookies.get("SSO"));
             String out = outCookie.toString();
-            outCookie.append("; Path=/; SameSite=None; Secure; Domain=").append(getCookieDomain(refererUrl));
+            outCookie.append("; Path=/").append(getCookieInfoData(refererUrl));
             if (orgCookie == null || !out.endsWith(orgCookie))
                 headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
@@ -117,7 +117,7 @@ public class Cookie {
             outCookie.append('|');
             if (portalNckuCookies.containsKey("MSISLoopDetectionCookie"))
                 outCookie.append(portalNckuCookies.get("MSISLoopDetectionCookie"));
-            outCookie.append("; Path=/api/login; SameSite=None; Secure; Domain=").append(getCookieDomain(refererUrl));
+            outCookie.append("; Path=/api/login").append(getCookieInfoData(refererUrl));
             headers.add("Set-Cookie", outCookie.toString());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);

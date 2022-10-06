@@ -40,6 +40,8 @@ public class Logout implements HttpHandler {
 
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+                responseHeader.add("Set-Cookie",
+                        removeCookie("authData") + "; Path=/api/login" + getCookieInfoData(refererUrl));
 
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 responseHeader.set("Content-Type", "application/json; charset=UTF-8");
@@ -63,6 +65,7 @@ public class Logout implements HttpHandler {
         try {
             Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=logout")
                     .cookieStore(cookieStore)
+                    .ignoreContentType(true)
                     .execute();
 
             outData.append("login", toLogin.body().contains("/index.php?c=auth&m=logout"));

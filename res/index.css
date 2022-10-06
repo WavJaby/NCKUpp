@@ -1,4 +1,5 @@
 :root {
+    --navbar-bg-color: #2F3136;
     --table-border: #383D3F;
 }
 
@@ -6,6 +7,17 @@
     position: absolute;
     width: 100%;
     height: 100%;
+}
+
+/*Navbar*/
+.navbar > ul {
+    margin: 0;
+    padding-inline-start: 0;
+    list-style-type: none;
+}
+
+.navbar > ul > li {
+    display: block;
 }
 
 .navbar {
@@ -16,77 +28,64 @@
     top: 0;
 }
 
-/*Login*/
-.loginField {
+.navbar .loginBtn {
+    float: right;
+}
+
+.navbar .loginBtn > button {
+    height: 100%;
+}
+
+.navbar .loginBtn > button:focus {
+    box-shadow: none;
+}
+
+.navbar li {
+    height: 40px;
+    float: left;
+}
+
+.navbar li > * {
+    background: var(--navbar-bg-color);
+    cursor: pointer;
+    user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+}
+
+.navbar li > *:hover {
+    background-color: var(--button-hover-color);
+}
+
+.navbar li > *:active {
+    background-color: var(--button-active-color);
+}
+
+.navbar a {
+    height: 100%;
+    line-height: 40px;
+    text-decoration: none;
+    padding: 0 10px;
+    display: block;
+}
+
+.navbar a:link, .navbar a:visited, .navbar a:hover, .navbar a:active {
+    color: var(--text-color);
+}
+
+/*Login Window*/
+.loginWindow .loginField {
     margin: 5px;
 }
 
-button.loginField {
+.loginWindow button.loginField {
     float: right;
 }
 
-.loginBtn {
-    height: 40px;
-    float: right;
-}
-
-.loginBtn:focus {
-    box-shadow: none;
-}
 
 .loginWindow {
     position: absolute;
     top: 40px;
     right: 0;
-}
-
-/*courseScheduleTable*/
-.courseScheduleTable {
-    margin: 10px;
-    border-collapse: collapse;
-}
-
-.courseScheduleInfo {
-    margin: 10px;
-    white-space: pre;
-}
-
-table tr:first-child{
-    white-space: pre;
-}
-
-table tr {
-    border-width: 1px 0;
-    border-color: var(--table-border);
-    white-space: pre-wrap;
-    border-style: solid;
-}
-
-table > thead td {
-    background-color: #282B2C;
-}
-
-table td {
-    vertical-align: middle;
-    text-align: center;
-    padding: 0.4em;
-    border-width: 0 1px;
-    border-color: var(--table-border);
-    border-style: solid;
-}
-
-.courseScheduleTable .activateCell {
-    cursor: pointer;
-}
-
-.courseInfoWindow {
-    background: rgba(0, 0, 0, 0.9);
-    width: 70%;
-    height: 70%;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    white-space: pre-wrap;
-    overflow-y: auto;
 }

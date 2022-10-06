@@ -44,6 +44,7 @@ public class Lib {
         try {
             HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=cosprecheck&time=" + now)
                     .cookieStore(cookieStore)
+                    .ignoreContentType(true)
                     .method(Connection.Method.POST)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")

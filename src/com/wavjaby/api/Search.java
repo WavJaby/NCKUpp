@@ -4,11 +4,10 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObject;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
-import org.jsoup.nodes.TextNode;
+import org.jsoup.nodes.*;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
@@ -22,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -96,57 +97,77 @@ public class Search implements HttpHandler {
 
     public boolean search(Map<String, String> query, JsonBuilder outData, String[] searchID, CookieStore cookieStore) {
         try {
-            String
-                    cosname = null,    // 課程名稱
-                    teaname = null,    // 教師姓名
-                    wk = null,         // 星期 1 ~ 7
-                    dept_no = null,    // 系所 A...
-                    degree = null,     // 年級 1 ~ 7
-                    cl = null;         // 節次 1 ~ 16 []
-
-            // get query
-            // extend
             String getSerialNumber;
-            Map<String, String> serialIdNumber = null;
             boolean getAll = query.containsKey("ALL"),
                     getSerial = (getSerialNumber = query.get("serial")) != null;
-            if (getSerial) {
-                serialIdNumber = parseUrlEncodedForm(URLDecoder.decode(getSerialNumber, "UTF-8"));
+
+            StringBuilder searchResult = new StringBuilder();
+            boolean success = true;
+            // get all course
+            if (getAll) {
+                Connection.Response allDeptRes = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
+                        .cookieStore(cookieStore)
+                        .execute();
+                String allDeptBody = allDeptRes.body();
+                cosPreCheck(allDeptBody, cookieStore, outData);
+
+                List<String> allDept = new ArrayList<>();
+                for (Element element : allDeptRes.parse().getElementsByClass("pnl_dept"))
+                    allDept.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
+
+                int cryptStart, cryptEnd;
+                if ((cryptStart = allDeptBody.indexOf("'crypt'")) == -1 ||
+                        (cryptStart = allDeptBody.indexOf('\'', cryptStart + 7)) == -1 ||
+                        (cryptEnd = allDeptBody.indexOf('\'', ++cryptStart)) == -1
+                ) {
+                    outData.append("err", "[Search] can not get crypt");
+                    success = false;
+                }
+                // success getting crypt
+                // start get dept
+                else {
+                    String crypt = allDeptBody.substring(cryptStart, cryptEnd);
+//                    for (int i = 0; i < 7; i++) {
+//                        if (!postSearchData(
+//                                null, null, String.valueOf(i + 1), null, null, null, null,
+//                                searchID, cookieStore, outData, searchResult
+//                        )) {
+//                            success = false;
+//                            break;
+//                        }
+//                    }
+
+                    CountDownLatch countDownLatch = new CountDownLatch(allDept.size());
+                    AtomicBoolean allSuccess = new AtomicBoolean(true);
+                    for (String deptNo : allDept) {
+                        pool.submit(() -> {
+                            if (!getDept(deptNo, crypt, cookieStore, outData, searchResult))
+                                allSuccess.set(false);
+                            countDownLatch.countDown();
+                        });
+//                        if (!postSearchData(
+//                                null, null, null, deptNo, null, null, null,
+//                                searchID, cookieStore, outData, searchResult
+//                        )) {
+//                            success = false;
+//                            break;
+//                        }
+                    }
+                    countDownLatch.await();
+                    if (!allSuccess.get())
+                        success = false;
+                }
+            }
+            // get listed serial
+            else if (getSerial) {
+                Map<String, String> serialIdNumber = parseUrlEncodedForm(URLDecoder.decode(getSerialNumber, "UTF-8"));
                 if (serialIdNumber.size() == 0) {
                     outData.append("err", "[Search] invalid serial number");
                     return false;
                 }
-            }
-            // regular
-            else if (!getAll) {
-                cosname = query.get("cosname");     // 課程名稱
-                teaname = query.get("teaname");     // 教師姓名
-                wk = query.get("wk");               // 星期 1 ~ 7
-                dept_no = query.get("dept");        // 系所 A...
-                degree = query.get("degree");       // 年級 1 ~ 7
-                cl = query.get("cl");               // 節次 1 ~ 16 []
-
-                if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
-                    outData.append("err", "[Search] no query string found");
-                    return false;
-                }
-            }
-
-            StringBuilder searchResult = new StringBuilder();
-            boolean success = true;
-            if (getAll) {
-                for (int i = 0; i < 7; i++)
-                    if (!postSearchDataAndGetResponse(
-                            null, null, String.valueOf(i + 1), null, null, null,
-                            null, searchID, cookieStore, outData, searchResult
-                    )) {
-                        success = false;
-                        break;
-                    }
-            } else if (getSerial) {
                 for (Map.Entry<String, String> i : serialIdNumber.entrySet()) {
                     searchResult.setLength(0);
-                    if (!postSearchDataAndGetResponse(
+                    if (!postSearchData(
                             null, null, null, i.getKey(), null, null,
                             Arrays.stream(i.getValue().split(",")).collect(Collectors.toSet()),
                             searchID, cookieStore, outData, searchResult
@@ -154,15 +175,24 @@ public class Search implements HttpHandler {
                         success = false;
                         break;
                     }
-                    if (searchResult.length() > 0)
-                        searchResult.setCharAt(0, '[');
-                    else
-                        searchResult.append('[');
+                    if (searchResult.length() > 0) searchResult.setCharAt(0, '[');
+                    else searchResult.append('[');
                     searchResult.append(']');
                     outData.append(i.getKey(), searchResult.toString(), true);
                 }
             } else {
-                success = postSearchDataAndGetResponse(
+                String cosname = query.get("cosname");     // 課程名稱
+                String teaname = query.get("teaname");     // 教師姓名
+                String wk = query.get("wk");               // 星期 1 ~ 7
+                String dept_no = query.get("dept");        // 系所 A...
+                String degree = query.get("degree");       // 年級 1 ~ 7
+                String cl = query.get("cl");               // 節次 1 ~ 16 []
+
+                if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
+                    outData.append("err", "[Search] no query string found");
+                    return false;
+                }
+                success = postSearchData(
                         cosname, teaname, wk, dept_no, degree, cl,
                         null, searchID, cookieStore, outData, searchResult
                 );
@@ -184,7 +214,73 @@ public class Search implements HttpHandler {
         return false;
     }
 
-    public boolean postSearchDataAndGetResponse(
+    public boolean getDept(String deptNo, String crypt, CookieStore cookieStore, JsonBuilder outData, StringBuilder searchResultBuilder) {
+        try {
+            Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .method(Connection.Method.POST)
+                    .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(crypt, "UTF-8"))
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .timeout(1000 * 60 * 60)
+                    .execute();
+
+            JsonObject idData = new JsonObject(id.body());
+            if (idData.getString("err").length() > 0) {
+                outData.append("err", "[Search] error from NCKU course: " + idData.getString("err"));
+                return false;
+            }
+
+            Connection.Response result = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" +
+                            URLEncoder.encode(idData.getString("id"), "UTF-8"))
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .maxBodySize(20 * 1024 * 1024)
+                    .timeout(1000 * 60 * 60)
+                    .header("Referer", courseNckuOrg + "/index.php?c=qry_all")
+                    .execute();
+            if (result.url().getQuery().equals("c=qry_all")) {
+                outData.append("warn", "[Search] dept.No " + deptNo + " not found");
+                return true;
+            }
+
+            String searchResultBody = result.body();
+
+            int resultTableStart;
+            if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
+                outData.append("err", "[Search] result table not found");
+                return false;
+            }
+            // get table body
+            int resultTableBodyStart, resultTableBodyEnd;
+            if ((resultTableBodyStart = searchResultBody.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
+                    (resultTableBodyEnd = searchResultBody.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
+            ) {
+                outData.append("err", "[Search] result table body not found");
+                return false;
+            }
+
+            // parse table
+            String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
+            Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
+
+            parseCourseTable(
+                    (Element) tbody,
+                    null,
+                    searchResultBody,
+                    searchResultBuilder
+            );
+
+            return true;
+        } catch (IOException e) {
+            outData.append("err", "[Search] Unknown error" + Arrays.toString(e.getStackTrace()));
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean postSearchData(
             String cosname,
             String teaname,
             String wk,
@@ -196,8 +292,9 @@ public class Search implements HttpHandler {
         try {
             // setup
             if (searchID[0] == null) {
+//                System.out.println("[Search] Get searchID");
                 final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
-                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
                         .execute().body();
                 cosPreCheck(body, cookieStore, outData);
                 if ((searchID[0] = getSearchID(body, outData)) == null) {
@@ -222,6 +319,7 @@ public class Search implements HttpHandler {
             if (cl != null)
                 builder.append("&cl=").append(cl);
 
+//            System.out.println("[Search] Post search query");
             Connection.Response search = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=save_qry")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
@@ -241,13 +339,13 @@ public class Search implements HttpHandler {
             }
 
             // get result
+//            System.out.println("[Search] Get search result");
             Connection.Response searchResult = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215" + searchBody)
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .method(Connection.Method.POST)
                     .requestBody(builder.toString())
                     .maxBodySize(20 * 1024 * 1024)
-                    .ignoreContentType(true)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
                     .execute();
@@ -275,9 +373,9 @@ public class Search implements HttpHandler {
             }
 
             // parse table
+//            System.out.println("[Search] Parse course table");
             String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
             Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
-
 
             parseCourseTable(
                     (Element) tbody,
@@ -410,38 +508,60 @@ public class Search implements HttpHandler {
 
             // get time
             String time;
-            List<TextNode> section8 = section.get(8).textNodes();
-            String section8Str;
-            if (section8.size() > 0 && !(section8Str = section8.get(0).text()).contains("未定") && !section8Str.contains("Undecided")) {
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append('[');
-                for (int i = 0; i < section8.size(); i++) {
-                    String text = section8.get(i).text().trim();
-                    if (text.length() == 0) continue;
-                    String[] timeStr = text.split("]");
-                    if (i > 0) stringBuilder.append(',');
-                    if (timeStr.length == 1)
-                        stringBuilder.append('"').append(timeStr[0].substring(1)).append('"');
-                    else
-                        stringBuilder.append('"').append(timeStr[0].substring(1)).append(timeStr[1]).append('"');
+            StringBuilder timeSectionBuilder = new StringBuilder();
+            timeSectionBuilder.append('[');
+            StringBuilder builder = new StringBuilder();
+            int timeParseState = 0;
+            for (Node node : section.get(8).childNodes()) {
+                // time
+                if (timeParseState == 0) {
+                    if (node instanceof TextNode) {
+                        String text = ((TextNode) node).text().trim();
+                        int split = text.indexOf(']', 1);
+                        if (split == -1)
+                            continue;
+                        else
+                            builder.append(text, 1, split).append(',')
+                                    .append(text, split + 1, text.length()).append(',');
+                        timeParseState++;
+                        continue;
+                    }
+                    // if no time
+                    else {
+                        builder.append(',').append(',');
+                        timeParseState++;
+                    }
                 }
-                time = stringBuilder.append(']').toString();
-            } else time = "[]";
-
-            // get location
-            String location;
-            Elements section8a = section.get(8).getElementsByTag("a");
-            if (section8a.size() > 0) {
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append('[');
-                for (int i = 0; i < section8a.size(); i++) {
-                    String attribute = section8a.get(i).attributes().get("href");
-                    String[] j = attribute.substring(17, attribute.length() - 3).split("','");
-                    if (i > 0) stringBuilder.append(',');
-                    stringBuilder.append('"').append(j[0]).append(',').append(j[1]).append('"');
+                if (timeParseState == 1) {
+                    Attributes attributes = node.attributes();
+                    // location link
+                    if (attributes.size() > 0) {
+                        String attribute = attributes.get("href");
+                        if (attribute.length() == 0) continue;
+                        String[] j = attribute.substring(17, attribute.length() - 3).split("','");
+                        builder.append(j[0]).append(',').append(j[1]).append(',').append(((Element) node).text().trim());
+                        timeParseState++;
+                        continue;
+                    }
+                    // if no location
+                    else {
+                        builder.append(',').append(',');
+                        timeParseState++;
+                    }
                 }
-                location = stringBuilder.append(']').toString();
-            } else location = "[]";
+                if (timeParseState == 2 && ((Element) node).tagName().equals("br")) {
+                    timeSectionBuilder.append('"').append(builder).append('"').append(',');
+                    timeParseState = 0;
+                    builder.setLength(0);
+                }
+            }
+            if (builder.length() > 0) {
+                if (timeParseState != 2)
+                    builder.append(',').append(',');
+                timeSectionBuilder.append('"').append(builder).append('"');
+            }
+            timeSectionBuilder.append(']');
+            time = timeSectionBuilder.toString();
 
             // get selected & available
             String[] count;
@@ -491,7 +611,6 @@ public class Search implements HttpHandler {
             jsonBuilder.append("s", selected);
             jsonBuilder.append("a", available);
             jsonBuilder.append("t", time, true);
-            jsonBuilder.append("l", location, true);
             jsonBuilder.append("m", moodle);
             result.append(',').append(jsonBuilder);
         }

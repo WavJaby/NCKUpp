@@ -1,0 +1,50 @@
+
+.courseScheduleTable {
+    margin: 10px;
+    border-collapse: collapse;
+}
+
+.courseScheduleInfo {
+    margin: 10px;
+    white-space: pre;
+}
+
+table tr:first-child {
+    white-space: pre;
+}
+
+table tr {
+    border-width: 1px 0;
+    border-color: var(--table-border);
+    white-space: pre-wrap;
+    border-style: solid;
+}
+
+table > thead td {
+    background-color: #282B2C;
+}
+
+table td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 0.4em;
+    border-width: 0 1px;
+    border-color: var(--table-border);
+    border-style: solid;
+}
+
+.courseScheduleTable .activateCell {
+    cursor: pointer;
+}
+
+.courseInfoWindow {
+    background: rgba(0, 0, 0, 0.9);
+    width: 70%;
+    height: 70%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: pre-wrap;
+    overflow-y: auto;
+}
