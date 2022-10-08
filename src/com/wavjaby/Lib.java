@@ -97,7 +97,7 @@ public class Lib {
     public static void setAllowOrigin(Headers requestHeaders, Headers responseHeader) {
         String refererUrl;
         List<String> clientUrl = requestHeaders.get("Referer");
-        System.out.println("Referer: " + clientUrl);
+//        System.out.println("Referer: " + clientUrl);
         if (clientUrl != null && clientUrl.size() > 0)
             refererUrl = clientUrl.get(0);
         else return;

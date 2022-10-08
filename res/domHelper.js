@@ -6,10 +6,9 @@ function addOption(element, options) {
         if (option instanceof Element)
             element.appendChild(option);
         // Show if
-        else if (option instanceof Function) {
-            const child = option(element);
-            if (child) element.appendChild(child);
-        } else if (option instanceof Array)
+        else if (option instanceof Function)
+            element.appendChild(option(element));
+        else if (option instanceof Array)
             element[option[0]] = option[1];
         else
             Object.assign(element, option);
@@ -45,6 +44,8 @@ function Signal(init, state) {
     }
 
     this.set = function (data) {
+        if (data === thisData) return;
+
         thisData = data;
         if (thisElement)
             thisElement.textContent = isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData;
@@ -70,7 +71,6 @@ function QueryRouter(defaultPage, Routs) {
     const routerRoot = div(null);
     let lastState, lastPage;
     (routerRoot.openPage = function (newPage) {
-        console.log(newPage)
         if (lastPage === newPage) return;
         lastPage = newPage;
 
@@ -80,12 +80,12 @@ function QueryRouter(defaultPage, Routs) {
         if (state instanceof Function)
             Routs[newPage] = state = state();
         if (lastState) {
-            if (state.onRender) state.onRender();
             if (lastState.onDestroy) lastState.onDestroy();
             routerRoot.replaceChild(state, lastState);
-        } else {
             if (state.onRender) state.onRender();
+        } else {
             routerRoot.appendChild(state);
+            if (state.onRender) state.onRender();
         }
         lastState = state;
     })(location.search.length < 2 ? defaultPage : location.search.slice(1))
@@ -102,6 +102,7 @@ function QueryRouter(defaultPage, Routs) {
  * @param element {HTMLElement|function}
  * */
 function ShowIf(signal, element) {
+    const emptyDiv = document.createElement('div');
     let showState = signal.get();
     let parent;
     signal.addListener(function (show) {
@@ -110,13 +111,13 @@ function ShowIf(signal, element) {
             if (show) {
                 if (element instanceof Function)
                     element = element();
+                parent.replaceChild(element, emptyDiv);
                 if (element.onRender)
                     element.onRender();
-                parent.appendChild(element);
-            } else if (!(element instanceof Function)) {
+            } else {
                 if (element.onDestroy)
                     element.onDestroy();
-                parent.removeChild(element);
+                parent.replaceChild(emptyDiv, element);
             }
         }
     });
@@ -128,7 +129,7 @@ function ShowIf(signal, element) {
             if (element.onRender)
                 element.onRender();
         }
-        return showState ? element : null;
+        return showState ? element : emptyDiv;
     }
 }
 
@@ -187,14 +188,31 @@ module.exports = {
     /**
      * @param [classN] {string} Class Name
      * @param placeholder {string}
+     * @param [id] {string}
      * @param [options] Option for element
      * @return HTMLInputElement
      * */
-    input(classN, placeholder, ...options) {
+    input(classN, placeholder, id, ...options) {
         const element = document.createElement('input');
         if (classN) element.className = classN;
         if (placeholder) element.placeholder = placeholder;
-        if (onchange) element.onchange = onchange;
+        if (id) element.id = id;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param [classN] {string} Class Name
+     * @param text {string}
+     * @param forId {string}
+     * @param [options] Option for element
+     * @return HTMLLabelElement
+     * */
+    label(classN, text, forId, ...options) {
+        const element = document.createElement('label');
+        if (classN) element.className = classN;
+        if (text) element.textContent = text;
+        if (forId) element.htmlFor = forId;
         if (options.length) addOption(element, options);
         return element;
     },
@@ -222,6 +240,30 @@ module.exports = {
      * */
     table(classN, ...options) {
         const element = document.createElement('table');
+        if (classN) element.className = classN;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param [classN] {string} Class Name
+     * @param [options] Option for element
+     * @return HTMLTableSectionElement
+     * */
+    thead(classN, ...options) {
+        const element = document.createElement('thead');
+        if (classN) element.className = classN;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param [classN] {string} Class Name
+     * @param [options] Option for element
+     * @return HTMLTableSectionElement
+     * */
+    tbody(classN, ...options) {
+        const element = document.createElement('tbody');
         if (classN) element.className = classN;
         if (options.length) addOption(element, options);
         return element;

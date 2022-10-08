@@ -181,12 +181,12 @@ public class Search implements HttpHandler {
                     outData.append(i.getKey(), searchResult.toString(), true);
                 }
             } else {
-                String cosname = query.get("cosname");     // 課程名稱
-                String teaname = query.get("teaname");     // 教師姓名
-                String wk = query.get("wk");               // 星期 1 ~ 7
-                String dept_no = query.get("dept");        // 系所 A...
-                String degree = query.get("degree");       // 年級 1 ~ 7
-                String cl = query.get("cl");               // 節次 1 ~ 16 []
+                String cosname = query.get("course");       // 課程名稱
+                String teaname = query.get("teacher");      // 教師姓名
+                String wk = query.get("day");               // 星期 1 ~ 7
+                String dept_no = query.get("dept");         // 系所 A...
+                String degree = query.get("grade");         // 年級 1 ~ 7
+                String cl = query.get("section");           // 節次 1 ~ 16 []
 
                 if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
                     outData.append("err", "[Search] no query string found");
@@ -435,8 +435,8 @@ public class Search implements HttpHandler {
                 getCount++;
             }
 
-            // get class code
-            String classCode = ((TextNode) section1.get(1)).text().trim();
+            // get system number
+            String systemNumber = ((TextNode) section1.get(1)).text().trim();
 
             // get attribute code
             String attributeCode = ((TextNode) section1.get(3)).text().trim();
@@ -456,7 +456,7 @@ public class Search implements HttpHandler {
             String courseType = section.get(3).text();
 
             // get teacher name
-            String teacherName = section.get(6).text();
+            String teachers = section.get(6).text();
 
             // get course tags
             String tags;
@@ -470,7 +470,7 @@ public class Search implements HttpHandler {
             }
 
             // get grade & classInfo & group
-            int classGrade = -1;
+            int courseGrade = -1;
             String classInfo = "";
             String classGroup = "";
             List<Node> section2 = section.get(2).childNodes();
@@ -484,7 +484,7 @@ public class Search implements HttpHandler {
                     String cache = ((TextNode) node).text().trim();
                     if (cache.length() == 0) continue;
                     if (section2c == 0)
-                        classGrade = Integer.parseInt(cache);
+                        courseGrade = Integer.parseInt(cache);
                     else if (section2c == 1)
                         classInfo = cache;
                     else
@@ -595,16 +595,16 @@ public class Search implements HttpHandler {
             // output
             JsonBuilder jsonBuilder = new JsonBuilder();
             jsonBuilder.append("sn", serialNumber);
-            jsonBuilder.append("ac", attributeCode);
-            jsonBuilder.append("cc", classCode);
+            jsonBuilder.append("ca", attributeCode);
+            jsonBuilder.append("cs", systemNumber);
             jsonBuilder.append("cn", courseName);
-            jsonBuilder.append("cr", courseNote);
+            jsonBuilder.append("ci", courseNote);
             jsonBuilder.append("cl", courseLimit);
             jsonBuilder.append("ct", courseType);
-            jsonBuilder.append("cf", classGrade);
+            jsonBuilder.append("g", courseGrade);
             jsonBuilder.append("ci", classInfo);
             jsonBuilder.append("cg", classGroup);
-            jsonBuilder.append("tn", teacherName);
+            jsonBuilder.append("ts", teachers);
             jsonBuilder.append("tg", tags, true);
             jsonBuilder.append("c", floatFormat.format(credits), true);
             jsonBuilder.append("r", required);

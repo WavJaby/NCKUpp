@@ -1,9 +1,9 @@
 'use strict';
 const {
-    Signal, ShowIf, QueryRouter, div, nav, ul, li, input, button, table, iframe, p, span, h1, a, text, img, svg
+    Signal, ShowIf, QueryRouter, div, nav, ul, li, input, button, table, thead, tbody, iframe, p, span, h1, a, text, img, svg, label
 } = require('./res/domHelper');
-const apiEndPoint = location.host === 'localhost'
-    ? 'http://localhost/api'
+const apiEndPoint = location.hostname === 'localhost'
+    ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
 
 (async function main() {
@@ -25,10 +25,8 @@ const apiEndPoint = location.host === 'localhost'
     fetchApi('/login').then(onLoginStateChange);
 
     document.body.appendChild(div('root',
-        div(null,
-            ShowIf(showLoginWindow,
-                LoginWindow(onLoginStateChange)
-            )
+        ShowIf(showLoginWindow,
+            LoginWindow(onLoginStateChange)
         ),
         // 選單列
         nav('navbar', ul(null,
@@ -65,26 +63,34 @@ const apiEndPoint = location.host === 'localhost'
     }
 
     function LoginWindow(onLoginStateChange) {
-        const username = input('loginField', '帳號', {autocomplete: 'on'});
-        const password = input('loginField', '密碼', {type: 'password'});
+        const username = input('loginField', '帳號', null, {onkeyup, type: 'text'});
+        const password = input('loginField', '密碼', null, {onkeyup, type: 'password'});
+
+        function onkeyup(e) {
+            if (e.key === 'Enter') login();
+        }
 
         let loading = false;
+
+        function login() {
+            const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
+            if (!loading) {
+                fetchApi('/login', {
+                    method: 'POST',
+                    body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
+                }).then(i => {
+                    onLoginStateChange(i);
+                    loading = false;
+                });
+                loading = true;
+            }
+        }
+
         // element
-        return div('loginWindow',
+        return div('loginWindow', {onRender: () => username.focus()},
             username,
             password,
-            button('loginField', '登入', () => {
-                const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-                if (!loading)
-                    fetchApi('/login', {
-                        method: 'POST',
-                        body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
-                    }).then(i => {
-                        onLoginStateChange(i);
-                        loading = false;
-                    });
-                loading = true;
-            }),
+            button('loginField', '登入', login, {type: 'submit'}),
         );
     }
 })();

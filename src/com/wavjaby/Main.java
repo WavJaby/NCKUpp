@@ -28,7 +28,7 @@ public class Main {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
         HttpServer server;
         try {
-            server = HttpServer.create(new InetSocketAddress(80), 0);
+            server = HttpServer.create(new InetSocketAddress(8080), 0);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

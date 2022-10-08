@@ -148,7 +148,7 @@ public class Login implements HttpHandler {
             }
 
             // check if portal login error
-            if(toPortal.url().getHost().equals(portalNcku)) {
+            if (toPortal.url().getHost().equals(portalNcku)) {
                 String loginPage = loginRes.body();
                 int errorStart = loginPage.indexOf("id=\"errorText\"");
                 if (errorStart != -1) {
@@ -160,7 +160,12 @@ public class Login implements HttpHandler {
                             errorMessage = loginPage.substring(errorStart + 1, errorEnd);
                     }
                     outData.append("err", "loginErr");
-                    outData.append("msg", errorMessage);
+                    if (errorMessage != null)
+                        outData.append("msg", errorMessage
+                                .replace("\\", "\\\\")
+                                .replace("&quot;", "\\\""));
+                    else
+                        outData.append("msg", "unknown error");
                     return false;
                 }
             }

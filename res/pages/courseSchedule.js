@@ -54,6 +54,7 @@ function CourseInfoWindow() {
 }
 
 module.exports = function (loginState) {
+    console.log('courseSchedule Init');
     // static element
     const scheduleTable = table('courseScheduleTable');
     const scheduleStudentInfo = new Signal();
