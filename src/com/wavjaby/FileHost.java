@@ -26,9 +26,7 @@ public class FileHost implements HttpHandler {
                     in = Files.newInputStream(Paths.get("./index.html"));
                 } else {
                     File file = new File("./", path.substring(8));
-                    if (!file.exists())
-                        req.sendResponseHeaders(404, 0);
-                    else {
+                    if (file.exists()) {
                         if (path.endsWith(".js"))
                             responseHeader.set("Content-Type", "application/javascript; charset=UTF-8");
                         else if (path.endsWith(".css"))

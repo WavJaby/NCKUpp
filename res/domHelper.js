@@ -372,9 +372,10 @@ module.exports = {
      * @return HTMLElement
      * */
     svg(url, classN, ...options) {
-        // const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;
-        const element = document.createElement('svg');
+        const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;
+        // const element = document.createElement('svg');
         if (classN) element.classList.add(classN)
+        // if (url) element.src = url;
         if (options.length) addOption(element, options);
         return element;
     }

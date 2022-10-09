@@ -56,18 +56,22 @@
  */
 
 /*ExcludeStart*/
-const {div, input, button, table, thead, tbody, span, text} = require('../domHelper');
+const {div, input, button, table, thead, tbody, span, text, svg} = require('../domHelper');
 /*ExcludeEnd*/
 const styles = require('./courseSearch.css');
 
 module.exports = function () {
     console.log('courseSearch Init');
+    const expendArrow = svg('./res/assets/expand_down_arrow_icon.svg', 'expendDownArrow');
     const searchResult = div('result');
+    let nckuHubCourseID;
     let courseSearchForm;
     let lastQueryString;
+    let searching;
 
     function onRender() {
         document.head.appendChild(styles);
+        search();
     }
 
     function onDestroy() {
@@ -79,6 +83,17 @@ module.exports = function () {
     }
 
     function search() {
+        if (searching) return;
+        searching = true;
+        if (!nckuHubCourseID) {
+            fetchApi('/nckuhub').then(i => {
+                nckuHubCourseID = i;
+                searching = false;
+                search();
+            });
+            return;
+        }
+
         const queryData = [];
         for (const /**@type HTMLElement*/ node of courseSearchForm.childNodes) {
             if (!(node instanceof HTMLInputElement)) continue;
@@ -100,30 +115,42 @@ module.exports = function () {
         searchResult.innerHTML = '';
         console.log(result);
 
+        const font = getComputedStyle(searchResult).font;
+        const canvas = new Canvas(font);
+
         let deptLen = 0;
+        let timeLen = 0;
         for (const data of result.data) {
             data.dn = data.dn.split(' ')[0];
-            if (data.dn.length > deptLen)
-                deptLen = data.dn.length;
-        }
-        deptLen = deptLen > 5 ? ' long' : '';
+            let cache;
+            if ((cache = canvas.measureText(data.dn).width + 1) > deptLen)
+                deptLen = cache;
+            data.t = data.t.map(i => i.split(','));
 
+            // parse
+            data.parseedTime = data.t.map(i => '[' + i[0] + ']' + i[1]).join(', ');
+            if ((cache = canvas.measureText(data.parseedTime).width + 1) > timeLen)
+                timeLen = cache;
+        }
 
         for (const data of result.data) {
             const info = div('courseInfo',
-                span(data.dn, 'departmentName' + deptLen),
+                expendArrow.cloneNode(true),
+                span(data.dn, 'departmentName', {style: `width:${deptLen}px`}),
                 span(data.sn, 'serialNumber'),
+                span(data.parseedTime, 'courseTime', {style: `width:${timeLen}px`}),
                 span(data.cn, 'courseName'),
             )
             searchResult.appendChild(info);
         }
+        searching = false;
     }
 
     return courseSearchForm = div('courseSearch',
         {onRender, onDestroy},
         input(null, 'Serial number', 'serialNumber', {onkeyup, name: 'serial'}),
         input(null, 'Course name', 'courseName', {onkeyup, name: 'course'}),
-        input(null, 'Dept ID', 'deptId', {onkeyup, name: 'dept'}),
+        input(null, 'Dept ID', 'deptId', {onkeyup, name: 'dept', value: 'F7'}),
         input(null, 'Instructor', 'instructor', {onkeyup, name: 'teacher'}),
         input(null, 'Day', 'day', {onkeyup, name: 'day'}),
         input(null, 'Grade', 'grade', {onkeyup, name: 'grade'}),
@@ -132,3 +159,10 @@ module.exports = function () {
         searchResult
     );
 };
+
+function Canvas(font) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    context.font = font;
+    return context;
+}

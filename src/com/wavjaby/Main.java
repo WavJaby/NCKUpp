@@ -42,6 +42,7 @@ public class Main {
         server.createContext("/api/courseSchedule", new CourseSchedule());
         server.createContext("/api/search", new Search());
         server.createContext("/api/extract", new ExtractUrl());
+        server.createContext("/api/nckuhub", new NCKUHub());
 
         server.start();
         System.out.println("Server started");

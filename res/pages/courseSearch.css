@@ -6,23 +6,38 @@
     margin: 5px;
 }
 
+.courseSearch > .result {
+    font-size: 18px;
+}
+
+.courseSearch > .result .expendDownArrow{
+    height: 1em;
+    margin-right: 5px;
+}
+
 .courseSearch > .result > .courseInfo {
     background: black;
     margin: 10px;
-    padding: 5px;
+    padding: 10px;
+    display: block;
     border-radius: 10px;
 }
 
-.courseSearch > .result > .courseInfo > .departmentName {
+.courseSearch > .result .departmentName {
+    display: inline-block;
+    margin-right: 2em;
+}
+
+.courseSearch > .result .serialNumber {
     display: inline-block;
     width: 6em;
 }
 
-.courseSearch > .result > .courseInfo > .departmentName.long {
-    width: 10em;
+.courseSearch > .result .courseTime {
+    display: inline-block;
+    margin-right: 2em;
 }
 
-.courseSearch > .result > .courseInfo > .serialNumber {
+.courseSearch > .result .courseClass {
     display: inline-block;
-    width: 6em;
 }

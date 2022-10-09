@@ -46,7 +46,7 @@ public class Template implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("[Moodle] Get moodle " + (System.currentTimeMillis() - startTime) + "ms");
+            System.out.println("[Template] Get template " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 }
