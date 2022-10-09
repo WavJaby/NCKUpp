@@ -6,3 +6,23 @@
     margin: 5px;
 }
 
+.courseSearch > .result > .courseInfo {
+    background: black;
+    margin: 10px;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.courseSearch > .result > .courseInfo > .departmentName {
+    display: inline-block;
+    width: 6em;
+}
+
+.courseSearch > .result > .courseInfo > .departmentName.long {
+    width: 10em;
+}
+
+.courseSearch > .result > .courseInfo > .serialNumber {
+    display: inline-block;
+    width: 6em;
+}

@@ -422,7 +422,7 @@ public class Search implements HttpHandler {
         for (Element element : courseList) {
             Elements section = element.getElementsByTag("td");
 
-//                String departmentName = section.get(0).ownText();
+            String departmentName = section.get(0).ownText();
 
             List<Node> section1 = section.get(1).childNodes();
             // get serial number
@@ -594,6 +594,7 @@ public class Search implements HttpHandler {
 
             // output
             JsonBuilder jsonBuilder = new JsonBuilder();
+            jsonBuilder.append("dn", departmentName);
             jsonBuilder.append("sn", serialNumber);
             jsonBuilder.append("ca", attributeCode);
             jsonBuilder.append("cs", systemNumber);
@@ -602,7 +603,7 @@ public class Search implements HttpHandler {
             jsonBuilder.append("cl", courseLimit);
             jsonBuilder.append("ct", courseType);
             jsonBuilder.append("g", courseGrade);
-            jsonBuilder.append("ci", classInfo);
+            jsonBuilder.append("co", classInfo);
             jsonBuilder.append("cg", classGroup);
             jsonBuilder.append("ts", teachers);
             jsonBuilder.append("tg", tags, true);

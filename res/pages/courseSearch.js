@@ -1,14 +1,68 @@
 'use strict';
 
+/**@typedef {string} departmentName */
+/**
+ * DeptCode - Course serial number
+ * @example F7-010
+ * @typedef {string} serialNumber
+ */
+/**
+ * Course attribute code
+ * @example CSIE1001
+ * @typedef {string} attributeCode
+ */
+/**
+ * Course system number - Class code
+ * @typedef {string} systemNumber
+ */
+/**@typedef {string} courseName */
+/**@typedef {string} courseNote */
+/**@typedef {string} courseLimit */
+/**@typedef {string} courseType */
+/**@typedef {int} courseGrade */
+/**@typedef {string} classInfo */
+/**@typedef {string} classGroup */
+/**@typedef {string} teachers */
+/**@typedef {string[]} tags */
+/**@typedef {float} credits */
+/**@typedef {boolean} required */
+/**@typedef {int} selected */
+/**@typedef {int|string} available */
+/**@typedef {string[]} time */
+/**@typedef {string} moodle */
+
+/**
+ * @typedef {{
+ *     dn: departmentName,
+ *     sn: serialNumber,
+ *     ca: attributeCode,
+ *     cs: systemNumber,
+ *     cn: courseName,
+ *     ci: courseNote,
+ *     cl: courseLimit,
+ *     ct: courseType,
+ *     g: courseGrade,
+ *     co: classInfo,
+ *     cg: classGroup,
+ *     ts: teachers,
+ *     tg: tags,
+ *     c: credits,
+ *     r: required,
+ *     s: selected,
+ *     a: available,
+ *     t: time,
+ *     m: moodle
+ * }} CourseData
+ */
+
 /*ExcludeStart*/
-const {div, input, button, table, thead, tbody} = require('../domHelper');
+const {div, input, button, table, thead, tbody, span, text} = require('../domHelper');
 /*ExcludeEnd*/
 const styles = require('./courseSearch.css');
 
 module.exports = function () {
     console.log('courseSearch Init');
-    const tableHead = thead();
-    const tableBody = tbody();
+    const searchResult = div('result');
     let courseSearchForm;
     let lastQueryString;
 
@@ -40,60 +94,29 @@ module.exports = function () {
     }
 
     /**
-     * DeptCode - Course serial number
-     * @example F7-010
-     * @typedef {string} serialNumber
-     */
-    /**
-     * Course attribute code
-     * @example CSIE1001
-     * @typedef {string} attributeCode
-     */
-    /**
-     * Course system number - Class code
-     * @typedef {string} systemNumber
-     */
-    /**@typedef {string} courseName */
-    /**@typedef {string} courseNote */
-    /**@typedef {string} courseLimit */
-    /**@typedef {string} courseType */
-    /**@typedef {int} courseGrade */
-    /**@typedef {string} classInfo */
-    /**@typedef {string} classGroup */
-    /**@typedef {string} teachers */
-    /**@typedef {string[]} tags */
-    /**@typedef {float} credits */
-    /**@typedef {boolean} required */
-    /**@typedef {int} selected */
-    /**@typedef {int|string} available */
-    /**@typedef {string[]} time */
-    /**@typedef {string} moodle */
-
-    /**
-     * @param result {{data:{
-     *     sn: serialNumber,
-     *     ca: attributeCode,
-     *     cs: systemNumber,
-     *     cn: courseName,
-     *     ci: courseNote,
-     *     cl: courseLimit,
-     *     ct: courseType,
-     *     g: courseGrade,
-     *     ci: classInfo,
-     *     cg: classGroup,
-     *     ts: teachers,
-     *     tg: tags,
-     *     c: credits,
-     *     r: required,
-     *     s: selected,
-     *     a: available,
-     *     t: time,
-     *     m: moodle
-     * }[]}}
+     * @param result {{data:CourseData[]}}
      */
     function onSearchResult(result) {
-        console.log(result.data[0].tg);
+        searchResult.innerHTML = '';
+        console.log(result);
 
+        let deptLen = 0;
+        for (const data of result.data) {
+            data.dn = data.dn.split(' ')[0];
+            if (data.dn.length > deptLen)
+                deptLen = data.dn.length;
+        }
+        deptLen = deptLen > 5 ? ' long' : '';
+
+
+        for (const data of result.data) {
+            const info = div('courseInfo',
+                span(data.dn, 'departmentName' + deptLen),
+                span(data.sn, 'serialNumber'),
+                span(data.cn, 'courseName'),
+            )
+            searchResult.appendChild(info);
+        }
     }
 
     return courseSearchForm = div('courseSearch',
@@ -106,12 +129,6 @@ module.exports = function () {
         input(null, 'Grade', 'grade', {onkeyup, name: 'grade'}),
         input(null, 'Section', 'section', {onkeyup, name: 'section'}),
         button(null, 'search', search),
-        table(null,
-            tableHead,
-            tableBody,
-        ),
-        div('result',
-            div(''),
-        )
+        searchResult
     );
 };

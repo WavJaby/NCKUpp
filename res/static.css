@@ -24,16 +24,6 @@ body {
     color: darkgray;
 }
 
-input {
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    border: none;
-    padding: 5px;
-    text-decoration: none;
-    display: block;
-    font-size: 20px;
-}
-
 button {
     background-color: var(--button-bg-color);
     color: var(--text-color);
@@ -56,4 +46,26 @@ button:active {
 textarea:focus, select:focus, input:focus, button:focus {
     outline: none;
     box-shadow: 0 0 3px 1px white;
+}
+
+input {
+    background-color: var(--button-bg-color);
+    color: var(--text-color);
+    border: none;
+    padding: 5px;
+    text-decoration: none;
+    display: block;
+    font-size: 20px;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 100px var(--button-bg-color) inset !important;
+}
+
+input:-webkit-autofill{
+    -webkit-text-fill-color: var(--text-color) !important;
+    caret-color: var(--text-color) !important;
 }
