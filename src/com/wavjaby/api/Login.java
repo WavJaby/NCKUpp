@@ -165,7 +165,7 @@ public class Login implements HttpHandler {
                                 .replace("\\", "\\\\")
                                 .replace("&quot;", "\\\""));
                     else
-                        outData.append("msg", "unknown error");
+                        outData.append("msg", "Unknown error");
                     return false;
                 }
             }

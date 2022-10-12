@@ -16,26 +16,14 @@ function addOption(element, options) {
 }
 
 /**
- * @param [init] {string | boolean} Init data
- * @param [state] {any[]} State
- * @return Signal
+ * @param [initState] {string | boolean | number} Init data
  * */
-function Signal(init, state) {
-    let thisListener;
-    let thisData;
-    let thisElement;
-    const hasState = state !== null && state !== undefined;
-    const isBool = hasState && typeof init === 'boolean';
-    thisData = init;
-
-    this.__setElement = function (element) {
-        thisElement = element;
-        return isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData;
-    }
+function Signal(initState) {
+    const thisListener = [];
+    this.state = initState !== undefined ? initState : null;
 
     this.addListener = function (listener) {
-        if (!thisListener) thisListener = [listener];
-        else thisListener.push(listener);
+        thisListener.push(listener);
     }
 
     this.removeListener = function (listener) {
@@ -43,24 +31,42 @@ function Signal(init, state) {
         if (index !== -1) thisListener.splice(index, 1);
     }
 
-    this.set = function (data) {
-        if (data === thisData) return;
+    this.set = function (newState) {
+        if (this.state === newState) return;
+        this.state = newState;
+        for (let i = 0; i < thisListener.length; i++)
+            thisListener[i](newState);
+    }
+}
 
-        thisData = data;
-        if (thisElement)
-            thisElement.textContent = isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData;
-        if (thisListener)
-            for (const listener of thisListener)
-                listener(thisData);
+/**
+ * @param signal {Signal}
+ * @param [toString] {any[]}
+ * */
+function State(signal, toString) {
+    return new TextState(signal, toString);
+}
+
+function TextState(signal, toString) {
+    let element = null;
+    signal.addListener(updateText);
+
+    this.init = function (newElement) {
+        element = newElement;
+        return toString ? toString(signal.state) : signal.state;
     }
 
-    this.get = function () {
-        return thisData;
+    function updateText(state) {
+        element.textContent = toString ? toString(state) : state;
     }
+}
 
-    this.getState = function () {
-        return isBool ? state[thisData ? 1 : 0] : hasState ? state[thisData] : thisData
-    }
+function parseTextInput(text, element) {
+    return (text instanceof Signal)
+        ? new TextState(text).init(element)
+        : (text instanceof TextState)
+            ? text.init(element)
+            : text;
 }
 
 /**
@@ -98,12 +104,12 @@ function QueryRouter(defaultPage, Routs) {
 }
 
 /**
- * @param signal
- * @param element {HTMLElement|function}
+ * @param signal {Signal}
+ * @param element {HTMLElement | function}
  * */
 function ShowIf(signal, element) {
     const emptyDiv = document.createElement('div');
-    let showState = signal.get();
+    let showState = signal.state;
     let parent;
     signal.addListener(function (show) {
         if (showState !== show) {
@@ -136,6 +142,7 @@ function ShowIf(signal, element) {
 module.exports = {
     Signal,
     ShowIf,
+    State,
     QueryRouter,
     /**
      * @param [classN] {string} Class Name
@@ -187,7 +194,7 @@ module.exports = {
 
     /**
      * @param [classN] {string} Class Name
-     * @param placeholder {string}
+     * @param [placeholder] {string}
      * @param [id] {string}
      * @param [options] Option for element
      * @return HTMLInputElement
@@ -203,7 +210,7 @@ module.exports = {
 
     /**
      * @param [classN] {string} Class Name
-     * @param text {string}
+     * @param text {string | Signal | State}
      * @param forId {string}
      * @param [options] Option for element
      * @return HTMLLabelElement
@@ -211,7 +218,7 @@ module.exports = {
     label(classN, text, forId, ...options) {
         const element = document.createElement('label');
         if (classN) element.className = classN;
-        if (text) element.textContent = text;
+        if (text) element.textContent = parseTextInput(text, element);
         if (forId) element.htmlFor = forId;
         if (options.length) addOption(element, options);
         return element;
@@ -219,15 +226,15 @@ module.exports = {
 
     /**
      * @param [classN] {string} Class Name
-     * @param [text] {string|Signal}
-     * @param [onClick] {function|null}
+     * @param [text] {string | Signal | State}
+     * @param [onClick] {function | null}
      * @param [options] Option for element
      * @return HTMLButtonElement
      * */
     button(classN, text, onClick, ...options) {
         const element = document.createElement('button');
         if (classN) element.className = classN;
-        if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
+        if (text) element.textContent = parseTextInput(text, element);
         if (onClick) element.onclick = onClick;
         if (options.length) addOption(element, options);
         return element;
@@ -284,7 +291,7 @@ module.exports = {
     },
 
     /**
-     * @param text {string|Signal}
+     * @param text {string | Signal | State}
      * @param [classN] {string} Class Name
      * @param [options] Option for element
      * @return HTMLParagraphElement
@@ -292,13 +299,13 @@ module.exports = {
     p(text, classN, ...options) {
         const element = document.createElement('p');
         if (classN) element.className = classN;
-        if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
+        if (text) element.textContent = parseTextInput(text, element);
         if (options.length) addOption(element, options);
         return element;
     },
 
     /**
-     * @param text {string|Signal}
+     * @param text {string | Signal | State}
      * @param [classN] {string} Class Name
      * @param [options] Option for element
      * @return HTMLSpanElement
@@ -306,13 +313,13 @@ module.exports = {
     span(text, classN, ...options) {
         const element = document.createElement('span');
         if (classN) element.className = classN;
-        if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
+        if (text) element.textContent = parseTextInput(text, element);
         if (options.length) addOption(element, options);
         return element;
     },
 
     /**
-     * @param text {string|Signal}
+     * @param text {string | Signal | State}
      * @param [classN] {string} Class Name
      * @param [options] Option for element
      * @return HTMLHeadingElement
@@ -320,24 +327,24 @@ module.exports = {
     h1(text, classN, ...options) {
         const element = document.createElement('h1');
         if (classN) element.className = classN;
-        if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
+        if (text) element.textContent = parseTextInput(text, element);
         if (options.length) addOption(element, options);
         return element;
     },
 
     /**
+     * @param text {string | Signal | State}
      * @param [href] {string}
-     * @param [text] {string|Signal}
      * @param [classN] {string} Class Name
-     * @param [onClick] {function|null}
+     * @param [onClick] {function | null}
      * @param [options] Option for element
      * @return HTMLAnchorElement
      * */
-    a(href, text, classN, onClick, ...options) {
+    a(text, href, classN, onClick, ...options) {
         const element = document.createElement('a');
         if (classN) element.className = classN;
         if (href) element.href = href;
-        if (text) element.textContent = (text instanceof Signal) ? text.__setElement(element) : text;
+        if (text) element.textContent = parseTextInput(text, element);
         if (onClick) element.onclick = onClick;
         if (options.length) addOption(element, options);
         return element;

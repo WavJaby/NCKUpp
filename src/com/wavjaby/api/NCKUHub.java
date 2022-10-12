@@ -12,10 +12,12 @@ import org.jsoup.helper.HttpConnection;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
-import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Map;
 
 import static com.wavjaby.Cookie.getDefaultCookie;
+import static com.wavjaby.Lib.parseUrlEncodedForm;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.pool;
 
@@ -29,7 +31,77 @@ public class NCKUHub implements HttpHandler {
         updateNckuHubCourseID();
     }
 
-    private void updateNckuHubCourseID() {
+    @Override
+    public void handle(HttpExchange req) {
+        pool.submit(() -> {
+            long startTime = System.currentTimeMillis();
+            CookieManager cookieManager = new CookieManager();
+            Headers requestHeaders = req.getRequestHeaders();
+            getDefaultCookie(requestHeaders, cookieManager);
+
+
+            try {
+                JsonBuilder data = new JsonBuilder();
+
+                String queryString = req.getRequestURI().getQuery();
+                boolean success = true;
+                if (queryString == null) {
+                    // get courseID
+                    if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
+                        success = updateNckuHubCourseID();
+                    if (success)
+                        data.append("data", nckuHubCourseID.toString(), true);
+                    else
+                        data.append("data", "[NCKU Hub] Update course id failed");
+                } else {
+                    // get course info
+                    success = getNckuHubCourseInfo(queryString, data);
+                }
+
+
+                Headers responseHeader = req.getResponseHeaders();
+                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+                // send response
+                setAllowOrigin(requestHeaders, responseHeader);
+                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+                OutputStream response = req.getResponseBody();
+                response.write(dataByte);
+                response.flush();
+                req.close();
+            } catch (IOException e) {
+                req.close();
+                e.printStackTrace();
+            }
+            System.out.println("[NCKUhub] Get nckuhub " + (System.currentTimeMillis() - startTime) + "ms");
+        });
+    }
+
+    private boolean getNckuHubCourseInfo(String queryString, JsonBuilder data) {
+        Map<String, String> query = parseUrlEncodedForm(queryString);
+        String nckuID = query.get("id");
+        if (nckuID == null) {
+            data.append("err", "[NCKU Hub] Query id not found");
+            return false;
+        }
+
+        try {
+            Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + nckuID)
+                    .ignoreContentType(true)
+                    .execute();
+            String body = nckuhubCourse.body();
+            data.append("data", body, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+            data.append("err", "[NCKU Hub] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean updateNckuHubCourseID() {
         try {
             System.out.println("[NCKU Hub] Update course id");
             Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/")
@@ -51,48 +123,11 @@ public class NCKUHub implements HttpHandler {
                 );
             }
             lastCourseIDUpdateTime = System.currentTimeMillis();
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("[NCKU Hub] Update course id failed");
+            return false;
         }
-    }
-
-    @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            CookieStore cookieStore = cookieManager.getCookieStore();
-            Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager);
-
-
-            try {
-                JsonBuilder data = new JsonBuilder();
-                boolean success = false;
-
-                if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
-                    updateNckuHubCourseID();
-                data.append("data", nckuHubCourseID.toString(), true);
-                success = true;
-
-
-                Headers responseHeader = req.getResponseHeaders();
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                req.close();
-                e.printStackTrace();
-            }
-            System.out.println("[NCKUhub] Get nckuhub " + (System.currentTimeMillis() - startTime) + "ms");
-        });
     }
 }

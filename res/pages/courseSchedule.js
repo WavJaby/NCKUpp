@@ -1,7 +1,7 @@
 'use strict';
 
 /*ExcludeStart*/
-const {div, button, table, Signal, text, span} = require('../domHelper');
+const {div, button, table, Signal, text, span, ShowIf} = require('../domHelper');
 /*ExcludeEnd*/
 const styles = require('./courseSchedule.css');
 
@@ -28,19 +28,14 @@ const timeTable = [
 ];
 const nightTimeStart = 11;
 
-function CourseInfoWindow() {
+function CourseInfoWindow(showCourseInfoWindow) {
     const body = div();
     const courseInfoWindow = div('courseInfoWindow',
         button('closeButton', 'x', () => {
-            if (document.body.contains(courseInfoWindow))
-                document.body.removeChild(courseInfoWindow);
+            showCourseInfoWindow.set(false);
         }),
         body
     );
-
-    courseInfoWindow.show = function () {
-        document.body.appendChild(courseInfoWindow);
-    }
 
     courseInfoWindow.clear = function () {
         body.innerHTML = '';
@@ -58,12 +53,13 @@ module.exports = function (loginState) {
     // static element
     const scheduleTable = table('courseScheduleTable');
     const scheduleStudentInfo = new Signal();
-    const courseInfoWindow = CourseInfoWindow();
+    const showCourseInfoWindow = new Signal(false);
+    const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
     // data
     const courseInfo = {};
     let thead, tbody;
 
-    onLoginState(loginState.get());
+    onLoginState(loginState.state);
 
     function onRender() {
         console.log('Render Schedule');
@@ -115,7 +111,7 @@ module.exports = function (loginState) {
                 );
             }
             courseInfoWindow.add(text(JSON.stringify(info, null, 4)));
-            courseInfoWindow.show();
+            showCourseInfoWindow.set(true);
         }
     }
 
@@ -188,6 +184,7 @@ module.exports = function (loginState) {
 
     return div('courseSchedule',
         {onRender, onDestroy},
+        ShowIf(showCourseInfoWindow, courseInfoWindow),
         div('courseScheduleInfo',
             span(scheduleStudentInfo)
         ),

@@ -56,7 +56,7 @@
  */
 
 /*ExcludeStart*/
-const {div, input, button, table, thead, tbody, span, text, svg} = require('../domHelper');
+const {div, input, button, table, thead, tbody, span, text, svg, Signal, State} = require('../domHelper');
 /*ExcludeEnd*/
 const styles = require('./courseSearch.css');
 
@@ -85,15 +85,17 @@ module.exports = function () {
     function search() {
         if (searching) return;
         searching = true;
+        // get all course ID
         if (!nckuHubCourseID) {
             fetchApi('/nckuhub').then(i => {
-                nckuHubCourseID = i;
+                nckuHubCourseID = i.data;
                 searching = false;
                 search();
             });
             return;
         }
 
+        // generate query string
         const queryData = [];
         for (const /**@type HTMLElement*/ node of courseSearchForm.childNodes) {
             if (!(node instanceof HTMLInputElement)) continue;
@@ -104,7 +106,8 @@ module.exports = function () {
         const queryString = queryData.join('&');
         if (queryString === lastQueryString) return;
         lastQueryString = queryString;
-        console.log(queryString);
+
+        // fetch data
         fetchApi('/search?' + queryString).then(onSearchResult);
     }
 
@@ -134,14 +137,39 @@ module.exports = function () {
         }
 
         for (const data of result.data) {
+            const nckuHubData = new Signal();
             const info = div('courseInfo',
                 expendArrow.cloneNode(true),
                 span(data.dn, 'departmentName', {style: `width:${deptLen}px`}),
                 span(data.sn, 'serialNumber'),
                 span(data.parseedTime, 'courseTime', {style: `width:${timeLen}px`}),
                 span(data.cn, 'courseName'),
+
+                span(State(nckuHubData, (state) => {
+                    if (state) {
+                        const got = parseFloat(state.got);
+                        const sweet = parseFloat(state.sweet);
+                        const cold = parseFloat(state.cold);
+                        if (got === 0 && sweet === 0 && cold === 0)
+                            return 'no result';
+                        return got.toFixed(2) + ' ' +
+                            sweet.toFixed(2) + ' ' +
+                            cold.toFixed(2);
+                    }
+                    return null;
+                }), 'nckuHubData'),
+                // span(data.cn, 'got'),
+                // span(data.cn, 'sweet'),
+                // span(data.cn, 'cold'),
             )
             searchResult.appendChild(info);
+
+            // get ncku hub data
+            const deptAndID = data.sn.split('-');
+            let nckuHubID = nckuHubCourseID[deptAndID[0]];
+            if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
+            if (data.sn.length > 0 && nckuHubID)
+                fetchApi('/nckuhub?id=' + nckuHubID).then(i => nckuHubData.set(i.data));
         }
         searching = false;
     }

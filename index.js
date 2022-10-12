@@ -1,6 +1,27 @@
 'use strict';
 const {
-    Signal, ShowIf, QueryRouter, div, nav, ul, li, input, button, table, thead, tbody, iframe, p, span, h1, a, text, img, svg, label
+    Signal,
+    ShowIf,
+    QueryRouter,
+    div,
+    nav,
+    ul,
+    li,
+    input,
+    button,
+    table,
+    thead,
+    tbody,
+    iframe,
+    p,
+    span,
+    h1,
+    a,
+    text,
+    img,
+    svg,
+    label,
+    State
 } = require('./res/domHelper');
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
@@ -8,7 +29,7 @@ const apiEndPoint = location.hostname === 'localhost'
 
 (async function main() {
     let login = false;
-    const loginState = new Signal(false, ['登入', '登出']);
+    const loginState = new Signal(false);
     const showLoginWindow = new Signal(false);
 
     const queryRouter =
@@ -31,14 +52,14 @@ const apiEndPoint = location.hostname === 'localhost'
         // 選單列
         nav('navbar', ul(null,
             li('loginBtn',
-                button(null, loginState, () => {
+                button(null, State(loginState, (state) => state ? '登出' : '登入'), () => {
                     if (login) fetchApi('/logout').then(onLoginStateChange);
-                    else showLoginWindow.set(!showLoginWindow.get());
+                    else showLoginWindow.set(!showLoginWindow.state);
                 })
             ),
             ...queryRouter.getRoutesName().map(i =>
                 li('./?' + i,
-                    a(null, navPageButtonName[i], null, () => queryRouter.openPage(i))
+                    a(navPageButtonName[i], null, null, () => queryRouter.openPage(i))
                 )
             ),
         )),

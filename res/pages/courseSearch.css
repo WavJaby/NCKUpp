@@ -41,3 +41,7 @@
 .courseSearch > .result .courseClass {
     display: inline-block;
 }
+
+.courseSearch > .result .nckuHubData {
+    float: right;
+}
