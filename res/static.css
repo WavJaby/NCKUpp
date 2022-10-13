@@ -69,7 +69,3 @@ input:-webkit-autofill {
     -webkit-text-fill-color: var(--text-color) !important;
     caret-color: var(--text-color) !important;
 }
-
-.root > div:last-of-type {
-    overflow: auto;
-}

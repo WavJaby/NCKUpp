@@ -8,19 +8,41 @@
 
 .courseSearch > .result {
     font-size: 18px;
+    white-space: nowrap;
 }
 
-.courseSearch > .result .expendDownArrow{
-    height: 1em;
-    margin-right: 5px;
+/*Course header*/
+.courseSearch > .result > .header > .departmentName {
+    margin-left: 1.2em;
 }
 
-.courseSearch > .result > .courseInfo {
-    background: black;
+.courseSearch > .result > .header {
+    position: sticky;
+    top: 0;
+    background: dimgray;
+    margin: 10px;
+    padding: 10px;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/*Course info*/
+.courseSearch > .result > .body > .info {
+    background: #0D1117;
     margin: 10px;
     padding: 10px;
     display: block;
     border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+}
+
+.courseSearch > .result .expendDownArrow {
+    height: 1em;
+    margin-right: 0.2em;
+    transform: rotate(-90deg);
+    transition: 0.2s transform;
 }
 
 .courseSearch > .result .departmentName {
@@ -42,6 +64,28 @@
     display: inline-block;
 }
 
-.courseSearch > .result .nckuHubData {
-    float: right;
+.courseSearch > .result .nckuhub {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.courseSearch > .result .nckuhub > span {
+    display: inline-block;
+    width: 4em;
+    text-align: right;
+}
+
+/*Course detail*/
+.courseSearch > .result > .body > .info.extend .expendDownArrow {
+    transform: rotate(0);
+}
+
+.courseSearch > .result > .body > .info .details {
+    border-top: solid 1px gray;
+    padding: 10px;
+}
+
+.courseSearch > .result > .body > .info .details > span {
+    display: block;
 }

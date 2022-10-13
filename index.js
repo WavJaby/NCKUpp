@@ -21,7 +21,9 @@ const {
     img,
     svg,
     label,
-    State
+    TextState,
+    State,
+    ClassList
 } = require('./res/domHelper');
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
@@ -46,13 +48,12 @@ const apiEndPoint = location.hostname === 'localhost'
     fetchApi('/login').then(onLoginStateChange);
 
     document.body.appendChild(div('root',
-        ShowIf(showLoginWindow,
-            LoginWindow(onLoginStateChange)
-        ),
+        // Pages
+        queryRouter,
         // 選單列
         nav('navbar', ul(null,
             li('loginBtn',
-                button(null, State(loginState, (state) => state ? '登出' : '登入'), () => {
+                button(null, TextState(loginState, (state) => state ? '登出' : '登入'), () => {
                     if (login) fetchApi('/logout').then(onLoginStateChange);
                     else showLoginWindow.set(!showLoginWindow.state);
                 })
@@ -63,8 +64,9 @@ const apiEndPoint = location.hostname === 'localhost'
                 )
             ),
         )),
-        // Pages
-        queryRouter
+        ShowIf(showLoginWindow,
+            LoginWindow(onLoginStateChange)
+        ),
     ));
 
     function onLoginStateChange(response) {

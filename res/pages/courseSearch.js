@@ -56,7 +56,7 @@
  */
 
 /*ExcludeStart*/
-const {div, input, button, table, thead, tbody, span, text, svg, Signal, State} = require('../domHelper');
+const {div, input, button, span, svg, Signal, State, ClassList} = require('../domHelper');
 /*ExcludeEnd*/
 const styles = require('./courseSearch.css');
 
@@ -136,33 +136,53 @@ module.exports = function () {
                 timeLen = cache;
         }
 
+        searchResult.appendChild(div('header',
+            span('Dept', 'departmentName', {style: `width:${deptLen}px`}),
+            span('Serial', 'serialNumber'),
+            span('Time', 'courseTime', {style: `width:${timeLen}px`}),
+            span('Name', 'courseName'),
+            div('nckuhub',
+                span('Reward', 'reward'),
+                span('Sweet', 'sweet'),
+                span('Cold', 'cold'),
+            ),
+        ));
+        const body = div('body');
+        searchResult.appendChild(body);
+
         for (const data of result.data) {
             const nckuHubData = new Signal();
-            const info = div('courseInfo',
+            const courseInfo = new Signal();
+            const infoClass = new ClassList('info');
+            body.appendChild(div(infoClass, {
+                    onclick: toggleCourseDetails,
+                    onmousedown: (e) => {if (e.detail > 1) e.preventDefault();},
+                },
                 expendArrow.cloneNode(true),
                 span(data.dn, 'departmentName', {style: `width:${deptLen}px`}),
                 span(data.sn, 'serialNumber'),
                 span(data.parseedTime, 'courseTime', {style: `width:${timeLen}px`}),
                 span(data.cn, 'courseName'),
 
-                span(State(nckuHubData, (state) => {
+                State(nckuHubData, (state) => {
                     if (state) {
-                        const got = parseFloat(state.got);
+                        if (state.noNckuHubID)
+                            return span('No result', 'nckuhub');
+                        const reward = parseFloat(state.got);
                         const sweet = parseFloat(state.sweet);
                         const cold = parseFloat(state.cold);
-                        if (got === 0 && sweet === 0 && cold === 0)
-                            return 'no result';
-                        return got.toFixed(2) + ' ' +
-                            sweet.toFixed(2) + ' ' +
-                            cold.toFixed(2);
+                        if (reward === 0 && sweet === 0 && cold === 0)
+                            return span('No result', 'nckuhub');
+                        return div('nckuhub',
+                            span(reward.toFixed(1), 'reward'),
+                            span(sweet.toFixed(1), 'sweet'),
+                            span(cold.toFixed(1), 'cold'),
+                        );
                     }
-                    return null;
-                }), 'nckuHubData'),
-                // span(data.cn, 'got'),
-                // span(data.cn, 'sweet'),
-                // span(data.cn, 'cold'),
-            )
-            searchResult.appendChild(info);
+                    return span('Loading...', 'nckuhub');
+                }),
+                courseInfo,
+            ));
 
             // get ncku hub data
             const deptAndID = data.sn.split('-');
@@ -170,8 +190,28 @@ module.exports = function () {
             if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
             if (data.sn.length > 0 && nckuHubID)
                 fetchApi('/nckuhub?id=' + nckuHubID).then(i => nckuHubData.set(i.data));
+            else
+                nckuHubData.set({noNckuHubID: true});
+
+            toggleCourseDetails();
+
+            function toggleCourseDetails() {
+                renderCourseDetails(infoClass.toggle('extend'), courseInfo, data);
+            }
         }
         searching = false;
+    }
+
+    function renderCourseDetails(show, courseInfo, data) {
+        if (courseInfo.state == null)
+            courseInfo.set(div('expandable', div('details',
+                span(data.ci),
+                span(data.cl),
+            )));
+        if (show)
+            courseInfo.state.style.height = courseInfo.state.firstChild.clientHeight + "px";
+        else
+            courseInfo.state.style.height = null;
     }
 
     return courseSearchForm = div('courseSearch',
