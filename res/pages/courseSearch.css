@@ -89,3 +89,86 @@
 .courseSearch > .result > .body > .info .details > span {
     display: block;
 }
+
+.courseSearch > .result > .body > .info .details > .info:before {
+    content: url('./res/assets/info_icon.svg');
+    display: inline-block;
+    width: 1em;
+    vertical-align: middle;
+}
+
+.courseSearch > .result > .body > .info .details > .limit:before {
+    content: url('./res/assets/warn_icon.svg');
+    display: inline-block;
+    width: 1em;
+    vertical-align: middle;
+}
+
+.courseSearch > .result > .body > .info .details > .instructor {
+    font-size: 16px;
+}
+
+/*Popup window*/
+.courseSearch > .result > .popupWindow {
+    background: rgba(0, 0, 0, 0.6);
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: none;
+    z-index: 2;
+}
+
+.courseSearch > .result > .popupWindow.open {
+    display: block;
+}
+
+.courseSearch > .result > .popupWindow > div {
+    background: rgba(0, 0, 0);
+    top: 100px;
+    bottom: 100px;
+    left: 100px;
+    right: 100px;
+    position: absolute;
+    margin: auto;
+    overflow: auto;
+}
+
+.courseSearch > .result > .popupWindow > div {
+    white-space: pre-wrap;
+}
+
+.courseSearch > .result > .popupWindow .rates {
+    width: 100%;
+    display: table;
+    table-layout: fixed;
+    text-align: center;
+}
+
+.courseSearch > .result > .popupWindow .rates > div {
+    display: table-cell;
+}
+
+.courseSearch > .result > .popupWindow .rates > div > .rateBox {
+    background: gray;
+    width: 7em;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+.courseSearch > .result > .popupWindow .rates .rateBox > span {
+    display: block;
+}
+
+.courseSearch > .result > .popupWindow .comments > .commentBlock {
+    background: gray;
+    margin: 0 10px 10px 10px;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.courseSearch > .result > .popupWindow .comments > .commentBlock > span {
+    display: block;
+}
+

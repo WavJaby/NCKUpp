@@ -115,3 +115,7 @@
     transition: height 0.2s;
     overflow: hidden;
 }
+
+.red {
+    color: #dd3333;
+}

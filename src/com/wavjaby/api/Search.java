@@ -21,8 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -137,14 +135,14 @@ public class Search implements HttpHandler {
 //                        }
 //                    }
 
-                    CountDownLatch countDownLatch = new CountDownLatch(allDept.size());
-                    AtomicBoolean allSuccess = new AtomicBoolean(true);
-                    for (String deptNo : allDept) {
-                        pool.submit(() -> {
-                            if (!getDept(deptNo, crypt, cookieStore, outData, searchResult))
-                                allSuccess.set(false);
-                            countDownLatch.countDown();
-                        });
+//                    CountDownLatch countDownLatch = new CountDownLatch(allDept.size());
+//                    AtomicBoolean allSuccess = new AtomicBoolean(true);
+//                    for (String deptNo : allDept) {
+//                        pool.submit(() -> {
+//                            if (!getDept(deptNo, crypt, cookieStore, outData, searchResult))
+//                                allSuccess.set(false);
+//                            countDownLatch.countDown();
+//                        });
 //                        if (!postSearchData(
 //                                null, null, null, deptNo, null, null, null,
 //                                searchID, cookieStore, outData, searchResult
@@ -152,10 +150,16 @@ public class Search implements HttpHandler {
 //                            success = false;
 //                            break;
 //                        }
+//                    }
+//                    countDownLatch.await();
+//                    if (!allSuccess.get())
+//                        success = false;
+                    for (String deptNo : allDept) {
+                        if (!getDept(deptNo, crypt, cookieStore, outData, searchResult)) {
+                            success = false;
+                            break;
+                        }
                     }
-                    countDownLatch.await();
-                    if (!allSuccess.get())
-                        success = false;
                 }
             }
             // get listed serial
@@ -246,6 +250,7 @@ public class Search implements HttpHandler {
             }
 
             String searchResultBody = result.body();
+//            cosPreCheck(searchResultBody, cookieStore, outData);
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {

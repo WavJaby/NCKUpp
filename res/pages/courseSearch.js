@@ -55,8 +55,41 @@
  * }} CourseData
  */
 
+/**
+ * @typedef {{
+ *     got: float,
+ *     sweet: float,
+ *     cold: float,
+ *     rate_count: int,
+ *     comment: [{
+ *         id: int,
+ *         comment: string,
+ *         semester: string
+ *     }],
+ *
+ *     parsedRates: {
+ *         post_id: {
+ *             id: int,
+ *             user_id: int,
+ *             post_id: int,
+ *             got: int,
+ *             sweet: int,
+ *             cold: int,
+ *             like: int,
+ *             dislike: int,
+ *             hard: int,
+ *             recommand: int,
+ *             give: int,
+ *             course_name: string,
+ *             teacher: string
+ *         }
+ *     },
+ *     noData: boolean
+ * }} NckuHub
+ */
+
 /*ExcludeStart*/
-const {div, input, button, span, svg, Signal, State, ClassList} = require('../domHelper');
+const {div, input, button, span, svg, Signal, State, ClassList, br} = require('../domHelper');
 /*ExcludeEnd*/
 const styles = require('./courseSearch.css');
 
@@ -104,9 +137,13 @@ module.exports = function () {
                 queryData.push(node.name + '=' + encodeURIComponent(value));
         }
         const queryString = queryData.join('&');
-        if (queryString === lastQueryString) return;
+        if (queryString === lastQueryString) {
+            searching = false;
+            return;
+        }
         lastQueryString = queryString;
 
+        console.log('Search');
         // fetch data
         fetchApi('/search?' + queryString).then(onSearchResult);
     }
@@ -120,7 +157,11 @@ module.exports = function () {
 
         const font = getComputedStyle(searchResult).font;
         const canvas = new Canvas(font);
+        const nckuHubRequestIDs = [];
+        const nckuHubResponseData = {};
+        const popupWindow = PopupWindow();
 
+        // parse result
         let deptLen = 0;
         let timeLen = 0;
         for (const data of result.data) {
@@ -134,8 +175,43 @@ module.exports = function () {
             data.parseedTime = data.t.map(i => '[' + i[0] + ']' + i[1]).join(', ');
             if ((cache = canvas.measureText(data.parseedTime).width + 1) > timeLen)
                 timeLen = cache;
+
+            // nckuhub
+            const deptAndID = data.sn.split('-');
+            let nckuHubID = nckuHubCourseID[deptAndID[0]];
+            if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
+            if (data.sn.length > 0 && nckuHubID) {
+                nckuHubRequestIDs.push(nckuHubID);
+                nckuHubResponseData[data.sn] = (new Signal());
+            }
         }
 
+        // get nckuhub data
+        const chunkSize = 5;
+        const nckuHubResponseDataArr = Object.values(nckuHubResponseData);
+        for (let i = 0; i < nckuHubRequestIDs.length; i += chunkSize) {
+            const chunk = nckuHubRequestIDs.slice(i, i + chunkSize);
+            fetchApi('/nckuhub?id=' + chunk.join(',')).then(({data}) => {
+                for (let j = 0; j < chunk.length; j++) {
+                    /**@type NckuHub*/
+                    const nckuhub = data[j];
+                    nckuhub.got = parseFloat(nckuhub.got);
+                    nckuhub.sweet = parseFloat(nckuhub.sweet);
+                    nckuhub.cold = parseFloat(nckuhub.cold);
+
+                    nckuhub.noData = nckuhub.rate_count === 0 && nckuhub.comment.length === 0;
+
+                    nckuhub.parsedRates = nckuhub.rates.reduce((a, v) => {
+                        a[v.post_id] = v;
+                        return a;
+                    }, {});
+                    delete data[j].rates;
+                    nckuHubResponseDataArr[i + j].set(nckuhub);
+                }
+            });
+        }
+
+        // add header
         searchResult.appendChild(div('header',
             span('Dept', 'departmentName', {style: `width:${deptLen}px`}),
             span('Serial', 'serialNumber'),
@@ -144,74 +220,78 @@ module.exports = function () {
             div('nckuhub',
                 span('Reward', 'reward'),
                 span('Sweet', 'sweet'),
-                span('Cold', 'cold'),
+                span('Cool', 'cool'),
             ),
         ));
+        // add body
         const body = div('body');
         searchResult.appendChild(body);
+        searchResult.appendChild(popupWindow);
 
+        // add result
         for (const data of result.data) {
-            const nckuHubData = new Signal();
-            const courseInfo = new Signal();
             const infoClass = new ClassList('info');
+            const expendButton = expendArrow.cloneNode(true);
+            expendButton.onclick = toggleCourseDetails;
+            const nckuHubData = nckuHubResponseData[data.sn];
+
+            let courseDetails;
+
             body.appendChild(div(infoClass, {
-                    onclick: toggleCourseDetails,
+                    onclick: openNckuHubDetails,
                     onmousedown: (e) => {if (e.detail > 1) e.preventDefault();},
                 },
-                expendArrow.cloneNode(true),
-                span(data.dn, 'departmentName', {style: `width:${deptLen}px`}),
-                span(data.sn, 'serialNumber'),
-                span(data.parseedTime, 'courseTime', {style: `width:${timeLen}px`}),
-                span(data.cn, 'courseName'),
+                div(null,
+                    expendButton,
+                    span(data.dn, 'departmentName', {style: `width:${deptLen}px`}),
+                    span(data.sn, 'serialNumber'),
+                    span(data.parseedTime, 'courseTime', {style: `width:${timeLen}px`}),
+                    span(data.cn, 'courseName'),
+                ),
 
-                State(nckuHubData, (state) => {
-                    if (state) {
-                        if (state.noNckuHubID)
-                            return span('No result', 'nckuhub');
-                        const reward = parseFloat(state.got);
-                        const sweet = parseFloat(state.sweet);
-                        const cold = parseFloat(state.cold);
-                        if (reward === 0 && sweet === 0 && cold === 0)
-                            return span('No result', 'nckuhub');
-                        return div('nckuhub',
-                            span(reward.toFixed(1), 'reward'),
-                            span(sweet.toFixed(1), 'sweet'),
-                            span(cold.toFixed(1), 'cold'),
-                        );
-                    }
-                    return span('Loading...', 'nckuhub');
-                }),
-                courseInfo,
+                // ncku Hub
+                nckuHubData
+                    ? State(nckuHubData, /**@param {NckuHub} nckuhub*/(nckuhub) => {
+                        if (nckuhub) {
+                            if (nckuhub.noData) return div();
+
+                            const reward = nckuhub.got;
+                            const sweet = nckuhub.sweet;
+                            const cool = nckuhub.cold;
+                            return div('nckuhub',
+                                span(reward.toFixed(1), 'reward'),
+                                span(sweet.toFixed(1), 'sweet'),
+                                span(cool.toFixed(1), 'cool'),
+                            );
+                        }
+                        return span('Loading...', 'nckuhub');
+                    })
+                    : div(),
+
+                // details
+                courseDetails = div('expandable', div('details',
+                    data.ci.length > 0 ? span(data.ci, 'info') : null,
+                    data.cl.length > 0 ? span(data.cl, 'limit red') : null,
+                    span('Instructor: ' + data.ts, 'instructor'),
+                )),
             ));
-
-            // get ncku hub data
-            const deptAndID = data.sn.split('-');
-            let nckuHubID = nckuHubCourseID[deptAndID[0]];
-            if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
-            if (data.sn.length > 0 && nckuHubID)
-                fetchApi('/nckuhub?id=' + nckuHubID).then(i => nckuHubData.set(i.data));
-            else
-                nckuHubData.set({noNckuHubID: true});
 
             toggleCourseDetails();
 
             function toggleCourseDetails() {
-                renderCourseDetails(infoClass.toggle('extend'), courseInfo, data);
+                const show = infoClass.toggle('extend');
+                if (show)
+                    courseDetails.style.height = courseDetails.firstChild.clientHeight + "px";
+                else
+                    courseDetails.style.height = null;
+            }
+
+            function openNckuHubDetails() {
+                if (!nckuHubData || !nckuHubData.state || nckuHubData.state.noData) return;
+                popupWindow.set([nckuHubData.state, data]);
             }
         }
         searching = false;
-    }
-
-    function renderCourseDetails(show, courseInfo, data) {
-        if (courseInfo.state == null)
-            courseInfo.set(div('expandable', div('details',
-                span(data.ci),
-                span(data.cl),
-            )));
-        if (show)
-            courseInfo.state.style.height = courseInfo.state.firstChild.clientHeight + "px";
-        else
-            courseInfo.state.style.height = null;
     }
 
     return courseSearchForm = div('courseSearch',
@@ -227,6 +307,51 @@ module.exports = function () {
         searchResult
     );
 };
+
+function PopupWindow() {
+    const popupSignal = new Signal();
+    const popupClass = new ClassList('popupWindow');
+    const popupState = State(popupSignal, /**@param {[NckuHub, CourseData]} data*/(data) => {
+        if (!data) return div();
+        const [nckuhub, ncku] = data;
+        popupClass.add('open');
+        return div(null,
+            button(null, 'x', () => popupClass.remove('open')),
+            // rates
+            span(`Evaluation(${nckuhub.rate_count})`, 'title'),
+            div('rates',
+                div(null, div('rateBox',
+                    span('Reward'),
+                    span(nckuhub.got.toFixed(1)),
+                )),
+                div(null, div('rateBox',
+                    span('Sweetness'),
+                    span(nckuhub.sweet.toFixed(1)),
+                )),
+                div(null, div('rateBox',
+                    span('Cool'),
+                    span(nckuhub.cold.toFixed(1)),
+                )),
+            ),
+            // comment
+            span(`Comments(${nckuhub.comment.length})`, 'title'),
+            div('comments',
+                ...nckuhub.comment.map(comment => div('commentBlock',
+                    span(comment.semester, 'semester'),
+                    span(comment.comment, 'comment'),
+                )),
+            ),
+            br(),
+            br(),
+            br(),
+            br(),
+            span(JSON.stringify(nckuhub, null, 2)),
+        );
+    });
+    const popupWindow = div(popupClass, popupState);
+    popupWindow.set = popupSignal.set;
+    return popupWindow;
+}
 
 function Canvas(font) {
     const canvas = document.createElement("canvas");

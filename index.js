@@ -17,6 +17,7 @@ const {
     span,
     h1,
     a,
+    br,
     text,
     img,
     svg,

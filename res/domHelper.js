@@ -156,8 +156,8 @@ function parseClassInput(className, element) {
 }
 
 /**
- * @param defaultPage
- * @param Routs
+ * @param {string} defaultPage
+ * @param {{pageName:function()|HTMLElement}} Routs
  * */
 function QueryRouter(defaultPage, Routs) {
     const routerRoot = document.createElement('div');
@@ -236,7 +236,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLDivElement
+     * @return {HTMLDivElement}
      * */
     div(classN, ...options) {
         const element = document.createElement('div');
@@ -248,7 +248,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLElement
+     * @return {HTMLElement}
      * */
     nav(classN, ...options) {
         const element = document.createElement('nav');
@@ -260,7 +260,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLUListElement
+     * @return {HTMLUListElement}
      * */
     ul(classN, ...options) {
         const element = document.createElement('ul');
@@ -272,7 +272,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLLIElement
+     * @return {HTMLLIElement}
      * */
     li(classN, ...options) {
         const element = document.createElement('li');
@@ -286,7 +286,7 @@ module.exports = {
      * @param {string} [placeholder]
      * @param {string} [id]
      * @param [options] Options for element
-     * @return HTMLInputElement
+     * @return {HTMLInputElement}
      * */
     input(classN, placeholder, id, ...options) {
         const element = document.createElement('input');
@@ -302,7 +302,7 @@ module.exports = {
      * @param {string | Signal | TextState | TextStateChanger} text
      * @param {string} forId
      * @param [options] Options for element
-     * @return HTMLLabelElement
+     * @return {HTMLLabelElement}
      * */
     label(classN, text, forId, ...options) {
         const element = document.createElement('label');
@@ -318,7 +318,7 @@ module.exports = {
      * @param {string | Signal | TextState | TextStateChanger} [text]
      * @param {function(MouseEvent)} [onClick]
      * @param [options] Options for element
-     * @return HTMLButtonElement
+     * @return {HTMLButtonElement}
      * */
     button(classN, text, onClick, ...options) {
         const element = document.createElement('button');
@@ -332,7 +332,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLTableElement
+     * @return {HTMLTableElement}
      * */
     table(classN, ...options) {
         const element = document.createElement('table');
@@ -344,7 +344,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLTableSectionElement
+     * @return {HTMLTableSectionElement}
      * */
     thead(classN, ...options) {
         const element = document.createElement('thead');
@@ -356,7 +356,7 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLTableSectionElement
+     * @return {HTMLTableSectionElement}
      * */
     tbody(classN, ...options) {
         const element = document.createElement('tbody');
@@ -369,7 +369,7 @@ module.exports = {
      * @param {string} url Url
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLIFrameElement
+     * @return {HTMLIFrameElement}
      * */
     iframe(url, classN, ...options) {
         const element = document.createElement('iframe');
@@ -383,7 +383,7 @@ module.exports = {
      * @param {string | Signal | TextState | TextStateChanger} text
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLParagraphElement
+     * @return {HTMLParagraphElement}
      * */
     p(text, classN, ...options) {
         const element = document.createElement('p');
@@ -397,7 +397,7 @@ module.exports = {
      * @param {string | Signal | TextState | TextStateChanger} text
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLSpanElement
+     * @return {HTMLSpanElement}
      * */
     span(text, classN, ...options) {
         const element = document.createElement('span');
@@ -411,7 +411,7 @@ module.exports = {
      * @param {string | Signal | TextState | TextStateChanger} text
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLHeadingElement
+     * @return {HTMLHeadingElement}
      * */
     h1(text, classN, ...options) {
         const element = document.createElement('h1');
@@ -427,7 +427,7 @@ module.exports = {
      * @param {string | ClassList} [classN] Class Name
      * @param {function(MouseEvent)} [onClick]
      * @param [options] Options for element
-     * @return HTMLAnchorElement
+     * @return {HTMLAnchorElement}
      * */
     a(text, href, classN, onClick, ...options) {
         const element = document.createElement('a');
@@ -440,18 +440,25 @@ module.exports = {
     },
 
     /**
-     * @param {string} text
-     * @return Text
-     * */
+     * @param {String} text
+     * @return {Text}
+     */
     text(text) {
         return document.createTextNode(text);
+    },
+
+    /**
+     * @return {HTMLBRElement}
+     */
+    br() {
+        return document.createElement('br')
     },
 
     /**
      * @param {string} url
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLImageElement
+     * @return {HTMLImageElement}
      * */
     img(url, classN, ...options) {
         const element = document.createElement('img');
@@ -465,7 +472,7 @@ module.exports = {
      * @param {string} url
      * @param {string} [classN] Class Name
      * @param [options] Options for element
-     * @return HTMLElement
+     * @return {HTMLElement}
      * */
     svg(url, classN, ...options) {
         const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;

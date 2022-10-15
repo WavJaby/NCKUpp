@@ -72,9 +72,8 @@ public class NCKUHub implements HttpHandler {
                 req.close();
             } catch (IOException e) {
                 req.close();
-                e.printStackTrace();
             }
-            System.out.println("[NCKUhub] Get nckuhub " + (System.currentTimeMillis() - startTime) + "ms");
+            System.out.println("[NCKU Hub] Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 
@@ -85,13 +84,26 @@ public class NCKUHub implements HttpHandler {
             data.append("err", "[NCKU Hub] Query id not found");
             return false;
         }
+        String[] nckuIDs = nckuID.split(",");
 
         try {
-            Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + nckuID)
-                    .ignoreContentType(true)
-                    .execute();
-            String body = nckuhubCourse.body();
-            data.append("data", body, true);
+            StringBuilder builder = new StringBuilder();
+            for (String id : nckuIDs) {
+                Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + id)
+                        .ignoreContentType(true)
+                        .execute();
+//                JsonObject jsonObject = new JsonObject(nckuhubCourse.body());
+//                JsonObject courseInfo = jsonObject.getJson("courseInfo");
+//                String serialNumber = courseInfo.getString("選課序號");
+                builder.append(',').append(nckuhubCourse.body());
+            }
+            if (builder.length() > 0)
+                builder.setCharAt(0, '[');
+            else
+                builder.append('[');
+            builder.append(']');
+
+            data.append("data", builder.toString(), true);
         } catch (IOException e) {
             e.printStackTrace();
             data.append("err", "[NCKU Hub] Unknown error: " + Arrays.toString(e.getStackTrace()));
