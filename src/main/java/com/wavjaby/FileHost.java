@@ -3,17 +3,32 @@ package com.wavjaby;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.logger.Logger;
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.Properties;
 
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.pool;
 
 public class FileHost implements HttpHandler {
+    private static final String TAG = "[FileHost] ";
+    private final File fileRoot;
+
+    public FileHost(Properties serverSettings) {
+        String frontendFilePath = serverSettings.getProperty("frontendFilePath");
+        if (frontendFilePath == null) {
+            frontendFilePath = "./";
+            Logger.warn(TAG, "Frontend file path not found, using current path");
+        }
+        fileRoot = new File(frontendFilePath);
+        if (!fileRoot.exists())
+            Logger.err(TAG, "Frontend file path not found");
+    }
+
     @Override
     public void handle(HttpExchange req) {
         pool.submit(() -> {
@@ -23,9 +38,9 @@ public class FileHost implements HttpHandler {
                 InputStream in = null;
                 if (path.equals("/NCKUpp/")) {
                     responseHeader.set("Content-Type", "text/html; charset=UTF-8");
-                    in = Files.newInputStream(Paths.get("./index.html"));
+                    in = Files.newInputStream(new File(fileRoot, "index.html").toPath());
                 } else {
-                    File file = new File("./", path.substring(8));
+                    File file = new File(fileRoot, path.substring(8));
                     if (file.exists()) {
                         if (path.endsWith(".js"))
                             responseHeader.set("Content-Type", "application/javascript; charset=UTF-8");

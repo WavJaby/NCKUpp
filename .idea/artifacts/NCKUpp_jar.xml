@@ -1,5 +1,5 @@
 <component name="ArtifactManager">
-  <artifact type="jar" name="NCKUpp.jar">
+  <artifact type="jar" name="NCKUpp:jar">
     <output-path>$PROJECT_DIR$/out</output-path>
     <root id="archive" name="NCKUpp.jar">
       <element id="module-output" name="NCKUpp" />

@@ -1,15 +1,19 @@
 package com.wavjaby;
 
-import com.sun.net.httpserver.HttpServer;
 import com.wavjaby.api.*;
+import com.wavjaby.logger.Logger;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
 public class Main {
+    public static final String TAG = "[Main] ";
     public static final String courseNcku = "course.ncku.edu.tw";
     public static final String portalNcku = "fs.ncku.edu.tw";
 
@@ -26,17 +30,33 @@ public class Main {
 
     Main() {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
-        HttpServer server;
+
+        Properties serverSettings = new Properties();
         try {
-            server = HttpServer.create(new InetSocketAddress(8080), 0);
+            File file = new File("./server.properties");
+            if (!file.exists()) {
+                Logger.log(TAG, "Server properties not found, create default.");
+                InputStream stream = Main.class.getResourceAsStream("/server.properties");
+                if (stream == null) {
+                    Logger.log(TAG, "Default server properties not found.");
+                    return;
+                }
+                Files.copy(stream, file.toPath());
+                stream.close();
+                stream = Main.class.getResourceAsStream("/server.properties");
+                assert stream != null;
+                serverSettings.load(stream);
+                stream.close();
+            } else
+                serverSettings.load(Files.newInputStream(file.toPath()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        // server
-//        HttpsServer server = new HttpsServer(443, "key/key.keystore", "key/key.properties");
+        HttpServer server = new HttpServer(serverSettings);
+        if (!server.Opened) return;
 
-        server.createContext("/NCKUpp/", new FileHost());
+        server.createContext("/NCKUpp/", new FileHost(serverSettings));
         server.createContext("/api/login", new Login());
         server.createContext("/api/logout", new Logout());
         server.createContext("/api/courseSchedule", new CourseSchedule());
@@ -45,7 +65,7 @@ public class Main {
         server.createContext("/api/nckuhub", new NCKUHub());
 
         server.start();
-        System.out.println("Server started");
+        Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
     }
 
     @SuppressWarnings("ALL")
