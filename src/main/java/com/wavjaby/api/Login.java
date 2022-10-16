@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -22,6 +23,8 @@ import static com.wavjaby.Main.*;
 
 
 public class Login implements HttpHandler {
+    private static final String TAG = "[Login] ";
+
     @Override
     public void handle(HttpExchange req) {
         pool.execute(() -> {
@@ -58,7 +61,7 @@ public class Login implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("[Login] Login " + (System.currentTimeMillis() - startTime) + "ms");
+            Logger.log(TAG, "Login " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 

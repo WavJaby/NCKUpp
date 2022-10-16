@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -22,6 +23,7 @@ import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.pool;
 
 public class NCKUHub implements HttpHandler {
+    private static final String TAG = "[NCKU Hub] ";
 
     private JsonObject nckuHubCourseID;
     private final long courseIDUpdateInterval = 5 * 60 * 1000;
@@ -47,6 +49,7 @@ public class NCKUHub implements HttpHandler {
                 boolean success = true;
                 if (queryString == null) {
                     // get courseID
+                    Logger.log(TAG, System.currentTimeMillis() - lastCourseIDUpdateTime);
                     if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
                         success = updateNckuHubCourseID();
                     if (success)
@@ -73,7 +76,7 @@ public class NCKUHub implements HttpHandler {
             } catch (IOException e) {
                 req.close();
             }
-            System.out.println("[NCKU Hub] Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
+            Logger.log(TAG, "Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 
@@ -115,7 +118,7 @@ public class NCKUHub implements HttpHandler {
 
     private boolean updateNckuHubCourseID() {
         try {
-            System.out.println("[NCKU Hub] Update course id");
+            Logger.log(TAG, "Update course id");
             Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/")
                     .ignoreContentType(true)
                     .execute();
@@ -138,7 +141,7 @@ public class NCKUHub implements HttpHandler {
             return true;
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("[NCKU Hub] Update course id failed");
+            Logger.err(TAG, "Update course id failed");
             return false;
         }
     }

@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
@@ -26,6 +27,8 @@ import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.pool;
 
 public class CourseSchedule implements HttpHandler {
+    private static final String TAG = "[Schedule] ";
+
     @Override
     public void handle(HttpExchange req) {
         pool.submit(() -> {
@@ -59,7 +62,7 @@ public class CourseSchedule implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("[Schedule] Get schedule " + (System.currentTimeMillis() - startTime) + "ms");
+            Logger.log(TAG, "Get schedule " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 

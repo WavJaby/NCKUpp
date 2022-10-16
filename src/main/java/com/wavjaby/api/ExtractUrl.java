@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -22,6 +23,8 @@ import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.pool;
 
 public class ExtractUrl implements HttpHandler {
+    private static final String TAG = "[Extract] ";
+
     @Override
     public void handle(HttpExchange req) {
         pool.submit(() -> {
@@ -60,7 +63,7 @@ public class ExtractUrl implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("[Extract] Extract url " + (System.currentTimeMillis() - startTime) + "ms");
+            Logger.log(TAG, "Extract url " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 

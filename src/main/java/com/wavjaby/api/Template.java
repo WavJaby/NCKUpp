@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.logger.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -17,6 +18,8 @@ import static com.wavjaby.Main.pool;
 
 @SuppressWarnings("ALL")
 public class Template implements HttpHandler {
+    private static final String TAG = "[Template] ";
+
     @Override
     public void handle(HttpExchange req) {
         pool.submit(() -> {
@@ -46,7 +49,7 @@ public class Template implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("[Template] Get template " + (System.currentTimeMillis() - startTime) + "ms");
+            Logger.log(TAG, "Get template " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 }

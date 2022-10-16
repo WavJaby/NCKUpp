@@ -38,7 +38,7 @@ public class Lib {
             data.append("warn", "[CosPreCheck] CosPreCheck key not found");
             return;
         }
-//        System.out.println("[CosPreCheck] make cosPreCheck");
+//        Logger.log(TAG, "[CosPreCheck] make cosPreCheck");
 
         long now = System.currentTimeMillis() / 1000;
         try {
@@ -97,7 +97,7 @@ public class Lib {
     public static void setAllowOrigin(Headers requestHeaders, Headers responseHeader) {
         String refererUrl;
         List<String> clientUrl = requestHeaders.get("Referer");
-//        System.out.println("Referer: " + clientUrl);
+//        Logger.log(TAG, "Referer: " + clientUrl);
         if (clientUrl != null && clientUrl.size() > 0)
             refererUrl = clientUrl.get(0);
         else return;

@@ -1,15 +1,50 @@
 package com.wavjaby.logger;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+
 public class Logger {
+    private static final List<ProgressBar> progressBars = new ArrayList<>();
+    private static final ProgressBar.OnProgress onProgress = () -> System.out.print('\r' + renderProgressBar());
+
+    private static final DecimalFormat format = new DecimalFormat("#.##");
+
     public static <T> void log(String tag, T message) {
-        System.out.println(tag + message);
+        if (progressBars.size() > 0)
+            System.out.print('\r' + tag + message + '\n' + renderProgressBar());
+        else
+            System.out.println('\r' + tag + message);
     }
 
     public static <T> void warn(String tag, T message) {
-        System.out.println(tag + message);
+        if (progressBars.size() > 0)
+            System.out.print('\r' + tag + message + '\n' + renderProgressBar());
+        else
+            System.out.println('\r' + tag + message);
     }
 
     public static <T> void err(String tag, T message) {
-        System.err.println(tag + message);
+        if (progressBars.size() > 0)
+            System.out.print('\r' + tag + message + '\n' + renderProgressBar());
+        else
+            System.err.println('\r' + tag + message);
+    }
+
+    private static String renderProgressBar() {
+        StringBuilder builder = new StringBuilder();
+        for (ProgressBar progressBar : progressBars)
+            builder.append(progressBar.tag).append(format.format(progressBar.progress)).append("%  ");
+        return builder.toString();
+    }
+
+    public static void addProgressBar(ProgressBar progressBar) {
+        progressBar.setListener(onProgress);
+        progressBars.add(progressBar);
+    }
+
+    public static void removeProgressBar(ProgressBar progressBar) {
+        System.out.println("\r" + progressBar.tag + format.format(progressBar.progress) + "%");
+        progressBars.remove(progressBar);
     }
 }

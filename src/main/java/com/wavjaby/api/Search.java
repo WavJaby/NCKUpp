@@ -5,6 +5,8 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.logger.Logger;
+import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.*;
@@ -21,6 +23,10 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -31,6 +37,7 @@ import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.pool;
 
 public class Search implements HttpHandler {
+    private static final String TAG = "[Search] ";
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
     private static final DecimalFormat floatFormat = new DecimalFormat("#.#");
 
@@ -89,7 +96,7 @@ public class Search implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-            System.out.println("[Search] Search " + (System.currentTimeMillis() - startTime) + "ms");
+            Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
         });
     }
 
@@ -109,9 +116,10 @@ public class Search implements HttpHandler {
                 String allDeptBody = allDeptRes.body();
                 cosPreCheck(allDeptBody, cookieStore, outData);
 
-                List<String> allDept = new ArrayList<>();
+                List<String> allDeptList = new ArrayList<>();
                 for (Element element : allDeptRes.parse().getElementsByClass("pnl_dept"))
-                    allDept.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
+                    allDeptList.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
+                String[] allDept = allDeptList.toArray(new String[0]);
 
                 int cryptStart, cryptEnd;
                 if ((cryptStart = allDeptBody.indexOf("'crypt'")) == -1 ||
@@ -121,45 +129,42 @@ public class Search implements HttpHandler {
                     outData.append("err", "[Search] can not get crypt");
                     success = false;
                 }
-                // success getting crypt
-                // start get dept
+                // start getting dept
                 else {
                     String crypt = allDeptBody.substring(cryptStart, cryptEnd);
-//                    for (int i = 0; i < 7; i++) {
-//                        if (!postSearchData(
-//                                null, null, String.valueOf(i + 1), null, null, null, null,
-//                                searchID, cookieStore, outData, searchResult
-//                        )) {
+//                    ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
+//                    Logger.addProgressBar(progressBar);
+//                    progressBar.setProgress(0f);
+//                    for (int i = 0; i < allDept.length; i++) {
+//                        if (!getDept(allDept[i], crypt, cookieStore, outData, searchResult)) {
 //                            success = false;
 //                            break;
 //                        }
+//                        progressBar.setProgress((float) (i + 1) / allDept.length * 100f);
 //                    }
+//                    progressBar.setProgress(100f);
+//                    Logger.removeProgressBar(progressBar);
 
-//                    CountDownLatch countDownLatch = new CountDownLatch(allDept.size());
-//                    AtomicBoolean allSuccess = new AtomicBoolean(true);
-//                    for (String deptNo : allDept) {
-//                        pool.submit(() -> {
-//                            if (!getDept(deptNo, crypt, cookieStore, outData, searchResult))
-//                                allSuccess.set(false);
-//                            countDownLatch.countDown();
-//                        });
-//                        if (!postSearchData(
-//                                null, null, null, deptNo, null, null, null,
-//                                searchID, cookieStore, outData, searchResult
-//                        )) {
-//                            success = false;
-//                            break;
-//                        }
-//                    }
-//                    countDownLatch.await();
-//                    if (!allSuccess.get())
-//                        success = false;
-                    for (String deptNo : allDept) {
-                        if (!getDept(deptNo, crypt, cookieStore, outData, searchResult)) {
-                            success = false;
-                            break;
-                        }
+                    CountDownLatch countDownLatch = new CountDownLatch(allDept.length);
+                    ExecutorService fetchPool = Executors.newFixedThreadPool(3);
+                    AtomicBoolean allSuccess = new AtomicBoolean(true);
+                    ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
+                    Logger.addProgressBar(progressBar);
+                    progressBar.setProgress(0f);
+                    int[] j = {0};
+                    for (String dept : allDept) {
+                        fetchPool.submit(() -> {
+                            if (!getDept(dept, crypt, cookieStore, outData, searchResult))
+                                allSuccess.set(false);
+                            progressBar.setProgress((float) ++j[0] / allDept.length * 100f);
+                            countDownLatch.countDown();
+                        });
+                        Thread.sleep(100);
                     }
+                    countDownLatch.await();
+                    progressBar.setProgress(100f);
+                    Logger.removeProgressBar(progressBar);
+                    success = allSuccess.get();
                 }
             }
             // get listed serial
@@ -227,7 +232,7 @@ public class Search implements HttpHandler {
                     .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(crypt, "UTF-8"))
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
-                    .timeout(1000 * 60 * 60)
+                    .timeout(60 * 1000)
                     .execute();
 
             JsonObject idData = new JsonObject(id.body());
@@ -241,7 +246,7 @@ public class Search implements HttpHandler {
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .maxBodySize(20 * 1024 * 1024)
-                    .timeout(1000 * 60 * 60)
+                    .timeout(60 * 1000)
                     .header("Referer", courseNckuOrg + "/index.php?c=qry_all")
                     .execute();
             if (result.url().getQuery().equals("c=qry_all")) {
@@ -297,7 +302,7 @@ public class Search implements HttpHandler {
         try {
             // setup
             if (searchID[0] == null) {
-//                System.out.println("[Search] Get searchID");
+//                Logger.log(TAG, "[Search] Get searchID");
                 final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
                         .ignoreContentType(true)
                         .execute().body();
@@ -324,7 +329,7 @@ public class Search implements HttpHandler {
             if (cl != null)
                 builder.append("&cl=").append(cl);
 
-//            System.out.println("[Search] Post search query");
+//            Logger.log(TAG, "[Search] Post search query");
             Connection.Response search = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=save_qry")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
@@ -344,7 +349,7 @@ public class Search implements HttpHandler {
             }
 
             // get result
-//            System.out.println("[Search] Get search result");
+//            Logger.log(TAG, "[Search] Get search result");
             Connection.Response searchResult = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215" + searchBody)
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
@@ -378,7 +383,7 @@ public class Search implements HttpHandler {
             }
 
             // parse table
-//            System.out.println("[Search] Parse course table");
+//            Logger.log(TAG, "[Search] Parse course table");
             String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
             Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
 

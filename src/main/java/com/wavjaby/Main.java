@@ -13,7 +13,7 @@ import java.util.concurrent.Executors;
 
 
 public class Main {
-    public static final String TAG = "[Main] ";
+    private static final String TAG = "[Main] ";
     public static final String courseNcku = "course.ncku.edu.tw";
     public static final String portalNcku = "fs.ncku.edu.tw";
 
@@ -63,6 +63,7 @@ public class Main {
         server.createContext("/api/search", new Search());
         server.createContext("/api/extract", new ExtractUrl());
         server.createContext("/api/nckuhub", new NCKUHub());
+        server.createContext("/api/urschool", new UrSchool());
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
