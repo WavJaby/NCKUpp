@@ -65,7 +65,7 @@ public class Login implements HttpHandler {
         });
     }
 
-    public boolean login(HttpExchange req, JsonBuilder outData, CookieStore cookieStore) {
+    private boolean login(HttpExchange req, JsonBuilder outData, CookieStore cookieStore) {
         try {
             boolean get = req.getRequestMethod().equals("GET");
             if (get) {
@@ -88,7 +88,7 @@ public class Login implements HttpHandler {
                         .execute();
                 if (toLogin.url().toString().endsWith("/index.php?c=portal") &&
                         toLogin.body().contains("/index.php?c=auth&m=logout")) {
-                    outData.append("warn", "[Login] Already login");
+                    outData.append("warn", TAG + "Already login");
                     outData.append("login", true);
                     return true;
                 }
@@ -119,19 +119,19 @@ public class Login implements HttpHandler {
                 // in portal
                 Map<String, String> query = parseUrlEncodedForm(readResponse(req));
                 if (!query.containsKey("username") || !query.containsKey("password")) {
-                    outData.append("err", "[Login] Login data not send");
+                    outData.append("err", TAG + "Login data not send");
                     return false;
                 }
 
                 // login use portal
                 int loginFormIndex = toPortalBody.indexOf("id=\"loginForm\"");
                 if (loginFormIndex == -1) {
-                    outData.append("err", "[Login] loginForm not found");
+                    outData.append("err", TAG + "Login form not found");
                     return false;
                 }
                 int actionLink = toPortalBody.indexOf("action=\"", loginFormIndex + 14);
                 if (actionLink == -1) {
-                    outData.append("err", "[Login] loginForm action link not found");
+                    outData.append("err", TAG + "Login form action link not found");
                     return false;
                 }
                 actionLink += 8;
@@ -177,7 +177,7 @@ public class Login implements HttpHandler {
             String redirect = loginRes.header("refresh");
             int redirectUrlStart;
             if (redirect == null || (redirectUrlStart = redirect.indexOf("url=")) == -1) {
-                outData.append("err", "[Login] Refresh url not found");
+                outData.append("err", TAG + "Refresh url not found");
                 return false;
             }
             redirect = redirect.substring(redirectUrlStart + 4);
@@ -188,7 +188,7 @@ public class Login implements HttpHandler {
 
             // check if force login
             if (result.contains("/index.php?c=auth&m=force_login")) {
-                outData.append("warn", "[Login] Force login");
+                outData.append("warn", TAG + "Force login");
                 result = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=force_login")
                         .ignoreContentType(true)
                         .cookieStore(cookieStore)
@@ -198,7 +198,7 @@ public class Login implements HttpHandler {
             outData.append("login", result.contains("/index.php?c=auth&m=logout"));
             return true;
         } catch (Exception e) {
-            outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;

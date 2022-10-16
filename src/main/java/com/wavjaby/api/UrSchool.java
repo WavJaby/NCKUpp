@@ -19,11 +19,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static com.wavjaby.Cookie.getDefaultCookie;
+import static com.wavjaby.Lib.parseUrlEncodedForm;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.pool;
 
@@ -31,7 +33,7 @@ public class UrSchool implements HttpHandler {
     private static final String TAG = "[UrSchool] ";
 
     private String UrSchoolData;
-    private final long updateInterval = 10 * 60 * 1000;
+    private final long updateInterval = 30 * 60 * 1000;
     private long lastUpdateTime;
 
     public UrSchool() {
@@ -70,11 +72,15 @@ public class UrSchool implements HttpHandler {
             try {
                 JsonBuilder data = new JsonBuilder();
 
+                String queryString = req.getRequestURI().getQuery();
                 boolean success = true;
-                if (System.currentTimeMillis() - lastUpdateTime > updateInterval)
-                    updateUrSchoolData();
-                data.append("data", UrSchoolData, true);
-
+                if (queryString == null) {
+                    if (System.currentTimeMillis() - lastUpdateTime > updateInterval)
+                        updateUrSchoolData();
+                    data.append("data", UrSchoolData, true);
+                } else {
+                    success = getInstructorInfo(queryString, data);
+                }
 
                 Headers responseHeader = req.getResponseHeaders();
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
@@ -94,7 +100,33 @@ public class UrSchool implements HttpHandler {
         });
     }
 
-    @SuppressWarnings("busy-waiting")
+    private boolean getInstructorInfo(String queryString, JsonBuilder outData) {
+        Map<String, String> query = parseUrlEncodedForm(queryString);
+        String instructorID = query.get("id");
+        if (instructorID == null) {
+            outData.append("err", TAG + "Query id not found");
+            return false;
+        }
+        String getMode = query.get("mode");
+        if (getMode == null) {
+            outData.append("err", TAG + "Query mode not found");
+            return false;
+        }
+
+        try {
+            Connection.Response result = HttpConnection.connect("https://urschool.org/ajax/modal/" + instructorID + "?mode=" + getMode)
+                    .ignoreContentType(true)
+                    .timeout(10 * 1000)
+                    .execute();
+            String resultBody = result.body();
+            System.out.print(resultBody);
+            return true;
+        } catch (IOException e) {
+            outData.append("err", TAG + "Query id not found");
+            return false;
+        }
+    }
+
     private void updateUrSchoolData() {
         pool.submit(() -> {
             long start = System.currentTimeMillis();
@@ -120,7 +152,9 @@ public class UrSchool implements HttpHandler {
                 int finalI = i + 1;
                 readPool.submit(() -> {
                     String page = fetchUrSchoolData(finalI, null);
-                    result.append(page);
+                    synchronized (result) {
+                        result.append(page);
+                    }
                     progressBar.setProgress(((float) (maxPage[0] - count.getCount() + 1) / maxPage[0]) * 100);
                     count.countDown();
                 });
@@ -161,7 +195,7 @@ public class UrSchool implements HttpHandler {
             String resultBody = result.body();
             int resultTableStart;
             if ((resultTableStart = resultBody.indexOf("<table")) == -1) {
-                Logger.log(TAG, "result table not found");
+                Logger.log(TAG, "Result table not found");
                 return null;
             }
             // get table body
@@ -169,7 +203,7 @@ public class UrSchool implements HttpHandler {
             if ((resultTableBodyStart = resultBody.indexOf("<tbody", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = resultBody.indexOf("</tbody>", resultTableBodyStart + 6)) == -1
             ) {
-                Logger.log(TAG, "result table body not found");
+                Logger.log(TAG, "Result table body not found");
                 return null;
             }
 
@@ -208,7 +242,7 @@ public class UrSchool implements HttpHandler {
                 if ((maxPageStart = resultBody.lastIndexOf("https://urschool.org/ncku/list?page=")) == -1 ||
                         (maxPageStart = resultBody.lastIndexOf("https://urschool.org/ncku/list?page=", maxPageStart - 36)) == -1 ||
                         (maxPageEnd = resultBody.indexOf('"', maxPageStart + 36)) == -1) {
-                    Logger.log(TAG, "max page not found");
+                    Logger.log(TAG, "Max page number not found");
                     return null;
                 }
                 maxPage[0] = Integer.parseInt(resultBody.substring(maxPageStart + 36, maxPageEnd));
@@ -216,7 +250,7 @@ public class UrSchool implements HttpHandler {
 
             int resultTableStart;
             if ((resultTableStart = resultBody.indexOf("<table")) == -1) {
-                Logger.log(TAG, "result table not found");
+                Logger.log(TAG, "Result table not found");
                 return null;
             }
             // get table body
@@ -224,7 +258,7 @@ public class UrSchool implements HttpHandler {
             if ((resultTableBodyStart = resultBody.indexOf("<tbody", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = resultBody.indexOf("</tbody>", resultTableBodyStart + 6)) == -1
             ) {
-                Logger.log(TAG, "result table body not found");
+                Logger.log(TAG, "Result table body not found");
                 return null;
             }
 
@@ -239,14 +273,14 @@ public class UrSchool implements HttpHandler {
                 if ((idStart = id.indexOf('\'')) == -1 ||
                         (idEnd = id.indexOf('\'', idStart + 1)) == -1
                 ) {
-                    Logger.log(TAG, "id not found");
+                    Logger.log(TAG, "Instructor ID not found");
                     return null;
                 }
                 int modeStart, modeEnd;
                 if ((modeStart = id.indexOf('\'', idEnd + 1)) == -1 ||
                         (modeEnd = id.indexOf('\'', modeStart + 1)) == -1
                 ) {
-                    Logger.log(TAG, "id not found");
+                    Logger.log(TAG, "Open mode not found");
                     return null;
                 }
                 String mode = id.substring(modeStart + 1, modeEnd);

@@ -72,7 +72,7 @@ public class Search implements HttpHandler {
                     Map<String, String> query = parseUrlEncodedForm(queryString);
                     success = search(query, data, searchID, cookieStore);
                 } else
-                    data.append("err", "[Search] no query string found");
+                    data.append("err", TAG + "No query string found");
 
                 // set cookie
                 Headers responseHeader = req.getResponseHeaders();
@@ -100,7 +100,7 @@ public class Search implements HttpHandler {
         });
     }
 
-    public boolean search(Map<String, String> query, JsonBuilder outData, String[] searchID, CookieStore cookieStore) {
+    private boolean search(Map<String, String> query, JsonBuilder outData, String[] searchID, CookieStore cookieStore) {
         try {
             String getSerialNumber;
             boolean getAll = query.containsKey("ALL"),
@@ -126,7 +126,7 @@ public class Search implements HttpHandler {
                         (cryptStart = allDeptBody.indexOf('\'', cryptStart + 7)) == -1 ||
                         (cryptEnd = allDeptBody.indexOf('\'', ++cryptStart)) == -1
                 ) {
-                    outData.append("err", "[Search] can not get crypt");
+                    outData.append("err", TAG + "Can not get crypt");
                     success = false;
                 }
                 // start getting dept
@@ -171,7 +171,7 @@ public class Search implements HttpHandler {
             else if (getSerial) {
                 Map<String, String> serialIdNumber = parseUrlEncodedForm(URLDecoder.decode(getSerialNumber, "UTF-8"));
                 if (serialIdNumber.size() == 0) {
-                    outData.append("err", "[Search] invalid serial number");
+                    outData.append("err", TAG + "Invalid serial number");
                     return false;
                 }
                 for (Map.Entry<String, String> i : serialIdNumber.entrySet()) {
@@ -198,7 +198,7 @@ public class Search implements HttpHandler {
                 String cl = query.get("section");           // 節次 1 ~ 16 []
 
                 if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
-                    outData.append("err", "[Search] no query string found");
+                    outData.append("err", TAG + "No query string found");
                     return false;
                 }
                 success = postSearchData(
@@ -217,13 +217,13 @@ public class Search implements HttpHandler {
             }
             return success;
         } catch (Exception e) {
-            outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;
     }
 
-    public boolean getDept(String deptNo, String crypt, CookieStore cookieStore, JsonBuilder outData, StringBuilder searchResultBuilder) {
+    private boolean getDept(String deptNo, String crypt, CookieStore cookieStore, JsonBuilder outData, StringBuilder searchResultBuilder) {
         try {
             Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
                     .cookieStore(cookieStore)
@@ -237,7 +237,7 @@ public class Search implements HttpHandler {
 
             JsonObject idData = new JsonObject(id.body());
             if (idData.getString("err").length() > 0) {
-                outData.append("err", "[Search] error from NCKU course: " + idData.getString("err"));
+                outData.append("err", TAG + "Error from NCKU course: " + idData.getString("err"));
                 return false;
             }
 
@@ -250,7 +250,7 @@ public class Search implements HttpHandler {
                     .header("Referer", courseNckuOrg + "/index.php?c=qry_all")
                     .execute();
             if (result.url().getQuery().equals("c=qry_all")) {
-                outData.append("warn", "[Search] dept.No " + deptNo + " not found");
+                outData.append("warn", TAG + "Dept.No " + deptNo + " not found");
                 return true;
             }
 
@@ -259,7 +259,7 @@ public class Search implements HttpHandler {
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
-                outData.append("err", "[Search] result table not found");
+                outData.append("err", TAG + "Result table not found");
                 return false;
             }
             // get table body
@@ -267,7 +267,7 @@ public class Search implements HttpHandler {
             if ((resultTableBodyStart = searchResultBody.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = searchResultBody.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
             ) {
-                outData.append("err", "[Search] result table body not found");
+                outData.append("err", TAG + "Result table body not found");
                 return false;
             }
 
@@ -284,13 +284,13 @@ public class Search implements HttpHandler {
 
             return true;
         } catch (IOException e) {
-            outData.append("err", "[Search] Unknown error" + Arrays.toString(e.getStackTrace()));
+            outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;
     }
 
-    public boolean postSearchData(
+    private boolean postSearchData(
             String cosname,
             String teaname,
             String wk,
@@ -302,13 +302,13 @@ public class Search implements HttpHandler {
         try {
             // setup
             if (searchID[0] == null) {
-//                Logger.log(TAG, "[Search] Get searchID");
+//                Logger.log(TAG, TAG + "Get searchID");
                 final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
                         .ignoreContentType(true)
                         .execute().body();
                 cosPreCheck(body, cookieStore, outData);
                 if ((searchID[0] = getSearchID(body, outData)) == null) {
-                    outData.append("err", "[Search] can not get searchID");
+                    outData.append("err", TAG + "Can not get searchID");
                     return false;
                 }
             }
@@ -329,7 +329,7 @@ public class Search implements HttpHandler {
             if (cl != null)
                 builder.append("&cl=").append(cl);
 
-//            Logger.log(TAG, "[Search] Post search query");
+//            Logger.log(TAG, TAG + "Post search query");
             Connection.Response search = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=save_qry")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
@@ -340,16 +340,16 @@ public class Search implements HttpHandler {
                     .execute();
             String searchBody = search.body();
             if (searchBody.equals("0")) {
-                outData.append("err", "[Search] condition not set");
+                outData.append("err", TAG + "Condition not set");
                 return false;
             }
             if (searchBody.equals("1")) {
-                outData.append("err", "[Search] wrong condition format");
+                outData.append("err", TAG + "Wrong condition format");
                 return false;
             }
 
             // get result
-//            Logger.log(TAG, "[Search] Get search result");
+//            Logger.log(TAG, TAG + "Get search result");
             Connection.Response searchResult = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215" + searchBody)
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
@@ -364,13 +364,13 @@ public class Search implements HttpHandler {
             cosPreCheck(searchResultBody, cookieStore, outData);
 
             if ((searchID[0] = getSearchID(searchResultBody, outData)) == null) {
-                outData.append("err", "[Search] can not get searchID");
+                outData.append("err", TAG + "Can not get searchID");
                 return false;
             }
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
-                outData.append("err", "[Search] result table not found");
+                outData.append("err", TAG + "Result table not found");
                 return false;
             }
             // get table body
@@ -378,12 +378,12 @@ public class Search implements HttpHandler {
             if ((resultTableBodyStart = searchResultBody.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = searchResultBody.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
             ) {
-                outData.append("err", "[Search] result table body not found");
+                outData.append("err", TAG + "Result table body not found");
                 return false;
             }
 
             // parse table
-//            Logger.log(TAG, "[Search] Parse course table");
+//            Logger.log(TAG, TAG + "Parse course table");
             String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
             Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
 
@@ -396,13 +396,13 @@ public class Search implements HttpHandler {
 
             return true;
         } catch (IOException e) {
-            outData.append("err", "[Search] Unknown error" + Arrays.toString(e.getStackTrace()));
+            outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;
     }
 
-    public void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, StringBuilder result) {
+    private void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, StringBuilder result) {
         // find style
         List<String> styleList = new ArrayList<>();
         int styleStart, styleEnd = 0;
@@ -627,11 +627,11 @@ public class Search implements HttpHandler {
         }
     }
 
-    public String getSearchID(String body, JsonBuilder outData) {
+    private String getSearchID(String body, JsonBuilder outData) {
         // get entry function
         int searchFunctionStart = body.indexOf("function setdata()");
         if (searchFunctionStart == -1) {
-            outData.append("err", "[Search] search function not found");
+            outData.append("err", TAG + "Search function not found");
             return null;
         } else searchFunctionStart += 18;
 
@@ -640,7 +640,7 @@ public class Search implements HttpHandler {
                 (idStart = body.indexOf('\'', idStart + 4)) == -1 ||
                 (idEnd = body.indexOf('\'', idStart + 1)) == -1
         ) {
-            outData.append("err", "[Search] search id not found");
+            outData.append("err", TAG + "Search id not found");
             return null;
         }
         return body.substring(idStart + 1, idEnd);

@@ -39,7 +39,7 @@ public class ExtractUrl implements HttpHandler {
                 String queryString = req.getRequestURI().getQuery();
                 boolean success = false;
                 if (queryString == null)
-                    data.append("err", "[Extract] no query string found");
+                    data.append("err", TAG + "No query string found");
                 else {
                     Map<String, String> query = parseUrlEncodedForm(queryString);
                     if (query.containsKey("m"))
@@ -70,7 +70,7 @@ public class ExtractUrl implements HttpHandler {
     private boolean getMoodle(String requestData, CookieStore cookieStore, JsonBuilder data) {
         String[] query = requestData.split(",");
         if (query.length != 3) {
-            data.append("err", "[Extract] invalid query data");
+            data.append("err", TAG + "Invalid query data");
             return false;
         }
 
@@ -85,7 +85,7 @@ public class ExtractUrl implements HttpHandler {
             data.append("data", body, true);
             return true;
         } catch (IOException e) {
-            data.append("err", "[Moodle] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            data.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;
@@ -94,7 +94,7 @@ public class ExtractUrl implements HttpHandler {
     private boolean getLocation(String requestData, CookieStore cookieStore, JsonBuilder data) {
         String[] query = requestData.split(",");
         if (query.length != 2) {
-            data.append("err", "[Extract] invalid query data");
+            data.append("err", TAG + "Invalid query data");
             return false;
         }
 
@@ -109,7 +109,7 @@ public class ExtractUrl implements HttpHandler {
             data.append("data", body, true);
             return true;
         } catch (IOException e) {
-            data.append("err", "[Moodle] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            data.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;

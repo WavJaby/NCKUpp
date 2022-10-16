@@ -114,7 +114,7 @@ public class HttpServer {
 
             // display certificate
 //            Certificate cert = keystore.getCertificate(alias);
-//            System.out.println(cert);
+//            Logger.log(TAG, cert);
 
             // Set up the key manager factory
             KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");

@@ -64,7 +64,7 @@ public class Logout implements HttpHandler {
         });
     }
 
-    public boolean logout(JsonBuilder outData, CookieStore cookieStore) {
+    private boolean logout(JsonBuilder outData, CookieStore cookieStore) {
         try {
             Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=logout")
                     .cookieStore(cookieStore)
@@ -74,7 +74,7 @@ public class Logout implements HttpHandler {
             outData.append("login", toLogin.body().contains("/index.php?c=auth&m=logout"));
             return true;
         } catch (Exception e) {
-            outData.append("err", "[Login] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
         return false;
     }

@@ -21,6 +21,7 @@ import static com.wavjaby.Main.accessControlAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
 
 public class Lib {
+    private static final String TAG = "[CosPreCheck] ";
 
     public static void cosPreCheck(String body, CookieStore cookieStore, JsonBuilder data) {
         String cosPreCheckKey = null;
@@ -35,10 +36,10 @@ public class Lib {
             }
         }
         if (cosPreCheckKey == null) {
-            data.append("warn", "[CosPreCheck] CosPreCheck key not found");
+            data.append("warn", TAG + "CosPreCheck key not found");
             return;
         }
-//        Logger.log(TAG, "[CosPreCheck] make cosPreCheck");
+//        Logger.log(TAG, "Make CosPreCheck");
 
         long now = System.currentTimeMillis() / 1000;
         try {
@@ -50,7 +51,6 @@ public class Lib {
                     .header("X-Requested-With", "XMLHttpRequest")
                     .requestBody("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"))
                     .execute();
-//            System.out.println(response.body());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

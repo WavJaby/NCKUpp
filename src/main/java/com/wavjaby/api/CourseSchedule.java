@@ -66,7 +66,7 @@ public class CourseSchedule implements HttpHandler {
         });
     }
 
-    public boolean getCourseSchedule(CookieStore cookieStore, JsonBuilder data) {
+    private boolean getCourseSchedule(CookieStore cookieStore, JsonBuilder data) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos32315")
                 .cookieStore(cookieStore);
         Document root = null;
@@ -75,29 +75,29 @@ public class CourseSchedule implements HttpHandler {
         } catch (IOException ignore) {
         }
         if (root == null) {
-            data.append("err", "[Schedule] Can not fetch schedule");
+            data.append("err", TAG + "Can not fetch schedule");
             return false;
         }
 
         Elements tableData = root.getElementsByClass("row visible-xs");
         if (tableData.size() < 1) {
-            data.append("err", "[Schedule] Table not found");
+            data.append("err", TAG + "Table not found");
             return false;
         }
         Elements tbody = tableData.get(0).getElementsByTag("tbody");
         if (tbody.size() < 7) {
-            data.append("err", "[Schedule] Table body not found");
+            data.append("err", TAG + "Table body not found");
             return false;
         }
         Element ownerInfoEle = tableData.get(0).child(0);
         if (ownerInfoEle.childNodeSize() < 2 || ownerInfoEle.getElementsByClass("clock").size() == 0) {
-            data.append("err", "[Schedule] OwnerInfo not found");
+            data.append("err", TAG + "OwnerInfo not found");
             return false;
         }
         ownerInfoEle = ownerInfoEle.child(1);
         String[] ownerInfoArr = ownerInfoEle.textNodes().get(0).toString().split("&nbsp; ");
         if (ownerInfoArr.length != 3) {
-            data.append("err", "[Schedule] OwnerInfo parse error");
+            data.append("err", TAG + "OwnerInfo parse error");
             return false;
         }
         int creditsStart = -1, creditsEnd = -1;
@@ -111,7 +111,7 @@ public class CourseSchedule implements HttpHandler {
                 break;
         }
         if (creditsStart == -1 || creditsEnd == -1) {
-            data.append("err", "[Schedule] OwnerInfo credits parse error");
+            data.append("err", TAG + "OwnerInfo credits parse error");
             return false;
         }
         ownerInfoArr[2] = ownerInfoArr[2].substring(creditsStart, creditsEnd + 1);
@@ -124,13 +124,13 @@ public class CourseSchedule implements HttpHandler {
             // section times
             Elements eachCourse = element.getElementsByTag("tr");
             if (eachCourse.size() < 18) {
-                data.append("err", "[Schedule] Course section not found");
+                data.append("err", TAG + "Course section not found");
                 return false;
             }
             for (int i = 1; i < 18; i++) {
                 Elements elements = eachCourse.get(i).getElementsByTag("td");
                 if (elements.size() == 0) {
-                    data.append("err", "[Schedule] Course info not found");
+                    data.append("err", TAG + "Course info not found");
                     return false;
                 }
                 List<TextNode> courseDataText = elements.get(0).textNodes();
@@ -141,7 +141,7 @@ public class CourseSchedule implements HttpHandler {
                     String courseName = courseDataText.get(0).text();
                     int courseIdEnd = courseName.indexOf("】");
                     if (courseIdEnd == -1) {
-                        data.append("err", "[Schedule] Course name parse error");
+                        data.append("err", TAG + "Course name parse error");
                         return false;
                     }
                     courseData.add(courseName.substring(1, courseIdEnd));
@@ -150,7 +150,7 @@ public class CourseSchedule implements HttpHandler {
                         String locationText = courseDataText.get(1).text();
                         int locationStart = locationText.indexOf("：");
                         if (locationStart == -1) {
-                            data.append("err", "[Schedule] Course location parse error");
+                            data.append("err", TAG + "Course location parse error");
                             return false;
                         }
                         courseData.add(locationText.substring(locationStart + 1, locationText.length() - 1));

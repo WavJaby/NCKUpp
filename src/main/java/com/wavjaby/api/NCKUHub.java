@@ -49,13 +49,12 @@ public class NCKUHub implements HttpHandler {
                 boolean success = true;
                 if (queryString == null) {
                     // get courseID
-                    Logger.log(TAG, System.currentTimeMillis() - lastCourseIDUpdateTime);
                     if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
                         success = updateNckuHubCourseID();
                     if (success)
                         data.append("data", nckuHubCourseID.toString(), true);
                     else
-                        data.append("data", "[NCKU Hub] Update course id failed");
+                        data.append("data", TAG + "Update course id failed");
                 } else {
                     // get course info
                     success = getNckuHubCourseInfo(queryString, data);
@@ -80,11 +79,11 @@ public class NCKUHub implements HttpHandler {
         });
     }
 
-    private boolean getNckuHubCourseInfo(String queryString, JsonBuilder data) {
+    private boolean getNckuHubCourseInfo(String queryString, JsonBuilder outData) {
         Map<String, String> query = parseUrlEncodedForm(queryString);
         String nckuID = query.get("id");
         if (nckuID == null) {
-            data.append("err", "[NCKU Hub] Query id not found");
+            outData.append("err", TAG + "Query id not found");
             return false;
         }
         String[] nckuIDs = nckuID.split(",");
@@ -95,9 +94,6 @@ public class NCKUHub implements HttpHandler {
                 Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + id)
                         .ignoreContentType(true)
                         .execute();
-//                JsonObject jsonObject = new JsonObject(nckuhubCourse.body());
-//                JsonObject courseInfo = jsonObject.getJson("courseInfo");
-//                String serialNumber = courseInfo.getString("選課序號");
                 builder.append(',').append(nckuhubCourse.body());
             }
             if (builder.length() > 0)
@@ -106,10 +102,10 @@ public class NCKUHub implements HttpHandler {
                 builder.append('[');
             builder.append(']');
 
-            data.append("data", builder.toString(), true);
+            outData.append("data", builder.toString(), true);
         } catch (IOException e) {
             e.printStackTrace();
-            data.append("err", "[NCKU Hub] Unknown error: " + Arrays.toString(e.getStackTrace()));
+            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             return false;
         }
 
