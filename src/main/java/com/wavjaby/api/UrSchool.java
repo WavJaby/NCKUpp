@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObject;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
@@ -18,6 +19,7 @@ import java.net.CookieManager;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -119,10 +121,162 @@ public class UrSchool implements HttpHandler {
                     .timeout(10 * 1000)
                     .execute();
             String resultBody = result.body();
-            System.out.print(resultBody);
+
+            // Get tags range
+            int tagsStart, tagsEnd;
+            if ((tagsStart = resultBody.indexOf("<div class='col-md-12'>")) == -1 ||
+                    (tagsEnd = resultBody.indexOf("</div>", tagsStart += 23)) == -1
+            ) {
+                outData.append("err", TAG + "Tags not found");
+                return false;
+            }
+
+            // Get tags
+            StringBuilder tageBuilder = new StringBuilder();
+            int urlStart, urlEnd = tagsStart;
+            while (true) {
+                // Get tag url
+                if ((urlStart = resultBody.indexOf("href='", urlEnd + 1)) == -1 ||
+                        (urlEnd = resultBody.indexOf('\'', urlStart += 6)) == -1
+                ) {
+                    outData.append("err", TAG + "Tag url not found");
+                    return false;
+                }
+                String url = resultBody.substring(urlStart, urlEnd);
+                if (url.startsWith("/shop") || urlStart > tagsEnd) break;
+
+                // Get tag name
+                int tagNameStart, tagNameEnd;
+                if ((tagNameStart = resultBody.indexOf('>', urlEnd + 1)) == -1 ||
+                        (tagNameEnd = resultBody.indexOf('<', tagNameStart += 1)) == -1
+                ) {
+                    outData.append("err", TAG + "Tag name not found");
+                    return false;
+                }
+                String tagName = resultBody.substring(tagNameStart, tagNameEnd).trim();
+
+                tageBuilder.append(',').append('[')
+                        .append('"').append(url).append('"').append(',')
+                        .append('"').append(tagName).append('"')
+                        .append(']');
+            }
+            if (tageBuilder.length() > 0) tageBuilder.setCharAt(0, '[');
+            else tageBuilder.append('[');
+            tageBuilder.append(']');
+
+            // Get visitors
+            int countStart, countEnd;
+            if ((countStart = resultBody.indexOf("store.count")) == -1 ||
+                    (countStart = resultBody.indexOf('=', countStart + 11)) == -1 ||
+                    (countEnd = resultBody.indexOf(';', countStart += 1)) == -1
+            ) {
+                outData.append("err", TAG + "Visitors not found");
+                return false;
+            }
+            StringBuilder visitorsBuilder = new StringBuilder();
+            int takeCourseCount = Integer.parseInt(resultBody.substring(countStart, countEnd).trim());
+            int visitorStart, visitorEnd = countEnd;
+            while (true) {
+                // Get profile url
+                if ((visitorStart = resultBody.indexOf("store.visits.push(", visitorEnd + 1)) == -1
+                ) {
+                    outData.append("err", TAG + "Profile url not found");
+                    return false;
+                }
+                if (resultBody.startsWith("store", visitorStart += 18)) break;
+                if ((visitorStart = resultBody.indexOf('\'', visitorStart)) == -1 ||
+                        (visitorEnd = resultBody.indexOf('\'', visitorStart += 1)) == -1) {
+                    outData.append("err", TAG + "Profile url string not found");
+                    return false;
+                }
+                String url = resultBody.substring(visitorStart, visitorEnd);
+
+                int subStart, subEnd;
+                if ((subEnd = url.lastIndexOf('/')) == -1 ||
+                        (subStart = url.lastIndexOf('/', subEnd -= 1)) == -1) {
+                    outData.append("err", TAG + "Profile url parse error");
+                    return false;
+                }
+                url = url.substring(subStart + 1, subEnd + 1);
+
+                visitorsBuilder.append(',').append('"').append(url).append('"');
+            }
+            if (visitorsBuilder.length() > 0) visitorsBuilder.setCharAt(0, '[');
+            else visitorsBuilder.append('[');
+            visitorsBuilder.append(']');
+
+            // Get comment
+            StringBuilder commentBuilder = new StringBuilder();
+            int commentStart, commentEnd = visitorEnd;
+            while (true) {
+                // Get comment data
+                if ((commentStart = resultBody.indexOf("var obj", commentEnd + 1)) == -1 ||
+                        (commentStart = resultBody.indexOf('{', commentStart += 7)) == -1)
+                    break;
+
+                if ((commentEnd = resultBody.indexOf('}', commentStart + 1)) == -1) {
+                    outData.append("err", TAG + "Comment data not found");
+                    return false;
+                }
+                JsonObject commentData = new JsonObject(resultBody.substring(commentStart, commentEnd + 1));
+                commentData.remove("cafe_id");
+                commentData.put("body", parseUnicode(commentData.getString("body")));
+
+                // Get avatar
+                int limit = resultBody.indexOf('}', commentEnd + 1);
+                int avatarStart, avatarEnd;
+                if ((avatarStart = resultBody.indexOf("avatar", commentEnd + 1)) == -1 ||
+                        (avatarStart = resultBody.indexOf('\'', avatarStart + 6)) == -1 ||
+                        (avatarEnd = resultBody.indexOf('\'', avatarStart += 1)) == -1 ||
+                        avatarEnd > limit) {
+                    outData.append("err", TAG + "Profile url string not found");
+                    return false;
+                }
+                String url = resultBody.substring(avatarStart, avatarEnd);
+                if (url.contains("anonymous"))
+                    url = null;
+                else {
+                    int subStart, subEnd;
+                    if ((subEnd = url.lastIndexOf('/')) == -1 ||
+                            (subStart = url.lastIndexOf('/', subEnd -= 1)) == -1) {
+                        outData.append("err", TAG + "Profile url parse error");
+                        return false;
+                    }
+                    url = url.substring(subStart + 1, subEnd + 1);
+                }
+                commentData.put("profile", url);
+
+                // Get timestamp
+                int timestampStart, timestampEnd;
+                if ((timestampStart = resultBody.indexOf("timestamp", commentEnd + 1)) == -1 ||
+                        (timestampStart = resultBody.indexOf('\'', timestampStart + 9)) == -1 ||
+                        (timestampEnd = resultBody.indexOf('\'', timestampStart += 1)) == -1 ||
+                        timestampEnd > limit) {
+                    outData.append("err", TAG + "Profile url string not found");
+                    return false;
+                }
+                String timestamp = resultBody.substring(timestampStart, timestampEnd);
+                commentData.put("timestamp", Long.parseLong(timestamp));
+
+                commentBuilder.append(',').append(commentData);
+            }
+            if (commentBuilder.length() > 0) commentBuilder.setCharAt(0, '[');
+            else commentBuilder.append('[');
+            commentBuilder.append(']');
+
+
+            // Write result
+            JsonBuilder jsonBuilder = new JsonBuilder();
+            jsonBuilder.append("id", '"' + instructorID + '"', true);
+            jsonBuilder.append("tags", tageBuilder.toString(), true);
+            jsonBuilder.append("takeCourseCount", takeCourseCount);
+            jsonBuilder.append("takeCourseUser", visitorsBuilder.toString(), true);
+            jsonBuilder.append("comments", commentBuilder.toString(), true);
+            outData.append("data", jsonBuilder.toString(), true);
+
             return true;
         } catch (IOException e) {
-            outData.append("err", TAG + "Query id not found");
+            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             return false;
         }
     }
@@ -313,5 +467,27 @@ public class UrSchool implements HttpHandler {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private String parseUnicode(String input) {
+        int lastIndex = 0, index;
+        int length = input.length();
+        index = input.indexOf("\\u");
+        StringBuilder builder = new StringBuilder();
+        while (index > -1) {
+            if (index > (length - 6)) break;
+            int nuiCodeStart = index + 2;
+            int nuiCodeEnd = nuiCodeStart + 4;
+            String substring = input.substring(nuiCodeStart, nuiCodeEnd);
+            int number = Integer.parseInt(substring, 16);
+
+            builder.append(input, lastIndex, index);
+            builder.append((char) number);
+
+            lastIndex = nuiCodeEnd;
+            index = input.indexOf("\\u", nuiCodeEnd);
+        }
+        builder.append(input, lastIndex, length);
+        return builder.toString();
     }
 }
