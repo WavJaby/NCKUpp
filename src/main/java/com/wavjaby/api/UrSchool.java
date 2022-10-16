@@ -116,10 +116,19 @@ public class UrSchool implements HttpHandler {
         }
 
         try {
-            Connection.Response result = HttpConnection.connect("https://urschool.org/ajax/modal/" + instructorID + "?mode=" + getMode)
-                    .ignoreContentType(true)
-                    .timeout(10 * 1000)
-                    .execute();
+            Connection.Response result;
+            while (true) {
+                try {
+                    result = HttpConnection.connect("https://urschool.org/ajax/modal/" + instructorID + "?mode=" + getMode)
+                            .ignoreContentType(true)
+                            .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
+                            .header("X-Requested-With", "XMLHttpRequest")
+                            .timeout(3 * 1000)
+                            .execute();
+                    break;
+                } catch (IOException ignore) {
+                }
+            }
             String resultBody = result.body();
 
             // Get tags range
@@ -275,7 +284,7 @@ public class UrSchool implements HttpHandler {
             outData.append("data", jsonBuilder.toString(), true);
 
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             return false;
         }
@@ -383,6 +392,8 @@ public class UrSchool implements HttpHandler {
                 try {
                     Connection.Response result = HttpConnection.connect("https://urschool.org/ncku/list?page=" + page)
                             .ignoreContentType(true)
+                            .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
+                            .header("X-Requested-With", "XMLHttpRequest")
                             .timeout(10 * 1000)
                             .execute();
                     resultBody = result.body();
