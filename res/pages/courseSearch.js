@@ -322,7 +322,7 @@ module.exports = function () {
                                             offsetY: courseSearch.scrollTop,
                                             data: i
                                         }),
-                                        // onmouseleave: () => instructorWindow.set(null)
+                                        onmouseleave: () => instructorWindow.set(null)
                                     })
                                 ),
                             )),
