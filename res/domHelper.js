@@ -505,5 +505,11 @@ module.exports = {
         // if (url) element.src = url;
         if (options.length) addOption(element, options);
         return element;
+    },
+    any(tagN, classN, ...options) {
+        const element = document.createElement(tagN);
+        if (classN) parseClassInput(classN, element);
+        if (options.length) addOption(element, options);
+        return element;
     }
 };
