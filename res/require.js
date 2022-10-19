@@ -102,6 +102,17 @@ function require(url, recursive) {
     else if (contentType.startsWith('text/css')) {
         var style = document.createElement('style');
         style.textContent = result.body;
+        style.add = function () {
+            document.head.appendChild(this);
+            for (let i = 0; i < document.styleSheets.length; i++)
+                if (document.styleSheets[i].ownerNode === style) {
+                    style.rules = document.styleSheets[i].cssRules;
+                    break;
+                }
+        };
+        style.remove = function () {
+            document.head.removeChild(this);
+        }
         return style;
     } else if (contentType.startsWith('application/javascript')) {
         return eval(`(function () {

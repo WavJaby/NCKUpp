@@ -5,6 +5,7 @@
     --button-bg-color: #5b5b5b;
     --button-hover-color: #505050;
     --button-active-color: #404040;
+    --font-size: 20px;
 }
 
 html, body {
@@ -32,7 +33,7 @@ button {
     text-align: center;
     text-decoration: none;
     display: block;
-    font-size: 20px;
+    font-size: var(--font-size);
 }
 
 button:hover {
@@ -55,7 +56,7 @@ input {
     padding: 5px;
     text-decoration: none;
     display: block;
-    font-size: 20px;
+    font-size: var(--font-size);
 }
 
 input:-webkit-autofill,

@@ -3,6 +3,7 @@
 /*ExcludeStart*/
 const {div, button, table, Signal, text, span, ShowIf} = require('../domHelper');
 /*ExcludeEnd*/
+/**@type {{add:function(), remove: function(), rules: CSSStyleRule}}*/
 const styles = require('./courseSchedule.css');
 
 // static
@@ -63,13 +64,13 @@ module.exports = function (loginState) {
 
     function onRender() {
         console.log('Render Schedule');
-        document.head.appendChild(styles);
+        styles.add();
         loginState.addListener(onLoginState);
     }
 
     function onDestroy() {
         console.log('Destroy Schedule');
-        document.head.removeChild(styles);
+        styles.remove();
         loginState.removeListener(onLoginState);
     }
 

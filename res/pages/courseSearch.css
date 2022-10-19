@@ -1,3 +1,7 @@
+:root {
+    --course-info-title-font-size: 20px;
+}
+
 .courseSearch input {
     margin: 5px;
 }
@@ -45,6 +49,10 @@
     transition: 0.2s transform;
 }
 
+.courseSearch > .result > .body > .info.extend .expendDownArrow {
+    transform: rotate(0);
+}
+
 .courseSearch > .result .departmentName {
     display: inline-block;
     margin-right: 2em;
@@ -77,16 +85,13 @@
 }
 
 /*Course detail*/
-.courseSearch > .result > .body > .info.extend .expendDownArrow {
-    transform: rotate(0);
-}
-
 .courseSearch > .result > .body > .info .details {
     border-top: solid 1px gray;
     padding: 10px;
 }
 
-.courseSearch > .result > .body > .info .details > span {
+.courseSearch > .result > .body > .info .details > .info,
+.courseSearch > .result > .body > .info .details > .limit {
     display: block;
 }
 
@@ -108,6 +113,13 @@
     font-size: 16px;
 }
 
+.courseSearch > .result > .body > .info .details > .instructorBtn {
+    margin: 0;
+    font-size: 18px;
+    padding: 3px 5px;
+    display: inline-block;
+}
+
 /*Popup window*/
 .courseSearch > .result > .popupWindow {
     background: rgba(0, 0, 0, 0.6);
@@ -117,7 +129,7 @@
     top: 0;
     left: 0;
     display: none;
-    z-index: 2;
+    z-index: 3;
 }
 
 .courseSearch > .result > .popupWindow.open {
@@ -170,5 +182,45 @@
 
 .courseSearch > .result > .popupWindow .comments > .commentBlock > span {
     display: block;
+}
+
+/*Instructor window*/
+.courseSearch > .result > .instructorWindow {
+    background: rgba(0, 0, 0, 0.8);
+    max-width: 500px;
+    min-width: 350px;
+    height: 300px;
+    position: absolute;
+    white-space: pre-wrap;
+    overflow: auto;
+    z-index: 2;
+}
+
+.courseSearch > .result > .instructorWindow > span {
+    display: block;
+}
+
+.courseSearch > .result > .instructorWindow table {
+    width: 100%;
+}
+
+.courseSearch > .result > .instructorWindow td {
+    text-align: center;
+}
+
+.courseSearch > .result > .instructorWindow td:after {
+    content: '★';
+}
+
+.courseSearch > .result > .instructorWindow .blue {
+    color: #33A2F4;
+}
+
+.courseSearch > .result > .instructorWindow .yellow {
+    color: #FFC71E;
+}
+
+.courseSearch > .result > .instructorWindow .red {
+    color: #FF311E;
 }
 

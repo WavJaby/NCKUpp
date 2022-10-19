@@ -48,6 +48,7 @@ function Signal(initState) {
  * @param {function(state)} renderState
  * */
 function State(signal, renderState) {
+    if (signal == null) return document.createElement('div');
     return new StateChanger(signal, renderState);
 }
 
@@ -349,6 +350,29 @@ module.exports = {
     thead(classN, ...options) {
         const element = document.createElement('thead');
         if (classN) parseClassInput(classN, element);
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    tr(classN, ...options) {
+        const element = document.createElement('tr');
+        if (classN) parseClassInput(classN, element);
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    th(text, classN, ...options) {
+        const element = document.createElement('th');
+        if (classN) parseClassInput(classN, element);
+        if (text) element.textContent = text;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    td(text, classN, ...options) {
+        const element = document.createElement('td');
+        if (classN) parseClassInput(classN, element);
+        if (text) element.textContent = text;
         if (options.length) addOption(element, options);
         return element;
     },

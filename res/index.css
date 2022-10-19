@@ -1,6 +1,7 @@
 :root {
     --navbar-bg-color: #2F3136;
     --table-border: #383D3F;
+    --nav-bar-height: 40px;
 }
 
 .root {
@@ -24,7 +25,7 @@
 .navbar {
     background: var(--navbar-bg-color);
     width: 100%;
-    height: 40px;
+    height: var(--nav-bar-height);
     position: absolute;
     top: 0;
 }
@@ -42,7 +43,7 @@
 }
 
 .navbar li {
-    height: 40px;
+    height: var(--nav-bar-height);
     float: left;
 }
 
@@ -65,7 +66,7 @@
 
 .navbar a {
     height: 100%;
-    line-height: 40px;
+    line-height: var(--nav-bar-height);
     text-decoration: none;
     padding: 0 10px;
     display: block;
@@ -86,14 +87,14 @@
 
 .loginWindow {
     position: absolute;
-    top: 40px;
+    top: var(--nav-bar-height);
     right: 0;
 }
 
 /*Router*/
 .router {
     position: absolute;
-    top: 40px;
+    top: var(--nav-bar-height);
     bottom: 0;
     left: 0;
     width: 100%;
