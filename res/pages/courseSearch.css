@@ -203,15 +203,29 @@
 }
 
 /*Instructor info bubble*/
+@media only screen and (min-width: 700px) {
+    .courseSearch > .instructorInfo {
+        max-width: 500px;
+        min-width: 350px;
+        padding: 5px;
+    }
+}
+
+@media only screen and (max-width: 700px) {
+    .courseSearch > .instructorInfo {
+        left: 0 !important;
+        right: 0 !important;
+        margin: auto;
+        overflow: auto;
+    }
+}
+
 .courseSearch > .instructorInfo {
     background: rgba(0, 0, 0, 0.9);
-    max-width: 500px;
-    min-width: 350px;
     height: 300px;
-    padding: 5px;
     box-sizing: border-box;
-    position: absolute;
     white-space: pre-wrap;
+    position: absolute;
     z-index: 2;
 
     /*animation: fadeIn var(--fade-time) reverse forwards;*/
