@@ -4,6 +4,10 @@ let debug = null;
 function addOption(element, options) {
     for (let i = 0; i < options.length; i++) {
         const option = options[i];
+        if (option instanceof Array) {
+            addOption(element, option);
+            continue;
+        }
         if (option instanceof Element || option instanceof Text)
             element.appendChild(option);
         else if (option instanceof StateChanger)

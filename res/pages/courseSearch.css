@@ -1,5 +1,6 @@
 :root {
     --course-info-title-font-size: 20px;
+    --popupWindow-bg-color: rgba(0, 0, 0);
     --fade-time: 0.2s;
 }
 
@@ -42,7 +43,6 @@
     padding: 10px;
     display: block;
     border-radius: 10px;
-    overflow: hidden;
     cursor: pointer;
     position: relative;
 }
@@ -60,6 +60,10 @@
 }
 
 /*item title sections*/
+.courseSearch > .result > .item > .header {
+    overflow: hidden;
+}
+
 .courseSearch > .result .departmentName {
     display: inline-block;
     margin-right: 2em;
@@ -133,26 +137,31 @@
     background: rgba(0, 0, 0, 0.6);
     width: 100%;
     height: 100%;
-    position: fixed;
     top: 0;
     left: 0;
-    display: none;
+    position: fixed;
+    visibility: hidden;
     z-index: 3;
 }
 
 .courseSearch > .popupWindow.open {
-    display: block;
+    visibility: visible;
 }
 
 .courseSearch > .popupWindow > div {
-    background: rgba(0, 0, 0);
-    top: 100px;
-    bottom: 100px;
-    left: 100px;
-    right: 100px;
-    position: absolute;
-    margin: auto;
+    background: var(--popupWindow-bg-color);
     overflow: auto;
+}
+
+@media only screen and (min-width: 700px) {
+    .courseSearch > .popupWindow > div {
+        top: 100px;
+        bottom: 100px;
+        left: 100px;
+        right: 100px;
+        position: absolute;
+        margin: auto;
+    }
 }
 
 /*Course detail window*/
@@ -173,9 +182,9 @@
 
 .courseSearch > .popupWindow .rates > div > .rateBox {
     background: gray;
-    width: 7em;
+    max-width: 7em;
+    margin: auto;
     border-radius: 10px;
-    display: inline-block;
 }
 
 .courseSearch > .popupWindow .rates .rateBox > span {
@@ -203,7 +212,6 @@
     box-sizing: border-box;
     position: absolute;
     white-space: pre-wrap;
-    overflow: auto;
     z-index: 2;
 
     /*animation: fadeIn var(--fade-time) reverse forwards;*/

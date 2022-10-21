@@ -276,12 +276,11 @@ module.exports = function () {
                 // course short information
                 let courseInfo;
 
-                function toggleCourseInfo() {
+                function toggleCourseInfo(e) {
                     const show = resultItemClass.toggle('extend');
-                    if (show)
-                        courseInfo.style.height = courseInfo.firstChild.clientHeight + "px";
-                    else
-                        courseInfo.style.height = null;
+                    if (show) courseInfo.style.height = courseInfo.firstChild.clientHeight + "px";
+                    else courseInfo.style.height = null;
+                    if (e) e.stopPropagation();
                 }
 
                 // open detail window
@@ -296,29 +295,31 @@ module.exports = function () {
                         // prevent double click select text
                         onmousedown: preventDoubleClick,
                     },
-                    // title sections
-                    expendButton,
-                    span(data.dn, 'departmentName', {style: `width:${state.deptLen}px`}),
-                    span(data.sn, 'serialNumber'),
-                    span(data.parseedTime, 'courseTime', {style: `width:${state.timeLen}px`}),
-                    span(data.cn, 'courseName'),
+                    div('header',
+                        // title sections
+                        expendButton,
+                        span(data.dn, 'departmentName', {style: `width:${state.deptLen}px`}),
+                        span(data.sn, 'serialNumber'),
+                        span(data.parseedTime, 'courseTime', {style: `width:${state.timeLen}px`}),
+                        span(data.cn, 'courseName'),
 
-                    // ncku Hub
-                    State(nckuHubData, /**@param {NckuHub} nckuhub*/(nckuhub) => {
-                        if (nckuhub) {
-                            if (nckuhub.noData) return div();
+                        // ncku Hub
+                        State(nckuHubData, /**@param {NckuHub} nckuhub*/(nckuhub) => {
+                            if (nckuhub) {
+                                if (nckuhub.noData) return div();
 
-                            const reward = nckuhub.got;
-                            const sweet = nckuhub.sweet;
-                            const cool = nckuhub.cold;
-                            return div('nckuhub',
-                                span(reward.toFixed(1), 'reward'),
-                                span(sweet.toFixed(1), 'sweet'),
-                                span(cool.toFixed(1), 'cool'),
-                            );
-                        }
-                        return span('Loading...', 'nckuhub');
-                    }),
+                                const reward = nckuhub.got;
+                                const sweet = nckuhub.sweet;
+                                const cool = nckuhub.cold;
+                                return div('nckuhub',
+                                    span(reward.toFixed(1), 'reward'),
+                                    span(sweet.toFixed(1), 'sweet'),
+                                    span(cool.toFixed(1), 'cool'),
+                                );
+                            }
+                            return span('Loading...', 'nckuhub');
+                        }),
+                    ),
 
                     // info
                     courseInfo = div('expandable', div('info',

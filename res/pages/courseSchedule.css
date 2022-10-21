@@ -45,5 +45,4 @@ table td {
     left: 50%;
     transform: translate(-50%, -50%);
     white-space: pre-wrap;
-    overflow-y: auto;
 }

@@ -23,6 +23,7 @@ body {
     background: #181a1b;
     color: var(--font-color);
     font-family: 'JetBrains Mono', monospace;
+    -webkit-tap-highlight-color: transparent;
 }
 
 ::placeholder {

@@ -34,7 +34,22 @@ const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
 
-(async function main() {
+/**
+ * @typedef {{err:string, msg:string, warn:string, login:boolean, data:{}}} APIResponse
+ */
+/**
+ * @param endpoint {string}
+ * @param [option] {RequestInit}
+ * @return Promise<APIResponse>
+ * */
+window.fetchApi = function (endpoint, option) {
+    if (option) option.credentials = 'include';
+    else option = {credentials: 'include'};
+    return fetch(apiEndPoint + endpoint, option).then(i => i.json());
+};
+
+// Main function
+(function main() {
     // debug
     let memoryUpdate = null;
     if (location.hostname === 'localhost') {
@@ -72,7 +87,7 @@ const apiEndPoint = location.hostname === 'localhost'
                     else showLoginWindow.set(!showLoginWindow.state);
                 })
             ),
-            ...queryRouter.getRoutesName().map(i =>
+            queryRouter.getRoutesName().map(i =>
                 li('./?' + i,
                     a(navPageButtonName[i], null, null, () => queryRouter.openPage(i))
                 )
@@ -133,18 +148,3 @@ const apiEndPoint = location.hostname === 'localhost'
         );
     }
 })();
-
-/**
- * @typedef {{err:string, msg:string, warn:string, login:boolean, data:{}}} APIResponse
- */
-
-/**
- * @param endpoint {string}
- * @param [option] {RequestInit}
- * @return Promise<APIResponse>
- * */
-function fetchApi(endpoint, option) {
-    if (option) option.credentials = 'include';
-    else option = {credentials: 'include'};
-    return fetch(apiEndPoint + endpoint, option).then(i => i.json());
-}

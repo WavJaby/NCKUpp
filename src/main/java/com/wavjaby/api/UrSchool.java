@@ -220,7 +220,7 @@ public class UrSchool implements HttpHandler {
             while (true) {
                 // Get comment data
                 if ((commentStart = resultBody.indexOf("var obj", commentEnd + 1)) == -1 ||
-                        (commentStart = resultBody.indexOf('{', commentStart += 7)) == -1)
+                        (commentStart = resultBody.indexOf('{', commentStart + 7)) == -1)
                     break;
 
                 if ((commentEnd = resultBody.indexOf('}', commentStart + 1)) == -1) {
@@ -398,7 +398,7 @@ public class UrSchool implements HttpHandler {
                             .execute();
                     resultBody = result.body();
                     break;
-                } catch (IOException ignore) {
+                } catch (Exception ignore) {
                 }
             }
 

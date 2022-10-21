@@ -1,6 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- IE version check -->
+    <!--[if !IE]> -->
+    <script>var ieVersion = null;</script>
+    <!-- <![endif]-->
+    <!--[if lte IE 9]>
+    <script>var ieVersion = 8;</script>
+    <![endif]-->
+    <!--[if IE 9]>
+    <script>var ieVersion = 9;</script>
+    <![endif]-->
+    <script>
+        var SystemStartTime = (ieVersion !== null && ieVersion < 10 ? Date.now() : performance.now());
+        if (ieVersion === null)
+            try {
+                eval('const ignore__=1;')
+            } catch (e) {
+                ieVersion = 10
+            }
+        if (ieVersion === null && (!!window.ActiveXObject || "ActiveXObject" in window))
+            ieVersion = 11;
+    </script>
+
+    <!-- Main head -->
     <meta charset="UTF-8">
     <title>NCKU++</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,5 +34,6 @@
 <noscript><h1>請啟用JavaScript來使用NCKU++.<br>Please enable JavaScript to use NCKU++</h1></noscript>
 <script src="./res/require.js"></script>
 <script src="./index.js"></script>
+<script> if (ieVersion !== null && ieVersion !== undefined) require('./index.js'); </script>
 </body>
 </html>
