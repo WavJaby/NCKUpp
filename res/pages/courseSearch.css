@@ -148,11 +148,6 @@
     visibility: visible;
 }
 
-.courseSearch > .popupWindow > div {
-    background: var(--popupWindow-bg-color);
-    overflow: auto;
-}
-
 @media only screen and (min-width: 700px) {
     .courseSearch > .popupWindow > div {
         top: 100px;
@@ -162,6 +157,14 @@
         position: absolute;
         margin: auto;
     }
+}
+
+.courseSearch > .popupWindow > div {
+    background: var(--popupWindow-bg-color);
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
 }
 
 /*Course detail window*/
@@ -228,11 +231,6 @@
     position: absolute;
     z-index: 2;
 
-    /*animation: fadeIn var(--fade-time) reverse forwards;*/
-    /*-webkit-animation: fadeIn var(--fade-time) reverse forwards;*/
-    /*-moz-animation: fadeIn var(--fade-time) reverse forwards;*/
-    /*-o-animation: fadeIn var(--fade-time) reverse forwards;*/
-
     opacity: 0;
     visibility: hidden;
     transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
@@ -245,10 +243,6 @@
 .courseSearch > .instructorInfo.show {
     opacity: 1;
     visibility: visible;
-    /*animation: fadeIn var(--fade-time) normal forwards;*/
-    /*-webkit-animation: fadeIn var(--fade-time) normal forwards;*/
-    /*-moz-animation: fadeIn var(--fade-time) normal forwards;*/
-    /*-o-animation: fadeIn var(--fade-time) normal forwards;*/
 }
 
 .courseSearch > .instructorInfo > span {
