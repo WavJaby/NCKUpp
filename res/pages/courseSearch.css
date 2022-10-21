@@ -1,5 +1,6 @@
 :root {
     --course-info-title-font-size: 20px;
+    --fade-time: 0.2s;
 }
 
 .courseSearch input {
@@ -15,7 +16,9 @@
     white-space: nowrap;
 }
 
-/*Course header*/
+/*
+    Course header
+*/
 .courseSearch > .result > .header > .departmentName {
     margin-left: 1.2em;
 }
@@ -30,8 +33,10 @@
     z-index: 1;
 }
 
-/*Course info*/
-.courseSearch > .result > .body > .info {
+/*
+    Course result item
+*/
+.courseSearch > .result > .item {
     background: #0D1117;
     margin: 10px;
     padding: 10px;
@@ -42,17 +47,19 @@
     position: relative;
 }
 
-.courseSearch > .result .expendDownArrow {
+/*Expend info arrow*/
+.courseSearch > .result > .item .expendDownArrow {
     height: 1em;
     margin-right: 0.2em;
     transform: rotate(-90deg);
     transition: 0.2s transform;
 }
 
-.courseSearch > .result > .body > .info.extend .expendDownArrow {
+.courseSearch > .result > .item.extend .expendDownArrow {
     transform: rotate(0);
 }
 
+/*item title sections*/
 .courseSearch > .result .departmentName {
     display: inline-block;
     margin-right: 2em;
@@ -73,9 +80,10 @@
 }
 
 .courseSearch > .result .nckuhub {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    /*position: absolute;*/
+    /*top: 10px;*/
+    /*right: 10px;*/
+    float: right;
 }
 
 .courseSearch > .result .nckuhub > span {
@@ -84,36 +92,36 @@
     text-align: right;
 }
 
-/*Course detail*/
-.courseSearch > .result > .body > .info .details {
+/*Course info*/
+.courseSearch > .result .item .info {
     border-top: solid 1px gray;
     padding: 10px;
 }
 
-.courseSearch > .result > .body > .info .details > .info,
-.courseSearch > .result > .body > .info .details > .limit {
+.courseSearch > .result .item .info > .note,
+.courseSearch > .result .item .info > .limit {
     display: block;
 }
 
-.courseSearch > .result > .body > .info .details > .info:before {
+.courseSearch > .result .item .info > .note:before {
     content: url('./res/assets/info_icon.svg');
     display: inline-block;
     width: 1em;
     vertical-align: middle;
 }
 
-.courseSearch > .result > .body > .info .details > .limit:before {
+.courseSearch > .result .item .info > .limit:before {
     content: url('./res/assets/warn_icon.svg');
     display: inline-block;
     width: 1em;
     vertical-align: middle;
 }
 
-.courseSearch > .result > .body > .info .details > .instructor {
+.courseSearch > .result .item .info > .instructor {
     font-size: 16px;
 }
 
-.courseSearch > .result > .body > .info .details > .instructorBtn {
+.courseSearch > .result .item .info > .instructorBtn {
     margin: 0;
     font-size: 18px;
     padding: 3px 5px;
@@ -121,7 +129,7 @@
 }
 
 /*Popup window*/
-.courseSearch > .result > .popupWindow {
+.courseSearch > .popupWindow {
     background: rgba(0, 0, 0, 0.6);
     width: 100%;
     height: 100%;
@@ -132,11 +140,11 @@
     z-index: 3;
 }
 
-.courseSearch > .result > .popupWindow.open {
+.courseSearch > .popupWindow.open {
     display: block;
 }
 
-.courseSearch > .result > .popupWindow > div {
+.courseSearch > .popupWindow > div {
     background: rgba(0, 0, 0);
     top: 100px;
     bottom: 100px;
@@ -147,80 +155,104 @@
     overflow: auto;
 }
 
-.courseSearch > .result > .popupWindow > div {
+/*Course detail window*/
+.courseSearch > .popupWindow > div {
     white-space: pre-wrap;
 }
 
-.courseSearch > .result > .popupWindow .rates {
+.courseSearch > .popupWindow .rates {
     width: 100%;
     display: table;
     table-layout: fixed;
     text-align: center;
 }
 
-.courseSearch > .result > .popupWindow .rates > div {
+.courseSearch > .popupWindow .rates > div {
     display: table-cell;
 }
 
-.courseSearch > .result > .popupWindow .rates > div > .rateBox {
+.courseSearch > .popupWindow .rates > div > .rateBox {
     background: gray;
     width: 7em;
     border-radius: 10px;
     display: inline-block;
 }
 
-.courseSearch > .result > .popupWindow .rates .rateBox > span {
+.courseSearch > .popupWindow .rates .rateBox > span {
     display: block;
 }
 
-.courseSearch > .result > .popupWindow .comments > .commentBlock {
+.courseSearch > .popupWindow .comments > .commentBlock {
     background: gray;
     margin: 0 10px 10px 10px;
     border-radius: 10px;
     padding: 10px;
 }
 
-.courseSearch > .result > .popupWindow .comments > .commentBlock > span {
+.courseSearch > .popupWindow .comments > .commentBlock > span {
     display: block;
 }
 
-/*Instructor window*/
-.courseSearch > .result > .instructorWindow {
-    background: rgba(0, 0, 0, 0.8);
+/*Instructor info bubble*/
+.courseSearch > .instructorInfo {
+    background: rgba(0, 0, 0, 0.9);
     max-width: 500px;
     min-width: 350px;
     height: 300px;
+    padding: 5px;
+    box-sizing: border-box;
     position: absolute;
     white-space: pre-wrap;
     overflow: auto;
     z-index: 2;
+
+    /*animation: fadeIn var(--fade-time) reverse forwards;*/
+    /*-webkit-animation: fadeIn var(--fade-time) reverse forwards;*/
+    /*-moz-animation: fadeIn var(--fade-time) reverse forwards;*/
+    /*-o-animation: fadeIn var(--fade-time) reverse forwards;*/
+
+    opacity: 0;
+    visibility: hidden;
+    transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -webkit-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -moz-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -ms-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -o-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
 }
 
-.courseSearch > .result > .instructorWindow > span {
+.courseSearch > .instructorInfo.show {
+    opacity: 1;
+    visibility: visible;
+    /*animation: fadeIn var(--fade-time) normal forwards;*/
+    /*-webkit-animation: fadeIn var(--fade-time) normal forwards;*/
+    /*-moz-animation: fadeIn var(--fade-time) normal forwards;*/
+    /*-o-animation: fadeIn var(--fade-time) normal forwards;*/
+}
+
+.courseSearch > .instructorInfo > span {
     display: block;
 }
 
-.courseSearch > .result > .instructorWindow table {
+.courseSearch > .instructorInfo > table {
     width: 100%;
 }
 
-.courseSearch > .result > .instructorWindow td {
+.courseSearch > .instructorInfo > table td {
     text-align: center;
 }
 
-.courseSearch > .result > .instructorWindow td:after {
+.courseSearch > .instructorInfo > table td:after {
     content: '★';
 }
 
-.courseSearch > .result > .instructorWindow .blue {
+.courseSearch > .instructorInfo .blue {
     color: #33A2F4;
 }
 
-.courseSearch > .result > .instructorWindow .yellow {
+.courseSearch > .instructorInfo .yellow {
     color: #FFC71E;
 }
 
-.courseSearch > .result > .instructorWindow .red {
+.courseSearch > .instructorInfo .red {
     color: #FF311E;
 }
-

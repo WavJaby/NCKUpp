@@ -30,7 +30,6 @@
 /**@typedef {int|string} available */
 /**@typedef {string[]} time */
 /**@typedef {string} moodle */
-
 /**
  * @typedef {{
  *     dn: departmentName,
@@ -54,7 +53,6 @@
  *     m: moodle
  * }} CourseData
  */
-
 /**
  * @typedef {{
  *     got: float,
@@ -101,7 +99,7 @@ const {
     br,
     table,
     tr,
-    th, td
+    th, td, TextState
 } = require('../domHelper');
 /*ExcludeEnd*/
 /**@type {{add:function(), remove: function(), rules: CSSStyleRule}}*/
@@ -111,11 +109,13 @@ module.exports = function () {
     console.log('courseSearch Init');
     const expendArrow = svg('./res/assets/expand_down_arrow_icon.svg', 'expendDownArrow');
     const searchResult = new Signal();
-    const instructorWindow = InstructorWindow();
-    const popupWindow = PopupWindow();
+    const instructorInfoBubble = InstructorInfoBubble();
+    const instructorDetailWindow = InstructorDetailWindow();
+    const courseDetailWindow = CourseDetailWindow();
     let expandElements;
     let courseSearch;
 
+    console.log('Course search Init');
     // data
     let nckuHubCourseID;
     let urschoolData;
@@ -125,11 +125,13 @@ module.exports = function () {
     let searching;
 
     function onRender() {
+        console.log('Course search Render');
         styles.add();
         search();
     }
 
     function onDestroy() {
+        console.log('Course search Destroy');
         styles.remove();
     }
 
@@ -162,16 +164,16 @@ module.exports = function () {
         lastQueryString = queryString;
 
         console.log('Search');
-        // fetch data
-        fetchApi('/search?' + queryString).then(parseResult);
-    }
 
-    /**
-     * @param result {{data:CourseData[]}}
-     */
-    function parseResult(result) {
+        // fetch data
+        /**
+         * @type {{data:CourseData[]}}
+         */
+        const result = (await fetchApi('/search?' + queryString));
+
         console.log(result);
         if (!result.data) {
+            // TODO: handle error
             searching = false;
             return;
         }
@@ -245,95 +247,110 @@ module.exports = function () {
         searching = false;
     }
 
+    function openInstructorDetailWindow(data) {
+        console.log(data)
+    }
+
     function renderResult(state) {
-        if (state) {
-            return div('result',
-                div('header',
-                    span('Dept', 'departmentName', {style: `width:${state.deptLen}px`}),
-                    span('Serial', 'serialNumber'),
-                    span('Time', 'courseTime', {style: `width:${state.timeLen}px`}),
-                    span('Name', 'courseName'),
-                    div('nckuhub',
-                        span('Reward', 'reward'),
-                        span('Sweet', 'sweet'),
-                        span('Cool', 'cool'),
-                    ),
+        if (!state) return div();
+
+        return div('result',
+            div('header',
+                span('Dept', 'departmentName', {style: `width:${state.deptLen}px`}),
+                span('Serial', 'serialNumber'),
+                span('Time', 'courseTime', {style: `width:${state.timeLen}px`}),
+                span('Name', 'courseName'),
+                div('nckuhub',
+                    span('Reward', 'reward'),
+                    span('Sweet', 'sweet'),
+                    span('Cool', 'cool'),
                 ),
-                div('body',
-                    ...state.data.map((data) => {
-                        const infoClass = new ClassList('info');
-                        const nckuHubData = state.nckuHubResponseData[data.sn];
-                        let courseDetails;
-                        const expendButton = expendArrow.cloneNode(true);
-                        expendButton.onclick = toggleCourseDetails;
-                        expandElements.push(toggleCourseDetails);
+            ),
+            ...state.data.map((data) => {
+                const resultItemClass = new ClassList('item');
+                const nckuHubData = state.nckuHubResponseData[data.sn];
+                const expendButton = expendArrow.cloneNode(true);
+                expendButton.onclick = toggleCourseInfo;
+                expandElements.push(toggleCourseInfo);
 
-                        function toggleCourseDetails() {
-                            const show = infoClass.toggle('extend');
-                            if (show)
-                                courseDetails.style.height = courseDetails.firstChild.clientHeight + "px";
-                            else
-                                courseDetails.style.height = null;
+                // course short information
+                let courseInfo;
+
+                function toggleCourseInfo() {
+                    const show = resultItemClass.toggle('extend');
+                    if (show)
+                        courseInfo.style.height = courseInfo.firstChild.clientHeight + "px";
+                    else
+                        courseInfo.style.height = null;
+                }
+
+                // open detail window
+                function openCourseDetailWindow() {
+                    if (!nckuHubData || !nckuHubData.state || nckuHubData.state.noData) return;
+                    courseDetailWindow.set([nckuHubData.state, data]);
+                }
+
+                // render result item
+                return div(resultItemClass, {
+                        onclick: openCourseDetailWindow,
+                        // prevent double click select text
+                        onmousedown: preventDoubleClick,
+                    },
+                    // title sections
+                    expendButton,
+                    span(data.dn, 'departmentName', {style: `width:${state.deptLen}px`}),
+                    span(data.sn, 'serialNumber'),
+                    span(data.parseedTime, 'courseTime', {style: `width:${state.timeLen}px`}),
+                    span(data.cn, 'courseName'),
+
+                    // ncku Hub
+                    State(nckuHubData, /**@param {NckuHub} nckuhub*/(nckuhub) => {
+                        if (nckuhub) {
+                            if (nckuhub.noData) return div();
+
+                            const reward = nckuhub.got;
+                            const sweet = nckuhub.sweet;
+                            const cool = nckuhub.cold;
+                            return div('nckuhub',
+                                span(reward.toFixed(1), 'reward'),
+                                span(sweet.toFixed(1), 'sweet'),
+                                span(cool.toFixed(1), 'cool'),
+                            );
                         }
-
-                        function openNckuHubDetails() {
-                            if (!nckuHubData || !nckuHubData.state || nckuHubData.state.noData) return;
-                            popupWindow.set([nckuHubData.state, data]);
-                        }
-
-                        return div(infoClass, {
-                                onclick: openNckuHubDetails,
-                                onmousedown: (e) => {if (e.detail > 1) e.preventDefault();},
-                            },
-                            div(null,
-                                expendButton,
-                                span(data.dn, 'departmentName', {style: `width:${state.deptLen}px`}),
-                                span(data.sn, 'serialNumber'),
-                                span(data.parseedTime, 'courseTime', {style: `width:${state.timeLen}px`}),
-                                span(data.cn, 'courseName'),
-                            ),
-
-                            // ncku Hub
-                            State(nckuHubData, /**@param {NckuHub} nckuhub*/(nckuhub) => {
-                                if (nckuhub) {
-                                    if (nckuhub.noData) return div();
-
-                                    const reward = nckuhub.got;
-                                    const sweet = nckuhub.sweet;
-                                    const cool = nckuhub.cold;
-                                    return div('nckuhub',
-                                        span(reward.toFixed(1), 'reward'),
-                                        span(sweet.toFixed(1), 'sweet'),
-                                        span(cool.toFixed(1), 'cool'),
-                                    );
-                                }
-                                return span('Loading...', 'nckuhub');
-                            }),
-
-                            // details
-                            courseDetails = div('expandable', div('details',
-                                data.ci.length > 0 ? span(data.ci, 'info') : null,
-                                data.cl.length > 0 ? span(data.cl, 'limit red') : null,
-                                span('Instructor: '),
-                                ...data.ts.map((i) =>
-                                    button('instructorBtn', i instanceof Array ? i[2] : i, () => {}, {
-                                        onmouseenter: (e) => instructorWindow.set({
-                                            target: e.target,
-                                            offsetY: courseSearch.scrollTop,
-                                            data: i
-                                        }),
-                                        onmouseleave: () => instructorWindow.set(null)
-                                    })
-                                ),
-                            )),
-                        );
+                        return span('Loading...', 'nckuhub');
                     }),
-                ),
-                instructorWindow,
-                popupWindow,
-            );
-        }
-        return div();
+
+                    // info
+                    courseInfo = div('expandable', div('info',
+                        data.ci.length > 0 ? span(data.ci, 'note') : null,
+                        data.cl.length > 0 ? span(data.cl, 'limit red') : null,
+
+                        // Instructor
+                        span('Instructor: ', 'instructor'),
+                        ...data.ts.map((i) =>
+                            button('instructorBtn', i instanceof Array ? i[2] : i,
+                                (e) => {
+                                    openInstructorDetailWindow(i);
+                                    e.stopPropagation();
+                                },
+                                {
+                                    onmouseenter: (e) => {
+                                        if (i instanceof Array) {
+                                            instructorInfoBubble.set({
+                                                target: e.target,
+                                                offsetY: courseSearch.scrollTop,
+                                                data: i
+                                            });
+                                            setTimeout(instructorInfoBubble.show, 0);
+                                        }
+                                    },
+                                    onmouseleave: instructorInfoBubble.hide
+                                })
+                        ),
+                    )),
+                );
+            }),
+        );
     }
 
     return courseSearch = div('courseSearch',
@@ -347,49 +364,99 @@ module.exports = function () {
         input(null, 'Section', 'section', {onkeyup, name: 'section'}),
         button(null, 'search', search),
         State(searchResult, renderResult),
+        instructorInfoBubble,
+        instructorDetailWindow,
+        courseDetailWindow,
     );
 };
 
-function InstructorWindow() {
+function InstructorInfoBubble() {
     const signal = new Signal();
+    const classList = new ClassList('instructorInfo');
     const state = State(signal, (state) => {
-        if (state && state.data instanceof Array) {
-            const bound = state.target.getBoundingClientRect();
-            const [id, mod,
-                name, dept, job,
-                recommend, reward, articulate, pressure, sweet,
-                averageScore, academicQualifications, note, nickname, rollCall
-            ] = state.data;
-            return div('instructorWindow', {
-                    'style': `top:${bound.top + state.offsetY - 340}px; left:${bound.left}px`
-                },
-                span('Name: ' + name),
-                recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
-                    ? table(null,
-                        tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
-                        tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), td(pressure, getColor(pressure)), td(sweet, getColor(sweet))),
-                    )
-                    : null,
-                span('Average score: ' + averageScore),
-                span('Note: ' + note),
-                span('Nickname: ' + nickname),
-                span('Department: ' + dept),
-                span('Job title: ' + job),
-                span('Roll call method: ' + rollCall),
-                span('Academic qualifications: ' + academicQualifications),
-            );
-        }
-        return div();
+        if (!state) return div(classList);
+
+        const bound = state.target.getBoundingClientRect();
+        const [id, mod,
+            name, dept, job,
+            recommend, reward, articulate, pressure, sweet,
+            averageScore, academicQualifications, note, nickname, rollCall
+        ] = state.data;
+        return div(classList, {
+                'style': `top:${bound.top + state.offsetY - 340}px; left:${bound.left}px`
+            },
+            span('Name: ' + name),
+            recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
+                ? table(null,
+                    tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
+                    tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), td(pressure, getColor(pressure)), td(sweet, getColor(sweet))),
+                )
+                : null,
+            span('Average score: ' + averageScore),
+            span('Note: ' + note),
+            span('Nickname: ' + nickname),
+            span('Department: ' + dept),
+            span('Job title: ' + job),
+            span('Roll call method: ' + rollCall),
+            span('Academic qualifications: ' + academicQualifications),
+        );
     });
     state.set = signal.set;
+    state.hide = () => classList.remove('show');
+    state.show = () => classList.add('show');
     return state;
+}
+
+function InstructorDetailWindow() {
+    const popupSignal = new Signal();
+    const popupClass = new ClassList('popupWindow');
+    const popupState = State(popupSignal, /**@param {[NckuHub, CourseData]} data*/(data) => {
+        if (!data) return div();
+        const [nckuhub, ncku] = data;
+        popupClass.add('open');
+        return div(null,
+            button(null, 'x', () => popupClass.remove('open')),
+            // rates
+            span(`Evaluation(${nckuhub.rate_count})`, 'title'),
+            div('rates',
+                div(null, div('rateBox',
+                    span('Reward'),
+                    span(nckuhub.got.toFixed(1)),
+                )),
+                div(null, div('rateBox',
+                    span('Sweetness'),
+                    span(nckuhub.sweet.toFixed(1)),
+                )),
+                div(null, div('rateBox',
+                    span('Cool'),
+                    span(nckuhub.cold.toFixed(1)),
+                )),
+            ),
+            // comment
+            span(`Comments(${nckuhub.comment.length})`, 'title'),
+            div('comments',
+                ...nckuhub.comment.map(comment => div('commentBlock',
+                    span(comment.semester, 'semester'),
+                    span(comment.comment, 'comment'),
+                )),
+            ),
+            br(),
+            br(),
+            br(),
+            br(),
+            span(JSON.stringify(nckuhub, null, 2)),
+        );
+    });
+    const popupWindow = div(popupClass, popupState);
+    popupWindow.set = popupSignal.set;
+    return popupWindow;
 }
 
 function getColor(number) {
     return number < 2 ? 'red' : number < 4 ? 'yellow' : 'blue';
 }
 
-function PopupWindow() {
+function CourseDetailWindow() {
     const popupSignal = new Signal();
     const popupClass = new ClassList('popupWindow');
     const popupState = State(popupSignal, /**@param {[NckuHub, CourseData]} data*/(data) => {
@@ -439,4 +506,9 @@ function Canvas(font) {
     const context = canvas.getContext("2d");
     context.font = font;
     return context;
+}
+
+function preventDoubleClick(e) {
+    if (e.detail > 1)
+        e.preventDefault();
 }

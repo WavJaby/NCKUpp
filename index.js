@@ -27,13 +27,23 @@ const {
     label,
     TextState,
     State,
-    ClassList
+    ClassList,
+    debug: doomDebug
 } = require('./res/domHelper');
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
 
 (async function main() {
+    // debug
+    let memoryUpdate = null;
+    if (location.hostname === 'localhost') {
+        doomDebug();
+        memoryUpdate = new Signal(window.performance.memory);
+        setInterval(() => memoryUpdate.set(window.performance.memory), 1000);
+    }
+
+    // main code
     let login = false;
     const loginState = new Signal(false);
     const showLoginWindow = new Signal(false);
@@ -71,6 +81,8 @@ const apiEndPoint = location.hostname === 'localhost'
         ShowIf(showLoginWindow,
             LoginWindow(onLoginStateChange)
         ),
+        memoryUpdate === null ? null :
+            span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black'}),
     ));
 
     function onLoginStateChange(response) {

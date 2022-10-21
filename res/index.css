@@ -73,7 +73,7 @@
 }
 
 .navbar a:link, .navbar a:visited, .navbar a:hover, .navbar a:active {
-    color: var(--text-color);
+    color: var(--font-color);
 }
 
 /*Login Window*/

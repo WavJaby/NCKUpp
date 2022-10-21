@@ -1,11 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
 
 :root {
-    --text-color: #e8e6e3;
+    --font-size: 20px;
+    --font-color: #e8e6e3;
+
     --button-bg-color: #5b5b5b;
     --button-hover-color: #505050;
     --button-active-color: #404040;
-    --font-size: 20px;
+
+    --scrollbar-bg-color: #555555;
+    --scrollbar-hover-color: #666666;
 }
 
 html, body {
@@ -17,7 +21,7 @@ html, body {
 body {
     position: absolute;
     background: #181a1b;
-    color: var(--text-color);
+    color: var(--font-color);
     font-family: 'JetBrains Mono', monospace;
 }
 
@@ -25,9 +29,10 @@ body {
     color: darkgray;
 }
 
+/*Button*/
 button {
     background-color: var(--button-bg-color);
-    color: var(--text-color);
+    color: var(--font-color);
     border: none;
     padding: 5px 10px;
     text-align: center;
@@ -44,6 +49,7 @@ button:active {
     background-color: var(--button-active-color);
 }
 
+/*Input color*/
 textarea:focus, select:focus, input:focus, button:focus {
     outline: none;
     box-shadow: 0 0 3px 1px white;
@@ -51,7 +57,7 @@ textarea:focus, select:focus, input:focus, button:focus {
 
 input {
     background-color: var(--button-bg-color);
-    color: var(--text-color);
+    color: var(--font-color);
     border: none;
     padding: 5px;
     text-decoration: none;
@@ -59,6 +65,7 @@ input {
     font-size: var(--font-size);
 }
 
+/*Input auto fill color*/
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -67,6 +74,34 @@ input:-webkit-autofill:active {
 }
 
 input:-webkit-autofill {
-    -webkit-text-fill-color: var(--text-color) !important;
-    caret-color: var(--text-color) !important;
+    -webkit-text-fill-color: var(--font-color) !important;
+    caret-color: var(--font-color) !important;
+}
+
+/*Scroll bar*/
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: none;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--button-bg-color);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: var(--button-hover-color);
+}
+
+::-webkit-scrollbar-corner {
+    background: none;
+    width: 0;
+    height: 0;
+    border-left: 10px solid var(--button-bg-color);
+    border-top: 10px solid var(--button-bg-color);
+    border-bottom: 10px solid transparent;
+    border-right: 10px solid transparent;
 }

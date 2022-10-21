@@ -50,7 +50,7 @@ function CourseInfoWindow(showCourseInfoWindow) {
 }
 
 module.exports = function (loginState) {
-    console.log('courseSchedule Init');
+    console.log('Course schedule Init');
     // static element
     const scheduleTable = table('courseScheduleTable');
     const scheduleStudentInfo = new Signal();
@@ -63,13 +63,13 @@ module.exports = function (loginState) {
     onLoginState(loginState.state);
 
     function onRender() {
-        console.log('Render Schedule');
+        console.log('Course schedule Render');
         styles.add();
         loginState.addListener(onLoginState);
     }
 
     function onDestroy() {
-        console.log('Destroy Schedule');
+        console.log('Course schedule Destroy');
         styles.remove();
         loginState.removeListener(onLoginState);
     }

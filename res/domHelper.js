@@ -1,4 +1,5 @@
 'use strict';
+let debug = null;
 
 function addOption(element, options) {
     for (let i = 0; i < options.length; i++) {
@@ -62,6 +63,7 @@ function StateChanger(signal, renderState) {
     };
 
     function onStateChange(state) {
+        // if (debug !== null) debug.trace('[Debug] State change', this);
         const newElement = renderState ? renderState(state) : state;
         thisParent.replaceChild(newElement, lastElement);
         lastElement = newElement;
@@ -108,44 +110,48 @@ function ClassList(...className) {
 
     this.init = function (element) {
         thisElement = element;
-        if (classList.length === 0)
-            return null;
-        return classList.join(' ');
-    };
+        if (classList.length === 0) return null;
 
-    this.add = function (...className) {
-        classList.push(...className);
-        thisElement.className = classList.join(' ');
-    };
-
-    this.remove = function (className) {
-        const index = classList.indexOf(className);
-        if (index !== -1)
-            classList.splice(index, 1);
-        thisElement.className = classList.join(' ');
-    };
-
-    this.removeAll = function (...className) {
-        for (let i = 0; i < className.length; i++) {
-            const index = classList.indexOf(className[i]);
-            if (index !== -1)
-                classList.splice(index, 1);
-        }
-        thisElement.className = classList.join(' ');
-    };
-
-    this.toggle = function (className) {
-        const index = classList.indexOf(className);
-        let toggle;
-        if (index !== -1) {
-            classList.splice(index, 1);
-            toggle = false;
+        if (element.classList) {
+            element.classList.add(...classList);
+            this.add = names => element.classList.add(names);
+            this.remove = names => element.classList.remove(names);
+            this.toggle = name => element.classList.toggle(name);
+            this.contains = name => element.classList.contains(name);
         } else {
-            classList.push(className);
-            toggle = true;
+            this.add = function (...className) {
+                Array.prototype.push.apply(classList, className);
+                thisElement.className = classList.join(' ');
+            };
+
+            this.remove = function (...className) {
+                for (let i = 0; i < className.length; i++) {
+                    const index = classList.indexOf(className[i]);
+                    if (index !== -1)
+                        classList.splice(index, 1);
+                }
+                thisElement.className = classList.join(' ');
+            };
+
+            this.toggle = function (className) {
+                const index = classList.indexOf(className);
+                let toggle;
+                if (index !== -1) {
+                    classList.splice(index, 1);
+                    toggle = false;
+                } else {
+                    classList.push(className);
+                    toggle = true;
+                }
+                thisElement.className = classList.join(' ');
+                return toggle;
+            };
+
+            this.contains = function (className) {
+                return classList.indexOf(className) !== -1;
+            }
         }
-        thisElement.className = classList.join(' ');
-        return toggle;
+        return classList.join(' ');
     };
 }
 
@@ -158,7 +164,7 @@ function parseClassInput(className, element) {
 
 /**
  * @param {string} defaultPage
- * @param {{pageName:function()|HTMLElement}} Routs
+ * @param {{pageName: function()|HTMLElement}} Routs
  * */
 function QueryRouter(defaultPage, Routs) {
     const routerRoot = document.createElement('div');
@@ -506,10 +512,21 @@ module.exports = {
         if (options.length) addOption(element, options);
         return element;
     },
+
+    /**
+     * @param {string} tagN
+     * @param {string} [classN] Class Name
+     * @param [options] Options for element
+     * @return {HTMLElement}
+     * */
     any(tagN, classN, ...options) {
         const element = document.createElement(tagN);
         if (classN) parseClassInput(classN, element);
         if (options.length) addOption(element, options);
         return element;
+    },
+
+    debug() {
+        debug = console;
     }
 };
