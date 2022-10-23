@@ -99,7 +99,7 @@ const {
     br,
     table,
     tr,
-    th, td, TextState
+    th, td, TextState, p, img
 } = require('../domHelper');
 /*ExcludeEnd*/
 /**@type {{add:function(), remove: function(), rules: CSSStyleRule}}*/
@@ -107,7 +107,7 @@ const styles = require('./courseSearch.css');
 
 module.exports = function () {
     console.log('courseSearch Init');
-    const expendArrow = svg('./res/assets/expand_down_arrow_icon.svg', 'expendDownArrow');
+    const expendArrow = svg('./res/assets/down_arrow_icon.svg', 'expendDownArrow');
     const searchResult = new Signal();
     const instructorInfoBubble = InstructorInfoBubble();
     const instructorDetailWindow = InstructorDetailWindow();
@@ -117,8 +117,8 @@ module.exports = function () {
 
     console.log('Course search Init');
     // data
-    let nckuHubCourseID;
-    let urschoolData;
+    let nckuHubCourseID = null;
+    let urschoolData = null;
 
     // quary string
     let lastQueryString;
@@ -143,10 +143,12 @@ module.exports = function () {
         if (searching) return;
         searching = true;
         // get all course ID
-        nckuHubCourseID = (await fetchApi('/nckuhub')).data;
+        if (nckuHubCourseID == null)
+            nckuHubCourseID = (await fetchApi('/nckuhub')).data;
 
         // get urschool data
-        urschoolData = (await fetchApi('/urschool')).data;
+        if (urschoolData == null)
+            urschoolData = (await fetchApi('/urschool')).data;
 
         // generate query string
         const queryData = [];
@@ -242,13 +244,18 @@ module.exports = function () {
 
         expandElements = [];
         searchResult.set({data: result.data, nckuHubResponseData, deptLen, timeLen});
-        expandElements.forEach(i => i());
+        for (const i of expandElements) i();
         expandElements = null;
         searching = false;
     }
 
-    function openInstructorDetailWindow(data) {
-        console.log(data)
+    function openInstructorDetailWindow(info) {
+        fetchApi(`/urschool?id=${info[0]}&mode=${info[1]}`).then(response => {
+            // TODO: handle error
+            const data = response.data;
+            data.info = info;
+            instructorDetailWindow.set(data);
+        });
     }
 
     function renderResult(state) {
@@ -266,7 +273,7 @@ module.exports = function () {
                     span('Cool', 'cool'),
                 ),
             ),
-            ...state.data.map((data) => {
+            ...state.data.map(data => {
                 const resultItemClass = new ClassList('item');
                 const nckuHubData = state.nckuHubResponseData[data.sn];
                 const expendButton = expendArrow.cloneNode(true);
@@ -304,7 +311,7 @@ module.exports = function () {
                         span(data.cn, 'courseName'),
 
                         // ncku Hub
-                        State(nckuHubData, /**@param {NckuHub} nckuhub*/(nckuhub) => {
+                        State(nckuHubData, /**@param {NckuHub} nckuhub*/nckuhub => {
                             if (nckuhub) {
                                 if (nckuhub.noData) return div();
 
@@ -328,14 +335,14 @@ module.exports = function () {
 
                         // Instructor
                         span('Instructor: ', 'instructor'),
-                        ...data.ts.map((i) =>
+                        ...data.ts.map(i =>
                             button('instructorBtn', i instanceof Array ? i[2] : i,
-                                (e) => {
+                                e => {
                                     openInstructorDetailWindow(i);
                                     e.stopPropagation();
                                 },
                                 {
-                                    onmouseenter: (e) => {
+                                    onmouseenter: e => {
                                         if (i instanceof Array) {
                                             instructorInfoBubble.set({
                                                 target: e.target,
@@ -371,36 +378,48 @@ module.exports = function () {
     );
 };
 
-function InstructorInfoBubble() {
-    const signal = new Signal();
-    const classList = new ClassList('instructorInfo');
-    const state = State(signal, (state) => {
-        if (!state) return div(classList);
-
-        const bound = state.target.getBoundingClientRect();
-        const [id, mod,
-            name, dept, job,
-            recommend, reward, articulate, pressure, sweet,
-            averageScore, academicQualifications, note, nickname, rollCall
-        ] = state.data;
-        return div(classList, {
-                'style': `top:${bound.top + state.offsetY - 340}px; left:${bound.left}px`
-            },
-            span('Name: ' + name),
+function InstructorInfoElement(
+    [id, mod,
+        name, dept, job,
+        recommend, reward, articulate, pressure, sweet,
+        averageScore, academicQualifications, note, nickname, rollCall
+    ]) {
+    return div(null,
+        div('rate',
             recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
                 ? table(null,
                     tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
                     tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), td(pressure, getColor(pressure)), td(sweet, getColor(sweet))),
                 )
                 : null,
-            span('Average score: ' + averageScore),
-            span('Note: ' + note),
-            span('Nickname: ' + nickname),
-            span('Department: ' + dept),
-            span('Job title: ' + job),
-            span('Roll call method: ' + rollCall),
-            span('Academic qualifications: ' + academicQualifications),
-        );
+        ),
+        div('info',
+            table(null,
+                tr(null, th('Average score'), td(averageScore)),
+                tr(null, th('Note'), td(note)),
+                tr(null, th('Nickname'), td(nickname)),
+                tr(null, th('Department'), td(dept)),
+                tr(null, th('Job title'), td(job)),
+                tr(null, th('Roll call method'), td(rollCall)),
+            ),
+        ),
+        span('Academic qualifications: ' + academicQualifications),
+    );
+}
+
+function InstructorInfoBubble() {
+    const signal = new Signal();
+    const classList = new ClassList('instructorInfo');
+    const state = State(signal, state => {
+        if (!state) return div(classList);
+
+        const bound = state.target.getBoundingClientRect();
+        const element = InstructorInfoElement(state.data);
+        element.style.top = (bound.top + state.offsetY - 340) + 'px';
+        element.style.left = bound.left + 'px';
+        element.insertBefore(span('Name: ' + state.data[2]), element.firstChild);
+        classList.init(element);
+        return element;
     });
     state.set = signal.set;
     state.hide = () => classList.remove('show');
@@ -409,48 +428,37 @@ function InstructorInfoBubble() {
 }
 
 function InstructorDetailWindow() {
-    const popupSignal = new Signal();
-    const popupClass = new ClassList('popupWindow');
-    const popupState = State(popupSignal, /**@param {[NckuHub, CourseData]} data*/(data) => {
-        if (!data) return div();
-        const [nckuhub, ncku] = data;
-        popupClass.add('open');
-        return div(null,
-            button(null, 'x', () => popupClass.remove('open')),
-            // rates
-            span(`Evaluation(${nckuhub.rate_count})`, 'title'),
-            div('rates',
-                div(null, div('rateBox',
-                    span('Reward'),
-                    span(nckuhub.got.toFixed(1)),
-                )),
-                div(null, div('rateBox',
-                    span('Sweetness'),
-                    span(nckuhub.sweet.toFixed(1)),
-                )),
-                div(null, div('rateBox',
-                    span('Cool'),
-                    span(nckuhub.cold.toFixed(1)),
-                )),
+    return PopupWindow(({id, info, tags, comments, takeCourseCount, takeCourseUser}) => {
+        const instructorInfo = InstructorInfoElement(info);
+        instructorInfo.className = 'instructorInfo';
+        return div('instructorDetailWindow',
+            div('title',
+                span('Evaluation for'),
+                div('name',
+                    span(info[3]),
+                    span(info[2]),
+                    span(info[4]),
+                ),
             ),
-            // comment
-            span(`Comments(${nckuhub.comment.length})`, 'title'),
+            div('tags',
+                tags.map(i => {
+                    return span(i[1]);
+                })
+            ),
+            instructorInfo,
             div('comments',
-                ...nckuhub.comment.map(comment => div('commentBlock',
-                    span(comment.semester, 'semester'),
-                    span(comment.comment, 'comment'),
-                )),
+                comments.map(i => {
+                    return div('item',
+                        img(`https://graph.facebook.com/v2.8/${i.profile}/picture?type=square`, 'profile'),
+                        div('body',
+                            span(i.created_at, 'createDate'),
+                            span(i.body, 'message'),
+                        ),
+                    );
+                })
             ),
-            br(),
-            br(),
-            br(),
-            br(),
-            span(JSON.stringify(nckuhub, null, 2)),
         );
     });
-    const popupWindow = div(popupClass, popupState);
-    popupWindow.set = popupSignal.set;
-    return popupWindow;
 }
 
 function getColor(number) {
@@ -458,14 +466,8 @@ function getColor(number) {
 }
 
 function CourseDetailWindow() {
-    const popupSignal = new Signal();
-    const popupClass = new ClassList('popupWindow');
-    const popupState = State(popupSignal, /**@param {[NckuHub, CourseData]} data*/(data) => {
-        if (!data) return div();
-        const [nckuhub, ncku] = data;
-        popupClass.add('open');
-        return div(null,
-            button(null, 'x', () => popupClass.remove('open')),
+    return PopupWindow(/**@param {[NckuHub, CourseData]} data*/([nckuhub, ncku]) => {
+        return div('courseDetailWindow',
             // rates
             span(`Evaluation(${nckuhub.rate_count})`, 'title'),
             div('rates',
@@ -487,7 +489,7 @@ function CourseDetailWindow() {
             div('comments',
                 ...nckuhub.comment.map(comment => div('commentBlock',
                     span(comment.semester, 'semester'),
-                    span(comment.comment, 'comment'),
+                    p(comment.comment, 'comment'),
                 )),
             ),
             br(),
@@ -497,7 +499,19 @@ function CourseDetailWindow() {
             span(JSON.stringify(nckuhub, null, 2)),
         );
     });
-    const popupWindow = div(popupClass, popupState);
+}
+
+function PopupWindow(onDataChange) {
+    const popupSignal = new Signal();
+    const popupClass = new ClassList('popupWindow');
+    const closeButton = button('closeButton', '', () => popupClass.remove('open'), div('icon'));
+    const popupWindow = div(popupClass, State(popupSignal, state => {
+        if (!state) return div();
+        const body = onDataChange(state);
+        body.insertBefore(closeButton, body.firstChild);
+        popupClass.add('open');
+        return body;
+    }));
     popupWindow.set = popupSignal.set;
     return popupWindow;
 }

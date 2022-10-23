@@ -79,6 +79,12 @@ input:-webkit-autofill {
     caret-color: var(--font-color) !important;
 }
 
+/*Paragraph Element*/
+p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
 /*Scroll bar*/
 ::-webkit-scrollbar {
     width: 10px;

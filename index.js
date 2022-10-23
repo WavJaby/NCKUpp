@@ -97,7 +97,7 @@ window.fetchApi = function (endpoint, option) {
             LoginWindow(onLoginStateChange)
         ),
         memoryUpdate === null ? null :
-            span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black'}),
+            span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px'}),
     ));
 
     function onLoginStateChange(response) {
