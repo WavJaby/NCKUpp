@@ -109,11 +109,11 @@
 
 .expandable {
     height: 0;
+    transition: height 0.2s;
+    -webkit-transition: height 0.2s;
     -moz-transition: height 0.2s;
     -ms-transition: height 0.2s;
     -o-transition: height 0.2s;
-    -webkit-transition: height 0.2s;
-    transition: height 2s;
     overflow: hidden;
 }
 
