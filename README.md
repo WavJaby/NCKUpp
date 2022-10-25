@@ -1,6 +1,6 @@
 # NCKUpp
 A new site for NCKU course enrollment system
 
-[To NCKU++](https://wavjaby.github.io/NCKUpp)
+<a href="https://wavjaby.github.io/NCKUpp" target="_blank" rel="noopener"><span>To NCKU++</span></a>
 
 ## API usage
