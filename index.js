@@ -1,4 +1,5 @@
 'use strict';
+
 const {
     Signal,
     ShowIf,
@@ -12,6 +13,8 @@ const {
     table,
     thead,
     tbody,
+    colgroup,
+    col,
     tr,
     th,
     td,
@@ -28,6 +31,7 @@ const {
     TextState,
     State,
     ClassList,
+    any,
     debug: doomDebug
 } = require('./res/domHelper');
 const apiEndPoint = location.hostname === 'localhost'
@@ -35,7 +39,7 @@ const apiEndPoint = location.hostname === 'localhost'
     : 'https://api.simon.chummydns.com/api';
 
 /**
- * @typedef {{err:string, msg:string, warn:string, login:boolean, data:{}}} APIResponse
+ * @typedef {{err:string, msg:string, warn:string, login:boolean, data:any}} APIResponse
  */
 /**
  * @param endpoint {string}

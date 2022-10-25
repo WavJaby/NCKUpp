@@ -92,7 +92,7 @@ p {
 }
 
 ::-webkit-scrollbar-track {
-    background: none;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {

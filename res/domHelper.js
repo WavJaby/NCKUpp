@@ -53,7 +53,7 @@ function Signal(initState) {
  * @param {function(state)} renderState
  * */
 function State(signal, renderState) {
-    if (signal == null) return document.createElement('div');
+    if (signal === null || signal === undefined) return document.createElement('div');
     return new StateChanger(signal, renderState);
 }
 
@@ -110,14 +110,11 @@ function parseTextInput(text, element) {
  * */
 function ClassList(...className) {
     const classList = className;
-    let thisElement = null;
 
     this.init = function (element) {
-        thisElement = element;
-        if (classList.length === 0) return null;
-
         if (element.classList) {
-            element.classList.add(...classList);
+            if (classList.length > 0)
+                element.classList.add(...classList);
             this.add = names => element.classList.add(names);
             this.remove = names => element.classList.remove(names);
             this.toggle = name => element.classList.toggle(name);
@@ -125,7 +122,7 @@ function ClassList(...className) {
         } else {
             this.add = function (...className) {
                 Array.prototype.push.apply(classList, className);
-                thisElement.className = classList.join(' ');
+                element.className = classList.join(' ');
             };
 
             this.remove = function (...className) {
@@ -134,7 +131,7 @@ function ClassList(...className) {
                     if (index !== -1)
                         classList.splice(index, 1);
                 }
-                thisElement.className = classList.join(' ');
+                element.className = classList.join(' ');
             };
 
             this.toggle = function (className) {
@@ -147,21 +144,22 @@ function ClassList(...className) {
                     classList.push(className);
                     toggle = true;
                 }
-                thisElement.className = classList.join(' ');
+                element.className = classList.join(' ');
                 return toggle;
             };
 
             this.contains = function (className) {
                 return classList.indexOf(className) !== -1;
-            }
+            };
+
+            element.className = classList.join(' ');
         }
-        return classList.join(' ');
     };
 }
 
 function parseClassInput(className, element) {
     if (className instanceof ClassList)
-        element.className = className.init(element);
+        className.init(element);
     else
         element.className = className;
 }
@@ -355,6 +353,30 @@ module.exports = {
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
+     * @return {HTMLTableColElement}
+     * */
+    colgroup(classN, ...options) {
+        const element = document.createElement('colgroup');
+        if (classN) parseClassInput(classN, element);
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param {string | ClassList} [classN] Class Name
+     * @param [options] Options for element
+     * @return {HTMLTableColElement}
+     * */
+    col(classN, ...options) {
+        const element = document.createElement('col');
+        if (classN) parseClassInput(classN, element);
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param {string | ClassList} [classN] Class Name
+     * @param [options] Options for element
      * @return {HTMLTableSectionElement}
      * */
     thead(classN, ...options) {
@@ -506,13 +528,11 @@ module.exports = {
      * @param {string} url
      * @param {string} [classN] Class Name
      * @param [options] Options for element
-     * @return {HTMLElement}
+     * @return {SVGSVGElement}
      * */
     svg(url, classN, ...options) {
         const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;
-        // const element = document.createElement('svg');
         if (classN) element.setAttribute('class', classN);
-        // if (url) element.src = url;
         if (options.length) addOption(element, options);
         return element;
     },
