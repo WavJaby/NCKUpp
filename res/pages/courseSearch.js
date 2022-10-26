@@ -120,7 +120,7 @@ module.exports = function () {
     const courseDetailWindow = CourseDetailWindow();
     let expandElements;
 
-    let courseSearch;
+    let courseSearch, courseSearchForm;
     // data
     let nckuHubCourseID = null;
     let urschoolData = null;
@@ -157,7 +157,7 @@ module.exports = function () {
 
         // generate query string
         const queryData = [];
-        for (const /**@type HTMLElement*/ node of courseSearch.childNodes) {
+        for (const /**@type HTMLElement*/ node of courseSearchForm.childNodes) {
             if (!(node instanceof HTMLInputElement)) continue;
             const value = node.value.trim();
             if (value.length > 0)
@@ -266,119 +266,96 @@ module.exports = function () {
     function renderResult(state) {
         if (!state) return div();
 
-        return table('result',
-            colgroup(null,
-                col(null),
-                col(null),
-                col(null),
-                col(null),
-                col(null),
-                col(null),
-            ),
-            thead(null, tr(null,
-                th(),
-                th('Dept', 'departmentName'),
-                th('Serial', 'serialNumber'),
-                th('Time', 'courseTime'),
-                th('Name', 'courseName'),
-                th(null, 'nckuhub',
-                    span('Reward', 'reward'),
-                    span('Sweet', 'sweet'),
-                    span('Cool', 'cool'),
-                ),
-            )),
-            tbody(null, state.data.map(data => {
-                const resultItemClass = new ClassList();
-                const nckuHubData = state.nckuHubResponseData[data.sn];
-                const expendButton = expendArrow.cloneNode(true);
-                expendButton.onclick = toggleCourseInfo;
-                expandElements.push(toggleCourseInfo);
+        return tbody(null, state.data.map(data => {
+            const resultItemClass = new ClassList();
+            const nckuHubData = state.nckuHubResponseData[data.sn];
+            const expendButton = expendArrow.cloneNode(true);
+            expendButton.onclick = toggleCourseInfo;
+            expandElements.push(toggleCourseInfo);
 
-                // course short information
-                let expandable, measureReference;
+            // course short information
+            let expandable, measureReference;
 
-                function toggleCourseInfo(e) {
-                    const show = resultItemClass.toggle('extend');
-                    if (show) expandable.style.height = measureReference.clientHeight + "px";
-                    else expandable.style.height = null;
-                    if (e) e.stopPropagation();
-                }
+            function toggleCourseInfo(e) {
+                const show = resultItemClass.toggle('extend');
+                if (show) expandable.style.height = measureReference.clientHeight + "px";
+                else expandable.style.height = null;
+                if (e) e.stopPropagation();
+            }
 
-                // open detail window
-                function openCourseDetailWindow() {
-                    if (!nckuHubData || !nckuHubData.state || nckuHubData.state.noData) return;
-                    courseDetailWindow.set([nckuHubData.state, data]);
-                }
+            // open detail window
+            function openCourseDetailWindow() {
+                if (!nckuHubData || !nckuHubData.state || nckuHubData.state.noData) return;
+                courseDetailWindow.set([nckuHubData.state, data]);
+            }
 
-                // render result item
-                return tr(resultItemClass, {
-                        onclick: openCourseDetailWindow,
-                        // prevent double click select text
-                        onmousedown: preventDoubleClick,
-                    },
-                    // title sections
-                    td(null, null,
-                        expendButton,
-                        // info
-                        expandable = div('expandable', div(null, measureReference = div('info',
-                            data.ci.length > 0 ? span(data.ci, 'note') : null,
-                            data.cl.length > 0 ? span(data.cl, 'limit red') : null,
+            // render result item
+            return tr(resultItemClass, {
+                    onclick: openCourseDetailWindow,
+                    // prevent double click select text
+                    onmousedown: preventDoubleClick,
+                },
+                // title sections
+                td(null, null,
+                    expendButton,
+                    // info
+                    expandable = div('expandable', div(null, measureReference = div('info',
+                        data.ci.length > 0 ? span(data.ci, 'note') : null,
+                        data.cl.length > 0 ? span(data.cl, 'limit red') : null,
 
-                            // Instructor
-                            span('Instructor: ', 'instructor'),
-                            data.ts.map(i =>
-                                button('instructorBtn', i instanceof Array ? i[2] : i,
-                                    e => {
-                                        openInstructorDetailWindow(i);
-                                        e.stopPropagation();
+                        // Instructor
+                        span('Instructor: ', 'instructor'),
+                        data.ts.map(i =>
+                            button('instructorBtn', i instanceof Array ? i[2] : i,
+                                e => {
+                                    openInstructorDetailWindow(i);
+                                    e.stopPropagation();
+                                },
+                                {
+                                    onmouseenter: e => {
+                                        if (i instanceof Array) {
+                                            instructorInfoBubble.set({
+                                                target: e.target,
+                                                offsetY: courseSearch.scrollTop,
+                                                data: i
+                                            });
+                                            setTimeout(instructorInfoBubble.show, 0);
+                                        }
                                     },
-                                    {
-                                        onmouseenter: e => {
-                                            if (i instanceof Array) {
-                                                instructorInfoBubble.set({
-                                                    target: e.target,
-                                                    offsetY: courseSearch.scrollTop,
-                                                    data: i
-                                                });
-                                                setTimeout(instructorInfoBubble.show, 0);
-                                            }
-                                        },
-                                        onmouseleave: instructorInfoBubble.hide
-                                    })
-                            ),
-                        ))),
-                    ),
-                    td(data.dn, 'departmentName'),
-                    td(data.sn, 'serialNumber'),
-                    td(data.parseedTime, 'courseTime'),
-                    td(data.cn, 'courseName'),
-                    // ncku Hub
-                    nckuHubData === undefined ? td() :
-                        State(nckuHubData, /**@param {NckuHub} nckuhub*/nckuhub => {
-                            if (nckuhub) {
-                                if (nckuhub.noData) return td();
+                                    onmouseleave: instructorInfoBubble.hide
+                                })
+                        ),
+                    ))),
+                ),
+                td(data.dn, 'departmentName'),
+                td(data.sn, 'serialNumber'),
+                td(data.parseedTime, 'courseTime'),
+                td(data.cn, 'courseName'),
+                // ncku Hub
+                nckuHubData === undefined ? td() :
+                    State(nckuHubData, /**@param {NckuHub} nckuhub*/nckuhub => {
+                        if (nckuhub) {
+                            if (nckuhub.noData) return td();
 
-                                const reward = nckuhub.got;
-                                const sweet = nckuhub.sweet;
-                                const cool = nckuhub.cold;
-                                return td(null, 'nckuhub',
-                                    span(reward.toFixed(1), 'reward'),
-                                    span(sweet.toFixed(1), 'sweet'),
-                                    span(cool.toFixed(1), 'cool'),
-                                );
-                            }
-                            return td('Loading...', 'nckuhub');
-                        }),
-                );
-                // return end
-            })),
-            // tbody end
-        );
+                            const reward = nckuhub.got;
+                            const sweet = nckuhub.sweet;
+                            const cool = nckuhub.cold;
+                            return td(null, 'nckuhub',
+                                span(reward.toFixed(1), 'reward'),
+                                span(sweet.toFixed(1), 'sweet'),
+                                span(cool.toFixed(1), 'cool'),
+                            );
+                        }
+                        return td('Loading...', 'nckuhub');
+                    }),
+            );
+            // return end
+        }));
     }
 
-    return div('courseSearch',
+    return courseSearch = div('courseSearch',
         {onRender, onDestroy},
-        courseSearch = div('form',
+        courseSearchForm = div('form',
             input(null, 'Serial number', 'serialNumber', {onkeyup, name: 'serial'}),
             input(null, 'Course name', 'courseName', {onkeyup, name: 'course'}),
             input(null, 'Dept ID', 'deptId', {onkeyup, name: 'dept', value: 'F7'}),
@@ -388,7 +365,28 @@ module.exports = function () {
             input(null, 'Section', 'section', {onkeyup, name: 'section'}),
             button(null, 'search', search),
         ),
-        State(searchResult, renderResult),
+        table('result', {'cellPadding': 0},
+            colgroup(null,
+                col(null, ),
+            ),
+            thead(null,
+                tr(null,
+                    th(null, null, expendArrow.cloneNode(true)),
+                    th('Dept', 'departmentName'),
+                    th('Serial', 'serialNumber'),
+                    th('Time', 'courseTime'),
+                    th('Name', 'courseName'),
+                    th(null, 'nckuhub',
+                        span('Reward', 'reward'),
+                        span('Sweet', 'sweet'),
+                        span('Cool', 'cool'),
+                    ),
+                ),
+                th(null, 'filter', svg('./res/assets/funnel_icon.svg'), {'colSpan': '100'},
+                ),
+            ),
+            State(searchResult, renderResult),
+        ),
         instructorInfoBubble,
         instructorDetailWindow,
         courseDetailWindow,
@@ -432,7 +430,7 @@ function InstructorInfoBubble() {
 
         const bound = state.target.getBoundingClientRect();
         const element = InstructorInfoElement(state.data);
-        element.style.top = (bound.top + state.offsetY - 300) + 'px';
+        element.style.top = (bound.top + state.offsetY - 340) + 'px';
         element.style.left = bound.left + 'px';
         element.insertBefore(span('Name: ' + state.data[2]), element.firstChild);
         classList.init(element);

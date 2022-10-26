@@ -123,7 +123,7 @@ public class UrSchool implements HttpHandler {
                             .ignoreContentType(true)
                             .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
                             .header("X-Requested-With", "XMLHttpRequest")
-                            .timeout(3 * 1000)
+                            .timeout(10 * 1000)
                             .execute();
                     break;
                 } catch (IOException ignore) {
