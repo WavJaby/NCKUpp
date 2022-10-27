@@ -270,12 +270,6 @@ module.exports = function () {
         if (!state) return div();
         expandButtons.length = 0;
 
-        // sort
-        if (state.sort) {
-            const key = state.sort;
-            state.data.sort((a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
-        }
-
         // render element
         return tbody(null, state.data.map(data => {
             const resultItemClass = new ClassList();
@@ -319,7 +313,8 @@ module.exports = function () {
                         data.ts.map(i =>
                             button('instructorBtn', i instanceof Array ? i[2] : i,
                                 e => {
-                                    openInstructorDetailWindow(i);
+                                    if (i instanceof Array)
+                                        openInstructorDetailWindow(i);
                                     e.stopPropagation();
                                 },
                                 {
@@ -364,10 +359,42 @@ module.exports = function () {
         }));
     }
 
-    function setSortKey(key) {
-        searchResult.state.sort = key;
+    function sortKey(key) {
+        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
+
+        if (searchResult.state.sort !== key) {
+            searchResult.state.sort = key;
+            searchResult.state.data.sort((a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
+        } else
+            searchResult.state.data.reverse();
         searchResult.update();
         expendAllItem();
+    }
+
+    function sortNckuhubKey(key) {
+        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
+        const keys = ['sweet', 'cold', 'got'];
+        keys.splice(keys.indexOf(key), 1);
+
+        if (searchResult.state.sort !== key) {
+            searchResult.state.sort = key;
+            searchResult.state.data.sort((a, b) =>
+                sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : (
+                    Math.abs(b[key] - a[key]) < 1e-10 ? (
+                        sortToEnd(a[keys[0]]) ? 1 : sortToEnd(b[keys[0]]) ? -1 : (
+                            Math.abs(b[keys[0]] - a[keys[0]]) < 1e-10 ? (
+                                sortToEnd(a[keys[1]]) ? 1 : sortToEnd(b[keys[1]]) ? -1 : (
+                                    Math.abs(b[keys[1]] - a[keys[1]]) < 1e-10 ? 0 : b[keys[1]] - a[keys[1]]
+                                )
+                            ) : b[keys[0]] - a[keys[0]]
+                        )
+                    ) : b[key] - a[key]
+                ));
+        } else
+            searchResult.state.data.reverse();
+        searchResult.update();
+        expendAllItem();
+
     }
 
     return courseSearch = div('courseSearch',
@@ -386,17 +413,17 @@ module.exports = function () {
             colgroup(null,
                 // col(null, {'span': '2', 'style': 'visibility: collapse'}),
             ),
-            thead(null,
+            thead('noSelect',
                 tr(null,
                     th(null, null, expendArrow.cloneNode(true)),
-                    th('Dept', 'departmentName', {onclick: () => setSortKey('dn')}),
-                    th('Serial', 'serialNumber', {onclick: () => setSortKey('sn')}),
-                    th('Time', 'courseTime', {onclick: () => setSortKey('parsedTime')}),
-                    th('Name', 'courseName', {onclick: () => setSortKey('cn')}),
+                    th('Dept', 'departmentName', {onclick: () => sortKey('dn')}),
+                    th('Serial', 'serialNumber', {onclick: () => sortKey('sn')}),
+                    th('Time', 'courseTime', {onclick: () => sortKey('parsedTime')}),
+                    th('Name', 'courseName', {onclick: () => sortKey('cn')}),
                     th(null, 'nckuhub',
-                        div(null, span('Reward', 'reward')),
-                        div(null, span('Sweet', 'sweet')),
-                        div(null, span('Cool', 'cool')),
+                        div(null, span('Reward', 'reward'), {onclick: () => sortNckuhubKey('got')}),
+                        div(null, span('Sweet', 'sweet'), {onclick: () => sortNckuhubKey('sweet')}),
+                        div(null, span('Cool', 'cool'), {onclick: () => sortNckuhubKey('cold')}),
                     ),
                 ),
                 th(null, 'filter', svg('./res/assets/funnel_icon.svg'), {'colSpan': '100'},
@@ -421,12 +448,13 @@ function InstructorInfoElement(
             recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
                 ? table(null,
                     tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
-                    tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), td(pressure, getColor(pressure)), td(sweet, getColor(sweet))),
+                    tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), th(pressure, getColor(5 - pressure)), td(sweet, getColor(sweet))),
                 )
                 : null,
         ),
         div('info',
             table(null,
+                tr(null, th('Average score'), td(averageScore)),
                 tr(null, th('Average score'), td(averageScore)),
                 tr(null, th('Note'), td(note)),
                 tr(null, th('Nickname'), td(nickname)),
@@ -460,7 +488,7 @@ function InstructorInfoBubble() {
 }
 
 function InstructorDetailWindow() {
-    return PopupWindow(({id, info, tags, comments, takeCourseCount, takeCourseUser}) => {
+    return PopupWindow(({id, info, tags, comments, reviewerCount, takeCourseCount, takeCourseUser}) => {
         const instructorInfo = InstructorInfoElement(info);
         instructorInfo.className = 'instructorInfo';
         return div('instructorDetailWindow',
@@ -476,6 +504,10 @@ function InstructorDetailWindow() {
                 tags.map(i => {
                     return span(i[1]);
                 })
+            ),
+            div('reviewerCount',
+                span('Total votes'),
+                span(reviewerCount),
             ),
             instructorInfo,
             div('comments',
@@ -560,6 +592,6 @@ function preventDoubleClick(e) {
         e.preventDefault();
 }
 
-function sortToEnd(str) {
-    return str.length === 0;
+function sortToEnd(data) {
+    return data === undefined || data.length === 0;
 }

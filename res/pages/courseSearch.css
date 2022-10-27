@@ -349,6 +349,10 @@
     visibility: visible;
 }
 
+.courseSearch > .instructorInfo table {
+    border-collapse: collapse;
+}
+
 .courseSearch .instructorInfo > span {
     display: block;
 }
@@ -412,6 +416,14 @@
     display: inline-block;
 }
 
+.courseSearch .instructorDetailWindow > .reviewerCount {
+    margin: 0 10px;
+}
+
+.courseSearch .instructorDetailWindow > .reviewerCount > span:first-child {
+    font-weight: bold;
+}
+
 .courseSearch .instructorDetailWindow > .comments {
     margin: 0 10px;
 }
@@ -455,6 +467,10 @@
     }
 
     .courseSearch .instructorDetailWindow > .tags {
+        margin: 0;
+    }
+
+    .courseSearch .instructorDetailWindow > .reviewerCount {
         margin: 0;
     }
 

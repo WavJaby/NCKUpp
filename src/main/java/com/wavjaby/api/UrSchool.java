@@ -162,7 +162,8 @@ public class UrSchool implements HttpHandler {
                     outData.append("err", TAG + "Tag name not found");
                     return false;
                 }
-                String tagName = resultBody.substring(tagNameStart, tagNameEnd).trim();
+                String tagName = resultBody.substring(tagNameStart, tagNameEnd).trim()
+                        .replace("&amp;", "&");
 
                 tageBuilder.append(',').append('[')
                         .append('"').append(url).append('"').append(',')
@@ -172,6 +173,17 @@ public class UrSchool implements HttpHandler {
             if (tageBuilder.length() > 0) tageBuilder.setCharAt(0, '[');
             else tageBuilder.append('[');
             tageBuilder.append(']');
+
+            // Get reviewer count
+            int reviewerCountStart, reviewerCountEnd;
+            if ((reviewerCountStart = resultBody.indexOf("/reviewers/", urlEnd + 1)) == -1 ||
+                    (reviewerCountStart = resultBody.indexOf('>', reviewerCountStart)) == -1 ||
+                    (reviewerCountEnd = resultBody.indexOf(' ', reviewerCountStart += 1)) == -1
+            ) {
+                outData.append("err", TAG + "Reviewer count not found");
+                return false;
+            }
+            int reviewerCount = Integer.parseInt(resultBody.substring(reviewerCountStart, reviewerCountEnd));
 
             // Get visitors
             int countStart, countEnd;
@@ -278,6 +290,7 @@ public class UrSchool implements HttpHandler {
             JsonBuilder jsonBuilder = new JsonBuilder();
             jsonBuilder.append("id", '"' + instructorID + '"', true);
             jsonBuilder.append("tags", tageBuilder.toString(), true);
+            jsonBuilder.append("reviewerCount", reviewerCount);
             jsonBuilder.append("takeCourseCount", takeCourseCount);
             jsonBuilder.append("takeCourseUser", visitorsBuilder.toString(), true);
             jsonBuilder.append("comments", commentBuilder.toString(), true);
