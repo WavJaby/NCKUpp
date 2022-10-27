@@ -46,6 +46,11 @@ function Signal(initState) {
         for (let i = 0; i < thisListener.length; i++)
             thisListener[i](newState);
     };
+
+    this.update = function () {
+        for (let i = 0; i < thisListener.length; i++)
+            thisListener[i](this.state);
+    }
 }
 
 /**

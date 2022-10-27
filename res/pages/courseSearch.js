@@ -118,7 +118,7 @@ module.exports = function () {
     const instructorInfoBubble = InstructorInfoBubble();
     const instructorDetailWindow = InstructorDetailWindow();
     const courseDetailWindow = CourseDetailWindow();
-    let expandElements;
+    const expandButtons = [];
 
     let courseSearch, courseSearchForm;
     // data
@@ -204,11 +204,11 @@ module.exports = function () {
                 for (const j of urschoolData) if (j[2] === i) return j;
                 return i;
             });
-            data.parseedTime = data.t.map(i => {
+            data.parsedTime = data.t.map(i => {
                 i = i.split(',');
                 return '[' + i[0] + ']' + i[1]
             }).join(', ');
-            if ((cache = canvas.measureText(data.parseedTime).width + 1) > timeLen)
+            if ((cache = canvas.measureText(data.parsedTime).width + 1) > timeLen)
                 timeLen = cache;
             delete data.t;
 
@@ -247,11 +247,14 @@ module.exports = function () {
             });
         }
 
-        expandElements = [];
         searchResult.set({data: result.data, nckuHubResponseData, deptLen, timeLen});
-        for (const i of expandElements) i();
-        expandElements = null;
+        expendAllItem();
         searching = false;
+    }
+
+    // expend info
+    function expendAllItem() {
+        for (const i of expandButtons) i();
     }
 
     function openInstructorDetailWindow(info) {
@@ -265,13 +268,21 @@ module.exports = function () {
 
     function renderResult(state) {
         if (!state) return div();
+        expandButtons.length = 0;
 
+        // sort
+        if (state.sort) {
+            const key = state.sort;
+            state.data.sort((a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
+        }
+
+        // render element
         return tbody(null, state.data.map(data => {
             const resultItemClass = new ClassList();
             const nckuHubData = state.nckuHubResponseData[data.sn];
             const expendButton = expendArrow.cloneNode(true);
             expendButton.onclick = toggleCourseInfo;
-            expandElements.push(toggleCourseInfo);
+            expandButtons.push(toggleCourseInfo);
 
             // course short information
             let expandable, measureReference;
@@ -329,7 +340,7 @@ module.exports = function () {
                 ),
                 td(data.dn, 'departmentName'),
                 td(data.sn, 'serialNumber'),
-                td(data.parseedTime, 'courseTime'),
+                td(data.parsedTime, 'courseTime'),
                 td(data.cn, 'courseName'),
                 // ncku Hub
                 nckuHubData === undefined ? td() :
@@ -337,9 +348,9 @@ module.exports = function () {
                         if (nckuhub) {
                             if (nckuhub.noData) return td();
 
-                            const reward = nckuhub.got;
-                            const sweet = nckuhub.sweet;
-                            const cool = nckuhub.cold;
+                            const reward = data.got = nckuhub.got;
+                            const sweet = data.sweet = nckuhub.sweet;
+                            const cool = data.cold = nckuhub.cold;
                             return td(null, 'nckuhub',
                                 span(reward.toFixed(1), 'reward'),
                                 span(sweet.toFixed(1), 'sweet'),
@@ -351,6 +362,12 @@ module.exports = function () {
             );
             // return end
         }));
+    }
+
+    function setSortKey(key) {
+        searchResult.state.sort = key;
+        searchResult.update();
+        expendAllItem();
     }
 
     return courseSearch = div('courseSearch',
@@ -367,19 +384,19 @@ module.exports = function () {
         ),
         table('result', {'cellPadding': 0},
             colgroup(null,
-                col(null, ),
+                // col(null, {'span': '2', 'style': 'visibility: collapse'}),
             ),
             thead(null,
                 tr(null,
                     th(null, null, expendArrow.cloneNode(true)),
-                    th('Dept', 'departmentName'),
-                    th('Serial', 'serialNumber'),
-                    th('Time', 'courseTime'),
-                    th('Name', 'courseName'),
+                    th('Dept', 'departmentName', {onclick: () => setSortKey('dn')}),
+                    th('Serial', 'serialNumber', {onclick: () => setSortKey('sn')}),
+                    th('Time', 'courseTime', {onclick: () => setSortKey('parsedTime')}),
+                    th('Name', 'courseName', {onclick: () => setSortKey('cn')}),
                     th(null, 'nckuhub',
-                        span('Reward', 'reward'),
-                        span('Sweet', 'sweet'),
-                        span('Cool', 'cool'),
+                        div(null, span('Reward', 'reward')),
+                        div(null, span('Sweet', 'sweet')),
+                        div(null, span('Cool', 'cool')),
                     ),
                 ),
                 th(null, 'filter', svg('./res/assets/funnel_icon.svg'), {'colSpan': '100'},
@@ -541,4 +558,8 @@ function Canvas(font) {
 function preventDoubleClick(e) {
     if (e.detail > 1)
         e.preventDefault();
+}
+
+function sortToEnd(str) {
+    return str.length === 0;
 }

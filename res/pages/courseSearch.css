@@ -6,7 +6,6 @@
     --course-filter-bg-color: dimgray;
     --course-result-header-bg-color: dimgray;
     --course-result-item-spacing: 10px;
-    --course-result-item-spacing-neg: -10px;
     --course-info-title-font-size: 20px;
 }
 
@@ -30,7 +29,7 @@
     width: 100%;
     height: 2em;
     position: absolute;
-    top: var(--course-result-item-spacing);
+    top: 0;
     z-index: 1;
     text-align: left;
 }
@@ -61,23 +60,57 @@
 .courseSearch > .result > thead {
     background: var(--course-result-header-bg-color);
     position: sticky;
-    top: var(--course-result-item-spacing-neg);
+    top: 0;
     z-index: 1;
 }
 
 .courseSearch > .result > thead > tr > th {
     text-align: left;
-    line-height: 2em;
+    height: 2em;
+    line-height: 1.5em;
     padding: 2em 0 0 0;
+    vertical-align: bottom;
 }
 
-.courseSearch > .result > thead > tr:last-child > th:first-child {
+.courseSearch > .result > thead > tr > .departmentName,
+.courseSearch > .result > thead > tr > .serialNumber,
+.courseSearch > .result > thead > tr > .courseTime,
+.courseSearch > .result > thead > tr > .courseName {
+    cursor: pointer;
+}
+
+.courseSearch > .result > thead > tr > .departmentName:hover,
+.courseSearch > .result > thead > tr > .serialNumber:hover,
+.courseSearch > .result > thead > tr > .courseTime:hover,
+.courseSearch > .result > thead > tr > .courseName:hover {
+    background: var(--button-hover-color);
+}
+
+.courseSearch > .result > thead > tr > th:first-child {
     border-bottom-left-radius: 10px;
 }
 
-.courseSearch > .result > thead > tr:last-child > th:last-child {
+.courseSearch > .result > thead > tr > th:last-child {
     border-bottom-right-radius: 10px;
-    padding-right: 5px;
+    padding-right: 10px;
+}
+
+.courseSearch > .result > thead .nckuhub > div {
+    width: 3.5em;
+    height: 100%;
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+}
+
+.courseSearch > .result > thead .nckuhub > div:hover {
+    background: var(--button-hover-color);
+}
+
+.courseSearch > .result > thead .nckuhub > div > span {
+    position: absolute;
+    bottom: 0;
+    right: 0;
 }
 
 /* Course search result
@@ -119,19 +152,15 @@
 /* Course search result
     Item data
 */
-.courseSearch > .result .courseName {
-    overflow: hidden;
+.courseSearch > .result .nckuhub > span {
+    width: 3.5em;
+    display: inline-block;
+    text-align: right;
 }
 
 .courseSearch > .result .nckuhub {
-    text-align: right;
-    padding-right: 5px;
-}
-
-.courseSearch > .result .nckuhub > span {
-    display: inline-block;
-    width: 4em;
-    text-align: right;
+    width: 0;
+    vertical-align: baseline;
 }
 
 /* Course search result
@@ -287,7 +316,6 @@
 @media only screen and (min-width: 700px) {
     .courseSearch > .instructorInfo {
         max-width: 500px;
-        min-width: 350px;
         padding: 5px;
     }
 }
