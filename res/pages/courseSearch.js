@@ -372,7 +372,7 @@ module.exports = function () {
             for (; end < searchResult.state.data.length; end++)
                 if (sortToEnd(searchResult.state.data[end][key])) break;
             searchResult.state.sortLastIndex = end > 0 ? end : null;
-            sortArrow.className = 'sortArrow';
+            sortArrowClass.remove('reverse');
         } else {
             if (searchResult.state.sortLastIndex !== null)
                 reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
@@ -408,7 +408,7 @@ module.exports = function () {
             for (; end < searchResult.state.data.length; end++)
                 if (sortToEnd(searchResult.state.data[end][key])) break;
             searchResult.state.sortLastIndex = end > 0 ? end : null;
-            sortArrow.className.baseVal = 'sortArrow';
+            sortArrowClass.remove('reverse');
         } else {
             if (searchResult.state.sortLastIndex !== null)
                 reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
