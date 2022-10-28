@@ -34,10 +34,13 @@ const {
     any,
     debug: doomDebug
 } = require('./res/domHelper');
+const loadingElement =
+    div('loaderCircle',
+        svg('<circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '25 25 50 50', 'circular')
+    );
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
-
 /**
  * @typedef {{err:string, msg:string, warn:string, login:boolean, data:any}} APIResponse
  */

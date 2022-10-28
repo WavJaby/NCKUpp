@@ -92,7 +92,6 @@ const {
     input,
     button,
     span,
-    svg,
     Signal,
     State,
     ClassList,
@@ -104,7 +103,7 @@ const {
     p,
     img,
     thead,
-    tbody, any, colgroup, col
+    tbody, colgroup
 } = require('../domHelper');
 /*ExcludeEnd*/
 
@@ -170,6 +169,7 @@ module.exports = function () {
         lastQueryString = queryString;
 
         console.log('Search');
+        searchResult.set({loading: true});
 
         // fetch data
         /**
@@ -267,6 +267,7 @@ module.exports = function () {
 
     function renderResult(state) {
         if (!state) return div();
+        if (state.loading) return div('loading', loadingElement.cloneNode(true));
         expandButtons.length = 0;
 
         // render element

@@ -1,0 +1,68 @@
+:root {
+    --green: #008744;
+    --blue: #0057e7;
+    --red: #d62d20;
+    --yellow: #ffa700;
+    --white: #eee;
+
+    --loadingSize: 100px;
+    --extrusionTime: 1.5s;
+    --ritationTime: 1.25s;
+}
+
+.loaderCircle > .circular {
+    height: 100%;
+    width: 100%;
+    animation: rotate var(--ritationTime) linear infinite;
+    transform-origin: center center;
+}
+
+.loaderCircle > .circular > .path {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+    animation: dash var(--extrusionTime) ease-in-out infinite, color calc(var(--extrusionTime) * 4) ease-in-out infinite;
+}
+
+.loaderCircle {
+    position: relative;
+    width: var(--loadingSize);
+    height: var(--loadingSize);
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 200;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 89, 200;
+        stroke-dashoffset: -35px;
+    }
+    100% {
+        stroke-dasharray: 89, 200;
+        stroke-dashoffset: -124px;
+    }
+}
+
+@keyframes color {
+    100%,
+    0% {
+        stroke: var(--red);
+    }
+    40% {
+        stroke: var(--blue);
+    }
+    66% {
+        stroke: var(--green);
+    }
+    80%,
+    90% {
+        stroke: var(--yellow);
+    }
+}

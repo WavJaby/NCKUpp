@@ -531,13 +531,16 @@ module.exports = {
 
     /**
      * @param {string} svgText
+     * @param {string} viewBox
      * @param {string} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLElement}
      * */
-    svg(svgText, classN, ...options) {
-        const element = new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement;
-        if (classN) element.setAttribute('class', classN);
+    svg(svgText, viewBox, classN, ...options) {
+        const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        element.innerHTML = svgText;
+        if (classN) element.setAttributeNS(null, 'class', classN);
+        if (classN) element.setAttributeNS(null, 'viewBox', viewBox);
         if (options.length) addOption(element, options);
         return element;
     },
