@@ -530,13 +530,13 @@ module.exports = {
     },
 
     /**
-     * @param {string} url
+     * @param {string} svgText
      * @param {string} [classN] Class Name
      * @param [options] Options for element
-     * @return {SVGSVGElement}
+     * @return {HTMLElement}
      * */
-    svg(url, classN, ...options) {
-        const element = new DOMParser().parseFromString(fetchSync(url).body, 'image/svg+xml').documentElement;
+    svg(svgText, classN, ...options) {
+        const element = new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement;
         if (classN) element.setAttribute('class', classN);
         if (options.length) addOption(element, options);
         return element;

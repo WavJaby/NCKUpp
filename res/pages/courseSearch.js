@@ -107,13 +107,12 @@ const {
     tbody, any, colgroup, col
 } = require('../domHelper');
 /*ExcludeEnd*/
-/**@type {{add:function(), remove: function(), rules: CSSStyleRule}}*/
-const styles = require('./courseSearch.css');
 
 module.exports = function () {
     console.log('Course search Init');
     // static
-    const expendArrow = svg('./res/assets/down_arrow_icon.svg', 'expendDownArrow');
+    let styles = async_require('./courseSearch.css');
+    const expendArrow = img('https://wavjaby.github.io/NCKUpp/res/assets/down_arrow_icon.svg', 'expendDownArrow');
     const searchResult = new Signal();
     const instructorInfoBubble = InstructorInfoBubble();
     const instructorDetailWindow = InstructorDetailWindow();
@@ -129,10 +128,10 @@ module.exports = function () {
     let lastQueryString;
     let searching;
 
-    function onRender() {
+    async function onRender() {
         console.log('Course search Render');
-        styles.add();
         search();
+        (styles = await styles).add();
     }
 
     function onDestroy() {
@@ -274,7 +273,7 @@ module.exports = function () {
         return tbody(null, state.data.map(data => {
             const resultItemClass = new ClassList();
             const nckuHubData = state.nckuHubResponseData[data.sn];
-            const expendButton = expendArrow.cloneNode(true);
+            const expendButton = expendArrow.cloneNode();
             expendButton.onclick = toggleCourseInfo;
             expandButtons.push(toggleCourseInfo);
 
@@ -357,8 +356,9 @@ module.exports = function () {
         }));
     }
 
-    const sortArrow = expendArrow.cloneNode(true);
-    sortArrow.className.baseVal = 'sortArrow';
+    const sortArrow = expendArrow.cloneNode();
+    const sortArrowClass = new ClassList('sortArrow');
+    sortArrowClass.init(sortArrow);
 
     function sortKey(key, element) {
         if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
@@ -371,13 +371,13 @@ module.exports = function () {
             for (; end < searchResult.state.data.length; end++)
                 if (sortToEnd(searchResult.state.data[end][key])) break;
             searchResult.state.sortLastIndex = end > 0 ? end : null;
-            sortArrow.className.baseVal = 'sortArrow';
+            sortArrow.className = 'sortArrow';
         } else {
             if (searchResult.state.sortLastIndex !== null)
                 reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
             else
                 searchResult.state.data.reverse();
-            sortArrow.className.baseVal = sortArrow.className.baseVal.length > 9 ? 'sortArrow' : 'sortArrow reverse';
+            sortArrowClass.toggle('reverse');
         }
         searchResult.update();
         expendAllItem();
@@ -413,11 +413,10 @@ module.exports = function () {
                 reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
             else
                 searchResult.state.data.reverse();
-            sortArrow.className.baseVal = sortArrow.className.baseVal.length > 9 ? 'sortArrow' : 'sortArrow reverse';
+            sortArrowClass.toggle('reverse');
         }
         searchResult.update();
         expendAllItem();
-
     }
 
     return courseSearch = div('courseSearch',
@@ -438,19 +437,22 @@ module.exports = function () {
             ),
             thead('noSelect',
                 tr(null,
-                    th(null, null, expendArrow.cloneNode(true)),
+                    th(null, null, expendArrow.cloneNode()),
                     th('Dept', 'departmentName', {onclick: (e) => sortKey('dn', e.target)}),
                     th('Serial', 'serialNumber', {onclick: (e) => sortKey('sn', e.target)}),
                     th('Time', 'courseTime', {onclick: (e) => sortKey('parsedTime', e.target)}),
-                    th('Name', 'courseName', {onclick: (e) => sortKey('cn', e.target)}),
+                    th('Course name', 'courseName', {onclick: (e) => sortKey('cn', e.target)}),
                     th(null, 'nckuhub',
                         div(null, span('Reward', 'reward'), {onclick: (e) => sortNckuhubKey('got', e.target)}),
                         div(null, span('Sweet', 'sweet'), {onclick: (e) => sortNckuhubKey('sweet', e.target)}),
                         div(null, span('Cool', 'cool'), {onclick: (e) => sortNckuhubKey('cold', e.target)}),
                     ),
                 ),
-                th(null, 'filter',
-                    svg('./res/assets/funnel_icon.svg'), {'colSpan': '100'},
+                tr('filterSection', {'colSpan': '100'},
+                    img('./res/assets/funnel_icon.svg'),
+                    div('options',
+                        input('filter', 'Teacher, Course name, Serial number'),
+                    ),
                 ),
             ),
             State(searchResult, renderResult),

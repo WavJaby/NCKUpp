@@ -91,10 +91,9 @@ function fetchSync(url, init, onError) {
 
 /**
  * @param url {string}
- * @param [recursive] {boolean}
  * @return any
  */
-function require(url, recursive) {
+function require(url) {
     var pathEnd = url.lastIndexOf('/');
     if (url.indexOf('.', pathEnd) === -1)
         url += '.js';
@@ -133,10 +132,9 @@ function require(url, recursive) {
 
 /**
  * @param url {string}
- * @param [recursive] {boolean}
  * @return {Promise<any>}
  */
-function async_require(url, recursive) {
+function async_require(url) {
     if (imagesExtension.some(function (i) {
         return url.endsWith(i);
     })) {
@@ -161,6 +159,17 @@ function async_require(url, recursive) {
             var style = document.createElement('style');
             return i.text().then(function (i) {
                 style.textContent = i;
+                style.add = function () {
+                    document.head.appendChild(this);
+                    for (let i = 0; i < document.styleSheets.length; i++)
+                        if (document.styleSheets[i].ownerNode === style) {
+                            style.rules = document.styleSheets[i].cssRules;
+                            break;
+                        }
+                };
+                style.remove = function () {
+                    document.head.removeChild(this);
+                }
                 return style;
             });
         } else if (contentType.startsWith('application/javascript')) {

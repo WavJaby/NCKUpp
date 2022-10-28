@@ -61,6 +61,7 @@ input {
     color: var(--font-color);
     border: none;
     padding: 5px;
+    box-sizing: border-box;
     text-decoration: none;
     display: block;
     font-size: var(--font-size);

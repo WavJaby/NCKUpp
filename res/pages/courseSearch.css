@@ -24,7 +24,7 @@
 /*
     Course search result filter
 */
-.courseSearch > .result > thead > .filter {
+.courseSearch > .result > thead > .filterSection {
     background: var(--course-result-header-bg-color);
     width: 100%;
     height: 2em;
@@ -32,6 +32,24 @@
     top: 0;
     z-index: 1;
     text-align: left;
+}
+
+.courseSearch > .result > thead > .filterSection > img {
+    float: left;
+}
+
+.courseSearch > .result > thead > .filterSection > .options {
+    display: block;
+    overflow: hidden;
+}
+
+.courseSearch > .result > thead > .filterSection > .options > input {
+    background: none;
+    width: 100%;
+    margin: auto;
+    right: 0;
+    box-shadow: none;
+    float: left;
 }
 
 /*
@@ -46,10 +64,6 @@
 
 @media only screen and (max-width: 700px) {
     .courseSearch > .result {
-        width: 100%;
-    }
-
-    .courseSearch > .filter {
         width: 100%;
     }
 }
@@ -81,6 +95,7 @@
 
 .courseSearch > .result > thead > tr > th > div .sortArrow {
     top: 0;
+    transform: none;
 }
 
 .courseSearch > .result > thead > tr > th .sortArrow.reverse {
@@ -112,6 +127,7 @@
 }
 
 .courseSearch > .result > thead > tr > th:first-child {
+    width: 0;
     border-bottom-left-radius: 10px;
 }
 
@@ -451,6 +467,7 @@
 
 .courseSearch .instructorDetailWindow > .reviewerCount > span:first-child {
     font-weight: bold;
+    margin-right: 0.5em;
 }
 
 .courseSearch .instructorDetailWindow > .comments {

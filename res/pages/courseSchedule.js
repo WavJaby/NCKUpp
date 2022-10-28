@@ -3,8 +3,6 @@
 /*ExcludeStart*/
 const {div, button, table, Signal, text, span, ShowIf} = require('../domHelper');
 /*ExcludeEnd*/
-/**@type {{add:function(), remove: function(), rules: CSSStyleRule}}*/
-const styles = require('./courseSchedule.css');
 
 // static
 const weekTable = ['#', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -52,6 +50,7 @@ function CourseInfoWindow(showCourseInfoWindow) {
 module.exports = function (loginState) {
     console.log('Course schedule Init');
     // static element
+    let styles = async_require('./courseSchedule.css');
     const scheduleTable = table('courseScheduleTable');
     const scheduleStudentInfo = new Signal();
     const showCourseInfoWindow = new Signal(false);
@@ -62,10 +61,10 @@ module.exports = function (loginState) {
 
     onLoginState(loginState.state);
 
-    function onRender() {
+    async function onRender() {
         console.log('Course schedule Render');
-        styles.add();
         loginState.addListener(onLoginState);
+        (styles = await styles).add();
     }
 
     function onDestroy() {

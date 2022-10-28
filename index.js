@@ -80,7 +80,7 @@ window.fetchApi = function (endpoint, option) {
     // check login
     fetchApi('/login').then(onLoginStateChange);
 
-    document.body.appendChild(div('root',
+    const root = div('root',
         // Pages
         queryRouter,
         // 選單列
@@ -102,7 +102,8 @@ window.fetchApi = function (endpoint, option) {
         ),
         memoryUpdate === null ? null :
             span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px'}),
-    ));
+    );
+    window.onload = () => document.body.appendChild(root);
 
     function onLoginStateChange(response) {
         if (response.err === 'loginErr')
