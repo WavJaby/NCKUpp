@@ -171,7 +171,7 @@ function parseClassInput(className, element) {
 
 /**
  * @param {string} defaultPage
- * @param {{pageName: function()|HTMLElement}} Routs
+ * @param {Object<string, function()|HTMLElement>} Routs
  * */
 function QueryRouter(defaultPage, Routs) {
     const routerRoot = document.createElement('div');

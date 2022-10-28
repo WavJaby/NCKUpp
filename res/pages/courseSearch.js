@@ -319,14 +319,12 @@ module.exports = function () {
                                 },
                                 {
                                     onmouseenter: e => {
-                                        if (i instanceof Array) {
+                                        if (i instanceof Array)
                                             instructorInfoBubble.set({
                                                 target: e.target,
                                                 offsetY: courseSearch.scrollTop,
                                                 data: i
                                             });
-                                            setTimeout(instructorInfoBubble.show, 0);
-                                        }
                                     },
                                     onmouseleave: instructorInfoBubble.hide
                                 })
@@ -359,25 +357,40 @@ module.exports = function () {
         }));
     }
 
-    function sortKey(key) {
+    const sortArrow = expendArrow.cloneNode(true);
+    sortArrow.className.baseVal = 'sortArrow';
+
+    function sortKey(key, element) {
         if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
 
         if (searchResult.state.sort !== key) {
             searchResult.state.sort = key;
+            element.appendChild(sortArrow);
             searchResult.state.data.sort((a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
-        } else
-            searchResult.state.data.reverse();
+            let end = 0;
+            for (; end < searchResult.state.data.length; end++)
+                if (sortToEnd(searchResult.state.data[end][key])) break;
+            searchResult.state.sortLastIndex = end > 0 ? end : null;
+            sortArrow.className.baseVal = 'sortArrow';
+        } else {
+            if (searchResult.state.sortLastIndex !== null)
+                reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
+            else
+                searchResult.state.data.reverse();
+            sortArrow.className.baseVal = sortArrow.className.baseVal.length > 9 ? 'sortArrow' : 'sortArrow reverse';
+        }
         searchResult.update();
         expendAllItem();
     }
 
-    function sortNckuhubKey(key) {
+    function sortNckuhubKey(key, element) {
         if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
         const keys = ['sweet', 'cold', 'got'];
         keys.splice(keys.indexOf(key), 1);
 
         if (searchResult.state.sort !== key) {
             searchResult.state.sort = key;
+            element.appendChild(sortArrow);
             searchResult.state.data.sort((a, b) =>
                 sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : (
                     Math.abs(b[key] - a[key]) < 1e-10 ? (
@@ -390,8 +403,18 @@ module.exports = function () {
                         )
                     ) : b[key] - a[key]
                 ));
-        } else
-            searchResult.state.data.reverse();
+            let end = 0;
+            for (; end < searchResult.state.data.length; end++)
+                if (sortToEnd(searchResult.state.data[end][key])) break;
+            searchResult.state.sortLastIndex = end > 0 ? end : null;
+            sortArrow.className.baseVal = 'sortArrow';
+        } else {
+            if (searchResult.state.sortLastIndex !== null)
+                reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
+            else
+                searchResult.state.data.reverse();
+            sortArrow.className.baseVal = sortArrow.className.baseVal.length > 9 ? 'sortArrow' : 'sortArrow reverse';
+        }
         searchResult.update();
         expendAllItem();
 
@@ -416,17 +439,18 @@ module.exports = function () {
             thead('noSelect',
                 tr(null,
                     th(null, null, expendArrow.cloneNode(true)),
-                    th('Dept', 'departmentName', {onclick: () => sortKey('dn')}),
-                    th('Serial', 'serialNumber', {onclick: () => sortKey('sn')}),
-                    th('Time', 'courseTime', {onclick: () => sortKey('parsedTime')}),
-                    th('Name', 'courseName', {onclick: () => sortKey('cn')}),
+                    th('Dept', 'departmentName', {onclick: (e) => sortKey('dn', e.target)}),
+                    th('Serial', 'serialNumber', {onclick: (e) => sortKey('sn', e.target)}),
+                    th('Time', 'courseTime', {onclick: (e) => sortKey('parsedTime', e.target)}),
+                    th('Name', 'courseName', {onclick: (e) => sortKey('cn', e.target)}),
                     th(null, 'nckuhub',
-                        div(null, span('Reward', 'reward'), {onclick: () => sortNckuhubKey('got')}),
-                        div(null, span('Sweet', 'sweet'), {onclick: () => sortNckuhubKey('sweet')}),
-                        div(null, span('Cool', 'cool'), {onclick: () => sortNckuhubKey('cold')}),
+                        div(null, span('Reward', 'reward'), {onclick: (e) => sortNckuhubKey('got', e.target)}),
+                        div(null, span('Sweet', 'sweet'), {onclick: (e) => sortNckuhubKey('sweet', e.target)}),
+                        div(null, span('Cool', 'cool'), {onclick: (e) => sortNckuhubKey('cold', e.target)}),
                     ),
                 ),
-                th(null, 'filter', svg('./res/assets/funnel_icon.svg'), {'colSpan': '100'},
+                th(null, 'filter',
+                    svg('./res/assets/funnel_icon.svg'), {'colSpan': '100'},
                 ),
             ),
             State(searchResult, renderResult),
@@ -475,15 +499,18 @@ function InstructorInfoBubble() {
 
         const bound = state.target.getBoundingClientRect();
         const element = InstructorInfoElement(state.data);
-        element.style.top = (bound.top + state.offsetY - 340) + 'px';
+        element.insertBefore(span(state.data[2]), element.firstChild);
         element.style.left = bound.left + 'px';
-        element.insertBefore(span('Name: ' + state.data[2]), element.firstChild);
         classList.init(element);
+
+        setTimeout(() => {
+            classList.add('show');
+            element.style.top = (bound.top + state.offsetY - 15 - element.offsetHeight - state.target.offsetHeight) + 'px';
+        }, 0);
         return element;
     });
     state.set = signal.set;
     state.hide = () => classList.remove('show');
-    state.show = () => classList.add('show');
     return state;
 }
 
@@ -594,4 +621,12 @@ function preventDoubleClick(e) {
 
 function sortToEnd(data) {
     return data === undefined || data.length === 0;
+}
+
+function reverseArray(array, start, end) {
+    while (start < end) {
+        let t = array[start];
+        array[start++] = array[--end];
+        array[end] = t;
+    }
 }

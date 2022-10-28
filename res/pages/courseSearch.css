@@ -64,19 +64,44 @@
     z-index: 1;
 }
 
+.courseSearch > .result > thead > tr > th .sortArrow {
+    position: absolute;
+    top: 2em;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    height: 0.8em;
+    pointer-events: none;
+    transition: 0.1s transform;
+    -webkit-transition: 0.1s transform;
+    -moz-transition: 0.1s transform;
+    -ms-transition: 0.1s transform;
+    -o-transition: 0.1s transform;
+}
+
+.courseSearch > .result > thead > tr > th > div .sortArrow {
+    top: 0;
+}
+
+.courseSearch > .result > thead > tr > th .sortArrow.reverse {
+    transform: rotate(180deg);
+}
+
 .courseSearch > .result > thead > tr > th {
     text-align: left;
     height: 2em;
     line-height: 1.5em;
-    padding: 2em 0 0 0;
+    padding: 2em 1px 0 1px;
     vertical-align: bottom;
+    position: relative;
 }
 
-.courseSearch > .result > thead > tr > .departmentName,
-.courseSearch > .result > thead > tr > .serialNumber,
-.courseSearch > .result > thead > tr > .courseTime,
-.courseSearch > .result > thead > tr > .courseName {
+.courseSearch > .result > thead > tr > th {
     cursor: pointer;
+}
+
+.courseSearch > .result > thead > tr > th:not(:last-child) {
+    border-right: lightgrey solid 1px;
 }
 
 .courseSearch > .result > thead > tr > .departmentName:hover,
@@ -111,6 +136,7 @@
     position: absolute;
     bottom: 0;
     right: 0;
+    pointer-events: none;
 }
 
 /* Course search result
@@ -142,6 +168,10 @@
     vertical-align: middle;
     transform: rotate(-90deg);
     transition: 0.2s transform;
+    -webkit-transition: 0.2s transform;
+    -moz-transition: 0.2s transform;
+    -ms-transition: 0.2s transform;
+    -o-transition: 0.2s transform;
 }
 
 .courseSearch > .result > thead > tr > th > .expendDownArrow.extend,
@@ -328,7 +358,6 @@
 
 .courseSearch > .instructorInfo {
     background: rgba(0, 0, 0, 0.9);
-    height: 300px;
     box-sizing: border-box;
     white-space: pre-wrap;
     position: absolute;
