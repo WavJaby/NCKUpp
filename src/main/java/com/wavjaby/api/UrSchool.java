@@ -175,15 +175,15 @@ public class UrSchool implements HttpHandler {
             tageBuilder.append(']');
 
             // Get reviewer count
+            int reviewerCount;
             int reviewerCountStart, reviewerCountEnd;
             if ((reviewerCountStart = resultBody.indexOf("/reviewers/", urlEnd + 1)) == -1 ||
                     (reviewerCountStart = resultBody.indexOf('>', reviewerCountStart)) == -1 ||
                     (reviewerCountEnd = resultBody.indexOf(' ', reviewerCountStart += 1)) == -1
             ) {
-                outData.append("err", TAG + "Reviewer count not found");
-                return false;
-            }
-            int reviewerCount = Integer.parseInt(resultBody.substring(reviewerCountStart, reviewerCountEnd));
+                reviewerCount = 0;
+            } else
+                reviewerCount = Integer.parseInt(resultBody.substring(reviewerCountStart, reviewerCountEnd));
 
             // Get visitors
             int countStart, countEnd;

@@ -103,7 +103,7 @@ const {
     p,
     img,
     thead,
-    tbody, colgroup
+    tbody, colgroup, TextState
 } = require('../domHelper');
 /*ExcludeEnd*/
 
@@ -341,13 +341,15 @@ module.exports = function () {
                         if (nckuhub) {
                             if (nckuhub.noData) return td();
 
-                            const reward = data.got = nckuhub.got;
-                            const sweet = data.sweet = nckuhub.sweet;
-                            const cool = data.cold = nckuhub.cold;
+                            data.got = nckuhub.got;
+                            data.sweet = nckuhub.sweet;
+                            data.cold = nckuhub.cold;
+                            if (nckuhub.rate_count === 0) return td('No rating', 'nckuhub');
+
                             return td(null, 'nckuhub',
-                                span(reward.toFixed(1), 'reward'),
-                                span(sweet.toFixed(1), 'sweet'),
-                                span(cool.toFixed(1), 'cool'),
+                                span(data.got.toFixed(1), 'reward'),
+                                span(data.sweet.toFixed(1), 'sweet'),
+                                span(data.cold.toFixed(1), 'cool'),
                             );
                         }
                         return td('Loading...', 'nckuhub');
@@ -438,7 +440,20 @@ module.exports = function () {
             ),
             thead('noSelect',
                 tr(null,
-                    th(null, null, expendArrow.cloneNode()),
+                    th(null, null,
+                        // filter options
+                        div('filterSection',
+                            div(null, div('options',
+                                img('./res/assets/funnel_icon.svg'),
+                                div('filter', input(null, 'Teacher, Course name, Serial number')),
+                                div('resultCount',
+                                    span('Result count: '),
+                                    span(TextState(searchResult, (state) => state && !state.loading ? state.data.length : ''))
+                                ),
+                            )),
+                        ),
+                        expendArrow.cloneNode()
+                    ),
                     th('Dept', 'departmentName', {onclick: (e) => sortKey('dn', e.target)}),
                     th('Serial', 'serialNumber', {onclick: (e) => sortKey('sn', e.target)}),
                     th('Time', 'courseTime', {onclick: (e) => sortKey('parsedTime', e.target)}),
@@ -449,12 +464,10 @@ module.exports = function () {
                         div(null, span('Cool', 'cool'), {onclick: (e) => sortNckuhubKey('cold', e.target)}),
                     ),
                 ),
-                tr('filterSection', {'colSpan': '100'},
-                    img('./res/assets/funnel_icon.svg'),
-                    div('options',
-                        input('filter', 'Teacher, Course name, Serial number'),
-                    ),
-                ),
+                // tr('resultCount',
+                //     span('Result count: '),
+                //     span(TextState(searchResult, (state) => state && !state.loading ? state.data.length : ''))
+                // ),
             ),
             State(searchResult, renderResult),
         ),
@@ -482,7 +495,6 @@ function InstructorInfoElement(
         div('info',
             table(null,
                 tr(null, th('Average score'), td(averageScore)),
-                tr(null, th('Average score'), td(averageScore)),
                 tr(null, th('Note'), td(note)),
                 tr(null, th('Nickname'), td(nickname)),
                 tr(null, th('Department'), td(dept)),
@@ -505,9 +517,9 @@ function InstructorInfoBubble() {
         element.insertBefore(span(state.data[2]), element.firstChild);
         element.style.left = bound.left + 'px';
         classList.init(element);
+        classList.add('show');
 
         setTimeout(() => {
-            classList.add('show');
             element.style.top = (bound.top + state.offsetY - 15 - element.offsetHeight - state.target.offsetHeight) + 'px';
         }, 0);
         return element;
@@ -564,7 +576,7 @@ function CourseDetailWindow() {
         return div('courseDetailWindow',
             // rates
             span(`Evaluation(${nckuhub.rate_count})`, 'title'),
-            div('rates',
+            nckuhub.rate_count === 0 ? div('rates') : div('rates',
                 div(null, div('rateBox',
                     span('Reward'),
                     span(nckuhub.got.toFixed(1)),
