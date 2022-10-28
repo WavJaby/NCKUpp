@@ -57,6 +57,7 @@
 }
 
 .courseSearch > .result > thead .filterSection .options > .resultCount {
+    height: 2em;
     padding-left: 5px;
 }
 
@@ -148,6 +149,7 @@
 .courseSearch > .result > thead .nckuhub {
     width: 0;
     vertical-align: baseline;
+    padding-left: 3px;
 }
 
 .courseSearch > .result > thead .nckuhub > div {
@@ -202,6 +204,7 @@
 
 .courseSearch > .result > tbody > tr > td:last-child {
     border-radius: 0 10px 10px 0;
+    padding-right: 10px;
 }
 
 .courseSearch > .result .expendDownArrow {
@@ -225,7 +228,7 @@
 /* Course search result
     Item data
 */
-.courseSearch > .result .nckuhub{
+.courseSearch > .result .nckuhub {
     text-align: right;
 }
 

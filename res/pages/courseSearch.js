@@ -251,7 +251,7 @@ module.exports = function () {
         searching = false;
     }
 
-    // expend info
+    // Expend info
     function expendAllItem() {
         for (const i of expandButtons) i();
     }
@@ -265,6 +265,7 @@ module.exports = function () {
         });
     }
 
+    // Render result
     function renderResult(state) {
         if (!state) return div();
         if (state.loading) return div('loading', loadingElement.cloneNode(true));
@@ -359,6 +360,7 @@ module.exports = function () {
         }));
     }
 
+    // Sort
     const sortArrow = expendArrow.cloneNode();
     const sortArrowClass = new ClassList('sortArrow');
     sortArrowClass.init(sortArrow);
@@ -422,6 +424,35 @@ module.exports = function () {
         expendAllItem();
     }
 
+    // Filter
+    let expendTimeout;
+    let lastFilterKey;
+
+    function filterChange(e) {
+        if ((!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) && !searchResult.state.orignalData) return;
+        const key = this.value.trim();
+        // if word not finish
+        if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w-]+$/g)) return;
+
+        // if same
+        if (lastFilterKey === key) return;
+        lastFilterKey = key;
+
+        if (!searchResult.state.orignalData)
+            searchResult.state.orignalData = searchResult.state.data;
+
+
+        searchResult.state.data = searchResult.state.orignalData.filter(i =>
+            i.cn.indexOf(key) !== -1 ||
+            i.sn.indexOf(key) !== -1 ||
+            i.ts.find(i => (i instanceof Array ? i[2] : i).indexOf(key) !== -1)
+        );
+        searchResult.update();
+        if (expendTimeout)
+            clearTimeout(expendTimeout);
+        expendTimeout = setTimeout(expendAllItem, 500);
+    }
+
     return courseSearch = div('courseSearch',
         {onRender, onDestroy},
         courseSearchForm = div('form',
@@ -445,7 +476,10 @@ module.exports = function () {
                         div('filterSection',
                             div(null, div('options',
                                 img('./res/assets/funnel_icon.svg'),
-                                div('filter', input(null, 'Teacher, Course name, Serial number')),
+                                div('filter', input(null, 'Teacher, Course name, Serial number', null, {
+                                    oninput: filterChange,
+                                    onpropertychange: filterChange
+                                })),
                                 div('resultCount',
                                     span('Result count: '),
                                     span(TextState(searchResult, (state) => state && !state.loading ? state.data.length : ''))
