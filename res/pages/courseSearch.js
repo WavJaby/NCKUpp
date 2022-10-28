@@ -222,7 +222,7 @@ module.exports = function () {
         }
 
         // get nckuhub data
-        const chunkSize = 5;
+        const chunkSize = 10;
         const nckuHubResponseDataArr = Object.values(nckuHubResponseData);
         for (let i = 0; i < nckuHubRequestIDs.length; i += chunkSize) {
             const chunk = nckuHubRequestIDs.slice(i, i + chunkSize);
@@ -296,11 +296,7 @@ module.exports = function () {
             }
 
             // render result item
-            return tr(resultItemClass, {
-                    onclick: openCourseDetailWindow,
-                    // prevent double click select text
-                    onmousedown: preventDoubleClick,
-                },
+            return tr(resultItemClass,
                 // title sections
                 td(null, null,
                     expendButton,
@@ -347,7 +343,7 @@ module.exports = function () {
                             data.cold = nckuhub.cold;
                             if (nckuhub.rate_count === 0) return td('No rating', 'nckuhub');
 
-                            return td(null, 'nckuhub',
+                            return td(null, 'nckuhub', {onclick: openCourseDetailWindow},
                                 span(data.got.toFixed(1), 'reward'),
                                 span(data.sweet.toFixed(1), 'sweet'),
                                 span(data.cold.toFixed(1), 'cool'),

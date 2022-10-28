@@ -187,26 +187,6 @@
     margin: 0 auto;
 }
 
-.courseSearch > .result > tbody > tr {
-    background: #0D1117;
-    cursor: pointer;
-    position: relative;
-}
-
-.courseSearch > .result > tbody > tr > td {
-    vertical-align: top;
-}
-
-.courseSearch > .result > tbody > tr > td:first-child {
-    border-radius: 10px 0 0 10px;
-    width: 1em;
-}
-
-.courseSearch > .result > tbody > tr > td:last-child {
-    border-radius: 0 10px 10px 0;
-    padding-right: 10px;
-}
-
 .courseSearch > .result .expendDownArrow {
     width: 1em;
     height: auto;
@@ -225,9 +205,33 @@
     transform: rotate(0);
 }
 
-/* Course search result
-    Item data
-*/
+.courseSearch > .result > tbody > tr {
+    background: #0D1117;
+    position: relative;
+}
+
+.courseSearch > .result > tbody > tr > td {
+    vertical-align: top;
+}
+
+.courseSearch > .result > tbody > tr > td:first-child {
+    border-radius: 10px 0 0 10px;
+    width: 1em;
+}
+
+.courseSearch > .result > tbody > tr > td:last-child {
+    border-radius: 0 10px 10px 0;
+    padding-right: 10px;
+}
+
+.courseSearch > .result > tbody > tr > td.nckuhub {
+    cursor: pointer;
+}
+
+.courseSearch > .result > tbody > tr > td.nckuhub:hover {
+    background: #0A0D12;
+}
+
 .courseSearch > .result .nckuhub {
     text-align: right;
 }
@@ -242,9 +246,9 @@
 */
 .courseSearch > .result > tbody > tr > td > .expandable > div {
     height: inherit;
-    width: 100%;
     position: absolute;
     overflow: hidden;
+    margin-right: 10.5em;
 }
 
 .courseSearch > .result > tbody > tr > td .info {
