@@ -41,6 +41,12 @@ public class Search implements HttpHandler {
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
     private static final DecimalFormat floatFormat = new DecimalFormat("#.#");
 
+    private final UrSchool urSchool;
+
+    public Search(UrSchool urSchool) {
+        this.urSchool = urSchool;
+    }
+
     @Override
     public void handle(HttpExchange req) {
         pool.submit(() -> {
@@ -94,7 +100,6 @@ public class Search implements HttpHandler {
                 req.close();
             } catch (IOException e) {
                 req.close();
-                e.printStackTrace();
             }
             Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
         });
@@ -421,8 +426,7 @@ public class Search implements HttpHandler {
             Matcher matcher = displayRegex.matcher(style);
             while (matcher.find()) {
                 if (matcher.groupCount() < 2) continue;
-                styles.add(new AbstractMap.SimpleEntry<>
-                        (matcher.group(1), !matcher.group(2).equals("none")));
+                styles.add(new AbstractMap.SimpleEntry<>(matcher.group(1), !matcher.group(2).equals("none")));
             }
         }
 
@@ -467,6 +471,12 @@ public class Search implements HttpHandler {
 
             // get teacher name
             String teachers = section.get(6).text();
+            if (teachers.length() == 0 || teachers.equals("未定"))
+                teachers = "";
+            else {
+                teachers = teachers.replace("*", "");
+                urSchool.addTeacherCache(teachers.split(" "));
+            }
 
             // get course tags
             String tags;
@@ -592,7 +602,11 @@ public class Search implements HttpHandler {
             }
             count = countBuilder.toString().split("/");
             int selected = count[0].length() > 0 ? Integer.parseInt(count[0]) : -1;
-            String available = count.length > 1 ? count[1] : null;
+            int available = count.length < 2 ? -1 :
+                    (count[1].equals("額滿") || count[1].equals("full")) ? 0 :
+                            (count[1].equals("不限") || count[1].equals("unlimited")) ? -2 :
+                                    (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -3 :
+                                            Integer.parseInt(count[1]);
 
             // get moodle
             String moodle = "";

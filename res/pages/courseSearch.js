@@ -27,7 +27,7 @@
 /**@typedef {float} credits */
 /**@typedef {boolean} required */
 /**@typedef {int} selected */
-/**@typedef {int|string} available */
+/**@typedef {int} available */
 /**@typedef {string[]} time */
 /**@typedef {string} moodle */
 /**
@@ -103,7 +103,7 @@ const {
     p,
     img,
     thead,
-    tbody, colgroup, TextState
+    tbody, colgroup, TextState, ShowIf
 } = require('../domHelper');
 /*ExcludeEnd*/
 
@@ -113,6 +113,7 @@ module.exports = function () {
     let styles = async_require('./courseSearch.css');
     const expendArrow = img('https://wavjaby.github.io/NCKUpp/res/assets/down_arrow_icon.svg', 'expendDownArrow');
     const searchResult = new Signal();
+    const showPageLoading = new Signal();
     const instructorInfoBubble = InstructorInfoBubble();
     const instructorDetailWindow = InstructorDetailWindow();
     const courseDetailWindow = CourseDetailWindow();
@@ -199,7 +200,8 @@ module.exports = function () {
                 deptLen = cache;
 
             // parse
-            data.ts = data.ts.replace(/\*/g, '').split(' ').map(i => {
+            data.ts = data.ts.split(' ').map(i => {
+                if (i.length === 0) return 'undecided';
                 for (const j of urschoolData) if (j[2] === i) return j;
                 return i;
             });
@@ -222,7 +224,7 @@ module.exports = function () {
         }
 
         // get nckuhub data
-        const chunkSize = 10;
+        const chunkSize = 20;
         const nckuHubResponseDataArr = Object.values(nckuHubResponseData);
         for (let i = 0; i < nckuHubRequestIDs.length; i += chunkSize) {
             const chunk = nckuHubRequestIDs.slice(i, i + chunkSize);
@@ -257,11 +259,13 @@ module.exports = function () {
     }
 
     function openInstructorDetailWindow(info) {
+        showPageLoading.set(true);
         fetchApi(`/urschool?id=${info[0]}&mode=${info[1]}`).then(response => {
             // TODO: handle error
             const data = response.data;
             data.info = info;
             instructorDetailWindow.set(data);
+            showPageLoading.set(false);
         });
     }
 
@@ -424,7 +428,7 @@ module.exports = function () {
     let expendTimeout;
     let lastFilterKey;
 
-    function filterChange(e) {
+    function filterChange() {
         if ((!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) && !searchResult.state.orignalData) return;
         const key = this.value.trim();
         // if word not finish
@@ -494,21 +498,18 @@ module.exports = function () {
                         div(null, span('Cool', 'cool'), {onclick: (e) => sortNckuhubKey('cold', e.target)}),
                     ),
                 ),
-                // tr('resultCount',
-                //     span('Result count: '),
-                //     span(TextState(searchResult, (state) => state && !state.loading ? state.data.length : ''))
-                // ),
             ),
             State(searchResult, renderResult),
         ),
         instructorInfoBubble,
         instructorDetailWindow,
         courseDetailWindow,
+        ShowIf(showPageLoading, div('loading', loadingElement.cloneNode(true))),
     );
 };
 
 function InstructorInfoElement(
-    [id, mod,
+    [id, mode,
         name, dept, job,
         recommend, reward, articulate, pressure, sweet,
         averageScore, academicQualifications, note, nickname, rollCall
@@ -657,11 +658,6 @@ function Canvas(font) {
     const context = canvas.getContext("2d");
     context.font = font;
     return context;
-}
-
-function preventDoubleClick(e) {
-    if (e.detail > 1)
-        e.preventDefault();
 }
 
 function sortToEnd(data) {

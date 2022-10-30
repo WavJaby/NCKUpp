@@ -56,14 +56,15 @@ public class Main {
         HttpServer server = new HttpServer(serverSettings);
         if (!server.Opened) return;
 
+        UrSchool urSchool = new UrSchool();
         server.createContext("/NCKUpp/", new FileHost(serverSettings));
         server.createContext("/api/login", new Login());
         server.createContext("/api/logout", new Logout());
         server.createContext("/api/courseSchedule", new CourseSchedule());
-        server.createContext("/api/search", new Search());
+        server.createContext("/api/search", new Search(urSchool));
         server.createContext("/api/extract", new ExtractUrl());
         server.createContext("/api/nckuhub", new NCKUHub());
-        server.createContext("/api/urschool", new UrSchool());
+        server.createContext("/api/urschool", urSchool);
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);

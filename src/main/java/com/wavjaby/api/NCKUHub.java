@@ -104,7 +104,6 @@ public class NCKUHub implements HttpHandler {
 
             outData.append("data", builder.toString(), true);
         } catch (IOException e) {
-            e.printStackTrace();
             outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             return false;
         }
