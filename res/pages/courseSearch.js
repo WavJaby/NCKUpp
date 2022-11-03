@@ -111,7 +111,7 @@ module.exports = function () {
     console.log('Course search Init');
     // static
     let styles = async_require('./courseSearch.css');
-    const expendArrow = img('https://wavjaby.github.io/NCKUpp/res/assets/down_arrow_icon.svg', 'expendDownArrow');
+    const expendArrow = img('./res/assets/down_arrow_icon.svg', 'expendDownArrow');
     const searchResult = new Signal();
     const showPageLoading = new Signal();
     const instructorInfoBubble = InstructorInfoBubble();
@@ -185,19 +185,12 @@ module.exports = function () {
             return;
         }
 
-        const font = '18px ' + getComputedStyle(document.body).fontFamily;
-        const canvas = new Canvas(font);
         const nckuHubRequestIDs = [];
         const nckuHubResponseData = {};
 
         // parse result
-        let deptLen = 0;
-        let timeLen = 0;
         for (const data of result.data) {
             data.dn = data.dn.split(' ')[0];
-            let cache;
-            if ((cache = canvas.measureText(data.dn).width + 1) > deptLen)
-                deptLen = cache;
 
             // parse
             data.ts = data.ts.split(' ').map(i => {
@@ -209,8 +202,6 @@ module.exports = function () {
                 i = i.split(',');
                 return '[' + i[0] + ']' + i[1]
             }).join(', ');
-            if ((cache = canvas.measureText(data.parsedTime).width + 1) > timeLen)
-                timeLen = cache;
             delete data.t;
 
             // nckuhub
@@ -248,7 +239,7 @@ module.exports = function () {
             });
         }
 
-        searchResult.set({data: result.data, nckuHubResponseData, deptLen, timeLen});
+        searchResult.set({data: result.data, nckuHubResponseData});
         expendAllItem();
         searching = false;
     }
@@ -336,6 +327,7 @@ module.exports = function () {
                 td(data.sn, 'serialNumber'),
                 td(data.parsedTime, 'courseTime'),
                 td(data.cn, 'courseName'),
+                td(`${data.s}/${data.a}`, 'available'),
                 // ncku Hub
                 nckuHubData === undefined ? td() :
                     State(nckuHubData, /**@param {NckuHub} nckuhub*/nckuhub => {
@@ -486,12 +478,13 @@ module.exports = function () {
                                 ),
                             )),
                         ),
-                        expendArrow.cloneNode()
+                        expendArrow.cloneNode(),
                     ),
                     th('Dept', 'departmentName', {onclick: (e) => sortKey('dn', e.target)}),
                     th('Serial', 'serialNumber', {onclick: (e) => sortKey('sn', e.target)}),
                     th('Time', 'courseTime', {onclick: (e) => sortKey('parsedTime', e.target)}),
                     th('Course name', 'courseName', {onclick: (e) => sortKey('cn', e.target)}),
+                    th('Sel/Avail', 'available', {onclick: (e) => sortKey('a', e.target)}),
                     th(null, 'nckuhub',
                         div(null, span('Reward', 'reward'), {onclick: (e) => sortNckuhubKey('got', e.target)}),
                         div(null, span('Sweet', 'sweet'), {onclick: (e) => sortNckuhubKey('sweet', e.target)}),
@@ -651,13 +644,6 @@ function PopupWindow(onDataChange) {
     }));
     popupWindow.set = popupSignal.set;
     return popupWindow;
-}
-
-function Canvas(font) {
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    context.font = font;
-    return context;
 }
 
 function sortToEnd(data) {

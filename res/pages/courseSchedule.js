@@ -25,7 +25,7 @@ const timeTable = [
     ['E'],
     ['F'],
 ];
-const nightTimeStart = 11;
+const nightTimeStart = 10;
 
 function CourseInfoWindow(showCourseInfoWindow) {
     const body = div();
@@ -51,7 +51,7 @@ module.exports = function (loginState) {
     console.log('Course schedule Init');
     // static element
     let styles = async_require('./courseSchedule.css');
-    const scheduleTable = table('courseScheduleTable');
+    const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
     const scheduleStudentInfo = new Signal();
     const showCourseInfoWindow = new Signal(false);
     const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
@@ -83,8 +83,8 @@ module.exports = function (loginState) {
         }
     }
 
-    function cellClick(e) {
-        const info = courseInfo[e.target.serialID];
+    function cellClick() {
+        const info = courseInfo[this.serialID];
         if (info) {
             courseInfoWindow.clear();
             courseInfoWindow.add(
@@ -115,9 +115,9 @@ module.exports = function (loginState) {
         }
     }
 
-    function buildScheduleTable({id, name, credits, schedule, err}) {
+    function buildScheduleTable({id, credits, schedule, err}) {
         if (err) return;
-        scheduleStudentInfo.set(id + ' ' + name + ' ' + 'credits: ' + credits);
+        scheduleStudentInfo.set(id + ' ' + 'credits: ' + credits);
 
         thead = scheduleTable.createTHead();
         tbody = scheduleTable.createTBody();
@@ -125,37 +125,102 @@ module.exports = function (loginState) {
 
         let nightTime = false;
         let holiday = false;
-        for (let i = nightTimeStart; i < 16; i++)
-            for (let j = 0; j < 7; j++)
-                if (schedule[j][i].length > 0)
-                    nightTime = true;
+        for (const i of schedule) for (const j of i.info) {
+            // parse time
+            const time = j.time = j.time.split(',');
+            time[0] = parseInt(time[0]);
+            if (time.length > 1) {
+                time[1] = time[1] === 'N' ? -1 : parseInt(time[1], 16);
+                if (time[1] > 4) time[1]++;
+                else if (time[1] === -1) time[1] = 5;
+            }
+            if (time.length > 2) {
+                time[2] = time[2] === 'N' ? -1 : parseInt(time[2], 16);
+                if (time[2] > 4) time[2]++;
+                else if (time[1] === -1) time[2] = 5;
+            }
+            if (time.length > 0 && time[0] > 4) holiday = true;
+            if (time.length > 1 && time[1] > nightTimeStart || time.length > 2 && time[2] > nightTimeStart) nightTime = true;
+        }
+        const tableWidth = holiday ? 7 : 5;
+        const tableHeight = nightTime ? 17 : 11;
 
-        for (let i = 0; i < 16; i++)
-            for (let j = 5; j < 7; j++)
-                if (schedule[j][i].length > 0)
-                    holiday = true;
+        const days = new Array(tableWidth);
+        for (let i = 0; i < 7; i++) days[i] = new Array(tableHeight);
+        for (const i of schedule)
+            for (const j of i.info) {
+                const k = days[j.time[0]][j.time[1]];
+                if (k instanceof Array)
+                    k.push(j);
+                else
+                    days[j.time[0]][j.time[1]] = [i, j]
+            }
+
         // header
-        for (let i = 0; i < (holiday ? 7 : 5) + 1; i++)
-            headRow.insertCell().textContent = weekTable[i];
+        for (let i = 0; i < tableWidth + 1; i++) {
+            const cell = headRow.insertCell();
+            cell.textContent = weekTable[i];
+            if (i === 0) cell.colSpan = 2;
+        }
+        headRow.appendChild(div('background'));
 
         // body
-        for (let i = 0; i < 17; i++) {
-            const row = tbody.insertRow();
-            if (i < nightTimeStart || nightTime && i < 16) {
-                const time = row.insertCell();
-                time.textContent = timeTable[i][1];
-                for (let j = 0; j < (holiday ? 7 : 5); j++) {
-                    const cell = row.insertCell();
-                    if (schedule[j][i].length > 0) {
-                        const serialID = schedule[j][i][0];
-                        courseInfo[serialID] = null;
-                        cell.classList.add('activateCell');
-                        cell.textContent = serialID + schedule[j][i][1] + '\n' + schedule[j][i][2];
-                        cell.serialID = serialID;
-                        cell.onclick = cellClick;
+        const rows = new Array(tableHeight);
+        const rowSize = new Int32Array(tableHeight);
+        for (let i = 0; i < tableHeight; i++) {
+            rows[i] = tbody.insertRow();
+            rows[i].insertCell().textContent = timeTable[i][0];
+            if (timeTable[i][1]) rows[i].insertCell().textContent = timeTable[i][1];
+            else rows[i].insertCell()
+        }
+
+        for (let i = 0; i < tableWidth; i++) {
+            for (let j = 0; j < tableHeight; j++) {
+                const course = days[i][j];
+                if (!course) continue;
+                // fill space
+                if (i - rowSize[j] > 0)
+                    rows[j].insertCell().colSpan = i - rowSize[j];
+
+                // add cell
+                const info = course[0];
+                const cell = rows[j].insertCell();
+                cell.className = 'activateCell';
+                cell.onclick = cellClick;
+                cell.serialID = info.deptID + '-' + info.sn;
+                courseInfo[cell.serialID] = null;
+
+                // add space
+                if (course[1].time.length === 3) {
+                    const length = course[1].time[2] - course[1].time[1] + 1;
+                    cell.rowSpan = length;
+                    rowSize[j] = i + 1;
+                    for (let k = 1; k < length; k++) {
+                        // fill space
+                        if (i - rowSize[j + k] > 0)
+                            rows[j + k].insertCell().colSpan = i - rowSize[j + k];
+                        rowSize[j + k] = i + 1;
                     }
+                } else if (course[1].time.length === 2)
+                    rowSize[j] = i + 1;
+
+                // build cell
+                const rooms = [];
+                for (let k = 1; k < course.length; k++) {
+                    rooms.push(span(course[k].room));
                 }
+                // create element
+                cell.appendChild(
+                    div(null,
+                        span(info.name),
+                        rooms,
+                    )
+                );
             }
+        }
+
+        for (let i = 0; i < tableHeight; i++) {
+            rows[i].appendChild(div('splitLine'));
         }
 
         // get course info
@@ -184,10 +249,10 @@ module.exports = function (loginState) {
 
     return div('courseSchedule',
         {onRender, onDestroy},
-        ShowIf(showCourseInfoWindow, courseInfoWindow),
         div('courseScheduleInfo',
             span(scheduleStudentInfo)
         ),
-        scheduleTable
+        scheduleTable,
+        ShowIf(showCourseInfoWindow, courseInfoWindow),
     );
 };

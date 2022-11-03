@@ -1,6 +1,6 @@
 .courseScheduleTable {
     margin: 10px;
-    border-collapse: collapse;
+    border-spacing: 5px;
 }
 
 .courseScheduleInfo {
@@ -12,28 +12,58 @@ table tr:first-child {
     white-space: pre;
 }
 
-table tr {
-    border-width: 1px 0;
-    border-color: var(--table-border);
-    white-space: pre-wrap;
-    border-style: solid;
+table > thead {
+    position: relative;
 }
 
-table > thead td {
+table > thead > tr {
+    height: 2em;
+}
+
+table > thead > tr > .background {
     background-color: #282B2C;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    position: absolute;
 }
 
-table td {
-    vertical-align: middle;
-    text-align: center;
+table > tbody > tr {
+    position: relative;
+}
+
+table > tbody > tr > td:nth-child(2) {
+    border-right: white 1px solid;
+    width: 0;
+}
+
+table > tbody > tr > td {
     padding: 0.4em;
-    border-width: 0 1px;
-    border-color: var(--table-border);
-    border-style: solid;
+    text-align: center;
+    border: none;
 }
 
-.courseScheduleTable .activateCell {
+table > tbody > tr > td > div > span {
+    display: block;
+}
+
+table > tbody > tr > td.activateCell {
+    background: #5985ef;
+    border-radius: 10px;
+    vertical-align: top;
     cursor: pointer;
+}
+
+table > tbody > tr > .splitLine {
+    background-color: #1C1E1F;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    position: absolute;
 }
 
 .courseInfoWindow {
