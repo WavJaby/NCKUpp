@@ -122,6 +122,7 @@ module.exports = function (loginState) {
         thead = scheduleTable.createTHead();
         tbody = scheduleTable.createTBody();
         const headRow = thead.insertRow();
+        headRow.className = 'noSelect';
 
         let nightTime = false;
         let holiday = false;
@@ -169,9 +170,12 @@ module.exports = function (loginState) {
         const rowSize = new Int32Array(tableHeight);
         for (let i = 0; i < tableHeight; i++) {
             rows[i] = tbody.insertRow();
-            rows[i].insertCell().textContent = timeTable[i][0];
-            if (timeTable[i][1]) rows[i].insertCell().textContent = timeTable[i][1];
-            else rows[i].insertCell()
+            const index = rows[i].insertCell();
+            index.textContent = timeTable[i][0];
+            index.className = 'noSelect';
+            const time = rows[i].insertCell();
+            if (timeTable[i][1]) time.textContent = timeTable[i][1];
+            time.className = 'noSelect';
         }
 
         for (let i = 0; i < tableWidth; i++) {
@@ -186,8 +190,8 @@ module.exports = function (loginState) {
                 const info = course[0];
                 const cell = rows[j].insertCell();
                 cell.className = 'activateCell';
-                cell.onclick = cellClick;
                 cell.serialID = info.deptID + '-' + info.sn;
+                cell.onclick = cellClick;
                 courseInfo[cell.serialID] = null;
 
                 // add space

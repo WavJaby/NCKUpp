@@ -267,11 +267,26 @@
 /* Course search result
     Course info
 */
-.courseSearch > .result > tbody > tr > td > .expandable > div {
+.courseSearch > .result > tbody > tr > td > .expandable > .container {
     height: inherit;
     position: absolute;
     overflow: hidden;
     margin-right: 10.5em;
+}
+
+.courseSearch > .result > tbody > tr > td > .expandable > .splitLine {
+    width: 100%;
+    height: inherit;
+    padding: 0 5px;
+    position: absolute;
+    overflow: hidden;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.courseSearch > .result > tbody > tr > td > .expandable > .splitLine > div {
+    width: 100%;
+    border-top: 1px gray solid;
 }
 
 .courseSearch > .result > tbody > tr > td .info {

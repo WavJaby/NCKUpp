@@ -481,8 +481,24 @@ public class Search implements HttpHandler {
             // get course tags
             String tags;
             StringBuilder tagBuilder = new StringBuilder();
-            for (Element tag : section.get(4).getElementsByClass("label"))
-                tagBuilder.append(',').append('"').append(tag.text()).append('"');
+            for (Element tag : section.get(4).getElementsByClass("label")) {
+                // get tag type
+                String tagType = "";
+                for (String i : tag.classNames())
+                    if (i.length() > 6 && i.startsWith("label")) {
+                        tagType = i.substring(6);
+                        break;
+                    }
+                Element j = tag.firstElementChild();
+                String link = j == null ? "" : j.attr("href");
+
+                // write tag
+                tagBuilder.append(',').append('"')
+                        .append(tag.text()).append(',')
+                        .append(tagType).append(',')
+                        .append(link)
+                        .append('"');
+            }
             if (tagBuilder.length() == 0) tags = "[]";
             else {
                 tagBuilder.setCharAt(0, '[');
@@ -535,44 +551,40 @@ public class Search implements HttpHandler {
             for (Node node : section.get(8).childNodes()) {
                 // time
                 if (timeParseState == 0) {
-                    if (node instanceof TextNode) {
-                        String text = ((TextNode) node).text().trim();
+                    timeParseState++;
+                    String text;
+                    if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
                         int split = text.indexOf(']', 1);
-                        if (split == -1)
-                            continue;
-                        else
+                        if (split != -1)
                             builder.append(text, 1, split).append(',')
                                     .append(text, split + 1, text.length()).append(',');
-                        timeParseState++;
-                        continue;
+                        else builder.append(',').append(',');
                     }
                     // if no time
-                    else {
-                        builder.append(',').append(',');
-                        timeParseState++;
-                    }
+                    else builder.append(',').append(',');
+                    continue;
                 }
                 if (timeParseState == 1) {
+                    timeParseState++;
                     Attributes attributes = node.attributes();
                     // location link
-                    if (attributes.size() > 0) {
-                        String attribute = attributes.get("href");
-                        if (attribute.length() == 0) continue;
+                    String attribute;
+                    if (attributes.size() > 0 && (attribute = attributes.get("href")).length() > 0) {
                         String[] j = attribute.substring(17, attribute.length() - 3).split("','");
                         builder.append(j[0]).append(',').append(j[1]).append(',').append(((Element) node).text().trim());
-                        timeParseState++;
                         continue;
                     }
                     // if no location
-                    else {
-                        builder.append(',').append(',');
-                        timeParseState++;
-                    }
+                    else builder.append(',').append(',');
                 }
-                if (timeParseState == 2 && ((Element) node).tagName().equals("br")) {
-                    timeSectionBuilder.append('"').append(builder).append('"').append(',');
-                    timeParseState = 0;
-                    builder.setLength(0);
+                if (timeParseState == 2) {
+                    String tagName = ((Element) node).tagName();
+                    if (tagName.equals("br")) {
+                        timeSectionBuilder.append('"').append(builder).append('"').append(',');
+                        timeParseState = 0;
+                        builder.setLength(0);
+                    } else if (((Element) node).tagName().equals("div"))
+                        builder.append(',').append(node.attr("data-mkey"));
                 }
             }
             if (builder.length() > 0) {

@@ -18,6 +18,7 @@ table > thead {
 
 table > thead > tr {
     height: 2em;
+    text-align: center;
 }
 
 table > thead > tr > .background {

@@ -296,35 +296,39 @@ module.exports = function () {
                 td(null, null,
                     expendButton,
                     // info
-                    expandable = div('expandable', div(null, measureReference = div('info',
-                        data.ci.length > 0 ? span(data.ci, 'note') : null,
-                        data.cl.length > 0 ? span(data.cl, 'limit red') : null,
+                    expandable = div('expandable',
+                        div('container', measureReference = div('info',
+                            data.ci.length > 0 ? span(data.ci, 'note') : null,
+                            data.cl.length > 0 ? span(data.cl, 'limit red') : null,
 
-                        // Instructor
-                        span('Instructor: ', 'instructor'),
-                        data.ts.map(i =>
-                            button('instructorBtn', i instanceof Array ? i[2] : i,
-                                e => {
-                                    if (i instanceof Array)
-                                        openInstructorDetailWindow(i);
-                                    e.stopPropagation();
-                                },
-                                {
-                                    onmouseenter: e => {
+                            // Instructor
+                            span('Instructor: ', 'instructor'),
+                            data.ts.map(i =>
+                                button('instructorBtn', i instanceof Array ? i[2] : i,
+                                    e => {
                                         if (i instanceof Array)
-                                            instructorInfoBubble.set({
-                                                target: e.target,
-                                                offsetY: courseSearch.scrollTop,
-                                                data: i
-                                            });
+                                            openInstructorDetailWindow(i);
+                                        e.stopPropagation();
                                     },
-                                    onmouseleave: instructorInfoBubble.hide
-                                })
-                        ),
-                    ))),
+                                    {
+                                        onmouseenter: e => {
+                                            if (i instanceof Array)
+                                                instructorInfoBubble.set({
+                                                    target: e.target,
+                                                    offsetY: courseSearch.scrollTop,
+                                                    data: i
+                                                });
+                                        },
+                                        onmouseleave: instructorInfoBubble.hide
+                                    })
+                            ),
+                        )),
+                        div('splitLine',div()),
+                    ),
                 ),
                 td(data.dn, 'departmentName'),
                 td(data.sn, 'serialNumber'),
+                td(data.ct, 'courseType'),
                 td(data.parsedTime, 'courseTime'),
                 td(data.cn, 'courseName'),
                 td(`${data.s}/${data.a}`, 'available'),
@@ -482,6 +486,7 @@ module.exports = function () {
                     ),
                     th('Dept', 'departmentName', {onclick: (e) => sortKey('dn', e.target)}),
                     th('Serial', 'serialNumber', {onclick: (e) => sortKey('sn', e.target)}),
+                    th('Type', 'courseType', {onclick: (e) => sortKey('ct', e.target)}),
                     th('Time', 'courseTime', {onclick: (e) => sortKey('parsedTime', e.target)}),
                     th('Course name', 'courseName', {onclick: (e) => sortKey('cn', e.target)}),
                     th('Sel/Avail', 'available', {onclick: (e) => sortKey('a', e.target)}),
