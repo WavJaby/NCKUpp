@@ -34,10 +34,9 @@ const {
     any,
     debug: doomDebug
 } = require('./res/domHelper');
-const loadingElement =
-    div('loaderCircle',
-        svg('<circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '25 25 50 50', 'circular')
-    );
+const loadingElement = div('loaderCircle',
+    svg('<circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '25 25 50 50', 'circular')
+);
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
@@ -82,29 +81,34 @@ window.fetchApi = function (endpoint, option) {
 
     // check login
     fetchApi('/login').then(onLoginStateChange);
+    const navLinksClass = new ClassList('links');
 
     const root = div('root',
         // Pages
         queryRouter,
         // 選單列
-        nav('navbar', ul(null,
-            li('loginBtn',
+        nav('navbar noSelect',
+            ul('loginBtn',
                 button(null, TextState(loginState, (state) => state ? '登出' : '登入'), () => {
                     if (login) fetchApi('/logout').then(onLoginStateChange);
                     else showLoginWindow.set(!showLoginWindow.state);
-                })
+                }),
             ),
-            queryRouter.getRoutesName().map(i =>
-                li('./?' + i,
-                    a(navPageButtonName[i], null, null, () => queryRouter.openPage(i))
-                )
-            ),
-        )),
+            ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => navLinksClass.toggle('open')})),
+            ul(navLinksClass,
+                queryRouter.getRoutesName().map(i =>
+                    li(null, text(navPageButtonName[i]), {
+                        tabIndex: 0,
+                        onclick: () => queryRouter.openPage(i)
+                    })
+                ),
+            )
+        ),
         ShowIf(showLoginWindow,
             LoginWindow(onLoginStateChange)
         ),
         memoryUpdate === null ? null :
-            span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px'}),
+            span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px; opacity: 0.5;'}),
     );
     window.onload = () => document.body.appendChild(root);
 

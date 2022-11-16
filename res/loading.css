@@ -15,6 +15,9 @@
     width: 100%;
     animation: rotate var(--ritationTime) linear infinite;
     transform-origin: center center;
+    -ms-transform-origin: center center;
+    -moz-transform-origin: center center;
+    -webkit-transform-origin: center center;
 }
 
 .loaderCircle > .circular > .path {
@@ -32,6 +35,9 @@
 @keyframes rotate {
     100% {
         transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -webkit-transform: rotate(360deg);
     }
 }
 

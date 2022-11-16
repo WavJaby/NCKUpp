@@ -24,7 +24,6 @@
     top: 0;
     left: 0;
     position: fixed;
-    z-index: 3;
 }
 
 .courseSearch > .loading > .loaderCircle {
@@ -68,6 +67,7 @@
 }
 
 .courseSearch > .result > thead .filterSection .options > .filter {
+    height: 2em;
     display: block;
     overflow: hidden;
 }
@@ -76,7 +76,6 @@
     width: 100%;
     background: none;
     box-shadow: none;
-    float: left;
 }
 
 .courseSearch > .result > thead .filterSection .options > .resultCount {
@@ -108,18 +107,24 @@
     background: var(--course-result-header-bg-color);
     position: sticky;
     top: 0;
-    z-index: 1;
+}
+
+.courseSearch > .result > thead .extendAll {
+    line-height: 2em;
 }
 
 .courseSearch > .result > thead > tr > th .sortArrow {
     position: absolute;
-    bottom: 1em;
+    bottom: 1.2em;
     left: 0;
     right: 0;
     margin: 0 auto;
     height: 0.8em;
     pointer-events: none;
     transform: rotate(0);
+    -ms-transform: rotate(0);
+    -moz-transform: rotate(0);
+    -webkit-transform: rotate(0);
     transition: 0.1s transform;
     -webkit-transition: 0.1s transform;
     -moz-transition: 0.1s transform;
@@ -127,12 +132,11 @@
     -o-transition: 0.1s transform;
 }
 
-.courseSearch > .result > thead > tr > th > div .sortArrow {
-    bottom: 1em;
-}
-
 .courseSearch > .result > thead > tr > th .sortArrow.reverse {
     transform: rotate(180deg);
+    -ms-transform: rotate(180deg);
+    -moz-transform: rotate(180deg);
+    -webkit-transform: rotate(180deg);
 }
 
 .courseSearch > .result > thead > tr > th {
@@ -151,10 +155,7 @@
     border-left: lightgrey solid 1px;
 }
 
-.courseSearch > .result > thead > tr > .departmentName:hover,
-.courseSearch > .result > thead > tr > .serialNumber:hover,
-.courseSearch > .result > thead > tr > .courseTime:hover,
-.courseSearch > .result > thead > tr > .courseName:hover {
+.courseSearch > .result > thead > tr > th:not(:last-child):hover {
     background: var(--button-hover-color);
 }
 
@@ -216,6 +217,9 @@
     margin: 0 0.2em;
     vertical-align: middle;
     transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -webkit-transform: rotate(-90deg);
     transition: 0.2s transform;
     -webkit-transition: 0.2s transform;
     -moz-transition: 0.2s transform;
@@ -226,6 +230,9 @@
 .courseSearch > .result > thead > tr > th > .expendDownArrow.extend,
 .courseSearch > .result > tbody > tr.extend .expendDownArrow {
     transform: rotate(0);
+    -ms-transform: rotate(0);
+    -moz-transform: rotate(0);
+    -webkit-transform: rotate(0);
 }
 
 .courseSearch > .result > tbody > tr {
@@ -340,7 +347,6 @@
     left: 0;
     position: fixed;
     visibility: hidden;
-    z-index: 3;
 }
 
 .courseSearch > .popupWindow.open {
@@ -366,6 +372,9 @@
     }
 }
 
+/*
+    Popup window
+*/
 .courseSearch > .popupWindow > div {
     background: var(--popupWindow-bg-color);
     overflow: auto;
@@ -387,6 +396,9 @@
     .courseSearch > .popupWindow .closeButton > .icon {
         content: url('./res/assets/down_arrow_icon.svg');
         transform: rotate(90deg);
+        -ms-transform: rotate(90deg);
+        -moz-transform: rotate(90deg);
+        -webkit-transform: rotate(90deg);
     }
 }
 
@@ -449,7 +461,6 @@
     word-break: break-word;
     position: absolute;
     top: 0;
-    z-index: 2;
 
     opacity: 0;
     visibility: hidden;

@@ -103,7 +103,7 @@ const {
     p,
     img,
     thead,
-    tbody, colgroup, TextState, ShowIf
+    tbody, colgroup, TextState, ShowIf, col
 } = require('../domHelper');
 /*ExcludeEnd*/
 
@@ -323,7 +323,7 @@ module.exports = function () {
                                     })
                             ),
                         )),
-                        div('splitLine',div()),
+                        div('splitLine', div()),
                     ),
                 ),
                 td(data.dn, 'departmentName'),
@@ -361,18 +361,16 @@ module.exports = function () {
     const sortArrowClass = new ClassList('sortArrow');
     sortArrowClass.init(sortArrow);
 
-    function sortKey(key, element) {
-        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
-
+    function sortResultItem(key, element, method) {
         if (searchResult.state.sort !== key) {
             searchResult.state.sort = key;
-            element.appendChild(sortArrow);
-            searchResult.state.data.sort((a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
+            searchResult.state.data.sort(method);
             let end = 0;
             for (; end < searchResult.state.data.length; end++)
                 if (sortToEnd(searchResult.state.data[end][key])) break;
             searchResult.state.sortLastIndex = end > 0 ? end : null;
             sortArrowClass.remove('reverse');
+            element.appendChild(sortArrow);
         } else {
             if (searchResult.state.sortLastIndex !== null)
                 reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
@@ -384,40 +382,36 @@ module.exports = function () {
         expendAllItem();
     }
 
-    function sortNckuhubKey(key, element) {
+    function sortKey() {
         if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
+        const key = this.key;
+        sortResultItem(key, this, (a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
+    }
+
+    function sortIntKey() {
+        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
+        const key = this.key;
+        sortResultItem(key, this, (a, b) => (sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : b[key] - a[key]));
+    }
+
+    function sortNckuhubKey() {
+        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
+        const key = this.key;
         const keys = ['sweet', 'cold', 'got'];
         keys.splice(keys.indexOf(key), 1);
 
-        if (searchResult.state.sort !== key) {
-            searchResult.state.sort = key;
-            element.appendChild(sortArrow);
-            searchResult.state.data.sort((a, b) =>
-                sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : (
-                    Math.abs(b[key] - a[key]) < 1e-10 ? (
-                        sortToEnd(a[keys[0]]) ? 1 : sortToEnd(b[keys[0]]) ? -1 : (
-                            Math.abs(b[keys[0]] - a[keys[0]]) < 1e-10 ? (
-                                sortToEnd(a[keys[1]]) ? 1 : sortToEnd(b[keys[1]]) ? -1 : (
-                                    Math.abs(b[keys[1]] - a[keys[1]]) < 1e-10 ? 0 : b[keys[1]] - a[keys[1]]
-                                )
-                            ) : b[keys[0]] - a[keys[0]]
-                        )
-                    ) : b[key] - a[key]
-                ));
-            let end = 0;
-            for (; end < searchResult.state.data.length; end++)
-                if (sortToEnd(searchResult.state.data[end][key])) break;
-            searchResult.state.sortLastIndex = end > 0 ? end : null;
-            sortArrowClass.remove('reverse');
-        } else {
-            if (searchResult.state.sortLastIndex !== null)
-                reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
-            else
-                searchResult.state.data.reverse();
-            sortArrowClass.toggle('reverse');
-        }
-        searchResult.update();
-        expendAllItem();
+        sortResultItem(key, this, (a, b) =>
+            sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : (
+                Math.abs(b[key] - a[key]) < 1e-10 ? (
+                    sortToEnd(a[keys[0]]) ? 1 : sortToEnd(b[keys[0]]) ? -1 : (
+                        Math.abs(b[keys[0]] - a[keys[0]]) < 1e-10 ? (
+                            sortToEnd(a[keys[1]]) ? 1 : sortToEnd(b[keys[1]]) ? -1 : (
+                                Math.abs(b[keys[1]] - a[keys[1]]) < 1e-10 ? 0 : b[keys[1]] - a[keys[1]]
+                            )
+                        ) : b[keys[0]] - a[keys[0]]
+                    )
+                ) : b[key] - a[key]
+            ))
     }
 
     // Filter
@@ -463,8 +457,10 @@ module.exports = function () {
         ),
         table('result', {'cellPadding': 0},
             colgroup(null,
-                // col(null, {'span': '2', 'style': 'visibility: collapse'}),
+                col(null),
+                // col(null, {'style': 'visibility: collapse'}),
             ),
+            State(searchResult, renderResult),
             thead('noSelect',
                 tr(null,
                     th(null, null,
@@ -482,22 +478,21 @@ module.exports = function () {
                                 ),
                             )),
                         ),
-                        expendArrow.cloneNode(),
+                        div('extendAll', expendArrow.cloneNode()),
                     ),
-                    th('Dept', 'departmentName', {onclick: (e) => sortKey('dn', e.target)}),
-                    th('Serial', 'serialNumber', {onclick: (e) => sortKey('sn', e.target)}),
-                    th('Type', 'courseType', {onclick: (e) => sortKey('ct', e.target)}),
-                    th('Time', 'courseTime', {onclick: (e) => sortKey('parsedTime', e.target)}),
-                    th('Course name', 'courseName', {onclick: (e) => sortKey('cn', e.target)}),
-                    th('Sel/Avail', 'available', {onclick: (e) => sortKey('a', e.target)}),
+                    th('Dept', 'departmentName', {key: 'dn', onclick: sortKey}),
+                    th('Serial', 'serialNumber', {key: 'sn', onclick: sortKey}),
+                    th('Type', 'courseType', {key: 'ct', onclick: sortKey}),
+                    th('Time', 'courseTime', {key: 'parsedTime', onclick: sortKey}),
+                    th('Course name', 'courseName', {key: 'cn', onclick: sortKey}),
+                    th('Sel/Avail', 'available', {key: 'a', onclick: sortIntKey}),
                     th(null, 'nckuhub',
-                        div(null, span('Reward', 'reward'), {onclick: (e) => sortNckuhubKey('got', e.target)}),
-                        div(null, span('Sweet', 'sweet'), {onclick: (e) => sortNckuhubKey('sweet', e.target)}),
-                        div(null, span('Cool', 'cool'), {onclick: (e) => sortNckuhubKey('cold', e.target)}),
+                        div(null, span('Reward', 'reward'), {key: 'got', onclick: sortNckuhubKey}),
+                        div(null, span('Sweet', 'sweet'), {key: 'sweet', onclick: sortNckuhubKey}),
+                        div(null, span('Cool', 'cool'), {key: 'cold', onclick: sortNckuhubKey}),
                     ),
                 ),
             ),
-            State(searchResult, renderResult),
         ),
         instructorInfoBubble,
         instructorDetailWindow,
@@ -652,7 +647,7 @@ function PopupWindow(onDataChange) {
 }
 
 function sortToEnd(data) {
-    return data === undefined || data.length === 0;
+    return data === undefined || data.length === 0 || data < 1e-10;
 }
 
 function reverseArray(array, start, end) {

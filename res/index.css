@@ -12,16 +12,6 @@
 }
 
 /*Navbar*/
-.navbar > ul {
-    margin: 0;
-    padding-inline-start: 0;
-    list-style-type: none;
-}
-
-.navbar > ul > li {
-    display: block;
-}
-
 .navbar {
     background: var(--navbar-bg-color);
     width: 100%;
@@ -30,50 +20,94 @@
     top: 0;
 }
 
-.navbar .loginBtn {
+.navbar > ul {
+    margin: 0;
+    padding-inline-start: 0;
+    list-style-type: none;
+    vertical-align: top;
+    display: inline-block;
+}
+
+.navbar > ul > li {
+    height: var(--nav-bar-height);
+    display: inline-block;
+}
+
+.navbar > .hamburgerMenu {
+    height: var(--nav-bar-height);
+    padding: 5px;
+    box-sizing: border-box;
+    display: none;
+}
+
+.navbar > .hamburgerMenu > img {
+    height: 100%;
+}
+
+.navbar > .loginBtn {
+    height: var(--nav-bar-height);
     float: right;
 }
 
-.navbar .loginBtn > button {
+.navbar > .loginBtn > button {
+    background: var(--navbar-bg-color);
     height: 100%;
 }
 
-.navbar .loginBtn > button:focus {
+.navbar > .loginBtn > button:focus {
     box-shadow: none;
 }
 
-.navbar li {
-    height: var(--nav-bar-height);
-    float: left;
-}
-
-.navbar li > * {
+.navbar > .links > li {
     background: var(--navbar-bg-color);
+    line-height: var(--nav-bar-height);
     cursor: pointer;
-    user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -webkit-user-select: none;
+    padding: 0 10px;
+    display: inline-block;
 }
 
-.navbar li > *:hover {
+.navbar > .links > li:hover, .navbar > .loginBtn > button:hover {
     background-color: var(--button-hover-color);
 }
 
-.navbar li > *:active {
+.navbar > .links > li:active, .navbar > .loginBtn > button:active {
     background-color: var(--button-active-color);
 }
 
-.navbar a {
-    height: 100%;
-    line-height: var(--nav-bar-height);
-    text-decoration: none;
-    padding: 0 10px;
-    display: block;
+@media only screen and (min-width: 700px) {
 }
 
-.navbar a:link, .navbar a:visited, .navbar a:hover, .navbar a:active {
-    color: var(--font-color);
+@media only screen and (max-width: 700px) {
+    .navbar > .hamburgerMenu {
+        display: inline-block;
+    }
+
+    .navbar > .links {
+        background: var(--navbar-bg-color);
+        max-width: 15em;
+        height: 100vh;
+        display: block;
+        transform: translateX(-100%);
+        -ms-transform: translateX(-100%);
+        -moz-transform: translateX(-100%);
+        -webkit-transform: translateX(-100%);
+        transition: transform 0.15s;
+        -webkit-transition: transform 0.15s;
+        -moz-transition: transform 0.15s;
+        -ms-transition: transform 0.15s;
+        -o-transition: transform 0.15s;
+    }
+
+    .navbar > .links.open {
+        transform: translateX(0);
+        -ms-transform: translateX(0);
+        -moz-transform: translateX(0);
+        -webkit-transform: translateX(0);
+    }
+
+    .navbar > .links > li {
+        display: block;
+    }
 }
 
 /*Login Window*/
