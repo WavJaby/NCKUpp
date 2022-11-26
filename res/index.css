@@ -12,27 +12,6 @@
 }
 
 /*Navbar*/
-.navbar {
-    background: var(--navbar-bg-color);
-    width: 100%;
-    height: var(--nav-bar-height);
-    position: absolute;
-    top: 0;
-}
-
-.navbar > ul {
-    margin: 0;
-    padding-inline-start: 0;
-    list-style-type: none;
-    vertical-align: top;
-    display: inline-block;
-}
-
-.navbar > ul > li {
-    height: var(--nav-bar-height);
-    display: inline-block;
-}
-
 .navbar > .hamburgerMenu {
     height: var(--nav-bar-height);
     padding: 5px;
@@ -44,6 +23,93 @@
     height: 100%;
 }
 
+.navbar {
+    background: var(--navbar-bg-color);
+    width: 100%;
+    height: var(--nav-bar-height);
+    position: absolute;
+    top: 0;
+}
+
+.navbar ul {
+    padding-inline-start: 0;
+    list-style-type: none;
+    /*vertical-align: top;*/
+}
+
+.navbar > ul {
+    margin: 0;
+}
+
+.navbar > ul > li {
+    float: left;
+}
+
+.navbar > .links > li {
+    line-height: var(--nav-bar-height);
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.navbar > .links > .list {
+    background: none;
+    height: var(--nav-bar-height);
+    padding: 0;
+    overflow: hidden;
+}
+
+.navbar > .links > .list:hover {
+    background: none;
+    height: auto;
+}
+
+.navbar > .links > .list > span:before {
+    background: url('./assets/down_triangle_icon.svg') 0 0 / 1em;
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    vertical-align: middle;
+    content: '';
+}
+
+.navbar > .links > .list > span {
+    background: var(--navbar-bg-color);
+    padding: 0 10px;
+    z-index: 1;
+    display: block;
+    position: relative;
+}
+
+.navbar > .links > .list > ul {
+    background: var(--navbar-bg-color);
+    min-width: 100%;
+    display: block;
+    transition: transform 0.2s ease-out, visibility 0.2s;
+    visibility: hidden;
+    transform: translateY(-100%);
+}
+
+.navbar > .links > .list:hover > ul {
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.navbar > .links > .list > ul > li {
+    padding: 0 10px;
+}
+
+.navbar > .links > li:hover,
+.navbar > .links > .list > span:hover,
+.navbar > .links > .list > ul > li:hover,
+.navbar > .loginBtn > button:hover {
+    background-color: var(--button-hover-color);
+}
+
+.navbar > .links > li:active, .navbar > .links > .list > ul > li:active, .navbar > .loginBtn > button:active {
+    background-color: var(--button-active-color);
+}
+
+/*Login button*/
 .navbar > .loginBtn {
     height: var(--nav-bar-height);
     float: right;
@@ -56,22 +122,6 @@
 
 .navbar > .loginBtn > button:focus {
     box-shadow: none;
-}
-
-.navbar > .links > li {
-    background: var(--navbar-bg-color);
-    line-height: var(--nav-bar-height);
-    cursor: pointer;
-    padding: 0 10px;
-    display: inline-block;
-}
-
-.navbar > .links > li:hover, .navbar > .loginBtn > button:hover {
-    background-color: var(--button-hover-color);
-}
-
-.navbar > .links > li:active, .navbar > .loginBtn > button:active {
-    background-color: var(--button-active-color);
 }
 
 @media only screen and (min-width: 700px) {
@@ -106,7 +156,7 @@
     }
 
     .navbar > .links > li {
-        display: block;
+        float: none;
     }
 }
 

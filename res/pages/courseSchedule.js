@@ -63,6 +63,8 @@ module.exports = function (loginState) {
 
     async function onRender() {
         console.log('Course schedule Render');
+        // close navLinks when using mobile devices
+        navLinksClass.remove('open');
         loginState.addListener(onLoginState);
         (styles = await styles).add();
     }

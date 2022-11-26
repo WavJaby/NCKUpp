@@ -130,6 +130,8 @@ module.exports = function () {
 
     async function onRender() {
         console.log('Course search Render');
+        // close navLinks when using mobile devices
+        navLinksClass.remove('open');
         search();
         (styles = await styles).add();
     }

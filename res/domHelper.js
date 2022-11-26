@@ -115,6 +115,7 @@ function parseTextInput(text, element) {
  * */
 function ClassList(...className) {
     const classList = className;
+    this.add = this.remove = this.toggle = this.contains = function () {}
 
     this.init = function (element) {
         if (element.classList) {

@@ -1,4 +1,3 @@
 <svg stroke="#FFFFFF" width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-	<line x1="4" y1="11" x2="16" y2="21" stroke-width="4" stroke-linecap="round"/>
-	<line x1="28" y1="11" x2="16" y2="21" stroke-width="4" stroke-linecap="round"/>
+    <polyline points="4,11 16,21 28,11" fill="none" stroke-width="4" stroke-linecap="round"/>
 </svg>

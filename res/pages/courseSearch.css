@@ -155,7 +155,7 @@
     border-left: lightgrey solid 1px;
 }
 
-.courseSearch > .result > thead > tr > th:not(:last-child):hover {
+.courseSearch > .result > thead > tr > th:not(:first-child):not(:last-child):hover {
     background: var(--button-hover-color);
 }
 
@@ -347,6 +347,7 @@
     left: 0;
     position: fixed;
     visibility: hidden;
+    z-index: 1;
 }
 
 .courseSearch > .popupWindow.open {

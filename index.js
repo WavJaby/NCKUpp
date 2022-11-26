@@ -37,6 +37,7 @@ const {
 const loadingElement = div('loaderCircle',
     svg('<circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '25 25 50 50', 'circular')
 );
+const navLinksClass = new ClassList('links');
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
@@ -81,7 +82,6 @@ window.fetchApi = function (endpoint, option) {
 
     // check login
     fetchApi('/login').then(onLoginStateChange);
-    const navLinksClass = new ClassList('links');
 
     const root = div('root',
         // Pages
@@ -96,9 +96,14 @@ window.fetchApi = function (endpoint, option) {
             ),
             ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => navLinksClass.toggle('open')})),
             ul(navLinksClass,
+                li('list', span('List'),
+                    ul(null,
+                        li(null, text('0w0')),
+                        li(null, text('awa')),
+                    ),
+                ),
                 queryRouter.getRoutesName().map(i =>
                     li(null, text(navPageButtonName[i]), {
-                        tabIndex: 0,
                         onclick: () => queryRouter.openPage(i)
                     })
                 ),
