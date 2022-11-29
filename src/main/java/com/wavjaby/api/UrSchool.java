@@ -29,12 +29,12 @@ import static com.wavjaby.Main.pool;
 
 public class UrSchool implements HttpHandler {
     private static final String TAG = "[UrSchool] ";
-    private static final long updateInterval = 30 * 60 * 1000;
+    private static final long updateInterval = 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 5 * 60 * 1000;
 
     private String urSchoolData;
     private JsonArray urSchoolDataJson;
-    private long lastUpdateTime;
+    private long lastFileUpdateTime;
 
     private final Map<String, Object[]> instructorCache = new HashMap<>();
 
@@ -57,7 +57,8 @@ public class UrSchool implements HttpHandler {
                 e.printStackTrace();
             }
         }
-        if (System.currentTimeMillis() - file.lastModified() > updateInterval)
+        lastFileUpdateTime = file.lastModified();
+        if (System.currentTimeMillis() - lastFileUpdateTime > updateInterval)
             updateUrSchoolData();
         else
             Logger.log(TAG, "Up to date");
@@ -77,7 +78,7 @@ public class UrSchool implements HttpHandler {
                 String queryString = req.getRequestURI().getQuery();
                 boolean success = true;
                 if (queryString == null) {
-                    if (System.currentTimeMillis() - lastUpdateTime > updateInterval)
+                    if (System.currentTimeMillis() - lastFileUpdateTime > updateInterval)
                         updateUrSchoolData();
                     data.append("data", urSchoolData, true);
                 } else {
@@ -119,7 +120,7 @@ public class UrSchool implements HttpHandler {
             if (outData != null) outData.append("data", (String) cacheData[1], true);
             return true;
         }
-//        Logger.log(TAG, id + " update data");
+//        Logger.log(TAG, id + " fetch data");
 
         try {
             Connection.Response result;
@@ -129,7 +130,7 @@ public class UrSchool implements HttpHandler {
                             .ignoreContentType(true)
                             .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
                             .header("X-Requested-With", "XMLHttpRequest")
-                            .timeout(6 * 1000)
+                            .timeout(10 * 1000)
                             .execute();
                     break;
                 } catch (IOException ignore) {
@@ -300,6 +301,7 @@ public class UrSchool implements HttpHandler {
             jsonBuilder.append("comments", commentBuilder.toString(), true);
             if (outData != null) outData.append("data", jsonBuilder.toString(), true);
             instructorCache.put(id + '-' + mode, new Object[]{System.currentTimeMillis(), jsonBuilder.toString()});
+//            Logger.log(TAG, id + " done");
             return true;
         } catch (Exception e) {
             if (outData != null) outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
@@ -310,7 +312,7 @@ public class UrSchool implements HttpHandler {
     private void updateUrSchoolData() {
         pool.submit(() -> {
             long start = System.currentTimeMillis();
-            lastUpdateTime = start;
+            lastFileUpdateTime = start;
 
             int[] maxPage = new int[1];
             StringBuilder result = new StringBuilder();

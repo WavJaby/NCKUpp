@@ -2,10 +2,11 @@
     --navbar-bg-color: #2F3136;
     --table-border: #383D3F;
     --nav-bar-height: 40px;
+    --footer-height: 200px;
 }
 
 .root {
-    position: absolute;
+    position: relative;
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -41,29 +42,35 @@
     margin: 0;
 }
 
-.navbar > ul > li {
-    float: left;
-}
-
 .navbar > .links > li {
     line-height: var(--nav-bar-height);
     cursor: pointer;
     padding: 0 10px;
+    float: left;
 }
 
-.navbar > .links > .list {
-    background: none;
+.navbar .list {
     height: var(--nav-bar-height);
-    padding: 0;
+    line-height: var(--nav-bar-height);
+    padding: 0 !important;
     overflow: hidden;
+    position: relative;
+    transition: height 0.15s ease-in;
+    -webkit-transition: height 0.15s ease-in;
+    -moz-transition: height 0.15s ease-in;
+    -ms-transition: height 0.15s ease-in;
+    -o-transition: height 0.15s ease-in;
 }
 
-.navbar > .links > .list:hover {
-    background: none;
-    height: auto;
+.navbar .list > *:first-child {
+    background: var(--navbar-bg-color);
+    padding: 0 10px;
+    z-index: 1;
+    display: block;
+    position: relative;
 }
 
-.navbar > .links > .list > span:before {
+.navbar .list > span:before {
     background: url('./assets/down_triangle_icon.svg') 0 0 / 1em;
     width: 1em;
     height: 1em;
@@ -72,56 +79,58 @@
     content: '';
 }
 
-.navbar > .links > .list > span {
-    background: var(--navbar-bg-color);
-    padding: 0 10px;
-    z-index: 1;
-    display: block;
-    position: relative;
-}
-
-.navbar > .links > .list > ul {
+.navbar .list > ul {
     background: var(--navbar-bg-color);
     min-width: 100%;
     display: block;
-    transition: transform 0.2s ease-out, visibility 0.2s;
-    visibility: hidden;
-    transform: translateY(-100%);
+    position: absolute;
+    bottom: 0;
 }
 
-.navbar > .links > .list:hover > ul {
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.navbar > .links > .list > ul > li {
+.navbar .list > ul > li {
     padding: 0 10px;
 }
 
 .navbar > .links > li:hover,
-.navbar > .links > .list > span:hover,
-.navbar > .links > .list > ul > li:hover,
-.navbar > .loginBtn > button:hover {
+.navbar .list > span:hover,
+.navbar .list > ul > li:hover {
     background-color: var(--button-hover-color);
 }
 
-.navbar > .links > li:active, .navbar > .links > .list > ul > li:active, .navbar > .loginBtn > button:active {
+.navbar > .links > li:active, .navbar .list > ul > li:active, .navbar > .loginBtn:active {
     background-color: var(--button-active-color);
+}
+
+.navbar .list:hover {
+    background: none;
 }
 
 /*Login button*/
 .navbar > .loginBtn {
-    height: var(--nav-bar-height);
+    background: var(--navbar-bg-color);
     float: right;
 }
 
-.navbar > .loginBtn > button {
-    background: var(--navbar-bg-color);
+.navbar > .loginBtn > .btn {
+    height: var(--nav-bar-height);
+    padding: 5px 0;
+    box-sizing: border-box;
+}
+
+.navbar > .loginBtn > .btn > img {
     height: 100%;
 }
 
-.navbar > .loginBtn > button:focus {
-    box-shadow: none;
+.navbar > .loginBtn > .btn > div {
+    display: inline-block;
+    line-height: normal;
+    vertical-align: top;
+    height: 100%;
+    margin: 0 5px;
+}
+
+.navbar > .loginBtn > .btn > div > span {
+    vertical-align: sub;
 }
 
 @media only screen and (min-width: 700px) {
@@ -175,20 +184,29 @@
     right: 0;
 }
 
+/*Footer*/
+footer {
+    background: black;
+    width: 100%;
+    height: var(--footer-height);
+    position: relative;
+}
+
 /*Router*/
 .router {
-    position: absolute;
+    width: 100%;
     top: var(--nav-bar-height);
     bottom: 0;
-    left: 0;
-    width: 100%;
+    position: absolute;
+    overflow-y: auto;
 }
 
 .router > div {
     position: relative;
+    overflow-x: auto;
+    min-height: 100vh;
+    margin-bottom: var(--footer-height);
     width: 100%;
-    height: 100%;
-    overflow: auto;
 }
 
 .expandable {

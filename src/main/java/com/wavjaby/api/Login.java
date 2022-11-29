@@ -24,6 +24,7 @@ import static com.wavjaby.Main.*;
 
 public class Login implements HttpHandler {
     private static final String TAG = "[Login] ";
+    private static final String loginCheckString = "/index.php?c=auth&m=logout";
 
     @Override
     public void handle(HttpExchange req) {
@@ -68,37 +69,33 @@ public class Login implements HttpHandler {
     private boolean login(HttpExchange req, JsonBuilder outData, CookieStore cookieStore) {
         try {
             boolean get = req.getRequestMethod().equals("GET");
+            Connection.Response checkLoginPage;
             if (get) {
                 // GET
-                Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
+                checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .execute();
-                boolean isLogin = toLogin.body().contains("/index.php?c=auth&m=logout");
-                if (isLogin) {
-                    outData.append("login", true);
-                    return true;
-                }
             } else {
                 // POST
-                // check if already login
-                Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth")
+                checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .execute();
-                if (toLogin.url().toString().endsWith("/index.php?c=portal") &&
-                        toLogin.body().contains("/index.php?c=auth&m=logout")) {
-                    outData.append("warn", TAG + "Already login");
-                    outData.append("login", true);
-                    return true;
-                }
             }
 
-//                URI uri = new URI(portalNckuOrg);
-//                cookieStore.getCookies().stream()
-//                        .filter(i -> i != null && (i.getName().equals("MSISAuth") || i.getName().equals("MSISAuthenticated")))
-//                        .collect(Collectors.toList())
-//                        .forEach(i -> cookieStore.remove(uri, i));
+            // check login state
+            String checkResult = checkLoginPage.body();
+            int loginState;
+            if ((get || checkLoginPage.url().toString().endsWith("/index.php?c=portal")) && // check if already login
+                    (loginState = checkResult.indexOf(loginCheckString)) != -1 &&
+                    (loginState = checkResult.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
+                // POST and already login
+                if(!get)
+                    outData.append("warn", TAG + "Already login");
+                packUserLoginInfo(checkResult, loginState + loginCheckString.length(), outData);
+                return true;
+            }
 
             // start login
             Connection.Response toPortal = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
@@ -195,12 +192,40 @@ public class Login implements HttpHandler {
                         .execute().body();
             }
 
-            outData.append("login", result.contains("/index.php?c=auth&m=logout"));
+            // check login state
+            if ((loginState = result.indexOf(loginCheckString)) == -1 ||
+                    (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) == -1)
+                outData.append("login", false);
+            else
+                packUserLoginInfo(result, loginState + loginCheckString.length(), outData);
             return true;
         } catch (Exception e) {
             outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;
+    }
+
+    private void packUserLoginInfo(String result, int infoStart, JsonBuilder outData) {
+        outData.append("login", true);
+        int start, end = infoStart;
+        // dept
+        if ((start = result.indexOf('>', end)) != -1 &&
+                (end = result.indexOf("<", ++start)) != -1) {
+            outData.append("dept", result.substring(start, end++).trim());
+        }
+        // name
+        if ((start = result.indexOf('>', end)) != -1 &&
+                (end = result.indexOf("<", ++start)) != -1)
+            outData.append("name", result.substring(start, end++));
+        // student ID
+        if ((start = result.indexOf('>', end)) != -1 &&
+                (end = result.indexOf("<", ++start)) != -1) {
+            int cache = result.indexOf('（', start);
+            if (cache != -1 && cache < end) start = cache + 1;
+            cache = result.lastIndexOf('）', end);
+            if (cache != -1 && cache > start) end = cache;
+            outData.append("studentID", result.substring(start, end));
+        }
     }
 }

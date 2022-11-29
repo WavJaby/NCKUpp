@@ -280,9 +280,10 @@ module.exports = function () {
             let expandable, measureReference;
 
             function toggleCourseInfo(e) {
-                const show = resultItemClass.toggle('extend');
-                if (show) expandable.style.height = measureReference.clientHeight + "px";
-                else expandable.style.height = null;
+                if (resultItemClass.toggle('extend'))
+                    expandable.style.height = measureReference.clientHeight + "px";
+                else
+                    expandable.style.height = null;
                 if (e) e.stopPropagation();
             }
 

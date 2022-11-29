@@ -119,12 +119,11 @@ function ClassList(...className) {
 
     this.init = function (element) {
         if (element.classList) {
-            if (classList.length > 0)
-                element.classList.add(...classList);
-            this.add = names => element.classList.add(names);
-            this.remove = names => element.classList.remove(names);
-            this.toggle = name => element.classList.toggle(name);
-            this.contains = name => element.classList.contains(name);
+            if (classList.length > 0) element.classList.add(...classList);
+            this.add = function (names) {element.classList.add(names);};
+            this.remove = function (names) {element.classList.remove(names);};
+            this.toggle = function (name) {return element.classList.toggle(name);};
+            this.contains = function (name) {element.classList.contains(name);};
         } else {
             this.add = function (...className) {
                 Array.prototype.push.apply(classList, className);
@@ -172,36 +171,58 @@ function parseClassInput(className, element) {
 
 /**
  * @param {string} defaultPage
- * @param {Object<string, function()|HTMLElement>} Routs
+ * @param {Object<string, function()|HTMLElement>} routs
+ * @param {HTMLElement} [footer]
  * */
-function QueryRouter(defaultPage, Routs) {
+function QueryRouter(defaultPage, routs, footer) {
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
     let lastState, lastPage;
-    (routerRoot.openPage = function (newPage) {
+    routerRoot.openPage = function (newPage) {
+        // if same page
         if (lastPage === newPage) return;
         lastPage = newPage;
 
+        // open page
         history.pushState(null, document.title, './?' + newPage)
-        let state = Routs[newPage];
+        let state = routs[newPage];
         if (!state) return;
+
+        // lazy
         if (state instanceof Function)
-            Routs[newPage] = state = state();
+            routs[newPage] = state = state();
+        // switch page element
         if (lastState) {
             if (lastState.onDestroy) lastState.onDestroy();
             routerRoot.replaceChild(state, lastState);
             if (state.onRender) state.onRender();
-        } else {
-            routerRoot.appendChild(state);
+        }
+        // append page element on first open
+        else {
+            if (footer) routerRoot.insertBefore(state, footer);
+            else routerRoot.appendChild(state);
             if (state.onRender) state.onRender();
         }
         lastState = state;
-    })(location.search.length < 2 ? defaultPage : location.search.slice(1));
+    }
 
     routerRoot.getRoutesName = function () {
-        return Object.keys(Routs);
+        return Object.keys(routs);
     };
 
+    // append footer
+    if (footer) {
+        routerRoot.addEventListener('scroll', function (e) {
+            const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
+            if (position > 0)
+                lastState.style.top = position + 'px';
+            else
+                lastState.style.top = null;
+        });
+        routerRoot.appendChild(footer);
+    }
+    // open default page
+    routerRoot.openPage(location.search.length < 2 ? defaultPage : location.search.slice(1));
     return routerRoot;
 }
 
@@ -535,13 +556,23 @@ module.exports = {
      * @param {string} viewBox
      * @param {string} [classN] Class Name
      * @param [options] Options for element
-     * @return {HTMLElement}
+     * @return {SVGSVGElement}
      * */
     svg(svgText, viewBox, classN, ...options) {
         const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         element.innerHTML = svgText;
         if (classN) element.setAttributeNS(null, 'class', classN);
         if (classN) element.setAttributeNS(null, 'viewBox', viewBox);
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
+    /**
+     * @param [options] Options for element
+     * @return {HTMLElement}
+     * */
+    footer(...options) {
+        const element = document.createElement('footer');
         if (options.length) addOption(element, options);
         return element;
     },
