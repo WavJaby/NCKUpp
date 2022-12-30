@@ -18,6 +18,7 @@ public class Main {
     public static final String portalNcku = "fs.ncku.edu.tw";
 
     public static final String courseNckuOrg = "https://" + courseNcku;
+    public static final String courseQueryNckuOrg = "https://course-query.acad.ncku.edu.tw";
     public static final String portalNckuOrg = "https://" + portalNcku;
 
     public static final String[] accessControlAllowOrigin = {

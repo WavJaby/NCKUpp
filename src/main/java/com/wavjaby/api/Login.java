@@ -16,6 +16,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Scanner;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
@@ -91,7 +92,7 @@ public class Login implements HttpHandler {
                     (loginState = checkResult.indexOf(loginCheckString)) != -1 &&
                     (loginState = checkResult.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
                 // POST and already login
-                if(!get)
+                if (!get)
                     outData.append("warn", TAG + "Already login");
                 packUserLoginInfo(checkResult, loginState + loginCheckString.length(), outData);
                 return true;
@@ -211,21 +212,37 @@ public class Login implements HttpHandler {
         int start, end = infoStart;
         // dept
         if ((start = result.indexOf('>', end)) != -1 &&
-                (end = result.indexOf("<", ++start)) != -1) {
+                (end = result.indexOf('<', ++start)) != -1) {
             outData.append("dept", result.substring(start, end++).trim());
         }
         // name
         if ((start = result.indexOf('>', end)) != -1 &&
-                (end = result.indexOf("<", ++start)) != -1)
+                (end = result.indexOf('<', ++start)) != -1)
             outData.append("name", result.substring(start, end++));
         // student ID
         if ((start = result.indexOf('>', end)) != -1 &&
-                (end = result.indexOf("<", ++start)) != -1) {
+                (end = result.indexOf('<', ++start)) != -1) {
             int cache = result.indexOf('（', start);
             if (cache != -1 && cache < end) start = cache + 1;
             cache = result.lastIndexOf('）', end);
             if (cache != -1 && cache > start) end = cache;
             outData.append("studentID", result.substring(start, end));
+        }
+
+        // year/semester
+        if ((start = result.indexOf("\"apName")) != -1 &&
+                (start = result.indexOf("span>", start + 7)) != -1) {
+            char c;
+            while ((c = result.charAt(start)) < '0' || c > '9') start++;
+            end = start;
+            while ((c = result.charAt(end)) >= '0' && c <= '9') end++;
+            outData.append("year", Integer.parseInt(result.substring(start, end)));
+
+            start = end;
+            while ((c = result.charAt(start)) < '0' || c > '9') start++;
+            end = start;
+            while ((c = result.charAt(end)) >= '0' && c <= '9') end++;
+            outData.append("semester", Integer.parseInt(result.substring(start, end)));
         }
     }
 }

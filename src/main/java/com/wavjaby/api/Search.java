@@ -63,21 +63,19 @@ public class Search implements HttpHandler {
                         : null;
                 String loginState = unpackLoginStateCookie(cookieIn, cookieManager);
                 String[] searchID = {null};
-                if (cookieIn != null)
-                    for (String i : cookieIn)
-                        if (i.startsWith("searchID")) {
-                            searchID[0] = i.substring(16);
-                            break;
-                        }
+                if (cookieIn != null) for (String i : cookieIn)
+                    if (i.startsWith("searchID")) {
+                        searchID[0] = i.substring(16);
+                        break;
+                    }
 
                 // search
                 boolean success = false;
                 JsonBuilder data = new JsonBuilder();
                 String queryString = req.getRequestURI().getQuery();
-                if (queryString != null) {
-                    Map<String, String> query = parseUrlEncodedForm(queryString);
-                    success = search(query, data, searchID, cookieStore);
-                } else
+                if (queryString != null)
+                    success = search(parseUrlEncodedForm(queryString), data, searchID, cookieStore);
+                else
                     data.append("err", TAG + "No query string found");
 
                 // set cookie
@@ -303,7 +301,8 @@ public class Search implements HttpHandler {
             String degree,
             String cl,
             Set<String> getSerialNumber, String[] searchID, CookieStore cookieStore,
-            JsonBuilder outData, StringBuilder searchResultBuilder) {
+            JsonBuilder outData, StringBuilder searchResultBuilder
+    ) {
         try {
             // setup
             if (searchID[0] == null) {
