@@ -86,6 +86,7 @@ module.exports = function (loginState) {
     }
 
     function cellClick() {
+        console.log(this.serialID)
         const info = courseInfo[this.serialID];
         if (info) {
             courseInfoWindow.clear();

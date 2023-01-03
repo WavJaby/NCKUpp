@@ -98,6 +98,33 @@ public class CourseSchedule implements HttpHandler {
         }
 
 
+        // get year, semester
+        Elements pagePath = root.getElementsByClass("breadcrumb");
+        if (pagePath.size() == 0) {
+            data.append("err", TAG + "Year and Semester not found");
+            return false;
+        } else
+            pagePath = pagePath.first().getElementsByTag("a");
+        if (pagePath.size() < 2) {
+            data.append("err", TAG + "Year and Semester not found");
+            return false;
+        }
+        String pageName = pagePath.get(1).text();
+        int year, semester;
+        int start = 0, end;
+        char c;
+        while ((c = pageName.charAt(start)) < '0' || c > '9') start++;
+        end = start;
+        while ((c = pageName.charAt(end)) >= '0' && c <= '9') end++;
+        year = Integer.parseInt(pageName.substring(start, end));
+
+        start = end;
+        while ((c = pageName.charAt(start)) < '0' || c > '9') start++;
+        end = start;
+        while ((c = pageName.charAt(end)) >= '0' && c <= '9') end++;
+        semester = Integer.parseInt(pageName.substring(start, end));
+
+
         // get student ID
         Element userIdEle = root.getElementById("current_time");
         List<TextNode> textNodes;
@@ -119,22 +146,22 @@ public class CourseSchedule implements HttpHandler {
             return false;
         }
         String credits = creditsEle.child(1).text();
-        int start = -1, end = -1;
+        int creditsStart = -1, creditsEnd = -1;
         char[] chars = credits.toCharArray();
         for (int i = 0; i < chars.length; i++) {
-            if (start == -1) {
+            if (creditsStart == -1) {
                 if (chars[i] >= '0' && chars[i] <= '9')
-                    start = i;
+                    creditsStart = i;
             } else if (chars[i] < '0' || chars[i] > '9') {
-                end = i;
+                creditsEnd = i;
                 break;
             }
         }
-        if (start == -1) {
+        if (creditsStart == -1) {
             data.append("err", TAG + "Credits parse error");
             return false;
         }
-        credits = end == -1 ? credits.substring(start) : credits.substring(start, end);
+        credits = creditsEnd == -1 ? credits.substring(creditsStart) : credits.substring(creditsStart, creditsEnd);
 
 
         // get table
@@ -257,6 +284,8 @@ public class CourseSchedule implements HttpHandler {
 //            }
 //        }
 //    }
+        data.append("year", year);
+        data.append("semester", semester);
         data.append("id", studentID);
         data.append("credits", credits);
         data.append("schedule", courseScheduleData.toString(), true);

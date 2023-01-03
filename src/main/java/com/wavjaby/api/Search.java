@@ -15,6 +15,7 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.URLDecoder;
@@ -33,8 +34,7 @@ import java.util.stream.Collectors;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
-import static com.wavjaby.Main.courseNckuOrg;
-import static com.wavjaby.Main.pool;
+import static com.wavjaby.Main.*;
 
 public class Search implements HttpHandler {
     private static final String TAG = "[Search] ";
@@ -45,6 +45,80 @@ public class Search implements HttpHandler {
 
     public Search(UrSchool urSchool) {
         this.urSchool = urSchool;
+    }
+
+    private class SearchQuery {
+        String searchID, timeSearchID;
+
+        String courseName;     // 課程名稱
+        String teacherName;     // 教師姓名
+        String wk;          // 星期 1 ~ 7
+        String deptNo;      // 系所 A...
+        String grade;      // 年級 1 ~ 7
+        String cl;          // 節次 1 ~ 16 []
+
+        boolean getAll;
+
+        boolean getSerial;
+        Map<String, String> serialIdNumber;     // 系號=序號&系號2=序號
+
+        boolean getTime;
+        int yearBegin, semBegin, yearEnd, semEnd;
+
+        SearchQuery(String queryString, String[] cookieIn) {
+            if (cookieIn != null) for (String i : cookieIn)
+                if (i.startsWith("searchID")) {
+                    String searchIDs = i.substring(16);
+                    int split = searchIDs.indexOf('|');
+                    if (split == -1)
+                        searchID = searchIDs;
+                    else {
+                        searchID = searchIDs.substring(0, split);
+                        timeSearchID = searchIDs.substring(split + 1);
+                    }
+                    break;
+                }
+
+            Map<String, String> query = parseUrlEncodedForm(queryString);
+
+            getAll = query.containsKey("ALL");
+            String serialNum;
+            getSerial = (serialNum = query.get("serial")) != null;
+            String queryTime;
+            getTime = (queryTime = query.get("queryTime")) != null;
+            if (getTime) {
+                String[] cache = queryTime.split(",");
+                // TODO: Error catch
+                yearBegin = Integer.parseInt(cache[0]);
+                semBegin = Integer.parseInt(cache[1]);
+                yearEnd = Integer.parseInt(cache[2]);
+                semEnd = Integer.parseInt(cache[3]);
+            }
+
+            if (!getAll) {
+                if (getSerial) {
+                    try {
+                        serialIdNumber = parseUrlEncodedForm(URLDecoder.decode(serialNum, "UTF-8"));
+                    } catch (UnsupportedEncodingException ignore) {
+                    }
+                } else {
+                    courseName = query.get("course");       // 課程名稱
+                    teacherName = query.get("teacher");     // 教師姓名
+                    wk = query.get("day");                  // 星期 1 ~ 7
+                    deptNo = query.get("dept");             // 系所 A...
+                    grade = query.get("grade");             // 年級 1 ~ 7
+                    cl = query.get("section");              // 節次 1 ~ 16 []
+                }
+            }
+        }
+
+        boolean noQuery() {
+            return !getAll && !getSerial && courseName == null && teacherName == null && wk == null && deptNo == null && grade == null && cl == null;
+        }
+
+        public boolean invalidSerialNumber() {
+            return getSerial && serialIdNumber.size() == 0;
+        }
     }
 
     @Override
@@ -62,28 +136,33 @@ public class Search implements HttpHandler {
                         ? requestHeaders.get("Cookie").get(0).split(",")
                         : null;
                 String loginState = unpackLoginStateCookie(cookieIn, cookieManager);
-                String[] searchID = {null};
-                if (cookieIn != null) for (String i : cookieIn)
-                    if (i.startsWith("searchID")) {
-                        searchID[0] = i.substring(16);
-                        break;
-                    }
 
                 // search
-                boolean success = false;
                 JsonBuilder data = new JsonBuilder();
-                String queryString = req.getRequestURI().getQuery();
-                if (queryString != null)
-                    success = search(parseUrlEncodedForm(queryString), data, searchID, cookieStore);
-                else
+                SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getQuery(), cookieIn);
+                boolean success = true;
+                if (searchQuery.invalidSerialNumber()) {
+                    data.append("err", TAG + "Invalid serial number");
+                    success = false;
+                }
+                if (searchQuery.noQuery()) {
                     data.append("err", TAG + "No query string found");
+                    success = false;
+                }
+                if (success)
+                    success = search(searchQuery, data, cookieStore);
 
                 // set cookie
                 Headers responseHeader = req.getResponseHeaders();
-                responseHeader.add("Set-Cookie", (searchID[0] != null && success
-                        ? "searchID=" + searchID[0]
-                        : removeCookie("searchID")) +
-                        "; Path=/api/search" + getCookieInfoData(refererUrl));
+                if (success) {
+                    String searchID = (searchQuery.searchID == null ? "" : searchQuery.searchID) +
+                            '|' +
+                            (searchQuery.timeSearchID == null ? "" : searchQuery.timeSearchID);
+                    responseHeader.add("Set-Cookie", searchID +
+                            "; Path=/api/search" + getCookieInfoData(refererUrl));
+                } else
+                    responseHeader.add("Set-Cookie", removeCookie("searchID") +
+                            "; Path=/api/search" + getCookieInfoData(refererUrl));
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
 
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
@@ -103,16 +182,12 @@ public class Search implements HttpHandler {
         });
     }
 
-    private boolean search(Map<String, String> query, JsonBuilder outData, String[] searchID, CookieStore cookieStore) {
+    private boolean search(SearchQuery searchQuery, JsonBuilder outData, CookieStore cookieStore) {
         try {
-            String getSerialNumber;
-            boolean getAll = query.containsKey("ALL"),
-                    getSerial = (getSerialNumber = query.get("serial")) != null;
-
             StringBuilder searchResult = new StringBuilder();
             boolean success = true;
             // get all course
-            if (getAll) {
+            if (searchQuery.getAll) {
                 Connection.Response allDeptRes = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
                         .cookieStore(cookieStore)
                         .execute();
@@ -135,19 +210,6 @@ public class Search implements HttpHandler {
                 // start getting dept
                 else {
                     String crypt = allDeptBody.substring(cryptStart, cryptEnd);
-//                    ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
-//                    Logger.addProgressBar(progressBar);
-//                    progressBar.setProgress(0f);
-//                    for (int i = 0; i < allDept.length; i++) {
-//                        if (!getDept(allDept[i], crypt, cookieStore, outData, searchResult)) {
-//                            success = false;
-//                            break;
-//                        }
-//                        progressBar.setProgress((float) (i + 1) / allDept.length * 100f);
-//                    }
-//                    progressBar.setProgress(100f);
-//                    Logger.removeProgressBar(progressBar);
-
                     CountDownLatch countDownLatch = new CountDownLatch(allDept.length);
                     ExecutorService fetchPool = Executors.newFixedThreadPool(3);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
@@ -157,7 +219,7 @@ public class Search implements HttpHandler {
                     int[] j = {0};
                     for (String dept : allDept) {
                         fetchPool.submit(() -> {
-                            if (!getDept(dept, crypt, cookieStore, outData, searchResult))
+                            if (allSuccess.get() && !getDept(dept, crypt, cookieStore, outData, searchResult))
                                 allSuccess.set(false);
                             progressBar.setProgress((float) ++j[0] / allDept.length * 100f);
                             countDownLatch.countDown();
@@ -171,19 +233,10 @@ public class Search implements HttpHandler {
                 }
             }
             // get listed serial
-            else if (getSerial) {
-                Map<String, String> serialIdNumber = parseUrlEncodedForm(URLDecoder.decode(getSerialNumber, "UTF-8"));
-                if (serialIdNumber.size() == 0) {
-                    outData.append("err", TAG + "Invalid serial number");
-                    return false;
-                }
-                for (Map.Entry<String, String> i : serialIdNumber.entrySet()) {
+            else if (searchQuery.getSerial) {
+                for (Map.Entry<String, String> i : searchQuery.serialIdNumber.entrySet()) {
                     searchResult.setLength(0);
-                    if (!postSearchData(
-                            null, null, null, i.getKey(), null, null,
-                            Arrays.stream(i.getValue().split(",")).collect(Collectors.toSet()),
-                            searchID, cookieStore, outData, searchResult
-                    )) {
+                    if (!postSearchData(searchQuery, i, cookieStore, outData, searchResult)) {
                         success = false;
                         break;
                     }
@@ -193,24 +246,10 @@ public class Search implements HttpHandler {
                     outData.append(i.getKey(), searchResult.toString(), true);
                 }
             } else {
-                String cosname = query.get("course");       // 課程名稱
-                String teaname = query.get("teacher");      // 教師姓名
-                String wk = query.get("day");               // 星期 1 ~ 7
-                String dept_no = query.get("dept");         // 系所 A...
-                String degree = query.get("grade");         // 年級 1 ~ 7
-                String cl = query.get("section");           // 節次 1 ~ 16 []
-
-                if (cosname == null && teaname == null && wk == null && dept_no == null && degree == null && cl == null) {
-                    outData.append("err", TAG + "No query string found");
-                    return false;
-                }
-                success = postSearchData(
-                        cosname, teaname, wk, dept_no, degree, cl,
-                        null, searchID, cookieStore, outData, searchResult
-                );
+                success = postSearchData(searchQuery, null, cookieStore, outData, searchResult);
             }
 
-            if (success && !getSerial) {
+            if (success && !searchQuery.getSerial) {
                 if (searchResult.length() > 0)
                     searchResult.setCharAt(0, '[');
                 else
@@ -293,84 +332,26 @@ public class Search implements HttpHandler {
         return false;
     }
 
-    private boolean postSearchData(
-            String cosname,
-            String teaname,
-            String wk,
-            String dept_no,
-            String degree,
-            String cl,
-            Set<String> getSerialNumber, String[] searchID, CookieStore cookieStore,
-            JsonBuilder outData, StringBuilder searchResultBuilder
-    ) {
+    private boolean postSearchData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
+                                   CookieStore cookieStore, JsonBuilder outData, StringBuilder searchResultBuilder) {
         try {
             // setup
-            if (searchID[0] == null) {
+            if (searchQuery.searchID == null) {
 //                Logger.log(TAG, TAG + "Get searchID");
                 final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
                         .ignoreContentType(true)
                         .execute().body();
                 cosPreCheck(body, cookieStore, outData);
-                if ((searchID[0] = getSearchID(body, outData)) == null) {
-                    outData.append("err", TAG + "Can not get searchID");
+                if ((searchQuery.searchID = getSearchID(body, outData)) == null)
                     return false;
-                }
             }
 
-            // search
-            StringBuilder builder = new StringBuilder();
-            builder.append("id=").append(URLEncoder.encode(searchID[0], "UTF-8"));
-            if (cosname != null)
-                builder.append("&cosname=").append(URLEncoder.encode(cosname, "UTF-8"));
-            if (teaname != null)
-                builder.append("&teaname=").append(URLEncoder.encode(teaname, "UTF-8"));
-            if (wk != null)
-                builder.append("&wk=").append(wk);
-            if (dept_no != null)
-                builder.append("&dept_no=").append(dept_no);
-            if (degree != null)
-                builder.append("&degree=").append(degree);
-            if (cl != null)
-                builder.append("&cl=").append(cl);
-
-//            Logger.log(TAG, TAG + "Post search query");
-            Connection.Response search = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=save_qry")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .method(Connection.Method.POST)
-                    .requestBody(builder.toString())
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .execute();
-            String searchBody = search.body();
-            if (searchBody.equals("0")) {
-                outData.append("err", TAG + "Condition not set");
+            String searchResultBody = postCourseNCKU(searchQuery, getSerialNum == null ? null : getSerialNum.getKey(), cookieStore, outData);
+            if (searchResultBody == null)
                 return false;
-            }
-            if (searchBody.equals("1")) {
-                outData.append("err", TAG + "Wrong condition format");
+
+            if ((searchQuery.searchID = getSearchID(searchResultBody, outData)) == null)
                 return false;
-            }
-
-            // get result
-//            Logger.log(TAG, TAG + "Get search result");
-            Connection.Response searchResult = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215" + searchBody)
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .method(Connection.Method.POST)
-                    .requestBody(builder.toString())
-                    .maxBodySize(20 * 1024 * 1024)
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .execute();
-
-            final String searchResultBody = searchResult.body();
-            cosPreCheck(searchResultBody, cookieStore, outData);
-
-            if ((searchID[0] = getSearchID(searchResultBody, outData)) == null) {
-                outData.append("err", TAG + "Can not get searchID");
-                return false;
-            }
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
@@ -393,7 +374,7 @@ public class Search implements HttpHandler {
 
             parseCourseTable(
                     (Element) tbody,
-                    getSerialNumber,
+                    getSerialNum.getValue().split(","),
                     searchResultBody,
                     searchResultBuilder
             );
@@ -406,7 +387,7 @@ public class Search implements HttpHandler {
         return false;
     }
 
-    private void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, StringBuilder result) {
+    private void parseCourseTable(Element tbody, String[] getSerialNumber, String searchResultBody, StringBuilder result) {
         // find style
         List<String> styleList = new ArrayList<>();
         int styleStart, styleEnd = 0;
@@ -430,7 +411,6 @@ public class Search implements HttpHandler {
         }
 
         // get course list
-        int getCount = 0;
         Elements courseList = tbody.getElementsByTag("tr");
         for (Element element : courseList) {
             Elements section = element.getElementsByTag("td");
@@ -441,11 +421,15 @@ public class Search implements HttpHandler {
             // get serial number
             String serialNumber = ((Element) section1.get(0)).text().trim();
             if (getSerialNumber != null) {
-                if (getCount == getSerialNumber.size())
-                    return;
-                if (!getSerialNumber.contains(serialNumber.substring(serialNumber.indexOf('-') + 1)))
-                    continue;
-                getCount++;
+                String serialNumberStr = serialNumber.substring(serialNumber.indexOf('-') + 1);
+                boolean notContains = true;
+                for (String s : getSerialNumber)
+                    if (s.equals(serialNumberStr)) {
+                        notContains = false;
+                        break;
+                    }
+                // skip if we don't want
+                if (notContains) continue;
             }
 
             // get system number
@@ -649,6 +633,68 @@ public class Search implements HttpHandler {
             jsonBuilder.append("t", time, true);
             jsonBuilder.append("m", moodle);
             result.append(',').append(jsonBuilder);
+        }
+    }
+
+    private String postCourseNCKU(SearchQuery searchQuery, String getSerialNum,
+                                  CookieStore cookieStore, JsonBuilder outData) {
+        try {
+            StringBuilder postData = new StringBuilder();
+            String host;
+            if (searchQuery.getTime) {
+                host = courseQueryNckuOrg;
+                postData.append("id=").append(URLEncoder.encode(searchQuery.timeSearchID, "UTF-8"));
+            } else {
+                host = courseNckuOrg;
+                postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+                if (searchQuery.courseName != null) postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+                if (searchQuery.teacherName != null) postData.append("&teaname=").append(URLEncoder.encode(searchQuery.teacherName, "UTF-8"));
+                if (searchQuery.wk != null) postData.append("&wk=").append(searchQuery.wk);
+                if (getSerialNum != null) postData.append("&dept_no=").append(getSerialNum);
+                else if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
+                if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
+                if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
+            }
+
+
+//            Logger.log(TAG, TAG + "Post search query");
+            Connection.Response search = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .method(Connection.Method.POST)
+                    .requestBody(postData.toString())
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .execute();
+            String searchBody = search.body();
+            if (searchBody.equals("0")) {
+                outData.append("err", TAG + "Condition not set");
+                return null;
+            }
+            if (searchBody.equals("1")) {
+                outData.append("err", TAG + "Wrong condition format");
+                return null;
+            }
+
+            // get result
+//            Logger.log(TAG, TAG + "Get search result");
+            Connection.Response searchResult = HttpConnection.connect(host + "/index.php?c=qry11215" + searchBody)
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .method(Connection.Method.POST)
+                    .requestBody(postData.toString())
+                    .maxBodySize(20 * 1024 * 1024)
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .execute();
+
+            String searchResultBody = searchResult.body();
+            cosPreCheck(searchResultBody, cookieStore, outData);
+            return searchResultBody;
+        } catch (IOException e) {
+            e.printStackTrace();
+            outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
+            return null;
         }
     }
 
