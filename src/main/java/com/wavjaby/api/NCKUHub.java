@@ -31,6 +31,7 @@ public class NCKUHub implements HttpHandler {
 
     public NCKUHub() {
         updateNckuHubCourseID();
+        Logger.log(TAG, "Ready");
     }
 
     @Override

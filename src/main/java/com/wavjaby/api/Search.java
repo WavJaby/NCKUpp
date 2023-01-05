@@ -30,7 +30,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
@@ -47,7 +46,7 @@ public class Search implements HttpHandler {
         this.urSchool = urSchool;
     }
 
-    private class SearchQuery {
+    private static class SearchQuery {
         String searchID, timeSearchID;
 
         String courseName;     // 課程名稱
@@ -374,7 +373,7 @@ public class Search implements HttpHandler {
 
             parseCourseTable(
                     (Element) tbody,
-                    getSerialNum.getValue().split(","),
+                    getSerialNum == null ? null : getSerialNum.getValue().split(","),
                     searchResultBody,
                     searchResultBuilder
             );
@@ -541,7 +540,6 @@ public class Search implements HttpHandler {
                         if (split != -1)
                             builder.append(text, 1, split).append(',')
                                     .append(text, split + 1, text.length()).append(',');
-                        else builder.append(',').append(',');
                     }
                     // if no time
                     else builder.append(',').append(',');
@@ -647,8 +645,10 @@ public class Search implements HttpHandler {
             } else {
                 host = courseNckuOrg;
                 postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
-                if (searchQuery.courseName != null) postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.teacherName != null) postData.append("&teaname=").append(URLEncoder.encode(searchQuery.teacherName, "UTF-8"));
+                if (searchQuery.courseName != null)
+                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+                if (searchQuery.teacherName != null)
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.teacherName, "UTF-8"));
                 if (searchQuery.wk != null) postData.append("&wk=").append(searchQuery.wk);
                 if (getSerialNum != null) postData.append("&dept_no=").append(getSerialNum);
                 else if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);

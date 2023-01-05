@@ -86,7 +86,6 @@ module.exports = function (loginState) {
     }
 
     function cellClick() {
-        console.log(this.serialID)
         const info = courseInfo[this.serialID];
         if (info) {
             courseInfoWindow.clear();
@@ -150,17 +149,25 @@ module.exports = function (loginState) {
         const tableHeight = nightTime ? 17 : 11;
 
         const days = new Array(tableWidth);
+        const daysUndecided = [];
         for (let i = 0; i < 7; i++) days[i] = new Array(tableHeight);
         for (const i of schedule)
             for (const j of i.info) {
+                // Time undecided
+                if (j.time[0] === -1) {
+                    daysUndecided.push([i, j]);
+                    continue;
+                }
+
+                // Add course to timetable
                 const k = days[j.time[0]][j.time[1]];
                 if (k instanceof Array)
                     k.push(j);
                 else
-                    days[j.time[0]][j.time[1]] = [i, j]
+                    days[j.time[0]][j.time[1]] = [i, j];
             }
 
-        // header
+        // Table header
         for (let i = 0; i < tableWidth + 1; i++) {
             const cell = headRow.insertCell();
             cell.textContent = weekTable[i];
@@ -168,7 +175,7 @@ module.exports = function (loginState) {
         }
         headRow.appendChild(div('background'));
 
-        // body
+        // Table time cell
         const rows = new Array(tableHeight);
         const rowSize = new Int32Array(tableHeight);
         for (let i = 0; i < tableHeight; i++) {
@@ -181,15 +188,16 @@ module.exports = function (loginState) {
             time.className = 'noSelect';
         }
 
+        // Add course cell
         for (let i = 0; i < tableWidth; i++) {
             for (let j = 0; j < tableHeight; j++) {
                 const course = days[i][j];
                 if (!course) continue;
-                // fill space
+                // Fill space
                 if (i - rowSize[j] > 0)
                     rows[j].insertCell().colSpan = i - rowSize[j];
 
-                // add cell
+                // Build cell
                 const info = course[0];
                 const cell = rows[j].insertCell();
                 cell.className = 'activateCell';
@@ -197,7 +205,19 @@ module.exports = function (loginState) {
                 cell.onclick = cellClick;
                 courseInfo[cell.serialID] = null;
 
-                // add space
+                const rooms = [];
+                for (let k = 1; k < course.length; k++)
+                    rooms.push(span(course[k].room));
+
+                cell.appendChild(
+                    div(null,
+                        span(info.name),
+                        rooms,
+                    )
+                );
+
+
+                // Add space
                 if (course[1].time.length === 3) {
                     const length = course[1].time[2] - course[1].time[1] + 1;
                     cell.rowSpan = length;
@@ -210,24 +230,50 @@ module.exports = function (loginState) {
                     }
                 } else if (course[1].time.length === 2)
                     rowSize[j] = i + 1;
-
-                // build cell
-                const rooms = [];
-                for (let k = 1; k < course.length; k++) {
-                    rooms.push(span(course[k].room));
-                }
-                // create element
-                cell.appendChild(
-                    div(null,
-                        span(info.name),
-                        rooms,
-                    )
-                );
             }
         }
 
         for (let i = 0; i < tableHeight; i++) {
             rows[i].appendChild(div('splitLine'));
+        }
+
+        // Add day undecided
+        for (let i = 0; i < daysUndecided.length; i++) {
+            const row = tbody.insertRow();
+            // Time info
+            if (i === 0) {
+                const empty = div();
+                empty.style.display = 'none';
+                row.appendChild(empty);
+                const cell = row.insertCell();
+                cell.colSpan = 2;
+                cell.className = 'noSelect';
+                cell.textContent = 'Undecided'
+            }
+
+            // Build cell
+            const course = daysUndecided[i];
+            const info = course[0];
+            const cell = row.insertCell();
+            cell.className = 'activateCell';
+            cell.colSpan = tableWidth;
+            cell.serialID = info.deptID + '-' + info.sn;
+            cell.onclick = cellClick;
+            courseInfo[cell.serialID] = null;
+
+            const rooms = [];
+            for (let k = 1; k < course.length; k++)
+                rooms.push(span(course[k].room));
+
+            cell.appendChild(
+                div(null,
+                    span(info.name),
+                    rooms,
+                )
+            );
+
+
+            row.appendChild(div('splitLine'));
         }
 
         // get course info

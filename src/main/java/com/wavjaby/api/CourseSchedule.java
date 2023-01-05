@@ -31,6 +31,8 @@ import static com.wavjaby.Main.pool;
 public class CourseSchedule implements HttpHandler {
     private static final String TAG = "[Schedule] ";
     private static final HashMap<String, Integer> DayTextToInt = new HashMap<String, Integer>() {{
+        put("時間未定", -1);
+        put("Undecided", -1);
         put("星期一", 0);
         put("Monday", 0);
         put("星期二", 1);
@@ -110,20 +112,23 @@ public class CourseSchedule implements HttpHandler {
             return false;
         }
         String pageName = pagePath.get(1).text();
-        int year, semester;
+        int year = -1, semester = -1;
         int start = 0, end;
         char c;
-        while ((c = pageName.charAt(start)) < '0' || c > '9') start++;
+        while (start < pageName.length() && ((c = pageName.charAt(start)) < '0' || c > '9')) start++;
         end = start;
-        while ((c = pageName.charAt(end)) >= '0' && c <= '9') end++;
-        year = Integer.parseInt(pageName.substring(start, end));
+        if (start < pageName.length()) {
+            while (end < pageName.length() && ((c = pageName.charAt(end)) >= '0' && c <= '9')) end++;
+            year = Integer.parseInt(pageName.substring(start, end));
+        }
 
         start = end;
-        while ((c = pageName.charAt(start)) < '0' || c > '9') start++;
+        while (start < pageName.length() && ((c = pageName.charAt(start)) < '0' || c > '9')) start++;
         end = start;
-        while ((c = pageName.charAt(end)) >= '0' && c <= '9') end++;
-        semester = Integer.parseInt(pageName.substring(start, end));
-
+        if (start < pageName.length()) {
+            while (end < pageName.length() && ((c = pageName.charAt(end)) >= '0' && c <= '9')) end++;
+            semester = Integer.parseInt(pageName.substring(start, end));
+        }
 
         // get student ID
         Element userIdEle = root.getElementById("current_time");
@@ -162,7 +167,6 @@ public class CourseSchedule implements HttpHandler {
             return false;
         }
         credits = creditsEnd == -1 ? credits.substring(creditsStart) : credits.substring(creditsStart, creditsEnd);
-
 
         // get table
         JsonArray courseScheduleData = new JsonArray();
@@ -224,14 +228,16 @@ public class CourseSchedule implements HttpHandler {
                 return false;
             }
             StringBuilder builder = new StringBuilder();
-            if (dayEnd != -1)
+            if (dayEnd != -1) {
                 builder.append(date).append(',');
-            int timeSplit = time.indexOf('~');
-            if (timeSplit == -1)
-                builder.append(time, dayEnd + 1, time.length());
-            else
-                builder.append(time, dayEnd + 1, timeSplit).append(',')
-                        .append(time, timeSplit + 1, time.length());
+                int timeSplit = time.indexOf('~');
+                if (timeSplit == -1)
+                    builder.append(time, dayEnd + 1, time.length());
+                else
+                    builder.append(time, dayEnd + 1, timeSplit).append(',')
+                            .append(time, timeSplit + 1, time.length());
+            } else
+                builder.append(date);
             info.put("time", builder.toString());
             String room = rowElements.get(8).text();
             int roomIdEnd = room.indexOf(' ');
@@ -252,38 +258,6 @@ public class CourseSchedule implements HttpHandler {
             courseInfo.add(info);
         }
 
-//        for (int i = 1; i < 18; i++) {
-//            Elements elements = eachCourse.get(i).getElementsByTag("td");
-//            if (elements.size() == 0) {
-//                data.append("err", TAG + "Course info not found");
-//                return false;
-//            }
-//            List<TextNode> courseDataText = elements.get(0).textNodes();
-//
-//            JsonArray courseData = new JsonArray();
-//            array.add(courseData);
-//            if (courseDataText.size() > 0) {
-//                String courseName = courseDataText.get(0).text();
-//                int courseIdEnd = courseName.indexOf("】");
-//                if (courseIdEnd == -1) {
-//                    data.append("err", TAG + "Course name parse error");
-//                    return false;
-//                }
-//                courseData.add(courseName.substring(1, courseIdEnd));
-//                courseData.add(courseName.substring(courseIdEnd + 1));
-//                if (courseDataText.size() > 1) {
-//                    String locationText = courseDataText.get(1).text();
-//                    int locationStart = locationText.indexOf("：");
-//                    if (locationStart == -1) {
-//                        data.append("err", TAG + "Course location parse error");
-//                        return false;
-//                    }
-//                    courseData.add(locationText.substring(locationStart + 1, locationText.length() - 1));
-//                } else
-//                    courseData.add("");
-//            }
-//        }
-//    }
         data.append("year", year);
         data.append("semester", semester);
         data.append("id", studentID);

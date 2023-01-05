@@ -66,6 +66,7 @@ public class Main {
         server.createContext("/api/extract", new ExtractUrl());
         server.createContext("/api/nckuhub", new NCKUHub());
         server.createContext("/api/urschool", urSchool);
+        server.createContext("/api/robotCode", new RobotCode(serverSettings));
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
