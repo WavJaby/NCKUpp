@@ -309,3 +309,7 @@ module.exports = function (loginState) {
         ShowIf(showCourseInfoWindow, courseInfoWindow),
     );
 };
+
+function ScheduleTable() {
+
+}

@@ -210,7 +210,7 @@ public class Search implements HttpHandler {
                 else {
                     String crypt = allDeptBody.substring(cryptStart, cryptEnd);
                     CountDownLatch countDownLatch = new CountDownLatch(allDept.length);
-                    ExecutorService fetchPool = Executors.newFixedThreadPool(3);
+                    ExecutorService fetchPool = Executors.newFixedThreadPool(10);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
                     ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
                     Logger.addProgressBar(progressBar);
@@ -300,7 +300,7 @@ public class Search implements HttpHandler {
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
-                outData.append("err", TAG + "Result table not found");
+                outData.append("err", TAG + "Dept.No " + deptNo + ", result table not found");
                 return false;
             }
             // get table body
@@ -308,7 +308,7 @@ public class Search implements HttpHandler {
             if ((resultTableBodyStart = searchResultBody.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = searchResultBody.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
             ) {
-                outData.append("err", TAG + "Result table body not found");
+                outData.append("err", TAG + "Dept.No " + deptNo + ", result table body not found");
                 return false;
             }
 
@@ -601,12 +601,22 @@ public class Search implements HttpHandler {
                                     (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -3 :
                                             Integer.parseInt(count[1]);
 
-            // get moodle
+            // get moodle, outline
             String moodle = "";
-            Elements moodleEle = section.get(9).getElementsByAttributeValueStarting("href", "javascript:moodle");
-            if (moodleEle.size() == 1) {
-                String str = moodleEle.get(0).attr("href");
-                moodle = str.substring(19, str.length() - 3).replace("','", ",");
+            String outline = "";
+            Elements linkEle = section.get(9).getElementsByAttribute("href");
+            if (linkEle.size() > 0) {
+                for (int i = 0; i < linkEle.size(); i++) {
+                    Element ele = linkEle.get(i);
+                    String href = ele.attr("href");
+                    if (href.startsWith("javascript"))
+                        // moodle link
+                        moodle = href.substring(19, href.length() - 3).replace("','", ",");
+                    else {
+                        // outline link
+                        outline = href.substring(href.indexOf("?") + 1);
+                    }
+                }
             }
 
             // output
@@ -630,6 +640,7 @@ public class Search implements HttpHandler {
             jsonBuilder.append("a", available);
             jsonBuilder.append("t", time, true);
             jsonBuilder.append("m", moodle);
+            jsonBuilder.append("o", outline);
             result.append(',').append(jsonBuilder);
         }
     }

@@ -108,7 +108,7 @@ public class RobotCode implements HttpHandler {
         }
     });
 
-    private String getCode(String url, String PHPSESSID, String COURSE_WEB) {
+    public String getCode(String url, String PHPSESSID, String COURSE_WEB) {
         Task task = new Task();
         String uuid = UUID.randomUUID().toString();
         tasks.put(uuid, task);

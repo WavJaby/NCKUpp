@@ -41,7 +41,7 @@ public class Lib {
         }
 //        Logger.log(TAG, "Make CosPreCheck");
 
-        long now = System.currentTimeMillis() / 1000;
+        long now = System.currentTimeMillis() / 1000 + 120;
         try {
             HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=cosprecheck&time=" + now)
                     .cookieStore(cookieStore)

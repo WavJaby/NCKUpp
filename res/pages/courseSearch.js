@@ -30,6 +30,7 @@
 /**@typedef {int} available */
 /**@typedef {string[]} time */
 /**@typedef {string} moodle */
+/**@typedef {string} outline */
 /**
  * @typedef {{
  *     dn: departmentName,
@@ -50,7 +51,8 @@
  *     s: selected,
  *     a: available,
  *     t: time,
- *     m: moodle
+ *     m: moodle,
+ *     o: outline,
  * }} CourseData
  */
 /**
