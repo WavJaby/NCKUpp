@@ -3,7 +3,7 @@
 const {
     Signal,
     ShowIf,
-    QueryRouter,
+    HashRouter,
     div,
     nav,
     ul,
@@ -70,8 +70,8 @@ window.fetchApi = function (endpoint, option) {
     const userData = new Signal();
     const showLoginWindow = new Signal(false);
 
-    const queryRouter =
-        QueryRouter('schedule',
+    const hashRouter =
+        HashRouter('schedule',
             {
                 search: () => require('./res/pages/courseSearch')(),
                 schedule: () => require('./res/pages/courseSchedule')(userData),
@@ -87,7 +87,7 @@ window.fetchApi = function (endpoint, option) {
 
     const root = div('root',
         // Pages
-        queryRouter,
+        hashRouter,
         // 選單列
         nav('navbar noSelect',
             ul('loginBtn list',
@@ -128,9 +128,9 @@ window.fetchApi = function (endpoint, option) {
                         li(null, text('awa')),
                     ),
                 ),
-                queryRouter.getRoutesName().map(i =>
+                hashRouter.getRoutesName().map(i =>
                     li(null, text(navPageButtonName[i]), {
-                        onclick: () => queryRouter.openPage(i)
+                        onclick: () => hashRouter.openPage(i)
                     })
                 ),
             )

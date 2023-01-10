@@ -2,73 +2,95 @@ package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
 
-import java.io.IOException;
 import java.net.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static com.wavjaby.Main.*;
+import static com.wavjaby.Main.courseNckuOrg;
 
 public class Cookie {
-    public static void unpackAuthCookie(String[] cookieIn, CookieManager cookieManager) {
-        if (cookieIn == null) return;
-        List<String> portalNckuCookieIn = new ArrayList<>();
-        for (String cookie : cookieIn) {
-            int startIndex;
-            if ((startIndex = cookie.indexOf("authData=")) != -1) {
-                cookie = cookie.substring(startIndex + 9);
-                int start = 0, end;
-                if ((end = cookie.indexOf("|")) == -1) continue;
-                portalNckuCookieIn.add("MSISAuth=" + cookie.substring(start, end));
-                start = end + 1;
-                if ((end = cookie.indexOf("|", start)) == -1) continue;
-                portalNckuCookieIn.add("MSISAuthenticated=" + cookie.substring(start, end));
-                start = end + 1;
-                portalNckuCookieIn.add("MSISLoopDetectionCookie=" + cookie.substring(start));
-                break;
-            }
-        }
+    private static HttpCookie createHttpCookie(String key, String value, String domain) {
+        HttpCookie httpCookie = new HttpCookie(key, value);
+        httpCookie.setPath("/");
+        httpCookie.setVersion(0);
+        httpCookie.setDomain(domain);
+        return httpCookie;
+    }
 
+    public static void unpackAuthCookie(String[] cookieIn, CookieStore cookieStore) {
+        if (cookieIn == null) return;
         try {
-            cookieManager.put(new URI(portalNckuOrg), new HashMap<String, List<String>>() {{
-                put("Set-Cookie", portalNckuCookieIn);
-            }});
-        } catch (IOException | URISyntaxException e) {
+            URI uri = new URI(portalNckuOrg);
+            for (String cookie : cookieIn) {
+                int startIndex;
+                if ((startIndex = cookie.indexOf("authData=")) != -1) {
+                    cookie = cookie.substring(startIndex + 9);
+                    int start = 0, end;
+                    if ((end = cookie.indexOf("|")) == -1) continue;
+                    cookieStore.add(uri, createHttpCookie("MSISAuth", cookie.substring(start, end), portalNcku));
+                    start = end + 1;
+                    if ((end = cookie.indexOf("|", start)) == -1) continue;
+                    cookieStore.add(uri, createHttpCookie("MSISAuthenticated", cookie.substring(start, end), portalNcku));
+                    start = end + 1;
+                    cookieStore.add(uri, createHttpCookie("MSISLoopDetectionCookie", cookie.substring(start), portalNcku));
+                    break;
+                }
+            }
+        } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static String unpackLoginStateCookie(String[] cookieIn, CookieManager cookieManager) {
-        if (cookieIn == null) return null;
-        List<String> courseNckuCookieIn = new ArrayList<>();
-        String originalCookie = null;
-        for (String cookie : cookieIn) {
-            int startIndex;
-            if ((startIndex = cookie.indexOf("loginData=")) != -1) {
-                cookie = cookie.substring(startIndex + 10);
-                int start = 0, end;
-                if ((end = cookie.indexOf("|")) == -1) continue;
-                courseNckuCookieIn.add("PHPSESSID=" + cookie.substring(start, end));
-                start = end + 1;
-                if ((end = cookie.indexOf("|", start)) == -1) continue;
-                courseNckuCookieIn.add("COURSE_WEB=" + cookie.substring(start, end));
-                start = end + 1;
-                if ((end = cookie.indexOf("|", start)) == -1) continue;
-                courseNckuCookieIn.add("COURSE_CDN=" + cookie.substring(start, end));
-                start = end + 1;
-                courseNckuCookieIn.add("SSO=" + cookie.substring(start));
-                originalCookie = cookie;
-                break;
-            }
-        }
+    public static void packAuthCookie(Headers headers, String refererUrl, CookieStore cookieStore) {
         try {
-            cookieManager.put(new URI(courseNckuOrg), new HashMap<String, List<String>>() {{
-                put("Set-Cookie", courseNckuCookieIn);
-            }});
+            StringBuilder outCookie = new StringBuilder();
+            Map<String, String> portalNckuCookies = new HashMap<>();
+            outCookie.append("authData=");
+            for (HttpCookie i : cookieStore.get(new URI(portalNckuOrg)))
+                portalNckuCookies.put(i.getName(), i.getValue());
+
+            if (portalNckuCookies.containsKey("MSISAuth"))
+                outCookie.append(portalNckuCookies.get("MSISAuth"));
+            outCookie.append('|');
+            if (portalNckuCookies.containsKey("MSISAuthenticated"))
+                outCookie.append(portalNckuCookies.get("MSISAuthenticated"));
+            outCookie.append('|');
+            if (portalNckuCookies.containsKey("MSISLoopDetectionCookie"))
+                outCookie.append(portalNckuCookies.get("MSISLoopDetectionCookie"));
+            outCookie.append("; Path=/api/login").append(getCookieInfoData(refererUrl));
+            headers.add("Set-Cookie", outCookie.toString());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String unpackLoginStateCookie(String[] cookieIn, CookieStore cookieStore) {
+        if (cookieIn == null) return null;
+        String originalCookie = null;
+        try {
+            URI uri = new URI(courseNckuOrg);
+            for (String cookie : cookieIn) {
+                int startIndex;
+                if ((startIndex = cookie.indexOf("loginData=")) != -1) {
+                    cookie = cookie.substring(startIndex + 10);
+                    int start = 0, end;
+                    if ((end = cookie.indexOf("|")) == -1) break;
+                    cookieStore.add(uri, createHttpCookie("PHPSESSID", cookie.substring(start, end), courseNcku));
+                    start = end + 1;
+                    if ((end = cookie.indexOf("|", start)) == -1) break;
+                    cookieStore.add(uri, createHttpCookie("COURSE_WEB", cookie.substring(start, end), courseNcku));
+                    start = end + 1;
+                    if ((end = cookie.indexOf("|", start)) == -1) break;
+                    cookieStore.add(uri, createHttpCookie("COURSE_CDN", cookie.substring(start, end), courseNcku));
+                    start = end + 1;
+                    cookieStore.add(uri, createHttpCookie("SSO", cookie.substring(start), courseNcku));
+                    originalCookie = cookie;
+                    break;
+                }
+            }
             return originalCookie;
-        } catch (IOException | URISyntaxException e) {
+        } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
     }
@@ -101,45 +123,21 @@ public class Cookie {
         }
     }
 
-    public static void packAuthCookie(Headers headers, String refererUrl, CookieStore cookieStore) {
-        try {
-            StringBuilder outCookie = new StringBuilder();
-            Map<String, String> portalNckuCookies = new HashMap<>();
-            outCookie.append("authData=");
-            for (HttpCookie i : cookieStore.get(new URI(portalNckuOrg)))
-                portalNckuCookies.put(i.getName(), i.getValue());
-
-            if (portalNckuCookies.containsKey("MSISAuth"))
-                outCookie.append(portalNckuCookies.get("MSISAuth"));
-            outCookie.append('|');
-            if (portalNckuCookies.containsKey("MSISAuthenticated"))
-                outCookie.append(portalNckuCookies.get("MSISAuthenticated"));
-            outCookie.append('|');
-            if (portalNckuCookies.containsKey("MSISLoopDetectionCookie"))
-                outCookie.append(portalNckuCookies.get("MSISLoopDetectionCookie"));
-            outCookie.append("; Path=/api/login").append(getCookieInfoData(refererUrl));
-            headers.add("Set-Cookie", outCookie.toString());
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-    public static String getDefaultCookie(Headers requestHeaders, CookieManager cookieManager) {
+    public static String getDefaultCookie(Headers requestHeaders, CookieStore cookieStore) {
         // unpack cookie
         String[] cookieIn = requestHeaders.containsKey("Cookie")
-                ? requestHeaders.get("Cookie").get(0).split(",")
+                ? requestHeaders.get("Cookie").get(0).split(";")
                 : null;
-        return unpackLoginStateCookie(cookieIn, cookieManager);
+        return unpackLoginStateCookie(cookieIn, cookieStore);
     }
 
-    public static String getDefaultLoginCookie(Headers requestHeaders, CookieManager cookieManager) {
+    public static String getDefaultLoginCookie(Headers requestHeaders, CookieStore cookieStore) {
         // unpack cookie
         String[] cookieIn = requestHeaders.containsKey("Cookie")
-                ? requestHeaders.get("Cookie").get(0).split(",")
+                ? requestHeaders.get("Cookie").get(0).split(";")
                 : null;
-        unpackAuthCookie(cookieIn, cookieManager);
-        return unpackLoginStateCookie(cookieIn, cookieManager);
+        unpackAuthCookie(cookieIn, cookieStore);
+        return unpackLoginStateCookie(cookieIn, cookieStore);
     }
 
     public static String getCookieInfoData(String refererUrl) {

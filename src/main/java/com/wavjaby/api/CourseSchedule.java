@@ -60,10 +60,11 @@ public class CourseSchedule implements HttpHandler {
 
             try {
                 // unpack cookie
-                String loginState = getDefaultCookie(requestHeaders, cookieManager);
+                String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
                 JsonBuilder data = new JsonBuilder();
                 boolean success = getCourseSchedule(cookieStore, data);
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);

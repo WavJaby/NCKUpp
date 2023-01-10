@@ -32,7 +32,7 @@ public class ExtractUrl implements HttpHandler {
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager);
+            getDefaultCookie(requestHeaders, cookieStore);
 
             try {
                 JsonBuilder data = new JsonBuilder();
@@ -47,6 +47,7 @@ public class ExtractUrl implements HttpHandler {
                     else if (query.containsKey("l"))
                         success = getLocation(query.get("l"), cookieStore, data);
                 }
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);

@@ -10,13 +10,10 @@ import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Scanner;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
@@ -38,13 +35,12 @@ public class Login implements HttpHandler {
 
             try {
                 // unpack cookie
-                String loginState = getDefaultLoginCookie(requestHeaders, cookieManager);
+                String loginState = getDefaultLoginCookie(requestHeaders, cookieStore);
 
                 // login
                 JsonBuilder data = new JsonBuilder();
                 boolean success = login(req, data, cookieStore);
-                if (!success)
-                    data.append("login", false);
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
@@ -195,16 +191,18 @@ public class Login implements HttpHandler {
 
             // check login state
             if ((loginState = result.indexOf(loginCheckString)) == -1 ||
-                    (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) == -1)
+                    (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) == -1) {
                 outData.append("login", false);
-            else
+            } else {
+                cosPreCheck(result, cookieStore, outData);
                 packUserLoginInfo(result, loginState + loginCheckString.length(), outData);
+            }
             return true;
         } catch (Exception e) {
             outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
     private void packUserLoginInfo(String result, int infoStart, JsonBuilder outData) {

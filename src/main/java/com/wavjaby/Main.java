@@ -24,6 +24,7 @@ public class Main {
     public static final String[] accessControlAllowOrigin = {
             "https://api.simon.chummydns.com",
             "https://wavjaby.github.io",
+            "http://localhost:63342",
     };
     public static final String cookieDomain = "simon.chummydns.com";
     public static ExecutorService pool = Executors.newCachedThreadPool();
@@ -58,6 +59,7 @@ public class Main {
         if (!server.Opened) return;
 
         UrSchool urSchool = new UrSchool();
+        RobotCode robotCode;
         server.createContext("/NCKUpp/", new FileHost(serverSettings));
         server.createContext("/api/login", new Login());
         server.createContext("/api/logout", new Logout());
@@ -66,7 +68,8 @@ public class Main {
         server.createContext("/api/extract", new ExtractUrl());
         server.createContext("/api/nckuhub", new NCKUHub());
         server.createContext("/api/urschool", urSchool);
-        server.createContext("/api/robotCode", new RobotCode(serverSettings));
+        server.createContext("/api/robotCode", robotCode = new RobotCode(serverSettings));
+        server.createContext("/api/preferenceEnter", new PreferenceEnter(robotCode));
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);

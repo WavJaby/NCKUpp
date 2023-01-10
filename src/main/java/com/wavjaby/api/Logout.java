@@ -35,11 +35,12 @@ public class Logout implements HttpHandler {
 
             try {
                 // unpack cookie
-                String loginState = getDefaultCookie(requestHeaders, cookieManager);
+                String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
                 // login
                 JsonBuilder data = new JsonBuilder();
                 boolean success = logout(data, cookieStore);
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
                 packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);

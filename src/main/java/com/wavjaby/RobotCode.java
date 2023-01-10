@@ -12,6 +12,7 @@ import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.getRefererUrl;
@@ -35,11 +36,12 @@ public class RobotCode implements HttpHandler {
 
             try {
                 // Unpack cookie
-                String loginState = getDefaultCookie(requestHeaders, cookieManager);
+                String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
                 // Crack robot code
                 JsonBuilder data = new JsonBuilder();
                 boolean success = true;
+                data.append("success", success);
 
                 // Set cookie
                 Headers responseHeader = req.getResponseHeaders();
@@ -102,17 +104,24 @@ public class RobotCode implements HttpHandler {
                 String output = stdout.readLine();
                 if (output == null) break;
                 String[] data = output.split(",");
-                tasks.remove(data[0]).done(data[1]);
+                Task task = tasks.remove(data[0]);
+                if (task == null)
+                    Logger.err(TAG, output);
+                else
+                    task.done(data[1]);
             }
         } catch (IOException ignore) {
         }
     });
 
-    public String getCode(String url, String PHPSESSID, String COURSE_WEB) {
+    public String getCode(String url, CookieStore cookieStore) {
         Task task = new Task();
         String uuid = UUID.randomUUID().toString();
         tasks.put(uuid, task);
-        sendCommand(uuid + ',' + url + ',' + PHPSESSID + ',' + COURSE_WEB);
+        String cookies = cookieStore.getCookies().stream()
+                .map(i -> '"' + i.getName() + '"' + ':' + '"' + i.getValue() + '"')
+                .collect(Collectors.joining(","));
+        sendCommand(uuid + ',' + url + ',' + '{' + cookies + '}');
         task.await();
         return task.result;
     }
@@ -146,7 +155,7 @@ public class RobotCode implements HttpHandler {
         String connect = "&&";
         ProcessBuilder builder = new ProcessBuilder(venvPath, connect, "python", mainPyPath);
         builder.directory(new File(workDir));
-        builder.redirectErrorStream(false);
+        builder.redirectErrorStream(true);
         try {
             // Start python
             Process process = builder.start();

@@ -23,8 +23,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import static com.wavjaby.Cookie.getDefaultCookie;
-import static com.wavjaby.Lib.parseUrlEncodedForm;
-import static com.wavjaby.Lib.setAllowOrigin;
+import static com.wavjaby.Lib.*;
 import static com.wavjaby.Main.pool;
 
 public class UrSchool implements HttpHandler {
@@ -70,7 +69,7 @@ public class UrSchool implements HttpHandler {
             long startTime = System.currentTimeMillis();
             CookieManager cookieManager = new CookieManager();
             Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager);
+            getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
             try {
                 JsonBuilder data = new JsonBuilder();
@@ -93,6 +92,7 @@ public class UrSchool implements HttpHandler {
                     } else
                         success = getInstructorInfo(instructorID, getMode, data);
                 }
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
@@ -531,27 +531,4 @@ public class UrSchool implements HttpHandler {
             }
         });
     }
-
-    private String parseUnicode(String input) {
-        int lastIndex = 0, index;
-        int length = input.length();
-        index = input.indexOf("\\u");
-        StringBuilder builder = new StringBuilder();
-        while (index > -1) {
-            if (index > (length - 6)) break;
-            int nuiCodeStart = index + 2;
-            int nuiCodeEnd = nuiCodeStart + 4;
-            String substring = input.substring(nuiCodeStart, nuiCodeEnd);
-            int number = Integer.parseInt(substring, 16);
-
-            builder.append(input, lastIndex, index);
-            builder.append((char) number);
-
-            lastIndex = nuiCodeEnd;
-            index = input.indexOf("\\u", nuiCodeEnd);
-        }
-        builder.append(input, lastIndex, length);
-        return builder.toString();
-    }
-
 }

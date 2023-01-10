@@ -13,6 +13,8 @@ import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 
 import static com.wavjaby.Cookie.getDefaultCookie;
+import static com.wavjaby.Cookie.packLoginStateCookie;
+import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.pool;
 
@@ -27,14 +29,17 @@ public class Template implements HttpHandler {
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
             Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager);
+            String refererUrl = getRefererUrl(requestHeaders);
+            String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
 
             try {
                 JsonBuilder data = new JsonBuilder();
                 boolean success = false;
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
+                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 

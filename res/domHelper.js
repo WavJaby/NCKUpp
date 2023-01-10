@@ -174,7 +174,7 @@ function parseClassInput(className, element) {
  * @param {Object<string, function()|HTMLElement>} routs
  * @param {HTMLElement} [footer]
  * */
-function QueryRouter(defaultPage, routs, footer) {
+function HashRouter(defaultPage, routs, footer) {
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
     let lastState, lastPage;
@@ -183,8 +183,9 @@ function QueryRouter(defaultPage, routs, footer) {
         if (lastPage === newPage) return;
         lastPage = newPage;
 
+        window.location.hash = newPage;
         // open page
-        history.pushState(null, document.title, './?' + newPage)
+        window.history.pushState(null, document.title, window.location.href)
         let state = routs[newPage];
         if (!state) return;
 
@@ -212,7 +213,7 @@ function QueryRouter(defaultPage, routs, footer) {
 
     // append footer
     if (footer) {
-        routerRoot.addEventListener('scroll', function (e) {
+        routerRoot.addEventListener('scroll', function () {
             const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
             if (position > 0)
                 lastState.style.top = position + 'px';
@@ -222,7 +223,7 @@ function QueryRouter(defaultPage, routs, footer) {
         routerRoot.appendChild(footer);
     }
     // open default page
-    routerRoot.openPage(location.search.length < 2 ? defaultPage : location.search.slice(1));
+    routerRoot.openPage(window.location.hash.length < 2 ? defaultPage : window.location.hash.slice(1));
     return routerRoot;
 }
 
@@ -268,7 +269,7 @@ module.exports = {
     State,
     TextState,
     ClassList,
-    QueryRouter,
+    HashRouter,
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element

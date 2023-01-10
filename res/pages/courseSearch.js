@@ -31,6 +31,9 @@
 /**@typedef {string[]} time */
 /**@typedef {string} moodle */
 /**@typedef {string} outline */
+/**@typedef {string} preferenceEnter */
+/**@typedef {string} addCourse */
+/**@typedef {string} preRegister */
 /**
  * @typedef {{
  *     dn: departmentName,
@@ -53,6 +56,9 @@
  *     t: time,
  *     m: moodle,
  *     o: outline,
+ *     pe: preferenceEnter,
+ *     ac: addCourse,
+ *     pr: preRegister,
  * }} CourseData
  */
 /**

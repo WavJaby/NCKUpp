@@ -51,13 +51,10 @@ module.exports = function (loginState) {
     console.log('Course schedule Init');
     // static element
     let styles = async_require('./courseSchedule.css');
-    const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
     const scheduleStudentInfo = new Signal();
     const showCourseInfoWindow = new Signal(false);
     const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
-    // data
-    const courseInfo = {};
-    let thead, tbody;
+    const scheduleTable = new ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWindow);
 
     onLoginState(loginState.state);
 
@@ -76,14 +73,26 @@ module.exports = function (loginState) {
     }
 
     function onLoginState(state) {
-        if (state) {
-            fetchApi('/courseSchedule').then(buildScheduleTable);
-        } else {
-            if (thead) thead.remove();
-            if (tbody) tbody.remove();
-            scheduleStudentInfo.set();
-        }
+        if (state)
+            fetchApi('/courseSchedule').then(scheduleTable.init);
+        else
+            scheduleTable.clear();
     }
+
+    return div('courseSchedule',
+        {onRender, onDestroy},
+        div('courseScheduleInfo',
+            span(scheduleStudentInfo)
+        ),
+        scheduleTable.table(),
+        ShowIf(showCourseInfoWindow, courseInfoWindow),
+    );
+};
+
+function ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWindow) {
+    const courseInfo = {};
+    const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
+    let thead = scheduleTable.createTHead(), tbody = scheduleTable.createTBody();
 
     function cellClick() {
         const info = courseInfo[this.serialID];
@@ -117,14 +126,12 @@ module.exports = function (loginState) {
         }
     }
 
-    function buildScheduleTable({id, credits, schedule, err}) {
+    this.init = function ({id, credits, schedule, err}) {
         if (err) return;
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
         scheduleStudentInfo.set(id + ' ' + 'credits: ' + credits);
 
-        thead = scheduleTable.createTHead();
-        tbody = scheduleTable.createTBody();
-        const headRow = thead.insertRow();
-        headRow.className = 'noSelect';
 
         let nightTime = false;
         let holiday = false;
@@ -168,6 +175,8 @@ module.exports = function (loginState) {
             }
 
         // Table header
+        const headRow = thead.insertRow();
+        headRow.className = 'noSelect';
         for (let i = 0; i < tableWidth + 1; i++) {
             const cell = headRow.insertCell();
             cell.textContent = weekTable[i];
@@ -298,18 +307,13 @@ module.exports = function (loginState) {
                 for (const course of entry[1])
                     courseInfo[course.sn] = course;
         });
-    }
+    };
 
-    return div('courseSchedule',
-        {onRender, onDestroy},
-        div('courseScheduleInfo',
-            span(scheduleStudentInfo)
-        ),
-        scheduleTable,
-        ShowIf(showCourseInfoWindow, courseInfoWindow),
-    );
-};
+    this.clear = function(){
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+        scheduleStudentInfo.set();
+    };
 
-function ScheduleTable() {
-
+    this.table = function () {return scheduleTable;};
 }

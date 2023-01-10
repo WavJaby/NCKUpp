@@ -9,7 +9,10 @@ import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
-import org.jsoup.nodes.*;
+import org.jsoup.nodes.Attributes;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
@@ -23,7 +26,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,6 +41,15 @@ public class Search implements HttpHandler {
     private static final String TAG = "[Search] ";
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
     private static final DecimalFormat floatFormat = new DecimalFormat("#.#");
+
+    private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
+        put("default", '0');
+        put("success", '1');
+        put("info", '2');
+        put("primary", '3');
+        put("warning", '4');
+        put("danger", '5');
+    }};
 
     private final UrSchool urSchool;
 
@@ -134,7 +145,7 @@ public class Search implements HttpHandler {
                 String[] cookieIn = requestHeaders.containsKey("Cookie")
                         ? requestHeaders.get("Cookie").get(0).split(",")
                         : null;
-                String loginState = unpackLoginStateCookie(cookieIn, cookieManager);
+                String loginState = unpackLoginStateCookie(cookieIn, cookieStore);
 
                 // search
                 JsonBuilder data = new JsonBuilder();
@@ -150,19 +161,20 @@ public class Search implements HttpHandler {
                 }
                 if (success)
                     success = search(searchQuery, data, cookieStore);
+                data.append("success", success);
 
                 // set cookie
                 Headers responseHeader = req.getResponseHeaders();
+                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
                 if (success) {
                     String searchID = (searchQuery.searchID == null ? "" : searchQuery.searchID) +
                             '|' +
                             (searchQuery.timeSearchID == null ? "" : searchQuery.timeSearchID);
-                    responseHeader.add("Set-Cookie", searchID +
+                    responseHeader.add("Set-Cookie", "searchID=" + searchID +
                             "; Path=/api/search" + getCookieInfoData(refererUrl));
                 } else
                     responseHeader.add("Set-Cookie", removeCookie("searchID") +
                             "; Path=/api/search" + getCookieInfoData(refererUrl));
-                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
 
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
                 responseHeader.set("Content-Type", "application/json; charset=UTF-8");
@@ -210,7 +222,7 @@ public class Search implements HttpHandler {
                 else {
                     String crypt = allDeptBody.substring(cryptStart, cryptEnd);
                     CountDownLatch countDownLatch = new CountDownLatch(allDept.length);
-                    ExecutorService fetchPool = Executors.newFixedThreadPool(10);
+                    ExecutorService fetchPool = Executors.newFixedThreadPool(4);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
                     ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
                     Logger.addProgressBar(progressBar);
@@ -223,7 +235,7 @@ public class Search implements HttpHandler {
                             progressBar.setProgress((float) ++j[0] / allDept.length * 100f);
                             countDownLatch.countDown();
                         });
-                        Thread.sleep(100);
+                        Thread.sleep(500);
                     }
                     countDownLatch.await();
                     progressBar.setProgress(100f);
@@ -296,7 +308,7 @@ public class Search implements HttpHandler {
             }
 
             String searchResultBody = result.body();
-//            cosPreCheck(searchResultBody, cookieStore, outData);
+            cosPreCheck(searchResultBody, cookieStore, outData);
 
             int resultTableStart;
             if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
@@ -338,6 +350,7 @@ public class Search implements HttpHandler {
             if (searchQuery.searchID == null) {
 //                Logger.log(TAG, TAG + "Get searchID");
                 final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                        .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .execute().body();
                 cosPreCheck(body, cookieStore, outData);
@@ -473,11 +486,14 @@ public class Search implements HttpHandler {
                     }
                 Element j = tag.firstElementChild();
                 String link = j == null ? "" : j.attr("href");
+                Character tagColor = tagColormap.get(tagType);
+                if (tagColor == null)
+                    Logger.log(TAG, "Unknown tag color: " + tagType);
 
                 // write tag
                 tagBuilder.append(',').append('"')
                         .append(tag.text()).append(',')
-                        .append(tagType).append(',')
+                        .append(tagColor).append(',')
                         .append(link)
                         .append('"');
             }
@@ -606,8 +622,7 @@ public class Search implements HttpHandler {
             String outline = "";
             Elements linkEle = section.get(9).getElementsByAttribute("href");
             if (linkEle.size() > 0) {
-                for (int i = 0; i < linkEle.size(); i++) {
-                    Element ele = linkEle.get(i);
+                for (Element ele : linkEle) {
                     String href = ele.attr("href");
                     if (href.startsWith("javascript"))
                         // moodle link
@@ -616,6 +631,32 @@ public class Search implements HttpHandler {
                         // outline link
                         outline = href.substring(href.indexOf("?") + 1);
                     }
+                }
+            }
+
+            // Get function buttons
+            String preferenceEnter = null, addCourse = null, preRegister = null, addRequest = null;
+            for (int i = 10; i < section.size(); i++) {
+                Element button = section.get(i).firstElementChild();
+                if (button == null) continue;
+                String buttonText = button.ownText().replace(" ", "");
+                switch (buttonText) {
+                    case "PreferenceEnter":
+                    case "志願登記":
+                        preferenceEnter = button.attr("data-key");
+                        break;
+                    case "AddCourse":
+                    case "單科加選":
+                        addCourse = button.attr("data-key");
+                        break;
+                    case "Pre-register":
+                    case "加入預排":
+                        preRegister = button.attr("data-prekey");
+                        break;
+                    case "AddRequest":
+                    case "加入徵詢":
+                        addRequest = button.attr("data-prekey");
+                        break;
                 }
             }
 
@@ -641,6 +682,9 @@ public class Search implements HttpHandler {
             jsonBuilder.append("t", time, true);
             jsonBuilder.append("m", moodle);
             jsonBuilder.append("o", outline);
+            if (preferenceEnter != null) jsonBuilder.append("pe", preferenceEnter);
+            if (addCourse != null) jsonBuilder.append("ac", addCourse);
+            if (preRegister != null) jsonBuilder.append("pr", preRegister);
             result.append(',').append(jsonBuilder);
         }
     }
@@ -691,12 +735,7 @@ public class Search implements HttpHandler {
 //            Logger.log(TAG, TAG + "Get search result");
             Connection.Response searchResult = HttpConnection.connect(host + "/index.php?c=qry11215" + searchBody)
                     .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .method(Connection.Method.POST)
-                    .requestBody(postData.toString())
                     .maxBodySize(20 * 1024 * 1024)
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest")
                     .execute();
 
             String searchResultBody = searchResult.body();

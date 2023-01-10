@@ -40,7 +40,7 @@ public class NCKUHub implements HttpHandler {
             long startTime = System.currentTimeMillis();
             CookieManager cookieManager = new CookieManager();
             Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager);
+            getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
 
             try {
@@ -55,12 +55,12 @@ public class NCKUHub implements HttpHandler {
                     if (success)
                         data.append("data", nckuHubCourseID.toString(), true);
                     else
-                        data.append("data", TAG + "Update course id failed");
+                        data.append("err", TAG + "Update course id failed");
                 } else {
                     // get course info
                     success = getNckuHubCourseInfo(queryString, data);
                 }
-
+                data.append("success", success);
 
                 Headers responseHeader = req.getResponseHeaders();
                 byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);

@@ -34,22 +34,22 @@ public class Lib {
                 if (cosPreCheckEnd != -1)
                     cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
             }
-        }
-        if (cosPreCheckKey == null) {
+        } else {
             data.append("warn", TAG + "CosPreCheck key not found");
             return;
         }
 //        Logger.log(TAG, "Make CosPreCheck");
 
-        long now = System.currentTimeMillis() / 1000 + 120;
+        long now = System.currentTimeMillis() / 1000;
         try {
+            String postData = cosPreCheckKey == null ? ("time=" + now) : ("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"));
             HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=cosprecheck&time=" + now)
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .method(Connection.Method.POST)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
-                    .requestBody("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"))
+                    .requestBody(postData)
                     .execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -73,6 +73,8 @@ public class Lib {
 
     public static Map<String, String> parseUrlEncodedForm(String data) {
         Map<String, String> query = new HashMap<>();
+        if (data == null)
+            return query;
         String[] pairs = data.split("&");
         try {
             for (String pair : pairs) {
@@ -118,5 +120,27 @@ public class Lib {
         if (clientUrl != null && clientUrl.size() > 0)
             return clientUrl.get(0);
         return null;
+    }
+
+    public static String parseUnicode(String input) {
+        int lastIndex = 0, index;
+        int length = input.length();
+        index = input.indexOf("\\u");
+        StringBuilder builder = new StringBuilder();
+        while (index > -1) {
+            if (index > (length - 6)) break;
+            int nuiCodeStart = index + 2;
+            int nuiCodeEnd = nuiCodeStart + 4;
+            String substring = input.substring(nuiCodeStart, nuiCodeEnd);
+            int number = Integer.parseInt(substring, 16);
+
+            builder.append(input, lastIndex, index);
+            builder.append((char) number);
+
+            lastIndex = nuiCodeEnd;
+            index = input.indexOf("\\u", nuiCodeEnd);
+        }
+        builder.append(input, lastIndex, length);
+        return builder.toString();
     }
 }
