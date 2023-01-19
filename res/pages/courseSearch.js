@@ -22,7 +22,7 @@
 /**@typedef {int} courseGrade */
 /**@typedef {string} classInfo */
 /**@typedef {string} classGroup */
-/**@typedef {string[]} teachers */
+/**@typedef {string[]} instructors */
 /**@typedef {string[]} tags */
 /**@typedef {float} credits */
 /**@typedef {boolean} required */
@@ -47,7 +47,7 @@
  *     g: courseGrade,
  *     co: classInfo,
  *     cg: classGroup,
- *     ts: teachers,
+ *     i: instructors,
  *     tg: tags,
  *     c: credits,
  *     r: required,
@@ -198,29 +198,34 @@ module.exports = function () {
         const nckuHubRequestIDs = [];
         const nckuHubResponseData = {};
 
-        // parse result
+        // Parse result
         for (const data of result.data) {
-            data.dn = data.dn.split(' ')[0];
+            data.dn = data.dn == null ? '' : data.dn.split(' ')[0];
 
-            // parse
-            data.ts = data.ts.split(' ').map(i => {
-                if (i.length === 0) return 'undecided';
-                for (const j of urschoolData) if (j[2] === i) return j;
-                return i;
-            });
-            data.parsedTime = data.t.map(i => {
+            // Parse time
+            data.parsedTime = data.t == null ? 'undecided' : data.t.map(i => {
                 i = i.split(',');
-                return '[' + i[0] + ']' + i[1]
+                // Extra time data
+                if (i.length === 1) return 'ex';
+                return '[' + i[0] + ']' + (i.length === 2 ? i[1] : (i[1] + '~' + i[2]))
             }).join(', ');
-            delete data.t;
+
+            // Parse instructors
+            if (data.i != null)
+                data.i = data.i.map(i => {
+                    for (const j of urschoolData) if(j[2] === i) return j;
+                    return i;
+                });
 
             // nckuhub
-            const deptAndID = data.sn.split('-');
-            let nckuHubID = nckuHubCourseID[deptAndID[0]];
-            if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
-            if (data.sn.length > 0 && nckuHubID) {
-                nckuHubRequestIDs.push(nckuHubID);
-                nckuHubResponseData[data.sn] = new Signal();
+            if (data.sn != null) {
+                const deptAndID = data.sn.split('-');
+                let nckuHubID = nckuHubCourseID[deptAndID[0]];
+                if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
+                if (data.sn.length > 0 && nckuHubID) {
+                    nckuHubRequestIDs.push(nckuHubID);
+                    nckuHubResponseData[data.sn] = new Signal();
+                }
             }
         }
 
@@ -302,6 +307,7 @@ module.exports = function () {
             }
 
             // render result item
+            // return end
             return tr(resultItemClass,
                 // title sections
                 td(null, null,
@@ -309,13 +315,14 @@ module.exports = function () {
                     // info
                     expandable = div('expandable',
                         div('container', measureReference = div('info',
-                            data.ci.length > 0 ? span(data.ci, 'note') : null,
-                            data.cl.length > 0 ? span(data.cl, 'limit red') : null,
+                            data.ci == null ? null : span(data.ci, 'note'),
+                            data.cl == null ? null : span(data.cl, 'limit red'),
 
                             // Instructor
                             span('Instructor: ', 'instructor'),
-                            data.ts.map(i =>
-                                button('instructorBtn', i instanceof Array ? i[2] : i,
+                            data.i == null ? null : data.i.map(i =>
+                                button('instructorBtn',
+                                    i instanceof Array ? i[2] : i,
                                     e => {
                                         if (i instanceof Array)
                                             openInstructorDetailWindow(i);
@@ -326,7 +333,7 @@ module.exports = function () {
                                             if (i instanceof Array)
                                                 instructorInfoBubble.set({
                                                     target: e.target,
-                                                    offsetY: courseSearch.scrollTop,
+                                                    offsetY: courseSearch.parentElement.scrollTop,
                                                     data: i
                                                 });
                                         },
@@ -342,7 +349,7 @@ module.exports = function () {
                 td(data.ct, 'courseType'),
                 td(data.parsedTime, 'courseTime'),
                 td(data.cn, 'courseName'),
-                td(`${data.s}/${data.a}`, 'available'),
+                td(data.s == null && data.a == null ? '' : `${data.s}/${data.a}`, 'available'),
                 // ncku Hub
                 nckuHubData === undefined ? td() :
                     State(nckuHubData, /**@param {NckuHub} nckuhub*/nckuhub => {
@@ -362,8 +369,8 @@ module.exports = function () {
                         }
                         return td('Loading...', 'nckuhub');
                     }),
+                td(null, 'options'),
             );
-            // return end
         }));
     }
 
@@ -444,9 +451,9 @@ module.exports = function () {
 
 
         searchResult.state.data = searchResult.state.orignalData.filter(i =>
-            i.cn.indexOf(key) !== -1 ||
-            i.sn.indexOf(key) !== -1 ||
-            i.ts.find(i => (i instanceof Array ? i[2] : i).indexOf(key) !== -1)
+            i.cn && i.cn.indexOf(key) !== -1 ||
+            i.sn && i.sn.indexOf(key) !== -1 ||
+            i.i && i.i.find(i => (i instanceof Array ? i[2] : i).indexOf(key) !== -1)
         );
         searchResult.update();
         if (expendTimeout)
@@ -502,6 +509,7 @@ module.exports = function () {
                         div(null, span('Sweet', 'sweet'), {key: 'sweet', onclick: sortNckuhubKey}),
                         div(null, span('Cool', 'cool'), {key: 'cold', onclick: sortNckuhubKey}),
                     ),
+                    th('Options', 'options'),
                 ),
             ),
         ),
@@ -545,17 +553,17 @@ function InstructorInfoBubble() {
     const signal = new Signal();
     const classList = new ClassList('instructorInfo');
     const state = State(signal, state => {
-        if (!state) return div(classList);
+        if (!state) return div();
 
         const bound = state.target.getBoundingClientRect();
         const element = InstructorInfoElement(state.data);
         element.insertBefore(span(state.data[2]), element.firstChild);
         element.style.left = bound.left + 'px';
         classList.init(element);
-        classList.add('show');
 
         setTimeout(() => {
-            element.style.top = (bound.top + state.offsetY - 15 - element.offsetHeight - state.target.offsetHeight) + 'px';
+            element.style.top = (bound.top + state.offsetY - 40 - element.offsetHeight) + 'px';
+            classList.add('show');
         }, 0);
         return element;
     });

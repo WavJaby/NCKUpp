@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonArray;
+import com.wavjaby.json.JsonArrayBuilder;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.logger.Logger;
@@ -31,8 +32,8 @@ public class UrSchool implements HttpHandler {
     private static final long updateInterval = 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 5 * 60 * 1000;
 
-    private String urSchoolData;
-    private JsonArray urSchoolDataJson;
+    private String urSchoolDataJson;
+    private JsonArray urSchoolData;
     private long lastFileUpdateTime;
 
     private final Map<String, Object[]> instructorCache = new HashMap<>();
@@ -50,8 +51,8 @@ public class UrSchool implements HttpHandler {
                     out.write(buff, 0, len);
                 reader.close();
 
-                urSchoolData = out.toString("UTF-8");
-                urSchoolDataJson = new JsonArray(urSchoolData);
+                urSchoolDataJson = out.toString("UTF-8");
+                urSchoolData = new JsonArray(urSchoolDataJson);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -79,7 +80,7 @@ public class UrSchool implements HttpHandler {
                 if (queryString == null) {
                     if (System.currentTimeMillis() - lastFileUpdateTime > updateInterval)
                         updateUrSchoolData();
-                    data.append("data", urSchoolData, true);
+                    data.appendRaw("data", urSchoolDataJson);
                 } else {
                     Map<String, String> query = parseUrlEncodedForm(queryString);
                     String instructorID = query.get("id");
@@ -117,7 +118,8 @@ public class UrSchool implements HttpHandler {
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
 //            Logger.log(TAG, id + " use cache");
-            if (outData != null) outData.append("data", (String) cacheData[1], true);
+            if (outData != null)
+                outData.appendRaw("data", (String) cacheData[1]);
             return true;
         }
 //        Logger.log(TAG, id + " fetch data");
@@ -148,7 +150,7 @@ public class UrSchool implements HttpHandler {
             }
 
             // Get tags
-            StringBuilder tageBuilder = new StringBuilder();
+            JsonArrayBuilder tags = new JsonArrayBuilder();
             int urlStart, urlEnd = tagsStart;
             while (true) {
                 // Get tag url
@@ -172,14 +174,10 @@ public class UrSchool implements HttpHandler {
                 String tagName = resultBody.substring(tagNameStart, tagNameEnd).trim()
                         .replace("&amp;", "&");
 
-                tageBuilder.append(',').append('[')
-                        .append('"').append(url).append('"').append(',')
-                        .append('"').append(tagName).append('"')
-                        .append(']');
+                JsonArrayBuilder tagData = new JsonArrayBuilder();
+                tagData.append(url).append(tagName);
+                tags.append(tagData);
             }
-            if (tageBuilder.length() > 0) tageBuilder.setCharAt(0, '[');
-            else tageBuilder.append('[');
-            tageBuilder.append(']');
 
             // Get reviewer count
             int reviewerCount;
@@ -187,9 +185,9 @@ public class UrSchool implements HttpHandler {
             if ((reviewerCountStart = resultBody.indexOf("/reviewers/", urlEnd + 1)) == -1 ||
                     (reviewerCountStart = resultBody.indexOf('>', reviewerCountStart)) == -1 ||
                     (reviewerCountEnd = resultBody.indexOf(' ', reviewerCountStart += 1)) == -1
-            ) {
+            )
                 reviewerCount = 0;
-            } else
+            else
                 reviewerCount = Integer.parseInt(resultBody.substring(reviewerCountStart, reviewerCountEnd));
 
             // Get visitors
@@ -201,7 +199,7 @@ public class UrSchool implements HttpHandler {
                 if (outData != null) outData.append("err", TAG + "Visitors not found");
                 return false;
             }
-            StringBuilder visitorsBuilder = new StringBuilder();
+            JsonArrayBuilder visitors = new JsonArrayBuilder();
             int takeCourseCount = Integer.parseInt(resultBody.substring(countStart, countEnd).trim());
             int visitorStart, visitorEnd = countEnd;
             while (true) {
@@ -227,14 +225,11 @@ public class UrSchool implements HttpHandler {
                 }
                 url = url.substring(subStart + 1, subEnd + 1);
 
-                visitorsBuilder.append(',').append('"').append(url).append('"');
+                visitors.append(url);
             }
-            if (visitorsBuilder.length() > 0) visitorsBuilder.setCharAt(0, '[');
-            else visitorsBuilder.append('[');
-            visitorsBuilder.append(']');
 
             // Get comment
-            StringBuilder commentBuilder = new StringBuilder();
+            JsonArrayBuilder comments = new JsonArrayBuilder();
             int commentStart, commentEnd = visitorEnd;
             // Get comment data
             while ((commentStart = resultBody.indexOf("var obj", commentEnd + 1)) != -1 &&
@@ -284,22 +279,19 @@ public class UrSchool implements HttpHandler {
                 String timestamp = resultBody.substring(timestampStart, timestampEnd);
                 commentData.put("timestamp", Long.parseLong(timestamp));
 
-                commentBuilder.append(',').append(commentData);
+                comments.append(commentData);
             }
-            if (commentBuilder.length() > 0) commentBuilder.setCharAt(0, '[');
-            else commentBuilder.append('[');
-            commentBuilder.append(']');
-
 
             // Write result
             JsonBuilder jsonBuilder = new JsonBuilder();
-            jsonBuilder.append("id", '"' + id + '"', true);
-            jsonBuilder.append("tags", tageBuilder.toString(), true);
+            jsonBuilder.append("id", id);
+            jsonBuilder.append("tags", tags);
             jsonBuilder.append("reviewerCount", reviewerCount);
             jsonBuilder.append("takeCourseCount", takeCourseCount);
-            jsonBuilder.append("takeCourseUser", visitorsBuilder.toString(), true);
-            jsonBuilder.append("comments", commentBuilder.toString(), true);
-            if (outData != null) outData.append("data", jsonBuilder.toString(), true);
+            jsonBuilder.append("takeCourseUser", visitors);
+            jsonBuilder.append("comments", comments);
+            if (outData != null)
+                outData.append("data", jsonBuilder);
             instructorCache.put(id + '-' + mode, new Object[]{System.currentTimeMillis(), jsonBuilder.toString()});
 //            Logger.log(TAG, id + " done");
             return true;
@@ -355,8 +347,8 @@ public class UrSchool implements HttpHandler {
             else result.append('[');
             result.append(']');
             String resultString = result.toString();
-            urSchoolData = resultString;
-            urSchoolDataJson = new JsonArray(urSchoolData);
+            urSchoolDataJson = resultString;
+            urSchoolData = new JsonArray(urSchoolDataJson);
             try {
                 File file = new File("./urschool.json");
                 FileWriter fileWriter = new FileWriter(file);
@@ -505,13 +497,13 @@ public class UrSchool implements HttpHandler {
         }
     }
 
-    public void addTeacherCache(String[] teachers) {
+    public void addInstructorCache(String[] instructors) {
         pool.submit(() -> {
-            for (String name : teachers) {
+            for (String name : instructors) {
                 List<JsonArray> results = new ArrayList<>();
-                for (Object i : urSchoolDataJson) {
+                for (Object i : urSchoolData) {
                     JsonArray array = (JsonArray) i;
-                    if (array.get(2).equals(name))
+                    if (array.getString(2).equals(name))
                         results.add(array);
                 }
                 String id = null, mode = null;

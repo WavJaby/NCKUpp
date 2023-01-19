@@ -4,7 +4,7 @@
     <root id="archive" name="NCKUpp.jar">
       <element id="module-output" name="NCKUpp" />
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/jsoup-1.15.3.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$PROJECT_DIR$/lib/tiny-json-0.0.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/TinyJson-0.0.2.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

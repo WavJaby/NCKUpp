@@ -3,24 +3,24 @@
 <head>
     <!-- IE version check -->
     <!--[if !IE]> -->
-    <script>var ieVersion = null;</script>
+    <script>window.ieVersion = null;</script>
     <!-- <![endif]-->
     <!--[if lte IE 9]>
-    <script>var ieVersion = 8;</script>
+    <script>window.ieVersion = 8;</script>
     <![endif]-->
     <!--[if IE 9]>
-    <script>var ieVersion = 9;</script>
+    <script>window.ieVersion = 9;</script>
     <![endif]-->
     <script>
-        var SystemStartTime = (ieVersion !== null && ieVersion < 10 ? Date.now() : performance.now());
-        if (ieVersion === null)
+        var SystemStartTime = (window.ieVersion !== null && window.ieVersion < 10 ? Date.now() : performance.now());
+        if (window.ieVersion === null)
             try {
-                eval('const ignore__=1;')
+                eval('const __ignore=1;');
             } catch (e) {
-                ieVersion = 10
+                window.ieVersion = 10;
             }
-        if (ieVersion === null && (!!window.ActiveXObject || "ActiveXObject" in window))
-            ieVersion = 11;
+        if (window.ieVersion === null && (!!window.ActiveXObject || "ActiveXObject" in window))
+            window.ieVersion = 11;
     </script>
 
     <!-- Main head -->

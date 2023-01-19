@@ -14,27 +14,30 @@ public class Logger {
         if (progressBars.size() > 0)
             System.out.print('\r' + tag + message + '\n' + renderProgressBar());
         else
-            System.out.println('\r' + tag + message);
+            System.out.print('\r' + tag + message + '\n' + '>');
     }
 
     public static <T> void warn(String tag, T message) {
         if (progressBars.size() > 0)
             System.out.print('\r' + tag + message + '\n' + renderProgressBar());
         else
-            System.out.println('\r' + tag + message);
+            System.out.print('\r' + tag + message + '\n' + '>');
     }
 
     public static <T> void err(String tag, T message) {
         if (progressBars.size() > 0)
-            System.out.print('\r' + tag + message + '\n' + renderProgressBar());
+            System.err.print('\r' + tag + message + '\n' + renderProgressBar());
         else
-            System.err.println('\r' + tag + message);
+            System.err.print('\r' + tag + message + '\n');
+        System.out.print('>');
     }
 
     private static String renderProgressBar() {
         StringBuilder builder = new StringBuilder();
         for (ProgressBar progressBar : progressBars)
-            builder.append(progressBar.tag).append(format.format(progressBar.progress)).append("%  ");
+            builder.append(progressBar.tag).append(format.format(progressBar.progress)).append('%')
+                    .append(' ');
+        builder.append('>');
         return builder.toString();
     }
 

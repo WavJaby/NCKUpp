@@ -213,13 +213,22 @@ function HashRouter(defaultPage, routs, footer) {
 
     // append footer
     if (footer) {
-        routerRoot.addEventListener('scroll', function () {
-            const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
-            if (position > 0)
-                lastState.style.top = position + 'px';
-            else
-                lastState.style.top = null;
-        });
+        // routerRoot.addEventListener('scroll', function () {
+        //     const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
+        //     console.log(position)
+        //
+        //     if (position > 0) {
+        //         // footer.style.marginTop = (lastState.offsetHeight + footer.offsetHeight) + 'px';
+        //         lastState.style.bottom = footer.offsetHeight + 'px';
+        //         // lastState.style.position = 'absolute';
+        //         // lastState.style.bottom = -position + 'px';
+        //     }else {
+        //         // footer.style.marginTop = null;
+        //         lastState.style.bottom = null;
+        //         // lastState.style.position = null;
+        //         // lastState.style.bottom = null;
+        //     }
+        // });
         routerRoot.appendChild(footer);
     }
     // open default page

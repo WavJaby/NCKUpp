@@ -3,9 +3,8 @@
     border-spacing: 5px;
 }
 
-.courseScheduleInfo {
-    margin: 10px;
-    white-space: pre;
+.courseScheduleTable > caption {
+    text-align: left;
 }
 
 table tr:first-child {

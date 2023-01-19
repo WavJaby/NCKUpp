@@ -263,7 +263,7 @@ public class CourseSchedule implements HttpHandler {
         data.append("semester", semester);
         data.append("id", studentID);
         data.append("credits", credits);
-        data.append("schedule", courseScheduleData.toString(), true);
+        data.append("schedule", courseScheduleData);
         return true;
     }
 }

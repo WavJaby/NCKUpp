@@ -10,7 +10,7 @@ import static com.wavjaby.Main.*;
 import static com.wavjaby.Main.courseNckuOrg;
 
 public class Cookie {
-    private static HttpCookie createHttpCookie(String key, String value, String domain) {
+    public static HttpCookie createHttpCookie(String key, String value, String domain) {
         HttpCookie httpCookie = new HttpCookie(key, value);
         httpCookie.setPath("/");
         httpCookie.setVersion(0);

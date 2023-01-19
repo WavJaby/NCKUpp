@@ -59,12 +59,13 @@ public class Main {
         if (!server.Opened) return;
 
         UrSchool urSchool = new UrSchool();
+        Search search = new Search(urSchool);
         RobotCode robotCode;
         server.createContext("/NCKUpp/", new FileHost(serverSettings));
         server.createContext("/api/login", new Login());
         server.createContext("/api/logout", new Logout());
         server.createContext("/api/courseSchedule", new CourseSchedule());
-        server.createContext("/api/search", new Search(urSchool));
+        server.createContext("/api/search", search);
         server.createContext("/api/extract", new ExtractUrl());
         server.createContext("/api/nckuhub", new NCKUHub());
         server.createContext("/api/urschool", urSchool);
@@ -73,6 +74,8 @@ public class Main {
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
+
+        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search);
     }
 
     @SuppressWarnings("ALL")

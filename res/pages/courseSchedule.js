@@ -51,10 +51,9 @@ module.exports = function (loginState) {
     console.log('Course schedule Init');
     // static element
     let styles = async_require('./courseSchedule.css');
-    const scheduleStudentInfo = new Signal();
     const showCourseInfoWindow = new Signal(false);
     const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
-    const scheduleTable = new ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWindow);
+    const scheduleTable = new ScheduleTable(showCourseInfoWindow, courseInfoWindow);
 
     onLoginState(loginState.state);
 
@@ -81,18 +80,18 @@ module.exports = function (loginState) {
 
     return div('courseSchedule',
         {onRender, onDestroy},
-        div('courseScheduleInfo',
-            span(scheduleStudentInfo)
-        ),
+        div('scheduleTab'),
         scheduleTable.table(),
         ShowIf(showCourseInfoWindow, courseInfoWindow),
     );
 };
 
-function ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWindow) {
+function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
     const courseInfo = {};
     const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
-    let thead = scheduleTable.createTHead(), tbody = scheduleTable.createTBody();
+    let thead = scheduleTable.createTHead(),
+        tbody = scheduleTable.createTBody(),
+        caption = scheduleTable.createCaption();
 
     function cellClick() {
         const info = courseInfo[this.serialID];
@@ -130,7 +129,7 @@ function ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWind
         if (err) return;
         thead.innerHTML = '';
         tbody.innerHTML = '';
-        scheduleStudentInfo.set(id + ' ' + 'credits: ' + credits);
+        caption.textContent = id + ' ' + 'credits: ' + credits;
 
 
         let nightTime = false;
@@ -303,7 +302,7 @@ function ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWind
 
         // fetch data
         fetchApi('/search?serial=' + courseFetchData).then(i => {
-            for (const entry of Object.entries(i))
+            for (const entry of Object.entries(i.data))
                 for (const course of entry[1])
                     courseInfo[course.sn] = course;
         });
@@ -312,7 +311,7 @@ function ScheduleTable(scheduleStudentInfo, showCourseInfoWindow, courseInfoWind
     this.clear = function(){
         thead.innerHTML = '';
         tbody.innerHTML = '';
-        scheduleStudentInfo.set();
+        caption.textContent = '';
     };
 
     this.table = function () {return scheduleTable;};

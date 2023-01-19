@@ -189,7 +189,8 @@ footer {
     background: black;
     width: 100%;
     height: var(--footer-height);
-    position: relative;
+    position: absolute;
+    left: 0;
 }
 
 /*Router*/
@@ -199,14 +200,16 @@ footer {
     bottom: 0;
     position: absolute;
     overflow-y: auto;
+    overflow-x: auto;
 }
 
 .router > div {
-    position: relative;
-    overflow-x: auto;
-    min-height: 100vh;
-    margin-bottom: var(--footer-height);
     width: 100%;
+    min-height: 100%;
+    display: inline-block;
+    position: relative;
+    /*margin-bottom: var(--footer-height);*/
+    /*padding-bottom: var(--footer-height);*/
 }
 
 .expandable {

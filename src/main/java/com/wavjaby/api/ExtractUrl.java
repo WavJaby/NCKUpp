@@ -83,7 +83,7 @@ public class ExtractUrl implements HttpHandler {
                             "&syear=" + query[0] + "&sem=" + query[1] + "&course=" + query[2])
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .execute().body();
-            data.append("data", body, true);
+            data.appendRaw("data", body);
             return true;
         } catch (IOException e) {
             data.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
@@ -107,7 +107,7 @@ public class ExtractUrl implements HttpHandler {
                             "&location=" + query[0] + "&room_no=" + query[1])
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .execute().body();
-            data.append("data", body, true);
+            data.appendRaw("data", body);
             return true;
         } catch (IOException e) {
             data.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));

@@ -3,13 +3,13 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.json.JsonArrayBuilder;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
-import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
@@ -24,11 +24,8 @@ import java.net.CookieStore;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,15 +37,14 @@ import static com.wavjaby.Main.*;
 public class Search implements HttpHandler {
     private static final String TAG = "[Search] ";
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
-    private static final DecimalFormat floatFormat = new DecimalFormat("#.#");
 
-    private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
-        put("default", '0');
-        put("success", '1');
-        put("info", '2');
-        put("primary", '3');
-        put("warning", '4');
-        put("danger", '5');
+    private static final Map<String, Integer> tagColormap = new HashMap<String, Integer>() {{
+        put("default", 0);
+        put("success", 1);
+        put("info", 2);
+        put("primary", 3);
+        put("warning", 4);
+        put("danger", 5);
     }};
 
     private final UrSchool urSchool;
@@ -57,7 +53,7 @@ public class Search implements HttpHandler {
         this.urSchool = urSchool;
     }
 
-    private static class SearchQuery {
+    public static class SearchQuery {
         String searchID, timeSearchID;
 
         String courseName;     // 課程名稱
@@ -75,7 +71,11 @@ public class Search implements HttpHandler {
         boolean getTime;
         int yearBegin, semBegin, yearEnd, semEnd;
 
-        SearchQuery(String queryString, String[] cookieIn) {
+        public SearchQuery(String dept) {
+            this.deptNo = dept;
+        }
+
+        private SearchQuery(String queryString, String[] cookieIn) {
             if (cookieIn != null) for (String i : cookieIn)
                 if (i.startsWith("searchID")) {
                     String searchIDs = i.substring(16);
@@ -98,7 +98,6 @@ public class Search implements HttpHandler {
             getTime = (queryTime = query.get("queryTime")) != null;
             if (getTime) {
                 String[] cache = queryTime.split(",");
-                // TODO: Error catch
                 yearBegin = Integer.parseInt(cache[0]);
                 semBegin = Integer.parseInt(cache[1]);
                 yearEnd = Integer.parseInt(cache[2]);
@@ -128,6 +127,206 @@ public class Search implements HttpHandler {
 
         public boolean invalidSerialNumber() {
             return getSerial && serialIdNumber.size() == 0;
+        }
+    }
+
+    public static class CourseData {
+        private String departmentName; // Can be null
+        private String serialNumber;
+        private String courseAttributeCode;
+        private String courseSystemNumber;
+        private String courseName;
+        private String courseNote; // Can be null
+        private String courseLimit; // Can be null
+        private String courseType;
+        private Integer forGrade;  // Can be null
+        private String forClass; // Can be null
+        private String group;  // Can be null
+        private String[] instructors; // Can be null
+        private TagData[] tags; // Can be null
+        private Float credits; // Can be null
+        private Boolean required; // Can be null
+        private Integer selected; // Can be null
+        private Integer available; // Can be null
+        private TimeData[] timeList; // Can be null
+        private String moodle; // Can be null
+        private String outline; // Can be null
+        private String btnPreferenceEnter; // Can be null
+        private String btnAddCourse; // Can be null
+        private String btnPreRegister; // Can be null
+        private String btnAddRequest; // Can be null
+
+        private static class TagData {
+            String tag;
+            String url; // Can be null
+            int colorID;
+
+            public TagData(String tag, int colorID, String url) {
+                this.tag = tag;
+                this.url = url;
+                this.colorID = colorID;
+            }
+
+            @Override
+            public String toString() {
+                if (url == null)
+                    return tag + ',' + colorID + ',';
+                return tag + ',' + colorID + ',' + url;
+            }
+        }
+
+        private static class TimeData {
+            Integer dayOfWeak; // Can be null
+            Character section; // Can be null
+            Character sectionTo; // Can be null
+            String mapLocation; // Can be null
+            String mapRoomNo; // Can be null
+            String mapRoomName; // Can be null
+            // Detailed time data
+            String extraTimeDataKey; // Can be null
+
+            public TimeData() {
+                dayOfWeak = null;
+                section = null;
+                sectionTo = null;
+                mapLocation = null;
+                mapRoomNo = null;
+                mapRoomName = null;
+                extraTimeDataKey = null;
+            }
+
+            public boolean isNotEmpty() {
+                return dayOfWeak != null ||
+                        section != null ||
+                        sectionTo != null ||
+                        mapLocation != null ||
+                        mapRoomNo != null ||
+                        mapRoomName != null ||
+                        extraTimeDataKey != null;
+            }
+
+            @Override
+            public String toString() {
+                if (extraTimeDataKey != null) return extraTimeDataKey;
+                StringBuilder builder = new StringBuilder();
+                if (dayOfWeak != null) builder.append(dayOfWeak);
+                builder.append(',');
+                if (section != null) builder.append(section);
+                builder.append(',');
+                if (sectionTo != null) builder.append(sectionTo);
+                builder.append(',');
+                if (mapLocation != null) builder.append(mapLocation);
+                builder.append(',');
+                if (mapRoomNo != null) builder.append(mapRoomNo);
+                builder.append(',');
+                if (mapRoomName != null) builder.append(mapRoomName);
+                return builder.toString();
+            }
+        }
+
+        private JsonArrayBuilder toJsonArray(Object[] array) {
+            if (array == null) return null;
+            JsonArrayBuilder builder = new JsonArrayBuilder();
+            for (Object i : array)
+                builder.append(i.toString());
+            return builder;
+        }
+
+        @Override
+        public String toString() {
+            // output
+            JsonBuilder jsonBuilder = new JsonBuilder();
+            jsonBuilder.append("dn", departmentName);
+            jsonBuilder.append("sn", serialNumber);
+            jsonBuilder.append("ca", courseAttributeCode);
+            jsonBuilder.append("cs", courseSystemNumber);
+            jsonBuilder.append("cn", courseName);
+            jsonBuilder.append("ci", courseNote);
+            jsonBuilder.append("cl", courseLimit);
+            jsonBuilder.append("ct", courseType);
+            if (forGrade == null) jsonBuilder.append("g");
+            else jsonBuilder.append("g", forGrade);
+            jsonBuilder.append("co", forClass);
+            jsonBuilder.append("cg", group);
+            jsonBuilder.append("i", toJsonArray(instructors));
+            jsonBuilder.append("tg", toJsonArray(tags));
+            if (credits == null) jsonBuilder.append("c");
+            else jsonBuilder.append("c", credits);
+            if (required == null) jsonBuilder.append("r");
+            else jsonBuilder.append("r", required);
+            if (selected == null) jsonBuilder.append("s");
+            else jsonBuilder.append("s", selected);
+            if (available == null) jsonBuilder.append("a");
+            else jsonBuilder.append("a", available);
+            jsonBuilder.append("t", toJsonArray(timeList));
+            jsonBuilder.append("m", moodle);
+            jsonBuilder.append("o", outline);
+            jsonBuilder.append("pe", btnPreferenceEnter);
+            jsonBuilder.append("ac", btnAddCourse);
+            jsonBuilder.append("pr", btnPreRegister);
+            jsonBuilder.append("ar", btnAddRequest);
+            return jsonBuilder.toString();
+        }
+
+        public String getSerialNumber() {
+            return serialNumber;
+        }
+
+        public String getCourseName() {
+            return courseName;
+        }
+
+        public Integer getSelected() {
+            return selected;
+        }
+
+        public Integer getAvailable() {
+            return available;
+        }
+    }
+
+    public static class SaveQueryToken {
+        private final String host, search;
+        private final CookieStore cookieStore;
+
+        public SaveQueryToken(String host, String search, CookieStore cookieStore) {
+            this.host = host;
+            this.search = search;
+            this.cookieStore = cookieStore;
+        }
+    }
+
+    public static class AllDeptData {
+        private final String crypt;
+        private final Set<String> allDept;
+        private final int deptCount;
+        private final CookieStore cookieStore;
+
+        public AllDeptData(String crypt, Set<String> allDept, CookieStore cookieStore) {
+            this.crypt = crypt;
+            this.allDept = allDept;
+            this.deptCount = allDept.size();
+            this.cookieStore = cookieStore;
+        }
+    }
+
+    public static class DeptToken {
+        private final String error;
+        private final String id;
+        private final CookieStore cookieStore;
+
+        private DeptToken(String error, String id, CookieStore cookieStore) {
+            this.error = error;
+            this.id = id;
+            this.cookieStore = cookieStore;
+        }
+
+        public String getID() {
+            return id;
+        }
+
+        public String getError() {
+            return error;
         }
     }
 
@@ -187,6 +386,7 @@ public class Search implements HttpHandler {
                 response.flush();
                 req.close();
             } catch (IOException e) {
+                e.printStackTrace();
                 req.close();
             }
             Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
@@ -195,49 +395,50 @@ public class Search implements HttpHandler {
 
     private boolean search(SearchQuery searchQuery, JsonBuilder outData, CookieStore cookieStore) {
         try {
-            StringBuilder searchResult = new StringBuilder();
+            List<CourseData> courseDataList = new ArrayList<>();
+
             boolean success = true;
             // get all course
             if (searchQuery.getAll) {
-                Connection.Response allDeptRes = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
-                        .cookieStore(cookieStore)
-                        .execute();
-                String allDeptBody = allDeptRes.body();
-                cosPreCheck(allDeptBody, cookieStore, outData);
-
-                List<String> allDeptList = new ArrayList<>();
-                for (Element element : allDeptRes.parse().getElementsByClass("pnl_dept"))
-                    allDeptList.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
-                String[] allDept = allDeptList.toArray(new String[0]);
-
-                int cryptStart, cryptEnd;
-                if ((cryptStart = allDeptBody.indexOf("'crypt'")) == -1 ||
-                        (cryptStart = allDeptBody.indexOf('\'', cryptStart + 7)) == -1 ||
-                        (cryptEnd = allDeptBody.indexOf('\'', ++cryptStart)) == -1
-                ) {
+                AllDeptData allDeptData = getAllDeptData(cookieStore);
+                if (allDeptData == null) {
                     outData.append("err", TAG + "Can not get crypt");
                     success = false;
                 }
                 // start getting dept
                 else {
-                    String crypt = allDeptBody.substring(cryptStart, cryptEnd);
-                    CountDownLatch countDownLatch = new CountDownLatch(allDept.length);
-                    ExecutorService fetchPool = Executors.newFixedThreadPool(4);
+                    CountDownLatch countDownLatch = new CountDownLatch(allDeptData.deptCount);
+                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+                    Semaphore fetchPoolLock = new Semaphore(2);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
                     ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
                     Logger.addProgressBar(progressBar);
                     progressBar.setProgress(0f);
-                    int[] j = {0};
-                    for (String dept : allDept) {
+                    for (String dept : allDeptData.allDept) {
+                        fetchPoolLock.acquire();
+                        // If one failed, stop all
+                        if (!allSuccess.get()) {
+                            while (countDownLatch.getCount() > 0)
+                                countDownLatch.countDown();
+                            break;
+                        }
                         fetchPool.submit(() -> {
-                            if (allSuccess.get() && !getDept(dept, crypt, cookieStore, outData, searchResult))
-                                allSuccess.set(false);
-                            progressBar.setProgress((float) ++j[0] / allDept.length * 100f);
+                            try {
+                                long start = System.currentTimeMillis();
+                                if (allSuccess.get() && !getDeptCourseData(dept, allDeptData, outData, courseDataList))
+                                    allSuccess.set(false);
+                                Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            fetchPoolLock.release();
                             countDownLatch.countDown();
+                            progressBar.setProgress((float) (allDeptData.deptCount - countDownLatch.getCount()) / allDeptData.deptCount * 100f);
                         });
-                        Thread.sleep(500);
                     }
                     countDownLatch.await();
+                    fetchPool.shutdown();
+                    fetchPool.awaitTermination(10, TimeUnit.SECONDS);
                     progressBar.setProgress(100f);
                     Logger.removeProgressBar(progressBar);
                     success = allSuccess.get();
@@ -245,29 +446,21 @@ public class Search implements HttpHandler {
             }
             // get listed serial
             else if (searchQuery.getSerial) {
+                JsonBuilder result = new JsonBuilder();
                 for (Map.Entry<String, String> i : searchQuery.serialIdNumber.entrySet()) {
-                    searchResult.setLength(0);
-                    if (!postSearchData(searchQuery, i, cookieStore, outData, searchResult)) {
+                    courseDataList.clear();
+                    if (!getQueryCourseData(searchQuery, i, cookieStore, outData, courseDataList)) {
                         success = false;
                         break;
                     }
-                    if (searchResult.length() > 0) searchResult.setCharAt(0, '[');
-                    else searchResult.append('[');
-                    searchResult.append(']');
-                    outData.append(i.getKey(), searchResult.toString(), true);
+                    result.appendRaw(i.getKey(), courseDataList.toString());
                 }
-            } else {
-                success = postSearchData(searchQuery, null, cookieStore, outData, searchResult);
-            }
+                outData.appendRaw("data", result.toString());
+            } else
+                success = getQueryCourseData(searchQuery, null, cookieStore, outData, courseDataList);
 
-            if (success && !searchQuery.getSerial) {
-                if (searchResult.length() > 0)
-                    searchResult.setCharAt(0, '[');
-                else
-                    searchResult.append('[');
-                searchResult.append(']');
-                outData.append("data", searchResult.toString(), true);
-            }
+            if (success && !searchQuery.getSerial)
+                outData.appendRaw("data", courseDataList.toString());
             return success;
         } catch (Exception e) {
             outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
@@ -276,130 +469,290 @@ public class Search implements HttpHandler {
         return false;
     }
 
-    private boolean getDept(String deptNo, String crypt, CookieStore cookieStore, JsonBuilder outData, StringBuilder searchResultBuilder) {
+    public AllDeptData getAllDeptData(CookieStore cookieStore) throws IOException {
+        Connection.Response allDeptRes = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
+                .cookieStore(cookieStore)
+                .execute();
+        String allDeptBody = allDeptRes.body();
+        cosPreCheck(allDeptBody, cookieStore, null);
+
+        Set<String> allDept = new HashSet<>();
+        for (Element element : allDeptRes.parse().getElementsByClass("pnl_dept"))
+            allDept.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
+
+        int cryptStart, cryptEnd;
+        if ((cryptStart = allDeptBody.indexOf("'crypt'")) == -1 ||
+                (cryptStart = allDeptBody.indexOf('\'', cryptStart + 7)) == -1 ||
+                (cryptEnd = allDeptBody.indexOf('\'', ++cryptStart)) == -1
+        )
+            return null;
+        return new AllDeptData(allDeptBody.substring(cryptStart, cryptEnd), allDept, cookieStore);
+    }
+
+    public DeptToken getDeptToken(String deptNo, AllDeptData allDeptData) throws IOException {
+//        Connection.Response id = null;
+//        final int retryCount = 10;
+//        for (int i = 0; i < retryCount; i++) {
+////            Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + deptNo + ", " + i);
+//            try {
+//                id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
+//                        .cookieStore(allDeptData.cookieStore)
+//                        .ignoreContentType(true)
+//                        .method(Connection.Method.POST)
+//                        .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(allDeptData.crypt, "UTF-8"))
+//                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+//                        .header("X-Requested-With", "XMLHttpRequest")
+//                        .timeout(5000)
+//                        .execute();
+//                break;
+//            } catch (UnsupportedEncodingException e) {
+//                e.printStackTrace();
+//                return null;
+//            } catch (IOException networkErr) {
+//                if (i == retryCount - 1) {
+//                    Logger.err(TAG, "Get dept " + deptNo + " failed");
+//                    networkErr.printStackTrace();
+//                    return null;
+//                }
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
+////                Logger.warn(TAG, "Get dept " + deptNo + " timeout, retry");
+//            }
+//        }
+
+        Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
+                .cookieStore(allDeptData.cookieStore)
+                .ignoreContentType(true)
+                .method(Connection.Method.POST)
+                .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(allDeptData.crypt, "UTF-8"))
+                .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .execute();
+        JsonObject idData = new JsonObject(id.body());
+        String error = idData.getString("err");
+        return new DeptToken(error.length() > 0 ? error : null, idData.getString("id"), allDeptData.cookieStore);
+    }
+
+    public boolean getDeptCourseData(DeptToken deptToken, List<CourseData> courseDataList) throws IOException {
+        String searchResultBody = getDeptNCKU(deptToken);
+        if (searchResultBody == null)
+            return true;
+
+        Element table = findCourseTable(searchResultBody, null, null);
+        if (table == null)
+            return false;
+
+        parseCourseTable(
+                table,
+                null,
+                searchResultBody,
+                courseDataList
+        );
+        return true;
+    }
+
+    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, JsonBuilder outData, List<CourseData> courseDataList) throws IOException {
+        DeptToken deptToken = getDeptToken(deptNo, allDeptData);
+        if (deptToken == null) {
+            outData.append("err", TAG + "Network error");
+            return false;
+        }
+        if (deptToken.error != null) {
+            outData.append("err", TAG + "Error from NCKU course: " + deptToken.error);
+            return false;
+        }
+
+        String searchResultBody = getDeptNCKU(deptToken);
+        if (searchResultBody == null) {
+            outData.append("warn", TAG + "Dept.No " + deptNo + " not found");
+            return true;
+        }
+
+        Element table = findCourseTable(searchResultBody, "Dept.No " + deptNo, outData);
+        if (table == null)
+            return false;
+
+        parseCourseTable(
+                table,
+                null,
+                searchResultBody,
+                courseDataList
+        );
+        return true;
+    }
+
+    private String getDeptNCKU(DeptToken deptToken) throws IOException {
+        Connection.Response result = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" +
+                        URLEncoder.encode(deptToken.id, "UTF-8"))
+                .cookieStore(deptToken.cookieStore)
+                .ignoreContentType(true)
+                .header("Referer", courseNckuOrg + "/index.php?c=qry_all")
+                .maxBodySize(20 * 1024 * 1024)
+                .execute();
+        if (result.url().getQuery().equals("c=qry_all"))
+            return null;
+        String searchResultBody = result.body();
+//            cosPreCheck(searchResultBody, deptToken.cookieStore, null);
+//            Logger.log(TAG, deptToken.cookieStore.getCookies().toString());
+
+        pool.submit(() -> cosPreCheck(searchResultBody, deptToken.cookieStore, null));
+        return searchResultBody;
+    }
+
+    private boolean getQueryCourseData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
+                                       CookieStore cookieStore, JsonBuilder outData, List<CourseData> courseDataList) throws IOException {
+        // If getSerialNum is given, set query dept to get courses
+        if (getSerialNum != null)
+            searchQuery.deptNo = getSerialNum.getKey();
+
+        SaveQueryToken saveQueryToken = getSaveQueryToken(searchQuery, cookieStore, outData);
+        if (saveQueryToken == null) {
+            outData.append("err", TAG + "Failed to save query");
+            return false;
+        }
+
+        String searchResultBody = getCourseNCKU(saveQueryToken);
+
+        if ((searchQuery.searchID = getSearchID(searchResultBody, outData)) == null)
+            return false;
+
+        Element table = findCourseTable(searchResultBody, "Query " + searchQuery, outData);
+        if (table == null)
+            return false;
+
+        parseCourseTable(
+                table,
+                getSerialNum == null ? null : new HashSet<>(Arrays.asList(getSerialNum.getValue().split(","))),
+                searchResultBody,
+                courseDataList
+        );
+
+        return true;
+    }
+
+    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList) throws IOException {
+        String searchResultBody = getCourseNCKU(saveQueryToken);
+
+        if ((searchQuery.searchID = getSearchID(searchResultBody, null)) == null)
+            return false;
+
+        Element table = findCourseTable(searchResultBody, "Query " + searchQuery, null);
+        if (table == null)
+            return false;
+
+        parseCourseTable(
+                table,
+                null,
+                searchResultBody,
+                courseDataList
+        );
+
+        return true;
+    }
+
+    public SaveQueryToken getSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, JsonBuilder outData) {
         try {
-            Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
+            StringBuilder postData = new StringBuilder();
+            String host;
+            if (searchQuery.getTime) {
+                host = courseQueryNckuOrg;
+                postData.append("id=").append(URLEncoder.encode(searchQuery.timeSearchID, "UTF-8"));
+            } else {
+                host = courseNckuOrg;
+                // Get searchID if it's null
+                if (searchQuery.searchID == null) {
+                    final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                            .cookieStore(cookieStore)
+                            .ignoreContentType(true)
+                            .execute().body();
+                    cosPreCheck(body, cookieStore, outData);
+                    if ((searchQuery.searchID = getSearchID(body, outData)) == null)
+                        return null;
+                }
+                postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+                if (searchQuery.courseName != null)
+                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+                if (searchQuery.teacherName != null)
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.teacherName, "UTF-8"));
+                if (searchQuery.wk != null) postData.append("&wk=").append(searchQuery.wk);
+                if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
+                if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
+                if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
+            }
+
+//            Logger.log(TAG, TAG + "Post search query");
+            Connection.Response search = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .method(Connection.Method.POST)
-                    .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(crypt, "UTF-8"))
+                    .requestBody(postData.toString())
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
-                    .timeout(60 * 1000)
                     .execute();
-
-            JsonObject idData = new JsonObject(id.body());
-            if (idData.getString("err").length() > 0) {
-                outData.append("err", TAG + "Error from NCKU course: " + idData.getString("err"));
-                return false;
+            String searchBody = search.body();
+            if (searchBody.equals("0")) {
+                if (outData != null)
+                    outData.append("err", TAG + "Condition not set");
+                return null;
             }
-
-            Connection.Response result = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" +
-                            URLEncoder.encode(idData.getString("id"), "UTF-8"))
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .maxBodySize(20 * 1024 * 1024)
-                    .timeout(60 * 1000)
-                    .header("Referer", courseNckuOrg + "/index.php?c=qry_all")
-                    .execute();
-            if (result.url().getQuery().equals("c=qry_all")) {
-                outData.append("warn", TAG + "Dept.No " + deptNo + " not found");
-                return true;
+            if (searchBody.equals("1")) {
+                if (outData != null)
+                    outData.append("err", TAG + "Wrong condition format");
+                return null;
             }
-
-            String searchResultBody = result.body();
-            cosPreCheck(searchResultBody, cookieStore, outData);
-
-            int resultTableStart;
-            if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
-                outData.append("err", TAG + "Dept.No " + deptNo + ", result table not found");
-                return false;
-            }
-            // get table body
-            int resultTableBodyStart, resultTableBodyEnd;
-            if ((resultTableBodyStart = searchResultBody.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
-                    (resultTableBodyEnd = searchResultBody.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
-            ) {
-                outData.append("err", TAG + "Dept.No " + deptNo + ", result table body not found");
-                return false;
-            }
-
-            // parse table
-            String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
-            Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
-
-            parseCourseTable(
-                    (Element) tbody,
-                    null,
-                    searchResultBody,
-                    searchResultBuilder
-            );
-
-            return true;
+            return new SaveQueryToken(host, searchBody, cookieStore);
+        } catch (UnsupportedEncodingException encodingException) {
+            encodingException.printStackTrace();
+            if (outData != null)
+                outData.append("err", TAG + "Unsupported encoding");
         } catch (IOException e) {
-            outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
+            if (outData != null)
+                outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
         }
-        return false;
+        return null;
     }
 
-    private boolean postSearchData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
-                                   CookieStore cookieStore, JsonBuilder outData, StringBuilder searchResultBuilder) {
-        try {
-            // setup
-            if (searchQuery.searchID == null) {
-//                Logger.log(TAG, TAG + "Get searchID");
-                final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
-                        .cookieStore(cookieStore)
-                        .ignoreContentType(true)
-                        .execute().body();
-                cosPreCheck(body, cookieStore, outData);
-                if ((searchQuery.searchID = getSearchID(body, outData)) == null)
-                    return false;
-            }
+    private String getCourseNCKU(SaveQueryToken saveQueryToken) throws IOException {
+//            Logger.log(TAG, TAG + "Get search result");
+        Connection.Response searchResult = HttpConnection.connect(saveQueryToken.host + "/index.php?c=qry11215" + saveQueryToken.search)
+                .cookieStore(saveQueryToken.cookieStore)
+                .ignoreContentType(true)
+                .maxBodySize(20 * 1024 * 1024)
+                .execute();
 
-            String searchResultBody = postCourseNCKU(searchQuery, getSerialNum == null ? null : getSerialNum.getKey(), cookieStore, outData);
-            if (searchResultBody == null)
-                return false;
+        String searchResultBody = searchResult.body();
+        pool.submit(() -> cosPreCheck(searchResultBody, saveQueryToken.cookieStore, null));
+        return searchResultBody;
+    }
 
-            if ((searchQuery.searchID = getSearchID(searchResultBody, outData)) == null)
-                return false;
+    private Element findCourseTable(String html, String errorMessage, JsonBuilder outData) {
+        int resultTableStart;
+        if ((resultTableStart = html.indexOf("<table")) == -1) {
+            if (outData != null)
+                outData.append("err", TAG + errorMessage + " result table not found");
+            return null;
+        }
+        // get table body
+        int resultTableBodyStart, resultTableBodyEnd;
+        if ((resultTableBodyStart = html.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
+                (resultTableBodyEnd = html.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
+        ) {
+            if (outData != null)
+                outData.append("err", TAG + errorMessage + " result table body not found");
+            return null;
+        }
 
-            int resultTableStart;
-            if ((resultTableStart = searchResultBody.indexOf("<table")) == -1) {
-                outData.append("err", TAG + "Result table not found");
-                return false;
-            }
-            // get table body
-            int resultTableBodyStart, resultTableBodyEnd;
-            if ((resultTableBodyStart = searchResultBody.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
-                    (resultTableBodyEnd = searchResultBody.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
-            ) {
-                outData.append("err", TAG + "Result table body not found");
-                return false;
-            }
-
-            // parse table
+        // parse table
 //            Logger.log(TAG, TAG + "Parse course table");
-            String resultBody = searchResultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
-            Node tbody = Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
-
-            parseCourseTable(
-                    (Element) tbody,
-                    getSerialNum == null ? null : getSerialNum.getValue().split(","),
-                    searchResultBody,
-                    searchResultBuilder
-            );
-
-            return true;
-        } catch (IOException e) {
-            outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
-        }
-        return false;
+        String resultBody = html.substring(resultTableBodyStart, resultTableBodyEnd + 8);
+        return (Element) Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
     }
 
-    private void parseCourseTable(Element tbody, String[] getSerialNumber, String searchResultBody, StringBuilder result) {
+    private void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, List<CourseData> courseDataList) {
         // find style
         List<String> styleList = new ArrayList<>();
         int styleStart, styleEnd = 0;
@@ -427,86 +780,95 @@ public class Search implements HttpHandler {
         for (Element element : courseList) {
             Elements section = element.getElementsByTag("td");
 
-            String departmentName = section.get(0).ownText();
-
             List<Node> section1 = section.get(1).childNodes();
             // get serial number
             String serialNumber = ((Element) section1.get(0)).text().trim();
             if (getSerialNumber != null) {
                 String serialNumberStr = serialNumber.substring(serialNumber.indexOf('-') + 1);
-                boolean notContains = true;
-                for (String s : getSerialNumber)
-                    if (s.equals(serialNumberStr)) {
-                        notContains = false;
-                        break;
+                // Skip if we don't want
+                if (!getSerialNumber.contains(serialNumberStr))
+                    continue;
+            }
+
+            CourseData courseData = new CourseData();
+
+            // Get department name
+            courseData.departmentName = section.get(0).ownText();
+            if (courseData.departmentName.length() == 0) courseData.departmentName = null;
+
+            // Get serial number
+            courseData.serialNumber = serialNumber.length() == 0 ? null : serialNumber;
+
+            // Get system number
+            courseData.courseSystemNumber = ((TextNode) section1.get(1)).text().trim();
+
+            // Get attribute code
+            String courseAttributeCode = ((TextNode) section1.get(3)).text().trim();
+            if (courseAttributeCode.length() > 0) {
+                int courseAttributeCodeStart, courseAttributeCodeEnd;
+                if ((courseAttributeCodeStart = courseAttributeCode.indexOf('[')) != -1 &&
+                        (courseAttributeCodeEnd = courseAttributeCode.lastIndexOf(']')) != -1)
+                    courseData.courseAttributeCode = courseAttributeCode.substring(courseAttributeCodeStart + 1, courseAttributeCodeEnd);
+                else
+                    courseData.courseAttributeCode = courseAttributeCode;
+            } else
+                Logger.log(TAG, "AttributeCode not found");
+
+            // Get course name
+            courseData.courseName = section.get(4).getElementsByClass("course_name").get(0).text();
+
+            // Get course note
+            courseData.courseNote = section.get(4).ownText().trim().replace("\"", "\\\"");
+            if (courseData.courseNote.length() == 0) courseData.courseNote = null;
+
+            // Get course limit
+            courseData.courseLimit = section.get(4).getElementsByClass("cond").text().trim().replace("\"", "\\\"");
+            if (courseData.courseLimit.length() == 0) courseData.courseLimit = null;
+
+            // Get course type
+            courseData.courseType = section.get(3).text();
+
+            // Get instructor name
+            String instructors = section.get(6).text();
+            if (instructors.length() > 0 && !instructors.equals("未定")) {
+                instructors = instructors.replace("*", "");
+                courseData.instructors = instructors.split(" ");
+                // Add urSchool cache
+                if (urSchool != null)
+                    urSchool.addInstructorCache(courseData.instructors);
+            } else courseData.instructors = null;
+
+            // Get course tags
+            Elements tagElements = section.get(4).getElementsByClass("label");
+            if (tagElements.size() > 0) {
+                CourseData.TagData[] tags = new CourseData.TagData[tagElements.size()];
+                for (int i = 0; i < tags.length; i++) {
+                    Element tagElement = tagElements.get(i);
+                    // Get tag Color
+                    String tagType = null;
+                    for (String j : tagElement.classNames())
+                        if (j.length() > 6 && j.startsWith("label")) {
+                            tagType = j.substring(6);
+                            break;
+                        }
+                    Integer tagColor = tagColormap.get(tagType);
+                    if (tagColor == null) {
+                        Logger.log(TAG, "Unknown tag color: " + tagType);
+                        tagColor = -1;
                     }
-                // skip if we don't want
-                if (notContains) continue;
-            }
 
-            // get system number
-            String systemNumber = ((TextNode) section1.get(1)).text().trim();
+                    Element j = tagElement.firstElementChild();
+                    String link = j == null ? null : j.attr("href");
 
-            // get attribute code
-            String attributeCode = ((TextNode) section1.get(3)).text().trim();
-            int end = attributeCode.lastIndexOf(']');
-            if (end != -1) attributeCode = attributeCode.substring(attributeCode.indexOf('[') + 1, end);
+                    tags[i] = new CourseData.TagData(tagElement.text(), tagColor, link);
+                }
+                courseData.tags = tags;
+            } else courseData.tags = null;
 
-            // get course name
-            String courseName = section.get(4).getElementsByClass("course_name").get(0).text();
-
-            // get course note
-            String courseNote = section.get(4).ownText().replace("\"", "\\\"");
-
-            // get course limit
-            String courseLimit = section.get(4).getElementsByClass("cond").text().replace("\"", "\\\"");
-
-            // get course type
-            String courseType = section.get(3).text();
-
-            // get teacher name
-            String teachers = section.get(6).text();
-            if (teachers.length() == 0 || teachers.equals("未定"))
-                teachers = "";
-            else {
-                teachers = teachers.replace("*", "");
-                urSchool.addTeacherCache(teachers.split(" "));
-            }
-
-            // get course tags
-            String tags;
-            StringBuilder tagBuilder = new StringBuilder();
-            for (Element tag : section.get(4).getElementsByClass("label")) {
-                // get tag type
-                String tagType = "";
-                for (String i : tag.classNames())
-                    if (i.length() > 6 && i.startsWith("label")) {
-                        tagType = i.substring(6);
-                        break;
-                    }
-                Element j = tag.firstElementChild();
-                String link = j == null ? "" : j.attr("href");
-                Character tagColor = tagColormap.get(tagType);
-                if (tagColor == null)
-                    Logger.log(TAG, "Unknown tag color: " + tagType);
-
-                // write tag
-                tagBuilder.append(',').append('"')
-                        .append(tag.text()).append(',')
-                        .append(tagColor).append(',')
-                        .append(link)
-                        .append('"');
-            }
-            if (tagBuilder.length() == 0) tags = "[]";
-            else {
-                tagBuilder.setCharAt(0, '[');
-                tags = tagBuilder.append(']').toString();
-            }
-
-            // get grade & classInfo & group
-            int courseGrade = -1;
-            String classInfo = "";
-            String classGroup = "";
+            // Get forGrade & classInfo & group
+            courseData.forGrade = null;
+            courseData.forClass = null;
+            courseData.group = null;
             List<Node> section2 = section.get(2).childNodes();
             int section2c = 0;
             for (Node node : section2) {
@@ -518,33 +880,29 @@ public class Search implements HttpHandler {
                     String cache = ((TextNode) node).text().trim();
                     if (cache.length() == 0) continue;
                     if (section2c == 0)
-                        courseGrade = Integer.parseInt(cache);
+                        courseData.forGrade = Integer.parseInt(cache);
                     else if (section2c == 1)
-                        classInfo = cache;
+                        courseData.forClass = cache;
                     else
-                        classGroup = cache;
+                        courseData.group = cache;
                 }
             }
 
             // get credits & required
             List<TextNode> section5 = section.get(5).textNodes();
-            float credits;
-            boolean required;
             String section5Str;
             if (section5.size() > 0 && (section5Str = section5.get(0).text().trim()).length() > 0) {
-                credits = Float.parseFloat(section5Str);
+                courseData.credits = Float.parseFloat(section5Str);
                 String cache = section5.get(1).text().trim();
-                required = cache.equals("必修") || cache.equals("Required");
+                courseData.required = cache.equals("必修") || cache.equals("Required");
             } else {
-                credits = -1;
-                required = false;
+                courseData.credits = null;
+                courseData.required = null;
             }
 
-            // get time
-            String time;
-            StringBuilder timeSectionBuilder = new StringBuilder();
-            timeSectionBuilder.append('[');
-            StringBuilder builder = new StringBuilder();
+            // Get time list
+            List<CourseData.TimeData> timeDataList = new ArrayList<>();
+            CourseData.TimeData timeDataCache = new CourseData.TimeData();
             int timeParseState = 0;
             for (Node node : section.get(8).childNodes()) {
                 // time
@@ -552,51 +910,68 @@ public class Search implements HttpHandler {
                     timeParseState++;
                     String text;
                     if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
-                        int split = text.indexOf(']', 1);
-                        if (split != -1)
-                            builder.append(text, 1, split).append(',')
-                                    .append(text, split + 1, text.length()).append(',');
+                        // Get dayOfWeak
+                        int dayOfWeakEnd = text.indexOf(']', 1);
+                        if (dayOfWeakEnd != -1) {
+                            timeDataCache.dayOfWeak = Integer.parseInt(text.substring(1, dayOfWeakEnd));
+                            // Get section
+                            if (text.length() > dayOfWeakEnd + 1) {
+                                timeDataCache.section = text.charAt(dayOfWeakEnd + 1);
+                                // Get section end
+                                int split = text.indexOf('~', dayOfWeakEnd + 1);
+                                if (split != -1 && text.length() > split + 1) {
+                                    timeDataCache.sectionTo = text.charAt(split + 1);
+                                }
+                            }
+                            continue;
+                        }
                     }
-                    // if no time
-                    else builder.append(',').append(',');
-                    continue;
                 }
                 if (timeParseState == 1) {
                     timeParseState++;
-                    Attributes attributes = node.attributes();
-                    // location link
+                    // Location link
                     String attribute;
-                    if (attributes.size() > 0 && (attribute = attributes.get("href")).length() > 0) {
-                        String[] j = attribute.substring(17, attribute.length() - 3).split("','");
-                        builder.append(j[0]).append(',').append(j[1]).append(',').append(((Element) node).text().trim());
+                    if ((attribute = node.attr("href")).length() > 0) {
+                        int locEnd = attribute.indexOf('\'', 17);
+                        if (locEnd != -1) {
+                            timeDataCache.mapLocation = attribute.substring(17, locEnd);
+                            int roomNoEnd = attribute.indexOf('\'', locEnd + 3);
+                            if (roomNoEnd != -1)
+                                timeDataCache.mapRoomNo = attribute.substring(locEnd + 3, roomNoEnd);
+                        }
+                        if (node instanceof Element)
+                            timeDataCache.mapRoomName = ((Element) node).text().trim();
                         continue;
                     }
-                    // if no location
-                    else builder.append(',').append(',');
                 }
-                if (timeParseState == 2) {
+                if (timeParseState == 2 && node instanceof Element) {
                     String tagName = ((Element) node).tagName();
                     if (tagName.equals("br")) {
-                        timeSectionBuilder.append('"').append(builder).append('"').append(',');
-                        timeParseState = 0;
-                        builder.setLength(0);
-                    } else if (((Element) node).tagName().equals("div"))
-                        builder.append(',').append(node.attr("data-mkey"));
+                        if (timeDataCache.isNotEmpty()) {
+                            timeDataList.add(timeDataCache);
+                            timeDataCache = new CourseData.TimeData();
+                        }
+                    } else if (((Element) node).tagName().equals("div")) {
+                        // Detailed time data
+                        timeDataCache.extraTimeDataKey = node.attr("data-mkey");
+                        timeDataList.add(timeDataCache);
+                    }
+                    timeParseState = 0;
                 }
             }
-            if (builder.length() > 0) {
-                if (timeParseState != 2)
-                    builder.append(',').append(',');
-                timeSectionBuilder.append('"').append(builder).append('"');
-            }
-            timeSectionBuilder.append(']');
-            time = timeSectionBuilder.toString();
+            if (timeDataCache.isNotEmpty())
+                timeDataList.add(timeDataCache);
 
-            // get selected & available
+            if (timeDataList.size() > 0)
+                courseData.timeList = timeDataList.toArray(new CourseData.TimeData[0]);
+            else
+                courseData.timeList = null;
+
+            // Get selected & available
             String[] count;
             StringBuilder countBuilder = new StringBuilder();
             for (Node n : section.get(7).childNodes()) {
-                // need to check style
+                // Check style
                 if (n instanceof Element) {
                     String nc = ((Element) n).className();
                     boolean display = true;
@@ -610,32 +985,34 @@ public class Search implements HttpHandler {
                     countBuilder.append(((TextNode) n).text());
             }
             count = countBuilder.toString().split("/");
-            int selected = count[0].length() > 0 ? Integer.parseInt(count[0]) : -1;
-            int available = count.length < 2 ? -1 :
+            courseData.selected = count[0].length() == 0 ? null : Integer.parseInt(count[0]);
+            courseData.available = count.length < 2 ? null :
                     (count[1].equals("額滿") || count[1].equals("full")) ? 0 :
-                            (count[1].equals("不限") || count[1].equals("unlimited")) ? -2 :
-                                    (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -3 :
+                            (count[1].equals("不限") || count[1].equals("unlimited")) ? -1 :
+                                    (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -2 :
                                             Integer.parseInt(count[1]);
 
-            // get moodle, outline
-            String moodle = "";
-            String outline = "";
+            // Get moodle, outline
+            courseData.moodle = null;
+            courseData.outline = null;
             Elements linkEle = section.get(9).getElementsByAttribute("href");
             if (linkEle.size() > 0) {
                 for (Element ele : linkEle) {
                     String href = ele.attr("href");
                     if (href.startsWith("javascript"))
                         // moodle link
-                        moodle = href.substring(19, href.length() - 3).replace("','", ",");
-                    else {
+                        courseData.moodle = href.substring(19, href.length() - 3).replace("','", ",");
+                    else
                         // outline link
-                        outline = href.substring(href.indexOf("?") + 1);
-                    }
+                        courseData.outline = href.substring(href.indexOf("?") + 1);
                 }
             }
 
             // Get function buttons
-            String preferenceEnter = null, addCourse = null, preRegister = null, addRequest = null;
+            courseData.btnPreferenceEnter = null;
+            courseData.btnAddCourse = null;
+            courseData.btnPreRegister = null;
+            courseData.btnAddRequest = null;
             for (int i = 10; i < section.size(); i++) {
                 Element button = section.get(i).firstElementChild();
                 if (button == null) continue;
@@ -643,108 +1020,24 @@ public class Search implements HttpHandler {
                 switch (buttonText) {
                     case "PreferenceEnter":
                     case "志願登記":
-                        preferenceEnter = button.attr("data-key");
+                        courseData.btnPreferenceEnter = button.attr("data-key");
                         break;
                     case "AddCourse":
                     case "單科加選":
-                        addCourse = button.attr("data-key");
+                        courseData.btnAddCourse = button.attr("data-key");
                         break;
                     case "Pre-register":
                     case "加入預排":
-                        preRegister = button.attr("data-prekey");
+                        courseData.btnPreRegister = button.attr("data-prekey");
                         break;
                     case "AddRequest":
                     case "加入徵詢":
-                        addRequest = button.attr("data-prekey");
+                        courseData.btnAddRequest = button.attr("data-prekey");
                         break;
                 }
             }
 
-            // output
-            JsonBuilder jsonBuilder = new JsonBuilder();
-            jsonBuilder.append("dn", departmentName);
-            jsonBuilder.append("sn", serialNumber);
-            jsonBuilder.append("ca", attributeCode);
-            jsonBuilder.append("cs", systemNumber);
-            jsonBuilder.append("cn", courseName);
-            jsonBuilder.append("ci", courseNote);
-            jsonBuilder.append("cl", courseLimit);
-            jsonBuilder.append("ct", courseType);
-            jsonBuilder.append("g", courseGrade);
-            jsonBuilder.append("co", classInfo);
-            jsonBuilder.append("cg", classGroup);
-            jsonBuilder.append("ts", teachers);
-            jsonBuilder.append("tg", tags, true);
-            jsonBuilder.append("c", floatFormat.format(credits), true);
-            jsonBuilder.append("r", required);
-            jsonBuilder.append("s", selected);
-            jsonBuilder.append("a", available);
-            jsonBuilder.append("t", time, true);
-            jsonBuilder.append("m", moodle);
-            jsonBuilder.append("o", outline);
-            if (preferenceEnter != null) jsonBuilder.append("pe", preferenceEnter);
-            if (addCourse != null) jsonBuilder.append("ac", addCourse);
-            if (preRegister != null) jsonBuilder.append("pr", preRegister);
-            result.append(',').append(jsonBuilder);
-        }
-    }
-
-    private String postCourseNCKU(SearchQuery searchQuery, String getSerialNum,
-                                  CookieStore cookieStore, JsonBuilder outData) {
-        try {
-            StringBuilder postData = new StringBuilder();
-            String host;
-            if (searchQuery.getTime) {
-                host = courseQueryNckuOrg;
-                postData.append("id=").append(URLEncoder.encode(searchQuery.timeSearchID, "UTF-8"));
-            } else {
-                host = courseNckuOrg;
-                postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
-                if (searchQuery.courseName != null)
-                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.teacherName != null)
-                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.teacherName, "UTF-8"));
-                if (searchQuery.wk != null) postData.append("&wk=").append(searchQuery.wk);
-                if (getSerialNum != null) postData.append("&dept_no=").append(getSerialNum);
-                else if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
-                if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
-                if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
-            }
-
-
-//            Logger.log(TAG, TAG + "Post search query");
-            Connection.Response search = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .method(Connection.Method.POST)
-                    .requestBody(postData.toString())
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .execute();
-            String searchBody = search.body();
-            if (searchBody.equals("0")) {
-                outData.append("err", TAG + "Condition not set");
-                return null;
-            }
-            if (searchBody.equals("1")) {
-                outData.append("err", TAG + "Wrong condition format");
-                return null;
-            }
-
-            // get result
-//            Logger.log(TAG, TAG + "Get search result");
-            Connection.Response searchResult = HttpConnection.connect(host + "/index.php?c=qry11215" + searchBody)
-                    .cookieStore(cookieStore)
-                    .maxBodySize(20 * 1024 * 1024)
-                    .execute();
-
-            String searchResultBody = searchResult.body();
-            cosPreCheck(searchResultBody, cookieStore, outData);
-            return searchResultBody;
-        } catch (IOException e) {
-            e.printStackTrace();
-            outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
-            return null;
+            courseDataList.add(courseData);
         }
     }
 
@@ -752,7 +1045,8 @@ public class Search implements HttpHandler {
         // get entry function
         int searchFunctionStart = body.indexOf("function setdata()");
         if (searchFunctionStart == -1) {
-            outData.append("err", TAG + "Search function not found");
+            if (outData != null)
+                outData.append("err", TAG + "Search function not found");
             return null;
         } else searchFunctionStart += 18;
 
@@ -761,7 +1055,8 @@ public class Search implements HttpHandler {
                 (idStart = body.indexOf('\'', idStart + 4)) == -1 ||
                 (idEnd = body.indexOf('\'', idStart + 1)) == -1
         ) {
-            outData.append("err", TAG + "Search id not found");
+            if (outData != null)
+                outData.append("err", TAG + "Search id not found");
             return null;
         }
         return body.substring(idStart + 1, idEnd);

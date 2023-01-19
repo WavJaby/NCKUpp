@@ -35,10 +35,11 @@ public class Lib {
                     cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
             }
         } else {
-            data.append("warn", TAG + "CosPreCheck key not found");
+            if (data != null)
+                data.append("warn", TAG + "CosPreCheck key not found");
             return;
         }
-//        Logger.log(TAG, "Make CosPreCheck");
+//        Logger.log(TAG, "Make CosPreCheck " + cookieStore.getCookies().toString());
 
         long now = System.currentTimeMillis() / 1000;
         try {

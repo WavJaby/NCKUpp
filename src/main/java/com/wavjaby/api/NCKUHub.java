@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.json.JsonArray;
+import com.wavjaby.json.JsonArrayBuilder;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.logger.Logger;
@@ -25,7 +26,7 @@ import static com.wavjaby.Main.pool;
 public class NCKUHub implements HttpHandler {
     private static final String TAG = "[NCKU Hub] ";
 
-    private JsonObject nckuHubCourseID;
+    private String nckuHubCourseIdJson;
     private final long courseIDUpdateInterval = 5 * 60 * 1000;
     private long lastCourseIDUpdateTime;
 
@@ -53,7 +54,7 @@ public class NCKUHub implements HttpHandler {
                     if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
                         success = updateNckuHubCourseID();
                     if (success)
-                        data.append("data", nckuHubCourseID.toString(), true);
+                        data.appendRaw("data", nckuHubCourseIdJson);
                     else
                         data.append("err", TAG + "Update course id failed");
                 } else {
@@ -90,20 +91,14 @@ public class NCKUHub implements HttpHandler {
         String[] nckuIDs = nckuID.split(",");
 
         try {
-            StringBuilder builder = new StringBuilder();
+            JsonArrayBuilder courses = new JsonArrayBuilder();
             for (String id : nckuIDs) {
                 Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + id)
                         .ignoreContentType(true)
                         .execute();
-                builder.append(',').append(nckuhubCourse.body());
+                courses.appendRaw(nckuhubCourse.body());
             }
-            if (builder.length() > 0)
-                builder.setCharAt(0, '[');
-            else
-                builder.append('[');
-            builder.append(']');
-
-            outData.append("data", builder.toString(), true);
+            outData.append("data", courses);
         } catch (IOException e) {
             outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             return false;
@@ -114,25 +109,26 @@ public class NCKUHub implements HttpHandler {
 
     private boolean updateNckuHubCourseID() {
         try {
-            Logger.log(TAG, "Update course id");
+            Logger.log(TAG, "Updating course id");
             Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/")
                     .ignoreContentType(true)
                     .execute();
             String body = nckuhubCourse.body();
             JsonObject nckuhubResponse = new JsonObject(body);
             JsonArray courseData = nckuhubResponse.getArray("courses");
-            nckuHubCourseID = new JsonObject();
+            JsonObject ids = new JsonObject();
             for (Object i : courseData) {
                 JsonObject each = (JsonObject) i;
                 String deptID = each.getString("系號");
-                JsonObject dept = nckuHubCourseID.getJson(deptID);
+                JsonObject dept = ids.getJson(deptID);
                 if (dept == null)
-                    nckuHubCourseID.put(deptID, dept = new JsonObject());
+                    ids.put(deptID, dept = new JsonObject());
                 dept.put(
                         each.getString("選課序號"),
                         each.getInt("id")
                 );
             }
+            nckuHubCourseIdJson = ids.toString();
             lastCourseIDUpdateTime = System.currentTimeMillis();
             return true;
         } catch (IOException e) {
