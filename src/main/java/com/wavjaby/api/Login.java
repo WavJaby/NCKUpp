@@ -3,6 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -20,47 +21,59 @@ import static com.wavjaby.Lib.*;
 import static com.wavjaby.Main.*;
 
 
-public class Login implements HttpHandler {
+public class Login implements Module {
     private static final String TAG = "[Login] ";
     private static final String loginCheckString = "/index.php?c=auth&m=logout";
 
     @Override
-    public void handle(HttpExchange req) {
-        pool.execute(() -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            CookieStore cookieStore = cookieManager.getCookieStore();
-            Headers requestHeaders = req.getRequestHeaders();
-            String refererUrl = getRefererUrl(requestHeaders);
+    public void start() {
 
-            try {
-                // unpack cookie
-                String loginState = getDefaultLoginCookie(requestHeaders, cookieStore);
+    }
 
-                // login
-                JsonBuilder data = new JsonBuilder();
-                boolean success = login(req, data, cookieStore);
-                data.append("success", success);
+    @Override
+    public void stop() {
 
-                Headers responseHeader = req.getResponseHeaders();
-                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
-                packAuthCookie(responseHeader, refererUrl, cookieStore);
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+    }
 
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                req.close();
-                e.printStackTrace();
-            }
-            Logger.log(TAG, "Login " + (System.currentTimeMillis() - startTime) + "ms");
-        });
+    private final HttpHandler httpHandler = req -> {
+        long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        CookieStore cookieStore = cookieManager.getCookieStore();
+        Headers requestHeaders = req.getRequestHeaders();
+        String refererUrl = getRefererUrl(requestHeaders);
+
+        try {
+            // unpack cookie
+            String loginState = getDefaultLoginCookie(requestHeaders, cookieStore);
+
+            // login
+            JsonBuilder data = new JsonBuilder();
+            boolean success = login(req, data, cookieStore);
+            data.append("success", success);
+
+            Headers responseHeader = req.getResponseHeaders();
+            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            packAuthCookie(responseHeader, refererUrl, cookieStore);
+            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+            // send response
+            setAllowOrigin(requestHeaders, responseHeader);
+            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            req.close();
+            e.printStackTrace();
+        }
+        Logger.log(TAG, "Login " + (System.currentTimeMillis() - startTime) + "ms");
+    };
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 
     private boolean login(HttpExchange req, JsonBuilder outData, CookieStore cookieStore) {

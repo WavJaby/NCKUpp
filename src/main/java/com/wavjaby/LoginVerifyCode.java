@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class VerifyCode {
+public class LoginVerifyCode {
     private final static byte[][][] numbers = {
             // 0
             {

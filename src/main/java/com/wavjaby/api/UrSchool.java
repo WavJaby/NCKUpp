@@ -1,8 +1,8 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayBuilder;
 import com.wavjaby.json.JsonBuilder;
@@ -25,10 +25,10 @@ import java.util.concurrent.*;
 
 import static com.wavjaby.Cookie.getDefaultCookie;
 import static com.wavjaby.Lib.*;
-import static com.wavjaby.Main.pool;
 
-public class UrSchool implements HttpHandler {
+public class UrSchool implements Module {
     private static final String TAG = "[UrSchool] ";
+    private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private static final long updateInterval = 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 5 * 60 * 1000;
 
@@ -38,7 +38,9 @@ public class UrSchool implements HttpHandler {
 
     private final Map<String, Object[]> instructorCache = new HashMap<>();
 
-    public UrSchool() {
+
+    @Override
+    public void start() {
         File file = new File("./urschool.json");
         if (file.exists()) {
             try {
@@ -56,61 +58,72 @@ public class UrSchool implements HttpHandler {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            lastFileUpdateTime = file.lastModified();
         }
-        lastFileUpdateTime = file.lastModified();
-        if (System.currentTimeMillis() - lastFileUpdateTime > updateInterval)
-            updateUrSchoolData();
-        else
+
+        if (updateUrSchoolData())
             Logger.log(TAG, "Up to date");
     }
 
     @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
+    public void stop() {
+        pool.shutdown();
+        try {
+            pool.awaitTermination(1000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Logger.log(TAG, "Stopped");
+    }
 
-            try {
-                JsonBuilder data = new JsonBuilder();
+    private final HttpHandler httpHandler = req -> {
+        long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        Headers requestHeaders = req.getRequestHeaders();
+        getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
-                String queryString = req.getRequestURI().getQuery();
-                boolean success = true;
-                if (queryString == null) {
-                    if (System.currentTimeMillis() - lastFileUpdateTime > updateInterval)
-                        updateUrSchoolData();
-                    data.appendRaw("data", urSchoolDataJson);
-                } else {
-                    Map<String, String> query = parseUrlEncodedForm(queryString);
-                    String instructorID = query.get("id");
-                    String getMode = query.get("mode");
-                    if (instructorID == null || getMode == null) {
-                        if (instructorID == null)
-                            data.append("err", TAG + "Query id not found");
-                        if (getMode == null)
-                            data.append("err", TAG + "Query mode not found");
-                    } else
-                        success = getInstructorInfo(instructorID, getMode, data);
-                }
-                data.append("success", success);
+        try {
+            JsonBuilder data = new JsonBuilder();
 
-                Headers responseHeader = req.getResponseHeaders();
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                req.close();
+            String queryString = req.getRequestURI().getQuery();
+            boolean success = true;
+            if (queryString == null) {
+                updateUrSchoolData();
+                data.appendRaw("data", urSchoolDataJson);
+            } else {
+                Map<String, String> query = parseUrlEncodedForm(queryString);
+                String instructorID = query.get("id");
+                String getMode = query.get("mode");
+                if (instructorID == null || getMode == null) {
+                    if (instructorID == null)
+                        data.append("err", TAG + "Query id not found");
+                    if (getMode == null)
+                        data.append("err", TAG + "Query mode not found");
+                } else
+                    success = getInstructorInfo(instructorID, getMode, data);
             }
-            Logger.log(TAG, "Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
-        });
+            data.append("success", success);
+
+            Headers responseHeader = req.getResponseHeaders();
+            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+            // send response
+            setAllowOrigin(requestHeaders, responseHeader);
+            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            req.close();
+        }
+        Logger.log(TAG, "Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
+    };
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 
     private boolean getInstructorInfo(String id, String mode, JsonBuilder outData) {
@@ -296,16 +309,18 @@ public class UrSchool implements HttpHandler {
 //            Logger.log(TAG, id + " done");
             return true;
         } catch (Exception e) {
-            if (outData != null) outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            if (outData != null)
+                outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            e.printStackTrace();
             return false;
         }
     }
 
-    private void updateUrSchoolData() {
+    private synchronized boolean updateUrSchoolData() {
+        final long start = System.currentTimeMillis();
+        if (start - lastFileUpdateTime <= updateInterval) return true;
+        lastFileUpdateTime = start;
         pool.submit(() -> {
-            long start = System.currentTimeMillis();
-            lastFileUpdateTime = start;
-
             int[] maxPage = new int[1];
             StringBuilder result = new StringBuilder();
 
@@ -320,23 +335,31 @@ public class UrSchool implements HttpHandler {
             result.append(firstPage);
 
             // Get the rest of the page
-            ThreadPoolExecutor readPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(16);
-            CountDownLatch count = new CountDownLatch(maxPage[0] - 1);
+            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(16);
+            Semaphore fetchPoolLock = new Semaphore(16);
+            CountDownLatch fetchLeft = new CountDownLatch(maxPage[0] - 1);
             for (int i = 1; i < maxPage[0]; i++) {
+                try {
+                    fetchPoolLock.acquire();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 int finalI = i + 1;
-                readPool.submit(() -> {
+                fetchPool.submit(() -> {
                     String page = fetchUrSchoolData(finalI, null);
                     synchronized (result) {
                         result.append(page);
                     }
-                    progressBar.setProgress(((float) (maxPage[0] - count.getCount() + 1) / maxPage[0]) * 100);
-                    count.countDown();
+                    fetchPoolLock.release();
+                    fetchLeft.countDown();
+                    progressBar.setProgress(((float) (maxPage[0] - fetchLeft.getCount() + 1) / maxPage[0]) * 100);
                 });
             }
             // Wait result
             try {
-                count.await();
-                readPool.awaitTermination(100, TimeUnit.MILLISECONDS);
+                fetchLeft.await();
+                fetchPool.shutdown();
+                fetchPool.awaitTermination(100, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 return;
@@ -360,6 +383,7 @@ public class UrSchool implements HttpHandler {
 
             Logger.log(TAG, "Used " + (System.currentTimeMillis() - start) + "ms");
         });
+        return false;
     }
 
     private List<String[]> fetchFreeProxy() {
@@ -400,16 +424,15 @@ public class UrSchool implements HttpHandler {
 
     private String fetchUrSchoolData(int page, int[] maxPage) {
         try {
+            Connection pageFetch = HttpConnection.connect("https://urschool.org/ncku/list?page=" + page)
+                    .ignoreContentType(true)
+                    .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .timeout(15 * 1000);
             String resultBody;
             while (true) {
                 try {
-                    Connection.Response result = HttpConnection.connect("https://urschool.org/ncku/list?page=" + page)
-                            .ignoreContentType(true)
-                            .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
-                            .header("X-Requested-With", "XMLHttpRequest")
-                            .timeout(15 * 1000)
-                            .execute();
-                    resultBody = result.body();
+                    resultBody = pageFetch.execute().body();
                     break;
                 } catch (Exception ignore) {
                 }

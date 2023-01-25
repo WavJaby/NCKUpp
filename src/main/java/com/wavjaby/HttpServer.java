@@ -3,6 +3,7 @@ package com.wavjaby;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
+import com.sun.net.httpserver.HttpsServer;
 import com.wavjaby.logger.Logger;
 
 import javax.net.ssl.*;
@@ -14,14 +15,13 @@ import java.nio.file.Files;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.util.Properties;
+import java.util.concurrent.Executors;
 
 public class HttpServer {
     private static final String TAG = "[HttpServer] ";
     private static final int defaultPort = 443;
-    private com.sun.net.httpserver.HttpsServer httpsServer;
     private com.sun.net.httpserver.HttpServer httpServer;
 
-    private int protocol = -1;
     public boolean Opened = false;
     public boolean Error = false;
     public int port;
@@ -72,7 +72,6 @@ public class HttpServer {
             Logger.warn(TAG, "Server already opened");
             return false;
         }
-        protocol = 0;
         SSLContext sslContext;
         try {
             Properties prop = new Properties();
@@ -125,7 +124,7 @@ public class HttpServer {
             tmf.init(keystore);
 
             // create https server
-            httpsServer = com.sun.net.httpserver.HttpsServer.create(
+            httpServer = com.sun.net.httpserver.HttpsServer.create(
                     new InetSocketAddress(hostname, port), 0);
             // create ssl context
             sslContext = SSLContext.getInstance("TLSv1");
@@ -136,7 +135,7 @@ public class HttpServer {
             e.printStackTrace();
             return false;
         }
-        httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+        ((HttpsServer) httpServer).setHttpsConfigurator(new HttpsConfigurator(sslContext) {
             public void configure(HttpsParameters params) {
                 try {
                     // Initialise the SSL context
@@ -164,7 +163,6 @@ public class HttpServer {
             Logger.warn(TAG, "Server already opened");
             return false;
         }
-        protocol = 1;
         try {
             httpServer = com.sun.net.httpserver.HttpServer.create(
                     new InetSocketAddress(hostname, port), 0
@@ -177,19 +175,11 @@ public class HttpServer {
     }
 
     public void start() {
-        if (protocol == 0) {
-            httpsServer.setExecutor(null); // creates a default executor
-            httpsServer.start();
-        } else if (protocol == 1) {
-            httpServer.setExecutor(null); // creates a default executor
-            httpServer.start();
-        }
+        httpServer.setExecutor(Executors.newCachedThreadPool());
+        httpServer.start();
     }
 
     public void createContext(String path, HttpHandler handler) {
-        if (protocol == 0)
-            httpsServer.createContext(path, handler);
-        else if (protocol == 1)
-            httpServer.createContext(path, handler);
+        httpServer.createContext(path, handler);
     }
 }

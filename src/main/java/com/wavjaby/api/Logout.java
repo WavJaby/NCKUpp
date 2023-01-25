@@ -1,8 +1,8 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -19,50 +19,62 @@ import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
-import static com.wavjaby.Main.pool;
 
-public class Logout implements HttpHandler {
+public class Logout implements Module {
     private static final String TAG = "[Logout] ";
 
+
     @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            CookieStore cookieStore = cookieManager.getCookieStore();
-            Headers requestHeaders = req.getRequestHeaders();
-            String refererUrl = getRefererUrl(requestHeaders);
+    public void start() {
 
-            try {
-                // unpack cookie
-                String loginState = getDefaultCookie(requestHeaders, cookieStore);
+    }
 
-                // login
-                JsonBuilder data = new JsonBuilder();
-                boolean success = logout(data, cookieStore);
-                data.append("success", success);
+    @Override
+    public void stop() {
 
-                Headers responseHeader = req.getResponseHeaders();
-                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
-                responseHeader.add("Set-Cookie",
-                        removeCookie("authData") + "; Path=/api/login" + getCookieInfoData(refererUrl));
+    }
 
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+    private final HttpHandler httpHandler = req -> {
+        long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        CookieStore cookieStore = cookieManager.getCookieStore();
+        Headers requestHeaders = req.getRequestHeaders();
+        String refererUrl = getRefererUrl(requestHeaders);
 
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                req.close();
-                e.printStackTrace();
-            }
-            Logger.log(TAG, "Logout " + (System.currentTimeMillis() - startTime) + "ms");
-        });
+        try {
+            // unpack cookie
+            String loginState = getDefaultCookie(requestHeaders, cookieStore);
+
+            // login
+            JsonBuilder data = new JsonBuilder();
+            boolean success = logout(data, cookieStore);
+            data.append("success", success);
+
+            Headers responseHeader = req.getResponseHeaders();
+            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            responseHeader.add("Set-Cookie",
+                    removeCookie("authData") + "; Path=/api/login" + getCookieInfoData(refererUrl));
+
+            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+            // send response
+            setAllowOrigin(requestHeaders, responseHeader);
+            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            req.close();
+            e.printStackTrace();
+        }
+        Logger.log(TAG, "Logout " + (System.currentTimeMillis() - startTime) + "ms");
+    };
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 
     private boolean logout(JsonBuilder outData, CookieStore cookieStore) {

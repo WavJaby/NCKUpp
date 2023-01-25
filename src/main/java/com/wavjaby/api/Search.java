@@ -1,8 +1,8 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArrayBuilder;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
@@ -34,8 +34,9 @@ import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
 import static com.wavjaby.Main.*;
 
-public class Search implements HttpHandler {
+public class Search implements Module {
     private static final String TAG = "[Search] ";
+    private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
 
     private static final Map<String, Integer> tagColormap = new HashMap<String, Integer>() {{
@@ -51,6 +52,87 @@ public class Search implements HttpHandler {
 
     public Search(UrSchool urSchool) {
         this.urSchool = urSchool;
+    }
+
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+        pool.shutdown();
+        try {
+            pool.awaitTermination(1000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Logger.log(TAG, "Stopped");
+    }
+
+    private final HttpHandler httpHandler = req -> {
+        long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        CookieStore cookieStore = cookieManager.getCookieStore();
+        Headers requestHeaders = req.getRequestHeaders();
+        String refererUrl = getRefererUrl(requestHeaders);
+
+        try {
+            // unpack cookie
+            String[] cookieIn = requestHeaders.containsKey("Cookie")
+                    ? requestHeaders.get("Cookie").get(0).split(",")
+                    : null;
+            String loginState = unpackLoginStateCookie(cookieIn, cookieStore);
+
+            // search
+            JsonBuilder data = new JsonBuilder();
+            SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getQuery(), cookieIn);
+            boolean success = true;
+            if (searchQuery.invalidSerialNumber()) {
+                data.append("err", TAG + "Invalid serial number");
+                success = false;
+            }
+            if (searchQuery.noQuery()) {
+                data.append("err", TAG + "No query string found");
+                success = false;
+            }
+            if (success)
+                success = search(searchQuery, data, cookieStore);
+            data.append("success", success);
+
+            // set cookie
+            Headers responseHeader = req.getResponseHeaders();
+            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            if (success) {
+                String searchID = (searchQuery.searchID == null ? "" : searchQuery.searchID) +
+                        '|' +
+                        (searchQuery.timeSearchID == null ? "" : searchQuery.timeSearchID);
+                responseHeader.add("Set-Cookie", "searchID=" + searchID +
+                        "; Path=/api/search" + getCookieInfoData(refererUrl));
+            } else
+                responseHeader.add("Set-Cookie", removeCookie("searchID") +
+                        "; Path=/api/search" + getCookieInfoData(refererUrl));
+
+            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+            // send response
+            setAllowOrigin(requestHeaders, responseHeader);
+            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            req.close();
+        }
+        Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
+    };
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 
     public static class SearchQuery {
@@ -328,69 +410,6 @@ public class Search implements HttpHandler {
         public String getError() {
             return error;
         }
-    }
-
-    @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            CookieStore cookieStore = cookieManager.getCookieStore();
-            Headers requestHeaders = req.getRequestHeaders();
-            String refererUrl = getRefererUrl(requestHeaders);
-
-            try {
-                // unpack cookie
-                String[] cookieIn = requestHeaders.containsKey("Cookie")
-                        ? requestHeaders.get("Cookie").get(0).split(",")
-                        : null;
-                String loginState = unpackLoginStateCookie(cookieIn, cookieStore);
-
-                // search
-                JsonBuilder data = new JsonBuilder();
-                SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getQuery(), cookieIn);
-                boolean success = true;
-                if (searchQuery.invalidSerialNumber()) {
-                    data.append("err", TAG + "Invalid serial number");
-                    success = false;
-                }
-                if (searchQuery.noQuery()) {
-                    data.append("err", TAG + "No query string found");
-                    success = false;
-                }
-                if (success)
-                    success = search(searchQuery, data, cookieStore);
-                data.append("success", success);
-
-                // set cookie
-                Headers responseHeader = req.getResponseHeaders();
-                packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
-                if (success) {
-                    String searchID = (searchQuery.searchID == null ? "" : searchQuery.searchID) +
-                            '|' +
-                            (searchQuery.timeSearchID == null ? "" : searchQuery.timeSearchID);
-                    responseHeader.add("Set-Cookie", "searchID=" + searchID +
-                            "; Path=/api/search" + getCookieInfoData(refererUrl));
-                } else
-                    responseHeader.add("Set-Cookie", removeCookie("searchID") +
-                            "; Path=/api/search" + getCookieInfoData(refererUrl));
-
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                req.close();
-            }
-            Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
-        });
     }
 
     private boolean search(SearchQuery searchQuery, JsonBuilder outData, CookieStore cookieStore) {

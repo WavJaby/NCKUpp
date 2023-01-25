@@ -1,8 +1,8 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayBuilder;
 import com.wavjaby.json.JsonBuilder;
@@ -21,64 +21,71 @@ import java.util.Map;
 import static com.wavjaby.Cookie.getDefaultCookie;
 import static com.wavjaby.Lib.parseUrlEncodedForm;
 import static com.wavjaby.Lib.setAllowOrigin;
-import static com.wavjaby.Main.pool;
 
-public class NCKUHub implements HttpHandler {
+public class NCKUHub implements Module {
     private static final String TAG = "[NCKU Hub] ";
 
     private String nckuHubCourseIdJson;
-    private final long courseIDUpdateInterval = 5 * 60 * 1000;
+    private final long courseIDUpdateInterval = 10 * 60 * 1000;
     private long lastCourseIDUpdateTime;
 
-    public NCKUHub() {
+    @Override
+    public void start() {
         updateNckuHubCourseID();
         Logger.log(TAG, "Ready");
     }
 
     @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
+    public void stop() {
+
+    }
+
+    private final HttpHandler httpHandler = req -> {
+        long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        Headers requestHeaders = req.getRequestHeaders();
+        getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
 
-            try {
-                JsonBuilder data = new JsonBuilder();
+        try {
+            JsonBuilder data = new JsonBuilder();
 
-                String queryString = req.getRequestURI().getQuery();
-                boolean success = true;
-                if (queryString == null) {
-                    // get courseID
-                    if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
-                        success = updateNckuHubCourseID();
-                    if (success)
-                        data.appendRaw("data", nckuHubCourseIdJson);
-                    else
-                        data.append("err", TAG + "Update course id failed");
-                } else {
-                    // get course info
-                    success = getNckuHubCourseInfo(queryString, data);
-                }
-                data.append("success", success);
-
-                Headers responseHeader = req.getResponseHeaders();
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                req.close();
+            String queryString = req.getRequestURI().getQuery();
+            boolean success = true;
+            if (queryString == null) {
+                // get courseID
+                if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
+                    success = updateNckuHubCourseID();
+                if (success)
+                    data.appendRaw("data", nckuHubCourseIdJson);
+                else
+                    data.append("err", TAG + "Update course id failed");
+            } else {
+                // get course info
+                success = getNckuHubCourseInfo(queryString, data);
             }
-            Logger.log(TAG, "Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
-        });
+            data.append("success", success);
+
+            Headers responseHeader = req.getResponseHeaders();
+            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+            // send response
+            setAllowOrigin(requestHeaders, responseHeader);
+            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            req.close();
+        }
+        Logger.log(TAG, "Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
+    };
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 
     private boolean getNckuHubCourseInfo(String queryString, JsonBuilder outData) {

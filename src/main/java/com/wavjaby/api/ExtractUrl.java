@@ -1,8 +1,8 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -20,14 +20,22 @@ import static com.wavjaby.Cookie.getDefaultCookie;
 import static com.wavjaby.Lib.parseUrlEncodedForm;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
-import static com.wavjaby.Main.pool;
 
-public class ExtractUrl implements HttpHandler {
+public class ExtractUrl implements Module {
     private static final String TAG = "[Extract] ";
 
+
     @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    private final HttpHandler httpHandler = req -> {
             long startTime = System.currentTimeMillis();
             CookieManager cookieManager = new CookieManager();
             CookieStore cookieStore = cookieManager.getCookieStore();
@@ -65,7 +73,11 @@ public class ExtractUrl implements HttpHandler {
                 e.printStackTrace();
             }
             Logger.log(TAG, "Extract url " + (System.currentTimeMillis() - startTime) + "ms");
-        });
+    };
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 
     private boolean getMoodle(String requestData, CookieStore cookieStore, JsonBuilder data) {

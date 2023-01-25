@@ -1,7 +1,6 @@
 package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.logger.Logger;
 
@@ -12,11 +11,21 @@ import java.nio.file.Files;
 import java.util.Properties;
 
 import static com.wavjaby.Lib.setAllowOrigin;
-import static com.wavjaby.Main.pool;
 
-public class FileHost implements HttpHandler {
+public class FileHost implements Module {
     private static final String TAG = "[FileHost] ";
     private final File fileRoot;
+    private final HttpHandler httpHandler;
+
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+
+    }
 
     public FileHost(Properties serverSettings) {
         String frontendFilePath = serverSettings.getProperty("frontendFilePath");
@@ -27,11 +36,8 @@ public class FileHost implements HttpHandler {
         fileRoot = new File(frontendFilePath);
         if (!fileRoot.exists())
             Logger.err(TAG, "Frontend file path not found");
-    }
 
-    @Override
-    public void handle(HttpExchange req) {
-        pool.submit(() -> {
+        httpHandler = req -> {
             String path = req.getRequestURI().getPath();
             Headers responseHeader = req.getResponseHeaders();
             try {
@@ -40,7 +46,20 @@ public class FileHost implements HttpHandler {
                     responseHeader.set("Content-Type", "text/html; charset=UTF-8");
                     in = Files.newInputStream(new File(fileRoot, "index.html").toPath());
                 } else {
-                    File file = new File(fileRoot, path.substring(8));
+                    String resFilePath = path.substring(8);
+                    if (!resFilePath.startsWith("res/") && !resFilePath.equals("index.js")) {
+                        req.sendResponseHeaders(404, 0);
+                        req.close();
+                        return;
+                    }
+
+                    File file = new File(fileRoot, resFilePath);
+                    if (!file.getAbsolutePath().startsWith(fileRoot.getAbsolutePath())) {
+                        req.sendResponseHeaders(404, 0);
+                        req.close();
+                        return;
+                    }
+
                     if (file.exists()) {
                         if (path.endsWith(".js"))
                             responseHeader.set("Content-Type", "application/javascript; charset=UTF-8");
@@ -68,6 +87,11 @@ public class FileHost implements HttpHandler {
                 req.close();
                 e.printStackTrace();
             }
-        });
+        };
+    }
+
+    @Override
+    public HttpHandler getHttpHandler() {
+        return httpHandler;
     }
 }

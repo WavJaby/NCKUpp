@@ -7,9 +7,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 public class Main {
@@ -27,7 +27,9 @@ public class Main {
             "http://localhost:63342",
     };
     public static final String cookieDomain = "simon.chummydns.com";
-    public static ExecutorService pool = Executors.newCachedThreadPool();
+
+    private HttpServer server;
+    private final Map<String, Module> modules = new HashMap<>();
 
 
     Main() {
@@ -45,37 +47,52 @@ public class Main {
                 }
                 Files.copy(stream, file.toPath());
                 stream.close();
-                stream = Main.class.getResourceAsStream("/server.properties");
-                assert stream != null;
-                serverSettings.load(stream);
-                stream.close();
-            } else
-                serverSettings.load(Files.newInputStream(file.toPath()));
+            }
+            InputStream in = Files.newInputStream(file.toPath());
+            serverSettings.load(in);
+            in.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            return;
         }
 
-        HttpServer server = new HttpServer(serverSettings);
+        server = new HttpServer(serverSettings);
         if (!server.Opened) return;
 
         UrSchool urSchool = new UrSchool();
         Search search = new Search(urSchool);
-        RobotCode robotCode;
-        server.createContext("/NCKUpp/", new FileHost(serverSettings));
-        server.createContext("/api/login", new Login());
-        server.createContext("/api/logout", new Logout());
-        server.createContext("/api/courseSchedule", new CourseSchedule());
-        server.createContext("/api/search", search);
-        server.createContext("/api/extract", new ExtractUrl());
-        server.createContext("/api/nckuhub", new NCKUHub());
-        server.createContext("/api/urschool", urSchool);
-        server.createContext("/api/robotCode", robotCode = new RobotCode(serverSettings));
-        server.createContext("/api/preferenceEnter", new PreferenceEnter(robotCode));
+        RobotCode robotCode = new RobotCode(serverSettings);
+        registerModule("FileHost", new FileHost(serverSettings), "/NCKUpp/");
+
+        // API
+        registerModule("NCKUHub", new NCKUHub(), "/api/nckuhub");
+        registerModule("UrSchool", urSchool, "/api/urschool");
+        registerModule("Search", search, "/api/search");
+        registerModule("Login", new Login(), "/api/login");
+        registerModule("Logout", new Logout(), "/api/logout");
+        registerModule("CourseSchedule", new CourseSchedule(), "/api/courseSchedule");
+        registerModule("ExtractUrl", new ExtractUrl(), "/api/extract");
+        registerModule("RobotCode", robotCode, "/api/robotCode");
+        registerModule("PreferenceEnter", new PreferenceEnter(robotCode), "/api/preferenceEnter");
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
 
-        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            for (Module module : modules.values())
+                module.stop();
+        }));
+
+        for (Module module : modules.values())
+            module.start();
+
+//        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search);
+    }
+
+    private void registerModule(String moduleName, Module module, String contextPath) {
+        if (contextPath != null)
+            server.createContext(contextPath, module.getHttpHandler());
+        modules.put(moduleName, module);
     }
 
     @SuppressWarnings("ALL")
