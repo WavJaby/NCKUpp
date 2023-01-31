@@ -4,8 +4,8 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
-import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -22,7 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.wavjaby.Cookie.*;
+import static com.wavjaby.Cookie.getDefaultCookie;
+import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
@@ -70,7 +71,7 @@ public class CourseSchedule implements Module {
             // unpack cookie
             String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = getCourseSchedule(cookieStore, data);
             data.append("success", success);
 
@@ -99,7 +100,7 @@ public class CourseSchedule implements Module {
         return httpHandler;
     }
 
-    private boolean getCourseSchedule(CookieStore cookieStore, JsonBuilder data) {
+    private boolean getCourseSchedule(CookieStore cookieStore, JsonObjectStringBuilder data) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215")
                 .cookieStore(cookieStore);
         Document root = null;

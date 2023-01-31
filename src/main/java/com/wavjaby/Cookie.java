@@ -2,12 +2,14 @@ package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
 
-import java.net.*;
+import java.net.CookieStore;
+import java.net.HttpCookie;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.wavjaby.Main.*;
-import static com.wavjaby.Main.courseNckuOrg;
 
 public class Cookie {
     public static HttpCookie createHttpCookie(String key, String value, String domain) {

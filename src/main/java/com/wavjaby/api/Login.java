@@ -4,14 +4,16 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.*;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
@@ -47,7 +49,7 @@ public class Login implements Module {
             String loginState = getDefaultLoginCookie(requestHeaders, cookieStore);
 
             // login
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = login(req, data, cookieStore);
             data.append("success", success);
 
@@ -76,7 +78,7 @@ public class Login implements Module {
         return httpHandler;
     }
 
-    private boolean login(HttpExchange req, JsonBuilder outData, CookieStore cookieStore) {
+    private boolean login(HttpExchange req, JsonObjectStringBuilder outData, CookieStore cookieStore) {
         try {
             boolean get = req.getRequestMethod().equals("GET");
             Connection.Response checkLoginPage;
@@ -218,7 +220,7 @@ public class Login implements Module {
         }
     }
 
-    private void packUserLoginInfo(String result, int infoStart, JsonBuilder outData) {
+    private void packUserLoginInfo(String result, int infoStart, JsonObjectStringBuilder outData) {
         outData.append("login", true);
         int start, end = infoStart;
         // dept

@@ -85,8 +85,9 @@ public class Main {
 
         for (Module module : modules.values())
             module.start();
+        Logger.log(TAG, "Ready");
 
-//        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search);
+        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, serverSettings);
     }
 
     private void registerModule(String moduleName, Module module, String contextPath) {

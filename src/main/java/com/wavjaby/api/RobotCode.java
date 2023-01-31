@@ -3,18 +3,22 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
 import java.io.*;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
-import static com.wavjaby.Cookie.*;
+import static com.wavjaby.Cookie.getDefaultCookie;
+import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 
@@ -79,7 +83,7 @@ public class RobotCode implements Module {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                Logger.log(TAG,"Process exited with code " + result);
+                Logger.log(TAG, "Process exited with code " + result);
             }));
         } catch (IOException e) {
             e.printStackTrace();
@@ -103,7 +107,7 @@ public class RobotCode implements Module {
             String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
             // Crack robot code
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = true;
             data.append("success", success);
 

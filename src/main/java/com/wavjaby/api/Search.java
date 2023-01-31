@@ -3,9 +3,10 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
-import com.wavjaby.json.JsonArrayBuilder;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.SimpleThreadFactory;
+import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
@@ -32,11 +33,13 @@ import java.util.regex.Pattern;
 
 import static com.wavjaby.Cookie.*;
 import static com.wavjaby.Lib.*;
-import static com.wavjaby.Main.*;
+import static com.wavjaby.Main.courseNckuOrg;
+import static com.wavjaby.Main.courseQueryNckuOrg;
 
 public class Search implements Module {
     private static final String TAG = "[Search] ";
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(4);
+    private final Semaphore cosPreCheckPoolLock = new Semaphore(4);
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
 
     private static final Map<String, Integer> tagColormap = new HashMap<String, Integer>() {{
@@ -61,11 +64,16 @@ public class Search implements Module {
 
     @Override
     public void stop() {
-        pool.shutdown();
+        cosPreCheckPool.shutdown();
         try {
-            pool.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            if (!cosPreCheckPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+                Logger.warn(TAG, "CosPreCheck pool close timeout.");
+                cosPreCheckPool.shutdownNow();
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Logger.warn(TAG, "CosPreCheck pool close timeout.");
+            cosPreCheckPool.shutdownNow();
         }
         Logger.log(TAG, "Stopped");
     }
@@ -85,7 +93,7 @@ public class Search implements Module {
             String loginState = unpackLoginStateCookie(cookieIn, cookieStore);
 
             // search
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getQuery(), cookieIn);
             boolean success = true;
             if (searchQuery.invalidSerialNumber()) {
@@ -138,12 +146,12 @@ public class Search implements Module {
     public static class SearchQuery {
         String searchID, timeSearchID;
 
-        String courseName;     // 課程名稱
-        String teacherName;     // 教師姓名
-        String wk;          // 星期 1 ~ 7
-        String deptNo;      // 系所 A...
-        String grade;      // 年級 1 ~ 7
-        String cl;          // 節次 1 ~ 16 []
+        String courseName;      // 課程名稱
+        String instructor;      // 教師姓名
+        String dayOfWeak;       // 星期 1 ~ 7
+        String deptNo;          // 系所 A...
+        String grade;           // 年級 1 ~ 7
+        String cl;              // 節次 1 ~ 16 []
 
         boolean getAll;
 
@@ -155,6 +163,24 @@ public class Search implements Module {
 
         public SearchQuery(String dept) {
             this.deptNo = dept;
+        }
+
+        public SearchQuery(CourseData courseData) {
+            this.deptNo = courseData.serialNumber == null
+                    ? null
+                    : courseData.serialNumber.substring(0, courseData.serialNumber.indexOf('-'));
+            this.instructor = courseData.instructors == null ? null : courseData.instructors[0];
+            if (courseData.timeList != null) {
+                for (CourseData.TimeData time : courseData.timeList) {
+                    if (time.section == null) continue;
+                    this.dayOfWeak = String.valueOf(time.dayOfWeak);
+                    this.cl = String.valueOf(time.getSectionAsInt());
+                    break;
+                }
+                // if no section
+                if (this.cl == null)
+                    this.dayOfWeak = String.valueOf(courseData.timeList[0].dayOfWeak);
+            }
         }
 
         private SearchQuery(String queryString, String[] cookieIn) {
@@ -193,9 +219,9 @@ public class Search implements Module {
                     } catch (UnsupportedEncodingException ignore) {
                     }
                 } else {
-                    courseName = query.get("course");       // 課程名稱
-                    teacherName = query.get("teacher");     // 教師姓名
-                    wk = query.get("day");                  // 星期 1 ~ 7
+                    courseName = query.get("courseName");   // 課程名稱
+                    instructor = query.get("instructor");   // 教師姓名
+                    dayOfWeak = query.get("dayOfWeak");     // 星期 1 ~ 7
                     deptNo = query.get("dept");             // 系所 A...
                     grade = query.get("grade");             // 年級 1 ~ 7
                     cl = query.get("section");              // 節次 1 ~ 16 []
@@ -204,7 +230,7 @@ public class Search implements Module {
         }
 
         boolean noQuery() {
-            return !getAll && !getSerial && courseName == null && teacherName == null && wk == null && deptNo == null && grade == null && cl == null;
+            return !getAll && !getSerial && courseName == null && instructor == null && dayOfWeak == null && deptNo == null && grade == null && cl == null;
         }
 
         public boolean invalidSerialNumber() {
@@ -214,7 +240,7 @@ public class Search implements Module {
 
     public static class CourseData {
         private String departmentName; // Can be null
-        private String serialNumber;
+        private String serialNumber; // Can be null
         private String courseAttributeCode;
         private String courseSystemNumber;
         private String courseName;
@@ -287,6 +313,16 @@ public class Search implements Module {
                         extraTimeDataKey != null;
             }
 
+            public Integer getSectionAsInt() {
+                if (section == null) return null;
+                if (section <= '4') return section - '0' + 1;
+                if (section == 'N') return 6;
+                if (section <= '9') return section - '5' + 7;
+                if (section >= 'A' && section <= 'E') return section - 'A' + 12;
+                if (section >= 'a' && section <= 'e') return section - 'a' + 12;
+                throw new RuntimeException(new NumberFormatException());
+            }
+
             @Override
             public String toString() {
                 if (extraTimeDataKey != null) return extraTimeDataKey;
@@ -306,9 +342,9 @@ public class Search implements Module {
             }
         }
 
-        private JsonArrayBuilder toJsonArray(Object[] array) {
+        private JsonArrayStringBuilder toJsonArray(Object[] array) {
             if (array == null) return null;
-            JsonArrayBuilder builder = new JsonArrayBuilder();
+            JsonArrayStringBuilder builder = new JsonArrayStringBuilder();
             for (Object i : array)
                 builder.append(i.toString());
             return builder;
@@ -317,7 +353,7 @@ public class Search implements Module {
         @Override
         public String toString() {
             // output
-            JsonBuilder jsonBuilder = new JsonBuilder();
+            JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
             jsonBuilder.append("dn", departmentName);
             jsonBuilder.append("sn", serialNumber);
             jsonBuilder.append("ca", courseAttributeCode);
@@ -376,6 +412,10 @@ public class Search implements Module {
             this.search = search;
             this.cookieStore = cookieStore;
         }
+
+        public String getUrl() {
+            return host + "/index.php?c=qry11215" + search;
+        }
     }
 
     public static class AllDeptData {
@@ -397,6 +437,8 @@ public class Search implements Module {
         private final String id;
         private final CookieStore cookieStore;
 
+        CountDownLatch cosPreCheckLock;
+
         private DeptToken(String error, String id, CookieStore cookieStore) {
             this.error = error;
             this.id = id;
@@ -410,9 +452,26 @@ public class Search implements Module {
         public String getError() {
             return error;
         }
+
+        void lockCosPreCheck() {
+            cosPreCheckLock = new CountDownLatch(1);
+        }
+
+        void unlockCosPreCheckLock() {
+            cosPreCheckLock.countDown();
+        }
+
+        public void awaitCosPreCheck() {
+            if (cosPreCheckLock != null)
+                try {
+                    cosPreCheckLock.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+        }
     }
 
-    private boolean search(SearchQuery searchQuery, JsonBuilder outData, CookieStore cookieStore) {
+    private boolean search(SearchQuery searchQuery, JsonObjectStringBuilder outData, CookieStore cookieStore) {
         try {
             List<CourseData> courseDataList = new ArrayList<>();
 
@@ -427,8 +486,9 @@ public class Search implements Module {
                 // start getting dept
                 else {
                     CountDownLatch countDownLatch = new CountDownLatch(allDeptData.deptCount);
-                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
-                    Semaphore fetchPoolLock = new Semaphore(2);
+                    final int poolSize = 4;
+                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(poolSize, new SimpleThreadFactory("Fetch-Thread-"));
+                    Semaphore fetchPoolLock = new Semaphore(poolSize);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
                     ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
                     Logger.addProgressBar(progressBar);
@@ -444,7 +504,7 @@ public class Search implements Module {
                         fetchPool.submit(() -> {
                             try {
                                 long start = System.currentTimeMillis();
-                                if (allSuccess.get() && !getDeptCourseData(dept, allDeptData, outData, courseDataList))
+                                if (allSuccess.get() && !getDeptCourseData(dept, allDeptData, false, outData, courseDataList))
                                     allSuccess.set(false);
                                 Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
                             } catch (Exception e) {
@@ -457,7 +517,10 @@ public class Search implements Module {
                     }
                     countDownLatch.await();
                     fetchPool.shutdown();
-                    fetchPool.awaitTermination(10, TimeUnit.SECONDS);
+                    if (!fetchPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+                        fetchPool.shutdownNow();
+                        Logger.warn(TAG, "FetchPool shutdown timeout");
+                    }
                     progressBar.setProgress(100f);
                     Logger.removeProgressBar(progressBar);
                     success = allSuccess.get();
@@ -465,7 +528,7 @@ public class Search implements Module {
             }
             // get listed serial
             else if (searchQuery.getSerial) {
-                JsonBuilder result = new JsonBuilder();
+                JsonObjectStringBuilder result = new JsonObjectStringBuilder();
                 for (Map.Entry<String, String> i : searchQuery.serialIdNumber.entrySet()) {
                     courseDataList.clear();
                     if (!getQueryCourseData(searchQuery, i, cookieStore, outData, courseDataList)) {
@@ -508,7 +571,7 @@ public class Search implements Module {
         return new AllDeptData(allDeptBody.substring(cryptStart, cryptEnd), allDept, cookieStore);
     }
 
-    public DeptToken getDeptToken(String deptNo, AllDeptData allDeptData) throws IOException {
+    public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData) throws IOException {
 //        Connection.Response id = null;
 //        final int retryCount = 10;
 //        for (int i = 0; i < retryCount; i++) {
@@ -555,7 +618,7 @@ public class Search implements Module {
         return new DeptToken(error.length() > 0 ? error : null, idData.getString("id"), allDeptData.cookieStore);
     }
 
-    public boolean getDeptCourseData(DeptToken deptToken, List<CourseData> courseDataList) throws IOException {
+    public boolean getDeptCourseData(DeptToken deptToken, List<CourseData> courseDataList, boolean addUrSchoolCache) throws IOException {
         String searchResultBody = getDeptNCKU(deptToken);
         if (searchResultBody == null)
             return true;
@@ -568,13 +631,13 @@ public class Search implements Module {
                 table,
                 null,
                 searchResultBody,
-                courseDataList
-        );
+                courseDataList,
+                addUrSchoolCache);
         return true;
     }
 
-    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, JsonBuilder outData, List<CourseData> courseDataList) throws IOException {
-        DeptToken deptToken = getDeptToken(deptNo, allDeptData);
+    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache, JsonObjectStringBuilder outData, List<CourseData> courseDataList) throws IOException {
+        DeptToken deptToken = createDeptToken(deptNo, allDeptData);
         if (deptToken == null) {
             outData.append("err", TAG + "Network error");
             return false;
@@ -598,8 +661,8 @@ public class Search implements Module {
                 table,
                 null,
                 searchResultBody,
-                courseDataList
-        );
+                courseDataList,
+                addUrSchoolCache);
         return true;
     }
 
@@ -616,18 +679,29 @@ public class Search implements Module {
         String searchResultBody = result.body();
 //            cosPreCheck(searchResultBody, deptToken.cookieStore, null);
 //            Logger.log(TAG, deptToken.cookieStore.getCookies().toString());
-
-        pool.submit(() -> cosPreCheck(searchResultBody, deptToken.cookieStore, null));
+        deptToken.awaitCosPreCheck();
+        deptToken.lockCosPreCheck();
+        try {
+            cosPreCheckPoolLock.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return null;
+        }
+        cosPreCheckPool.submit(() -> {
+            cosPreCheck(searchResultBody, deptToken.cookieStore, null);
+            deptToken.unlockCosPreCheckLock();
+            cosPreCheckPoolLock.release();
+        });
         return searchResultBody;
     }
 
     private boolean getQueryCourseData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
-                                       CookieStore cookieStore, JsonBuilder outData, List<CourseData> courseDataList) throws IOException {
+                                       CookieStore cookieStore, JsonObjectStringBuilder outData, List<CourseData> courseDataList) throws IOException {
         // If getSerialNum is given, set query dept to get courses
         if (getSerialNum != null)
             searchQuery.deptNo = getSerialNum.getKey();
 
-        SaveQueryToken saveQueryToken = getSaveQueryToken(searchQuery, cookieStore, outData);
+        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, outData);
         if (saveQueryToken == null) {
             outData.append("err", TAG + "Failed to save query");
             return false;
@@ -646,13 +720,13 @@ public class Search implements Module {
                 table,
                 getSerialNum == null ? null : new HashSet<>(Arrays.asList(getSerialNum.getValue().split(","))),
                 searchResultBody,
-                courseDataList
-        );
+                courseDataList,
+                true);
 
         return true;
     }
 
-    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList) throws IOException {
+    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList, boolean addUrSchoolCache) throws IOException {
         String searchResultBody = getCourseNCKU(saveQueryToken);
 
         if ((searchQuery.searchID = getSearchID(searchResultBody, null)) == null)
@@ -666,13 +740,13 @@ public class Search implements Module {
                 table,
                 null,
                 searchResultBody,
-                courseDataList
-        );
+                courseDataList,
+                addUrSchoolCache);
 
         return true;
     }
 
-    public SaveQueryToken getSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, JsonBuilder outData) {
+    public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, JsonObjectStringBuilder outData) {
         try {
             StringBuilder postData = new StringBuilder();
             String host;
@@ -694,9 +768,9 @@ public class Search implements Module {
                 postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
                 if (searchQuery.courseName != null)
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.teacherName != null)
-                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.teacherName, "UTF-8"));
-                if (searchQuery.wk != null) postData.append("&wk=").append(searchQuery.wk);
+                if (searchQuery.instructor != null)
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+                if (searchQuery.dayOfWeak != null) postData.append("&wk=").append(searchQuery.dayOfWeak);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
                 if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
@@ -744,11 +818,19 @@ public class Search implements Module {
                 .execute();
 
         String searchResultBody = searchResult.body();
-        pool.submit(() -> cosPreCheck(searchResultBody, saveQueryToken.cookieStore, null));
+        try {
+            cosPreCheckPoolLock.acquire();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        cosPreCheckPool.submit(() -> {
+            cosPreCheck(searchResultBody, saveQueryToken.cookieStore, null);
+            cosPreCheckPoolLock.release();
+        });
         return searchResultBody;
     }
 
-    private Element findCourseTable(String html, String errorMessage, JsonBuilder outData) {
+    private Element findCourseTable(String html, String errorMessage, JsonObjectStringBuilder outData) {
         int resultTableStart;
         if ((resultTableStart = html.indexOf("<table")) == -1) {
             if (outData != null)
@@ -771,7 +853,7 @@ public class Search implements Module {
         return (Element) Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
     }
 
-    private void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, List<CourseData> courseDataList) {
+    private void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, List<CourseData> courseDataList, boolean addUrSchoolCache) {
         // find style
         List<String> styleList = new ArrayList<>();
         int styleStart, styleEnd = 0;
@@ -793,6 +875,9 @@ public class Search implements Module {
                 styles.add(new AbstractMap.SimpleEntry<>(matcher.group(1), !matcher.group(2).equals("none")));
             }
         }
+
+        List<String> urSchoolCache = null;
+        if (addUrSchoolCache) urSchoolCache = new ArrayList<>();
 
         // get course list
         Elements courseList = tbody.getElementsByTag("tr");
@@ -853,8 +938,14 @@ public class Search implements Module {
                 instructors = instructors.replace("*", "");
                 courseData.instructors = instructors.split(" ");
                 // Add urSchool cache
-                if (urSchool != null)
-                    urSchool.addInstructorCache(courseData.instructors);
+                if (addUrSchoolCache && urSchool != null) {
+                    urSchoolCache.addAll(Arrays.asList(courseData.instructors));
+                    // Flush to add urSchool cache
+                    if (urSchoolCache.size() > 10) {
+                        urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
+                        urSchoolCache.clear();
+                    }
+                }
             } else courseData.instructors = null;
 
             // Get course tags
@@ -1058,9 +1149,16 @@ public class Search implements Module {
 
             courseDataList.add(courseData);
         }
+
+        // Add urSchool cache
+        if (addUrSchoolCache && urSchool != null) {
+            // Flush to add urSchool cache
+            if (urSchoolCache.size() > 0)
+                urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
+        }
     }
 
-    private String getSearchID(String body, JsonBuilder outData) {
+    private String getSearchID(String body, JsonObjectStringBuilder outData) {
         // get entry function
         int searchFunctionStart = body.indexOf("function setdata()");
         if (searchFunctionStart == -1) {

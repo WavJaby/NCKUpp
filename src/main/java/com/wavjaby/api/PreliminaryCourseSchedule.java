@@ -17,9 +17,8 @@ import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 
-@SuppressWarnings("ALL")
-public class Template implements Module {
-    private static final String TAG = "[Template] ";
+public class PreliminaryCourseSchedule implements Module {
+    private static final String TAG = "[PreliminaryCourseSchedule] ";
 
     @Override
     public void start() {
@@ -43,6 +42,7 @@ public class Template implements Module {
             JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = false;
             data.append("success", success);
+
 
             Headers responseHeader = req.getResponseHeaders();
             packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);

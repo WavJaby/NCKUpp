@@ -3,7 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -36,43 +36,43 @@ public class ExtractUrl implements Module {
     }
 
     private final HttpHandler httpHandler = req -> {
-            long startTime = System.currentTimeMillis();
-            CookieManager cookieManager = new CookieManager();
-            CookieStore cookieStore = cookieManager.getCookieStore();
-            Headers requestHeaders = req.getRequestHeaders();
-            getDefaultCookie(requestHeaders, cookieStore);
+        long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        CookieStore cookieStore = cookieManager.getCookieStore();
+        Headers requestHeaders = req.getRequestHeaders();
+        getDefaultCookie(requestHeaders, cookieStore);
 
-            try {
-                JsonBuilder data = new JsonBuilder();
-                String queryString = req.getRequestURI().getQuery();
-                boolean success = false;
-                if (queryString == null)
-                    data.append("err", TAG + "No query string found");
-                else {
-                    Map<String, String> query = parseUrlEncodedForm(queryString);
-                    if (query.containsKey("m"))
-                        success = getMoodle(query.get("m"), cookieStore, data);
-                    else if (query.containsKey("l"))
-                        success = getLocation(query.get("l"), cookieStore, data);
-                }
-                data.append("success", success);
-
-                Headers responseHeader = req.getResponseHeaders();
-                byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-                responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-                // send response
-                setAllowOrigin(requestHeaders, responseHeader);
-                req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-                OutputStream response = req.getResponseBody();
-                response.write(dataByte);
-                response.flush();
-                req.close();
-            } catch (IOException e) {
-                req.close();
-                e.printStackTrace();
+        try {
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
+            String queryString = req.getRequestURI().getQuery();
+            boolean success = false;
+            if (queryString == null)
+                data.append("err", TAG + "No query string found");
+            else {
+                Map<String, String> query = parseUrlEncodedForm(queryString);
+                if (query.containsKey("m"))
+                    success = getMoodle(query.get("m"), cookieStore, data);
+                else if (query.containsKey("l"))
+                    success = getLocation(query.get("l"), cookieStore, data);
             }
-            Logger.log(TAG, "Extract url " + (System.currentTimeMillis() - startTime) + "ms");
+            data.append("success", success);
+
+            Headers responseHeader = req.getResponseHeaders();
+            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+            // send response
+            setAllowOrigin(requestHeaders, responseHeader);
+            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            req.close();
+            e.printStackTrace();
+        }
+        Logger.log(TAG, "Extract url " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -80,7 +80,7 @@ public class ExtractUrl implements Module {
         return httpHandler;
     }
 
-    private boolean getMoodle(String requestData, CookieStore cookieStore, JsonBuilder data) {
+    private boolean getMoodle(String requestData, CookieStore cookieStore, JsonObjectStringBuilder data) {
         String[] query = requestData.split(",");
         if (query.length != 3) {
             data.append("err", TAG + "Invalid query data");
@@ -104,7 +104,7 @@ public class ExtractUrl implements Module {
         return false;
     }
 
-    private boolean getLocation(String requestData, CookieStore cookieStore, JsonBuilder data) {
+    private boolean getLocation(String requestData, CookieStore cookieStore, JsonObjectStringBuilder data) {
         String[] query = requestData.split(",");
         if (query.length != 2) {
             data.append("err", TAG + "Invalid query data");

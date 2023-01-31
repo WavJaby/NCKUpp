@@ -2,7 +2,7 @@ package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -23,7 +23,7 @@ import static com.wavjaby.Main.courseNckuOrg;
 public class Lib {
     private static final String TAG = "[CosPreCheck] ";
 
-    public static void cosPreCheck(String body, CookieStore cookieStore, JsonBuilder data) {
+    public static void cosPreCheck(String body, CookieStore cookieStore, JsonObjectStringBuilder data) {
         String cosPreCheckKey = null;
         int cosPreCheckStart = body.indexOf("m=cosprecheck");
         if (cosPreCheckStart != -1) {

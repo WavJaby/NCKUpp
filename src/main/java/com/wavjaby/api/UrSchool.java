@@ -4,9 +4,9 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
-import com.wavjaby.json.JsonArrayBuilder;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
@@ -69,9 +69,14 @@ public class UrSchool implements Module {
     public void stop() {
         pool.shutdown();
         try {
-            pool.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            if (!pool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+                Logger.warn(TAG, "Data update pool close timeout");
+                pool.shutdownNow();
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Logger.warn(TAG, "Data update pool close timeout");
+            pool.shutdownNow();
         }
         Logger.log(TAG, "Stopped");
     }
@@ -83,7 +88,7 @@ public class UrSchool implements Module {
         getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
         try {
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
 
             String queryString = req.getRequestURI().getQuery();
             boolean success = true;
@@ -126,7 +131,7 @@ public class UrSchool implements Module {
         return httpHandler;
     }
 
-    private boolean getInstructorInfo(String id, String mode, JsonBuilder outData) {
+    private boolean getInstructorInfo(String id, String mode, JsonObjectStringBuilder outData) {
         // check if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
@@ -163,7 +168,7 @@ public class UrSchool implements Module {
             }
 
             // Get tags
-            JsonArrayBuilder tags = new JsonArrayBuilder();
+            JsonArrayStringBuilder tags = new JsonArrayStringBuilder();
             int urlStart, urlEnd = tagsStart;
             while (true) {
                 // Get tag url
@@ -187,7 +192,7 @@ public class UrSchool implements Module {
                 String tagName = resultBody.substring(tagNameStart, tagNameEnd).trim()
                         .replace("&amp;", "&");
 
-                JsonArrayBuilder tagData = new JsonArrayBuilder();
+                JsonArrayStringBuilder tagData = new JsonArrayStringBuilder();
                 tagData.append(url).append(tagName);
                 tags.append(tagData);
             }
@@ -212,7 +217,7 @@ public class UrSchool implements Module {
                 if (outData != null) outData.append("err", TAG + "Visitors not found");
                 return false;
             }
-            JsonArrayBuilder visitors = new JsonArrayBuilder();
+            JsonArrayStringBuilder visitors = new JsonArrayStringBuilder();
             int takeCourseCount = Integer.parseInt(resultBody.substring(countStart, countEnd).trim());
             int visitorStart, visitorEnd = countEnd;
             while (true) {
@@ -242,7 +247,7 @@ public class UrSchool implements Module {
             }
 
             // Get comment
-            JsonArrayBuilder comments = new JsonArrayBuilder();
+            JsonArrayStringBuilder comments = new JsonArrayStringBuilder();
             int commentStart, commentEnd = visitorEnd;
             // Get comment data
             while ((commentStart = resultBody.indexOf("var obj", commentEnd + 1)) != -1 &&
@@ -296,7 +301,7 @@ public class UrSchool implements Module {
             }
 
             // Write result
-            JsonBuilder jsonBuilder = new JsonBuilder();
+            JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
             jsonBuilder.append("id", id);
             jsonBuilder.append("tags", tags);
             jsonBuilder.append("reviewerCount", reviewerCount);
@@ -359,7 +364,10 @@ public class UrSchool implements Module {
             try {
                 fetchLeft.await();
                 fetchPool.shutdown();
-                fetchPool.awaitTermination(100, TimeUnit.MILLISECONDS);
+                if (!fetchPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+                    fetchPool.shutdownNow();
+                    Logger.warn(TAG, "FetchPool shutdown timeout");
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 return;
@@ -521,6 +529,7 @@ public class UrSchool implements Module {
     }
 
     public void addInstructorCache(String[] instructors) {
+//        Logger.log(TAG, Arrays.toString(instructors));
         pool.submit(() -> {
             for (String name : instructors) {
                 List<JsonArray> results = new ArrayList<>();

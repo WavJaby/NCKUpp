@@ -4,9 +4,9 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
-import com.wavjaby.json.JsonArrayBuilder;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -48,7 +48,7 @@ public class NCKUHub implements Module {
 
 
         try {
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
 
             String queryString = req.getRequestURI().getQuery();
             boolean success = true;
@@ -88,7 +88,7 @@ public class NCKUHub implements Module {
         return httpHandler;
     }
 
-    private boolean getNckuHubCourseInfo(String queryString, JsonBuilder outData) {
+    private boolean getNckuHubCourseInfo(String queryString, JsonObjectStringBuilder outData) {
         Map<String, String> query = parseUrlEncodedForm(queryString);
         String nckuID = query.get("id");
         if (nckuID == null) {
@@ -98,7 +98,7 @@ public class NCKUHub implements Module {
         String[] nckuIDs = nckuID.split(",");
 
         try {
-            JsonArrayBuilder courses = new JsonArrayBuilder();
+            JsonArrayStringBuilder courses = new JsonArrayStringBuilder();
             for (String id : nckuIDs) {
                 Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + id)
                         .ignoreContentType(true)

@@ -3,8 +3,8 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
-import com.wavjaby.json.JsonBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -17,9 +17,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import static com.wavjaby.Cookie.*;
+import static com.wavjaby.Cookie.getDefaultCookie;
+import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.*;
-import static com.wavjaby.Main.*;
+import static com.wavjaby.Main.courseNckuOrg;
 
 public class PreferenceEnter implements Module {
     private static final String TAG = "[PreferenceEnter] ";
@@ -49,7 +50,7 @@ public class PreferenceEnter implements Module {
         Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
 
         try {
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = addPreferenceEnter(query, data, cookieStore);
             data.append("success", success);
 
@@ -77,7 +78,7 @@ public class PreferenceEnter implements Module {
         return httpHandler;
     }
 
-    private boolean addPreferenceEnter(Map<String, String> query, JsonBuilder outData, CookieStore cookieStore) {
+    private boolean addPreferenceEnter(Map<String, String> query, JsonObjectStringBuilder outData, CookieStore cookieStore) {
         String key;
         if ((key = query.get("key")) == null) {
             outData.append("err", TAG + "Key not found");

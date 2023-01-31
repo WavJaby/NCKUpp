@@ -3,7 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.Module;
-import com.wavjaby.json.JsonBuilder;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -46,7 +46,7 @@ public class Logout implements Module {
             String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
             // login
-            JsonBuilder data = new JsonBuilder();
+            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = logout(data, cookieStore);
             data.append("success", success);
 
@@ -77,7 +77,7 @@ public class Logout implements Module {
         return httpHandler;
     }
 
-    private boolean logout(JsonBuilder outData, CookieStore cookieStore) {
+    private boolean logout(JsonObjectStringBuilder outData, CookieStore cookieStore) {
         try {
             Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=logout")
                     .cookieStore(cookieStore)
