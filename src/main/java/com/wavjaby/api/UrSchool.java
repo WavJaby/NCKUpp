@@ -2,7 +2,7 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
@@ -26,7 +26,7 @@ import java.util.concurrent.*;
 import static com.wavjaby.Cookie.getDefaultCookie;
 import static com.wavjaby.Lib.*;
 
-public class UrSchool implements Module {
+public class UrSchool implements EndpointModule {
     private static final String TAG = "[UrSchool] ";
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private static final long updateInterval = 60 * 60 * 1000;
@@ -147,6 +147,7 @@ public class UrSchool implements Module {
             while (true) {
                 try {
                     result = HttpConnection.connect("https://urschool.org/ajax/modal/" + id + "?mode=" + mode)
+                            .header("Connection", "keep-alive")
                             .ignoreContentType(true)
                             .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
                             .header("X-Requested-With", "XMLHttpRequest")
@@ -340,8 +341,8 @@ public class UrSchool implements Module {
             result.append(firstPage);
 
             // Get the rest of the page
-            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(16);
-            Semaphore fetchPoolLock = new Semaphore(16);
+            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
+            Semaphore fetchPoolLock = new Semaphore(8);
             CountDownLatch fetchLeft = new CountDownLatch(maxPage[0] - 1);
             for (int i = 1; i < maxPage[0]; i++) {
                 try {
@@ -394,45 +395,10 @@ public class UrSchool implements Module {
         return false;
     }
 
-    private List<String[]> fetchFreeProxy() {
-        try {
-            List<String[]> proxy = new ArrayList<>();
-            Connection.Response result = HttpConnection.connect("https://free-proxy-list.net/")
-                    .ignoreContentType(true)
-                    .execute();
-            String resultBody = result.body();
-            int resultTableStart;
-            if ((resultTableStart = resultBody.indexOf("<table")) == -1) {
-                Logger.log(TAG, "Result table not found");
-                return null;
-            }
-            // get table body
-            int resultTableBodyStart, resultTableBodyEnd;
-            if ((resultTableBodyStart = resultBody.indexOf("<tbody", resultTableStart + 7)) == -1 ||
-                    (resultTableBodyEnd = resultBody.indexOf("</tbody>", resultTableBodyStart + 6)) == -1
-            ) {
-                Logger.log(TAG, "Result table body not found");
-                return null;
-            }
-
-            // parse table
-            String bodyStr = resultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
-            Node tbody = Parser.parseFragment(bodyStr, new Element("tbody"), "").get(0);
-
-            for (Element i : ((Element) tbody).getElementsByTag("tr")) {
-                Elements elements = i.getElementsByTag("td");
-                String[] data = elements.stream().map(Element::text).toArray(String[]::new);
-                proxy.add(data);
-            }
-            return proxy;
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
     private String fetchUrSchoolData(int page, int[] maxPage) {
         try {
             Connection pageFetch = HttpConnection.connect("https://urschool.org/ncku/list?page=" + page)
+                    .header("Connection", "keep-alive")
                     .ignoreContentType(true)
                     .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
                     .header("X-Requested-With", "XMLHttpRequest")

@@ -1,100 +1,169 @@
 'use strict';
 
-/**@typedef {string} departmentName */
 /**
- * DeptCode - Course serial number
- * @example F7-010
- * @typedef {string} serialNumber
+ * @typedef {Object} CourseDataRaw
+ * @property {string} dn - departmentName
+ * @property {string} sn - serialNumber
+ * @property {string} ca - attributeCode
+ * @property {string} cs - systemNumber
+ * @property {string} cn - courseName
+ * @property {string} ci - courseNote
+ * @property {string} cl - courseLimit
+ * @property {string} ct - courseType
+ * @property {int} g - courseGrade 年級
+ * @property {string} co - classInfo 班別
+ * @property {string} cg - classGroup 組別
+ * @property {string[]} i - instructors
+ * @property {string[]} tg - tags
+ * @property {float} c - credits
+ * @property {boolean} r - required
+ * @property {int} s - selected
+ * @property {int} a - available
+ * @property {string[]} t - time
+ * @property {string} m - moodle
+ * @property {string} o - outline
+ * @property {string} pe - preferenceEnter
+ * @property {string} ac - addCourse
+ * @property {string} pr - preRegister
+ * @property {string} ar - addRequest
  */
 /**
- * Course attribute code
- * @example CSIE1001
- * @typedef {string} attributeCode
+ * @typedef {Object} CourseData
+ * @property {string} departmentName
+ * @property {string} serialNumber
+ * @property {string} attributeCode
+ * @property {string} systemNumber
+ * @property {string} courseName
+ * @property {string} [courseNote]
+ * @property {string} [courseLimit]
+ * @property {string} courseType
+ * @property {int} courseGrade
+ * @property {string} classInfo
+ * @property {string} classGroup
+ * @property {(UrSchoolInstructorSimple|string)[]} [instructors] - Only name or full data
+ * @property {CourseDataTag[]} [tags]
+ * @property {float} credits
+ * @property {boolean} required
+ * @property {int} selected
+ * @property {int} available
+ * @property {CourseDataTime[]} [time]
+ * @property {string} [timeString]
+ * @property {string} moodle
+ * @property {string} outline
+ * @property {string} preferenceEnter
+ * @property {string} addCourse
+ * @property {string} preRegister
+ * @property {string} addRequest
+ * @property {NckuHub} [nckuhub]
  */
 /**
- * Course system number - Class code
- * @typedef {string} systemNumber
- */
-/**@typedef {string} courseName */
-/**@typedef {string} courseNote */
-/**@typedef {string} courseLimit */
-/**@typedef {string} courseType */
-/**@typedef {int} courseGrade */
-/**@typedef {string} classInfo */
-/**@typedef {string} classGroup */
-/**@typedef {string[]} instructors */
-/**@typedef {string[]} tags */
-/**@typedef {float} credits */
-/**@typedef {boolean} required */
-/**@typedef {int} selected */
-/**@typedef {int} available */
-/**@typedef {string[]} time */
-/**@typedef {string} moodle */
-/**@typedef {string} outline */
-/**@typedef {string} preferenceEnter */
-/**@typedef {string} addCourse */
-/**@typedef {string} preRegister */
-/**
- * @typedef {{
- *     dn: departmentName,
- *     sn: serialNumber,
- *     ca: attributeCode,
- *     cs: systemNumber,
- *     cn: courseName,
- *     ci: courseNote,
- *     cl: courseLimit,
- *     ct: courseType,
- *     g: courseGrade,
- *     co: classInfo,
- *     cg: classGroup,
- *     i: instructors,
- *     tg: tags,
- *     c: credits,
- *     r: required,
- *     s: selected,
- *     a: available,
- *     t: time,
- *     m: moodle,
- *     o: outline,
- *     pe: preferenceEnter,
- *     ac: addCourse,
- *     pr: preRegister,
- * }} CourseData
+ * @typedef {Object} CourseDataTag
+ * @property {string} name
+ * @property {string} color
+ * @property {string} [link]
  */
 /**
- * @typedef {{
- *     got: float,
- *     sweet: float,
- *     cold: float,
- *     rate_count: int,
- *     comment: [{
- *         id: int,
- *         comment: string,
- *         semester: string
- *     }],
- *
- *     parsedRates: {
- *         post_id: {
- *             id: int,
- *             user_id: int,
- *             post_id: int,
- *             got: float,
- *             sweet: float,
- *             cold: float,
- *             like: int,
- *             dislike: int,
- *             hard: int,
- *             recommand: int,
- *             give: int,
- *             course_name: string,
- *             teacher: string
- *         }
- *     },
- *     noData: boolean
- * }} NckuHub
+ * @typedef {Object} CourseDataTime
+ * @property {int} dayOfWeek
+ * @property {int} sectionStart
+ * @property {int} [sectionEnd]
+ * @property {string} deptID
+ * @property {string} classroomID
+ * @property {string} classroomName
+ * @property {string} [extraTimeDataKey]
+ */
+/**
+ * @typedef {Object} UrSchoolInstructor
+ * @property {string} id
+ * @property {[path: string, name: string][]} tags
+ * @property {int} reviewerCount
+ * @property {int} takeCourseCount
+ * @property {string[]} takeCourseUser
+ * @property {UrSchoolInstructorComments[]} comments
+ * @property {UrSchoolInstructorSimple} info,
+ */
+/**
+ * @typedef {Object} UrSchoolInstructorComments
+ * @property {string} updated_at
+ * @property {int} user_id
+ * @property {boolean} is_anonymous
+ * @property {string} profile
+ * @property {string} created_at
+ * @property {int} id
+ * @property {string} body
+ * @property {int} status
+ * @property {int} timestamp
+ */
+/**
+ * @typedef {Object} UrSchoolInstructorSimple
+ * @property {string} id
+ * @property {string} mode
+ * @property {string} name
+ * @property {string} department
+ * @property {string} jobTitle
+ * @property {float} recommend
+ * @property {float} reward
+ * @property {float} articulate
+ * @property {float} pressure
+ * @property {float} sweet
+ * @property {string} averageScore
+ * @property {string} qualifications
+ * @property {string} note
+ * @property {string} nickname
+ * @property {string} rollCallMethod
+ */
+/**
+ * @typedef {Object} NckuHub
+ * @property {boolean} noData
+ * @property {int} rate_count
+ * @property {string} got
+ * @property {string} sweet
+ * @property {string} cold
+ * @property {NckuHubCommentObject[]} comments
+ * @property {Object.<int, NckuHubRateObject>} parsedRates
+ */
+/**
+ * @typedef {Object} NckuHubRaw
+ * @property {string} got
+ * @property {string} sweet
+ * @property {string} cold
+ * @property {int} rate_count
+ * @property {NckuHubCommentObject[]} comment
+ * @property {NckuHubRateObject[]} rates
+ */
+/**
+ * @typedef {Object} NckuHubRateObject
+ * @property {int} id
+ * @property {int} user_id
+ * @property {int} post_id
+ * @property {float} got
+ * @property {float} sweet
+ * @property {float} cold
+ * @property {int} like
+ * @property {int} dislike
+ * @property {int} hard
+ * @property {int} recommend
+ * @property {int} give
+ * @property {string} course_name
+ * @property {string} teacher
+ */
+/**
+ * @typedef {Object} NckuHubCommentObject
+ * @property {int} id
+ * @property {string} comment
+ * @property {string} semester
+ */
+/**
+ * @typedef {Object} AllDeptData
+ * @property {int} deptCount
+ * @property {AllDeptGroup[]} deptGroup
+ * @typedef {Object} AllDeptGroup
+ * @property {string} name
+ * @property {[string, string][]} dept
  */
 
 /*ExcludeStart*/
+const module = {};
 const {
     div,
     input,
@@ -111,37 +180,71 @@ const {
     p,
     img,
     thead,
-    tbody, colgroup, TextState, ShowIf, col
+    tbody,
+    colgroup,
+    TextState,
+    ShowIf,
+    col,
+    ul,
+    li,
+    text,
+    a
 } = require('../domHelper');
 /*ExcludeEnd*/
 
-module.exports = function () {
+// [default, success, info, primary, warning, danger]
+const courseDataTagColor = [
+    'gray',
+    '#5cb85c',
+    '#5bc0de',
+    '#337ab7',
+    '#f0ad4e',
+    '#d9534f'
+];
+
+module.exports = function (loginState) {
     console.log('Course search Init');
-    // static
     let styles = async_require('./courseSearch.css');
-    const expendArrow = img('./res/assets/down_arrow_icon.svg', 'expendDownArrow');
-    const searchResult = new Signal();
-    const showPageLoading = new Signal();
+    const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
+
+    const searchResultSignal = new Signal({loading: false, courseResult: null, nckuhubResult: null});
+    const alldeptDataSignal = new Signal();
+    const instructorInfoLoadSignal = new Signal(false);
     const instructorInfoBubble = InstructorInfoBubble();
     const instructorDetailWindow = InstructorDetailWindow();
-    const courseDetailWindow = CourseDetailWindow();
-    const expandButtons = [];
+    const nckuhubDetailWindow = NckuhubDetailWindow();
 
-    let courseSearch, courseSearchForm;
-    // data
+    // Element
+    const courseRenderResult = [];
+    let courseSearch, courseSearchForm, courseSearchResultCount;
+    // Static data
     let nckuHubCourseID = null;
-    let urschoolData = null;
+    let urSchoolData = null;
 
-    // quary string
+    // query string
     let lastQueryString;
     let searching;
 
     async function onRender() {
         console.log('Course search Render');
         // close navLinks when using mobile devices
-        navLinksClass.remove('open');
-        search();
+        window.navMenu.remove('open');
         (styles = await styles).add();
+        alldeptDataSignal.set((await fetchApi('/alldept')).data);
+    }
+
+    function onCourseSearchCreate() {
+        const rawQuery = window.hashData.get('searchRawQuery');
+        if (rawQuery && rawQuery.length > 0) {
+            for (const rawQueryElement of rawQuery) {
+                for (const /**@type HTMLElement*/ node of courseSearchForm.getElementsByTagName('input')) {
+                    if (!(node instanceof HTMLInputElement)) continue;
+                    if (node.id === rawQueryElement[0])
+                        node.value = rawQueryElement[1];
+                }
+            }
+            search(rawQuery);
+        }
     }
 
     function onDestroy() {
@@ -149,340 +252,577 @@ module.exports = function () {
         styles.remove();
     }
 
-    function onkeyup(e) {
-        if (e.key === 'Enter') search();
-    }
-
-    async function search() {
+    async function search(rawQuery, saveQuery) {
         if (searching) return;
         searching = true;
         // get all course ID
         if (nckuHubCourseID === null)
             nckuHubCourseID = (await fetchApi('/nckuhub')).data;
 
-        // get urschool data
-        if (urschoolData === null)
-            urschoolData = (await fetchApi('/urschool')).data;
+        // get urSchool data
+        if (urSchoolData === null)
+            urSchoolData = (await fetchApi('/urschool')).data;
 
-        // generate query string
-        const queryData = [];
-        for (const /**@type HTMLElement*/ node of courseSearchForm.childNodes) {
-            if (!(node instanceof HTMLInputElement)) continue;
-            const value = node.value.trim();
-            if (value.length > 0)
-                queryData.push(node.name + '=' + encodeURIComponent(value));
+        let queryData = rawQuery instanceof Event ? null : rawQuery;
+        if (!queryData) {
+            // generate query string
+            queryData = [];
+            for (let /**@type HTMLElement*/ node of courseSearchForm.getElementsByTagName('input')) {
+                if (!(node instanceof HTMLInputElement)) continue;
+                const value = node.value.trim();
+                if (value.length > 0)
+                    queryData.push([node.id, value]);
+            }
         }
-        const queryString = queryData.join('&');
-        if (queryString === lastQueryString) {
-            searching = false;
-            return;
-        }
+        const queryString = queryData.map(i => i[0] + '=' + encodeURIComponent(i[1])).join('&');
+        // if (queryString === lastQueryString) {
+        //     searching = false;
+        //     return;
+        // }
         lastQueryString = queryString;
+        if (saveQuery === undefined || saveQuery === true)
+            window.hashData.set('searchRawQuery', queryData);
 
-        console.log('Search');
-        searchResult.set({loading: true});
+        console.log('Search:', queryString);
+        searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 
         // fetch data
-        /**
-         * @type {{err: string, msg: string, warn: string, login: boolean, data: CourseData[]}}
-         */
         const result = (await fetchApi('/search?' + queryString));
 
-        console.log(result);
-        if (!result.data) {
-            // TODO: handle error
+        if (!result.success) {
+            searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null});
             searching = false;
             return;
         }
 
-        const nckuHubRequestIDs = [];
-        const nckuHubResponseData = {};
-
         // Parse result
-        for (const data of result.data) {
-            data.dn = data.dn == null ? '' : data.dn.split(' ')[0];
+        /**@type CourseData[]*/
+        const courseResult = [];
+        const nckuhubResult = {};
+        if (!(result.data instanceof Array)) {
+            const arr = [];
+            Object.values(result.data).forEach(i => arr.push(...i));
+            result.data = arr;
+        }
+        for (/**@type CourseDataRaw*/const data of result.data) {
+            /**@type CourseData*/
+            const courseData = {
+                departmentName: data.dn,
+                serialNumber: data.sn,
+                attributeCode: data.ca,
+                systemNumber: data.cs,
+                courseName: data.cn,
+                courseNote: data.ci,
+                courseLimit: data.cl,
+                courseType: data.ct,
+                courseGrade: data.g,
+                classInfo: data.co,
+                classGroup: data.cg,
+                instructors: null,
+                tags: null,
+                credits: data.c,
+                required: data.r,
+                selected: data.s,
+                available: data.a,
+                time: null,
+                timeString: null,
+                moodle: data.m,
+                outline: data.o,
+                preferenceEnter: data.pe,
+                addCourse: data.ac,
+                preRegister: data.pr,
+                addRequest: data.ar,
+                nckuhub: null
+            };
+            courseResult.push(courseData);
 
             // Parse time
-            data.parsedTime = data.t == null ? 'undecided' : data.t.map(i => {
-                i = i.split(',');
-                // Extra time data
-                if (i.length === 1) return 'ex';
-                return '[' + i[0] + ']' + (i.length === 2 ? i[1] : (i[1] + '~' + i[2]))
+            if (data.t != null)
+                courseData.time = data.t.map(i => {
+                    if (i.indexOf(',') === -1)
+                        return {extraTimeDataKey: i[0]};
+                    i = i.split(',');
+                    return {
+                        dayOfWeek: parseInt(i[0]),
+                        sectionStart: i[1].length === 0 ? null : i[1],
+                        sectionEnd: i[2].length === 0 ? null : i[2],
+                        deptID: i[3].length === 0 ? null : i[3],
+                        classroomID: i[4].length === 0 ? null : i[4],
+                        classroomName: i[5].length === 0 ? null : i[5]
+                    };
+                });
+            courseData.timeString = courseData.time === null ? 'pending' : courseData.time.map(i => {
+                if (i.extraTimeDataKey) return '';
+                if (i.sectionStart !== null) {
+                    let section;
+                    if (i.sectionEnd !== null) {
+                        section = i.sectionStart + '~' + i.sectionEnd;
+                    } else
+                        section = i.sectionStart;
+                    return '[' + i.dayOfWeek + ']' + section;
+                }
+                return '[' + i.dayOfWeek + ']';
             }).join(', ');
 
             // Parse instructors
-            if (data.i != null)
-                data.i = data.i.map(i => {
-                    for (const j of urschoolData) if(j[2] === i) return j;
+            if (data.i !== null)
+                courseData.instructors = data.i.map(i => {
+                    for (const j of urSchoolData) if (j[2] === i)
+                        return {
+                            id: j[0],
+                            mode: j[1],
+                            name: j[2],
+                            department: j[3],
+                            jobTitle: j[4],
+                            recommend: parseFloat(j[5]),
+                            reward: parseFloat(j[6]),
+                            articulate: parseFloat(j[7]),
+                            pressure: parseFloat(j[8]),
+                            sweet: parseFloat(j[9]),
+                            averageScore: j[10],
+                            qualifications: j[11],
+                            note: j[12],
+                            nickname: j[13],
+                            rollCallMethod: j[14]
+                        };
                     return i;
                 });
 
-            // nckuhub
+            // Parse tags
+            if (data.tg !== null)
+                courseData.tags = data.tg.map(i => {
+                    i = i.split(',');
+                    return {
+                        name: i[0],
+                        color: i[1].charCodeAt(0) === 0x23 ? i[1] : courseDataTagColor[i[1]],
+                        link: i[2].length === 0 ? null : i[2],
+                    }
+                });
+
+
+            // Nckuhub
             if (data.sn != null) {
                 const deptAndID = data.sn.split('-');
                 let nckuHubID = nckuHubCourseID[deptAndID[0]];
                 if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
-                if (data.sn.length > 0 && nckuHubID) {
-                    nckuHubRequestIDs.push(nckuHubID);
-                    nckuHubResponseData[data.sn] = new Signal();
-                }
+                if (nckuHubID) nckuhubResult[data.sn] = {nckuHubID, courseData, signal: new Signal()};
             }
         }
 
-        // get nckuhub data
+        // Get nckuhub data
         const chunkSize = 20;
-        const nckuHubResponseDataArr = Object.values(nckuHubResponseData);
-        for (let i = 0; i < nckuHubRequestIDs.length; i += chunkSize) {
-            const chunk = nckuHubRequestIDs.slice(i, i + chunkSize);
+        const nckuHubDataArr = Object.values(nckuhubResult);
+        for (let i = 0; i < nckuHubDataArr.length; i += chunkSize) {
+            const chunk = [];
+            for (let j = i; j < i + chunkSize && j < nckuHubDataArr.length; j++)
+                chunk.push(nckuHubDataArr[j].nckuHubID);
             fetchApi('/nckuhub?id=' + chunk.join(',')).then(({data}) => {
                 for (let j = 0; j < chunk.length; j++) {
-                    /**@type NckuHub*/
+                    const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubDataArr[i + j];
+                    /**@type NckuHubRaw*/
                     const nckuhub = data[j];
-                    nckuhub.got = parseFloat(nckuhub.got);
-                    nckuhub.sweet = parseFloat(nckuhub.sweet);
-                    nckuhub.cold = parseFloat(nckuhub.cold);
-
-                    nckuhub.noData = nckuhub.rate_count === 0 && nckuhub.comment.length === 0;
-
-                    nckuhub.parsedRates = nckuhub.rates.reduce((a, v) => {
-                        a[v.post_id] = v;
-                        return a;
-                    }, {});
-                    delete data[j].rates;
-                    nckuHubResponseDataArr[i + j].set(nckuhub);
+                    courseData.nckuhub = {
+                        noData: nckuhub.rate_count === 0 && nckuhub.comment.length === 0,
+                        got: parseFloat(nckuhub.got),
+                        sweet: parseFloat(nckuhub.sweet),
+                        cold: parseFloat(nckuhub.cold),
+                        rate_count: nckuhub.rate_count,
+                        comments: nckuhub.comment,
+                        parsedRates: nckuhub.rates.reduce((a, v) => {
+                            // nckuhub why
+                            if (!v.recommend && v.recommand) {
+                                v.recommend = v.recommand;
+                                delete v.recommand;
+                            }
+                            a[v.post_id] = v;
+                            return a;
+                        }, {})
+                    };
+                    signal.update();
                 }
             });
         }
 
-        searchResult.set({data: result.data, nckuHubResponseData});
-        expendAllItem();
+        console.log(courseResult);
+        searchResultSignal.set({loading: false, courseResult, nckuhubResult});
         searching = false;
     }
 
-    // Expend info
-    function expendAllItem() {
-        for (const i of expandButtons) i();
+    function openInstructorDetailWindow(info) {
+        instructorInfoLoadSignal.set(true);
+        fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
+            // TODO: handle error
+            /**@type UrSchoolInstructor*/
+            const instructor = response.data;
+            instructor.info = info;
+            instructorDetailWindow.set(instructor);
+            instructorInfoLoadSignal.set(false);
+        });
     }
 
-    function openInstructorDetailWindow(info) {
-        showPageLoading.set(true);
-        fetchApi(`/urschool?id=${info[0]}&mode=${info[1]}`).then(response => {
-            // TODO: handle error
-            const data = response.data;
-            data.info = info;
-            instructorDetailWindow.set(data);
-            showPageLoading.set(false);
+    // Watched list
+    let watchList = null;
+
+    function watchedCourseAddRemove() {
+        if (!loginState.state || !watchList) return;
+
+        /**@type{CourseData}*/
+        const courseData = this.courseData;
+        let serialIndex, result;
+        if ((serialIndex = watchList.indexOf(courseData.serialNumber)) === -1) {
+            console.log('add watch');
+            result = fetchApi('/watchdog', {
+                method: 'POST',
+                body: `studentID=${loginState.state.studentID}&courseSerial=${courseData.serialNumber}`
+            });
+            this.textContent = 'remove watch';
+            watchList.push(courseData.serialNumber);
+        } else {
+            console.log('remove watch');
+            result = fetchApi('/watchdog', {
+                method: 'POST',
+                body: `studentID=${loginState.state.studentID}&removeCourseSerial=${courseData.serialNumber}`
+            });
+            this.textContent = 'add watch';
+            watchList.splice(serialIndex, 1);
+        }
+        result.then(i => {
+            console.log(i);
+        });
+    }
+
+    function getWatchCourse() {
+        if (!loginState.state) return;
+        fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
+            const eql = encodeURIComponent('&');
+            watchList = [];
+            Object.entries(i.data).forEach(i => i[1].forEach(j => watchList.push(i[0] + '-' + j)));
+            const serialQuery = Object.entries(i.data).map(i => i[0] + '=' + i[1].join(',')).join(eql);
+            search([['serial', serialQuery]], false);
+        })
+    }
+
+    function sendCosData() {
+        fetchApi(`/courseFuncBtn?cosdata=${this.cosdata}`).then(i => {
+            if (i.success)
+                window.messageAlert.addSuccess('Message', i.msg, 5000);
         });
     }
 
     // Render result
-    function renderResult(state) {
-        if (!state) return div();
-        if (state.loading) return div('loading', loadingElement.cloneNode(true));
-        expandButtons.length = 0;
+    const courseRenderResultSort = [];
+    const courseRenderResultFilter = [];
+    const expandButtons = [];
 
-        // render element
-        return tbody(null, state.data.map(data => {
-            const resultItemClass = new ClassList();
-            const nckuHubData = state.nckuHubResponseData[data.sn];
-            const expendButton = expendArrow.cloneNode();
-            expendButton.onclick = toggleCourseInfo;
-            expandButtons.push(toggleCourseInfo);
+    function renderSearchResult(state) {
+        if (state.loading) {
+            courseRenderResult.length = 0;
+            return div('loading', window.loadingElement.cloneNode(true));
+        }
+        if (!state.courseResult) return div();
 
-            // course short information
-            let expandable, measureReference;
+        if (courseRenderResult.length === 0) {
+            // Render result elements
+            courseRenderResultSort.length = 0;
+            courseRenderResultFilter.length = 0;
+            expandButtons.length = 0;
+            for (/**@type{CourseData}*/const data of state.courseResult) {
+                const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
+                const nckuhubResultData = state.nckuhubResult[data.serialNumber];
+                const expandButton = expandArrowImage.cloneNode();
+                expandButtons.push(toggleCourseInfo);
 
-            function toggleCourseInfo(e) {
-                if (resultItemClass.toggle('extend'))
-                    expandable.style.height = measureReference.clientHeight + "px";
-                else
-                    expandable.style.height = null;
-                if (e) e.stopPropagation();
-            }
+                // Course detail
+                let expandableHeightReference, expandableElement;
+                const courseDetail = td(null, null, {colSpan: 12},
+                    expandableElement = div('expandable', expandableHeightReference = div('info',
+                        div('splitLine'),
+                        // Tags
+                        data.tags === null ? null : data.tags.map(i => i.link
+                            ? a(i.name, i.link, 'tags', null, {style: 'background-color:' + i.color, target: '_blank'})
+                            : div('tags', text(i.name), {style: 'background-color:' + i.color})
+                        ),
 
-            // open detail window
-            function openCourseDetailWindow() {
-                if (!nckuHubData || !nckuHubData.state || nckuHubData.state.noData) return;
-                courseDetailWindow.set([nckuHubData.state, data]);
-            }
+                        // Note, limit
+                        data.courseNote === null ? null : span(data.courseNote, 'note'),
+                        data.courseLimit === null ? null : span(data.courseLimit, 'limit red'),
 
-            // render result item
-            // return end
-            return tr(resultItemClass,
-                // title sections
-                td(null, null,
-                    expendButton,
-                    // info
-                    expandable = div('expandable',
-                        div('container', measureReference = div('info',
-                            data.ci == null ? null : span(data.ci, 'note'),
-                            data.cl == null ? null : span(data.cl, 'limit red'),
-
-                            // Instructor
-                            span('Instructor: ', 'instructor'),
-                            data.i == null ? null : data.i.map(i =>
-                                button('instructorBtn',
-                                    i instanceof Array ? i[2] : i,
-                                    e => {
-                                        if (i instanceof Array)
-                                            openInstructorDetailWindow(i);
-                                        e.stopPropagation();
+                        // Instructor
+                        span('Instructor: ', 'instructor'),
+                        data.instructors === null ? null : data.instructors.map(/**@param{UrSchoolInstructorSimple|string}instructor*/instructor =>
+                            button('instructorBtn',
+                                instructor instanceof Object ? instructor.name : instructor,
+                                instructor instanceof Object ? () => openInstructorDetailWindow(instructor) : null,
+                                instructor instanceof Object ? {
+                                    onmouseenter: e => {
+                                        instructorInfoBubble.set({
+                                            target: e.target,
+                                            offsetY: courseSearch.parentElement.scrollTop,
+                                            data: instructor
+                                        });
                                     },
-                                    {
-                                        onmouseenter: e => {
-                                            if (i instanceof Array)
-                                                instructorInfoBubble.set({
-                                                    target: e.target,
-                                                    offsetY: courseSearch.parentElement.scrollTop,
-                                                    data: i
-                                                });
-                                        },
-                                        onmouseleave: instructorInfoBubble.hide
-                                    })
-                            ),
-                        )),
-                        div('splitLine', div()),
-                    ),
-                ),
-                td(data.dn, 'departmentName'),
-                td(data.sn, 'serialNumber'),
-                td(data.ct, 'courseType'),
-                td(data.parsedTime, 'courseTime'),
-                td(data.cn, 'courseName'),
-                td(data.s == null && data.a == null ? '' : `${data.s}/${data.a}`, 'available'),
-                // ncku Hub
-                nckuHubData === undefined ? td() :
-                    State(nckuHubData, /**@param {NckuHub} nckuhub*/nckuhub => {
-                        if (nckuhub) {
-                            if (nckuhub.noData) return td();
+                                    onmouseleave: instructorInfoBubble.hide
+                                } : null
+                            )
+                        )
+                    ))
+                );
 
-                            data.got = nckuhub.got;
-                            data.sweet = nckuhub.sweet;
-                            data.cold = nckuhub.cold;
-                            if (nckuhub.rate_count === 0) return td('No rating', 'nckuhub');
-
-                            return td(null, 'nckuhub', {onclick: openCourseDetailWindow},
-                                span(data.got.toFixed(1), 'reward'),
-                                span(data.sweet.toFixed(1), 'sweet'),
-                                span(data.cold.toFixed(1), 'cool'),
+                // nckuhub info
+                const nckuhubInfo = nckuhubResultData && nckuhubResultData.signal
+                    ? State(nckuhubResultData.signal, () => {
+                        if (data.nckuhub) {
+                            if (data.nckuhub.noData) return td('No data', 'nckuhub', {colSpan: 3});
+                            const options = {colSpan: 3, onclick: openNckuhubDetailWindow};
+                            if (data.nckuhub.rate_count === 0)
+                                return td('No rating', 'nckuhub', options);
+                            return td(null, 'nckuhub', options,
+                                span(data.nckuhub.got.toFixed(1), 'reward'),
+                                span(data.nckuhub.sweet.toFixed(1), 'sweet'),
+                                span(data.nckuhub.cold.toFixed(1), 'cool'),
                             );
                         }
-                        return td('Loading...', 'nckuhub');
-                    }),
-                td(null, 'options'),
-            );
-        }));
+                        return td('Loading...', 'nckuhub', {colSpan: 3});
+                    })
+                    : td('No data', 'nckuhub', {colSpan: 3})
+
+
+                function toggleCourseInfo(forceState) {
+                    if (forceState instanceof Boolean ? forceState : expandArrowStateClass.toggle('expand')) {
+                        expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
+                        setTimeout(() => expandableElement.style.height = null, 200);
+                    } else {
+                        expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
+                        setTimeout(() => expandableElement.style.height = '0');
+                    }
+                }
+
+                // Open nckuhub detail window
+                function openNckuhubDetailWindow() {
+                    if (!data.nckuhub) return;
+                    nckuhubDetailWindow.set(data.nckuhub, true);
+                }
+
+                // render result item
+                const courseResult = [
+                    tr(),
+                    // Info
+                    tr(null,
+                        // Title sections
+                        td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
+                        td(data.departmentName, 'departmentName'),
+                        td(data.serialNumber, 'serialNumber'),
+                        td(data.courseType, 'courseType'),
+                        td(data.classInfo, 'class'),
+                        td(data.timeString, 'courseTime'),
+                        td(data.courseName, 'courseName'),
+                        td(data.credits, 'credits'),
+                        td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
+                        nckuhubInfo,
+                        td(null, 'options', {rowSpan: 2},
+                            !data.serialNumber || !loginState.state ? null :
+                                button('addToWatch', watchList && watchList.indexOf(data.serialNumber) !== -1 ? 'remove watch' : 'add watch', watchedCourseAddRemove, {courseData: data}),
+                            !data.preferenceEnter ? null :
+                                button('addToWatch', '加入志願', sendCosData, {cosdata: data.preferenceEnter}),
+                            !data.addCourse ? null :
+                                button('addToWatch', '單科加選', sendCosData, {cosdata: data.addCourse}),
+                        ),
+                    ),
+                    tr('courseDetail',
+                        // Details
+                        courseDetail,
+                    )
+                ];
+                courseRenderResult.push([data, courseResult]);
+                courseRenderResultFilter.push([data, courseResult]);
+                courseRenderResultSort.push(courseResult);
+            }
+        }
+        courseSearchResultCount.textContent = courseRenderResultSort.length;
+        return tbody(null, courseRenderResultSort);
     }
+
 
     // Sort
-    const sortArrow = expendArrow.cloneNode();
+    const sortArrow = expandArrowImage.cloneNode();
     const sortArrowClass = new ClassList('sortArrow');
     sortArrowClass.init(sortArrow);
+    let sortKey = null;
+    let sortLastIndex = null;
 
     function sortResultItem(key, element, method) {
-        if (searchResult.state.sort !== key) {
-            searchResult.state.sort = key;
-            searchResult.state.data.sort(method);
-            let end = 0;
-            for (; end < searchResult.state.data.length; end++)
-                if (sortToEnd(searchResult.state.data[end][key])) break;
-            searchResult.state.sortLastIndex = end > 0 ? end : null;
+        /**@type{[CourseData, HTMLElement][]}*/
+        const courseResult = courseRenderResultFilter;
+        courseRenderResultSort.length = courseResult.length;
+        let reverse;
+        if (sortKey !== key) {
+            sortKey = key;
+            courseResult.sort(method);
+            sortLastIndex = courseResult.length;
+            for (let i = courseResult.length - 1; i > -1; i--)
+                if (!sortToEnd(courseResult[i][0][key])) {
+                    sortLastIndex = i + 1;
+                    break;
+                }
             sortArrowClass.remove('reverse');
+            reverse = false;
             element.appendChild(sortArrow);
-        } else {
-            if (searchResult.state.sortLastIndex !== null)
-                reverseArray(searchResult.state.data, 0, searchResult.state.sortLastIndex);
-            else
-                searchResult.state.data.reverse();
-            sortArrowClass.toggle('reverse');
-        }
-        searchResult.update();
-        expendAllItem();
+        } else
+            reverse = sortArrowClass.toggle('reverse');
+
+        let i = 0;
+        if (reverse)
+            for (; i < sortLastIndex; i++)
+                courseRenderResultSort[i] = courseResult[courseResult.length - i - 1][1];
+        for (; i < courseResult.length; i++)
+            courseRenderResultSort[i] = courseResult[i][1];
+
+        searchResultSignal.update();
     }
 
-    function sortKey() {
-        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
-        const key = this.key;
-        sortResultItem(key, this, (a, b) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
+    function sortStringKey() {
+        if (courseRenderResult.length > 0) {
+            const key = this.key;
+            sortResultItem(key, this, ([a], [b]) => sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : a[key].localeCompare(b[key]));
+        }
     }
 
     function sortIntKey() {
-        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
-        const key = this.key;
-        sortResultItem(key, this, (a, b) => (sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : b[key] - a[key]));
+        if (courseRenderResult.length > 0) {
+            const key = this.key;
+            sortResultItem(key, this, ([a], [b]) => (sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : b[key] - a[key]));
+        }
     }
 
     function sortNckuhubKey() {
-        if (!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) return;
-        const key = this.key;
-        const keys = ['sweet', 'cold', 'got'];
-        keys.splice(keys.indexOf(key), 1);
+        if (courseRenderResult.length > 0) {
+            const key = this.key;
+            const keys = ['sweet', 'cold', 'got'];
+            keys.splice(keys.indexOf(key), 1);
 
-        sortResultItem(key, this, (a, b) =>
-            sortToEnd(a[key]) ? 1 : sortToEnd(b[key]) ? -1 : (
-                Math.abs(b[key] - a[key]) < 1e-10 ? (
-                    sortToEnd(a[keys[0]]) ? 1 : sortToEnd(b[keys[0]]) ? -1 : (
-                        Math.abs(b[keys[0]] - a[keys[0]]) < 1e-10 ? (
-                            sortToEnd(a[keys[1]]) ? 1 : sortToEnd(b[keys[1]]) ? -1 : (
-                                Math.abs(b[keys[1]] - a[keys[1]]) < 1e-10 ? 0 : b[keys[1]] - a[keys[1]]
-                            )
-                        ) : b[keys[0]] - a[keys[0]]
-                    )
-                ) : b[key] - a[key]
-            ))
+            sortResultItem(key, this, (a, b) =>
+                sortToEnd(a && (a = a[0]) && (a = a.nckuhub) && a[key]) ? 1 : sortToEnd(b && (b = b[0]) && (b = b.nckuhub) && b[key]) ? -1 : (
+                    Math.abs(b[key] - a[key]) < 1e-10 ? (
+                        sortToEnd(a[keys[0]]) ? 1 : sortToEnd(b[keys[0]]) ? -1 : (
+                            Math.abs(b[keys[0]] - a[keys[0]]) < 1e-10 ? (
+                                sortToEnd(a[keys[1]]) ? 1 : sortToEnd(b[keys[1]]) ? -1 : (
+                                    Math.abs(b[keys[1]] - a[keys[1]]) < 1e-10 ? 0 : b[keys[1]] - a[keys[1]]
+                                )
+                            ) : b[keys[0]] - a[keys[0]]
+                        )
+                    ) : b[key] - a[key]
+                )
+            );
+        }
     }
 
+
     // Filter
-    let expendTimeout;
-    let lastFilterKey;
+    let lastFilterKey = null;
 
     function filterChange() {
-        if ((!searchResult.state || !searchResult.state.data || searchResult.state.data.length === 0) && !searchResult.state.orignalData) return;
+        if (courseRenderResult.length === 0) return;
         const key = this.value.trim();
         // if word not finish
-        if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w-]+$/g)) return;
+        if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w -]+$/g)) return;
 
         // if same
         if (lastFilterKey === key) return;
         lastFilterKey = key;
+        const keys = key.split(' ');
 
-        if (!searchResult.state.orignalData)
-            searchResult.state.orignalData = searchResult.state.data;
-
-
-        searchResult.state.data = searchResult.state.orignalData.filter(i =>
-            i.cn && i.cn.indexOf(key) !== -1 ||
-            i.sn && i.sn.indexOf(key) !== -1 ||
-            i.i && i.i.find(i => (i instanceof Array ? i[2] : i).indexOf(key) !== -1)
-        );
-        searchResult.update();
-        if (expendTimeout)
-            clearTimeout(expendTimeout);
-        expendTimeout = setTimeout(expendAllItem, 500);
+        sortKey = null;
+        courseRenderResultFilter.length = 0;
+        courseRenderResultSort.length = 0;
+        for (/**@type{[CourseData, HTMLElement]}*/const i of courseRenderResult) {
+            if (findIfContains(i[0].courseName, keys) ||
+                findIfContains(i[0].serialNumber, keys) ||
+                i[0].instructors && i[0].instructors.find(i => findIfContains(i instanceof Object ? i.name : i, keys))
+            ) {
+                courseRenderResultFilter.push(i);
+                courseRenderResultSort.push(i[1]);
+            }
+        }
+        searchResultSignal.update();
     }
 
-    return courseSearch = div('courseSearch',
+    function findIfContains(data, keys) {
+        if (!data) return false;
+        for (const key of keys)
+            if (key.length === 0 || data.indexOf(key) !== -1) return true;
+        return false;
+    }
+
+    // Select menu
+    let selectMenuInput, selectMenuItem, lastSelectMenuGroup;
+    let selectMenuClass = new ClassList();
+
+    // selectMenuInput.addEventListener('focusout', () => selectMenuClass.remove('opened'));
+
+    function selectMenuGroupOnclick() {
+        const col = this.nextElementSibling;
+        if (col.style.height) {
+            col.style.height = null;
+            this.classList.add('opened');
+        } else {
+            col.style.height = '0';
+            this.classList.remove('opened');
+        }
+
+        // Close last group
+        if (lastSelectMenuGroup) {
+            lastSelectMenuGroup.classList.remove('opened');
+            lastSelectMenuGroup.nextElementSibling.style.height = '0';
+        }
+        lastSelectMenuGroup = this;
+
+        // Move group to top
+        if (selectMenuItem)
+            selectMenuItem.scrollTop = this.offsetTop - this.offsetHeight;
+    }
+
+    function selectMenuItemOnclick() {
+        selectMenuInput.value = this.deptID;
+        selectMenuClass.remove('opened');
+    }
+
+    function onkeyup(e) {
+        if (e.key === 'Enter') search();
+    }
+
+    courseSearch = div('courseSearch',
         {onRender, onDestroy},
         courseSearchForm = div('form',
-            input(null, 'Serial number', 'serialNumber', {onkeyup, name: 'serial'}),
-            input(null, 'Course name', 'courseName', {onkeyup, name: 'courseName'}),
-            input(null, 'Dept ID', 'deptId', {onkeyup, name: 'dept', value: 'F7'}),
-            input(null, 'Instructor', 'instructor', {onkeyup, name: 'instructor'}),
-            input(null, 'DayOfWeak', 'dayOfWeak', {onkeyup, name: 'dayOfWeak'}),
-            input(null, 'Grade', 'grade', {onkeyup, name: 'grade'}),
-            input(null, 'Section', 'section', {onkeyup, name: 'section'}),
+            // input(null, 'Serial number', 'serial', {onkeyup}),
+            input(null, 'Course name', 'courseName', {onkeyup}),
+            div('selectMenu',
+                selectMenuInput = input(null, 'Dept ID', 'dept', {onclick: () => selectMenuClass.toggle('opened'), onkeyup}),
+                State(alldeptDataSignal, /**@param{AllDeptData}data*/data => {
+                    if (!data) return div();
+                    return selectMenuItem = ul(selectMenuClass, data.deptGroup.map(data => [
+                        li('groupTitle', text(data.name), {onclick: selectMenuGroupOnclick}),
+                        ul('group', {style: 'height:0'},
+                            data.dept.map(dept => li(null, text(dept[1]), {onclick: selectMenuItemOnclick, deptID: dept[0]})))
+                    ]))
+                }),
+            ),
+            input(null, 'Instructor', 'instructor', {onkeyup}),
+            input(null, 'DayOfWeak', 'dayOfWeek', {onkeyup}),
+            input(null, 'Grade', 'grade', {onkeyup}),
+            input(null, 'Section', 'section', {onkeyup}),
             button(null, 'search', search),
+            button(null, 'get watched course', getWatchCourse),
         ),
-        table('result', {'cellPadding': 0},
+        table('result', {cellPadding: 0},
             colgroup(null,
                 col(null),
                 // col(null, {'style': 'visibility: collapse'}),
             ),
-            State(searchResult, renderResult),
+            State(searchResultSignal, renderSearchResult),
             thead('noSelect',
                 tr(null,
                     th(null, null,
-                        // filter options
+                        // Filter options
                         div('filterSection',
                             div(null, div('options',
                                 img('./res/assets/funnel_icon.svg'),
@@ -492,41 +832,42 @@ module.exports = function () {
                                 })),
                                 div('resultCount',
                                     span('Result count: '),
-                                    span(TextState(searchResult, (state) => state && !state.loading ? state.data.length : ''))
+                                    courseSearchResultCount = span()
                                 ),
                             )),
                         ),
-                        div('extendAll', expendArrow.cloneNode()),
+                        div('expandDownArrow', expandArrowImage.cloneNode()),
                     ),
-                    th('Dept', 'departmentName', {key: 'dn', onclick: sortKey}),
-                    th('Serial', 'serialNumber', {key: 'sn', onclick: sortKey}),
-                    th('Type', 'courseType', {key: 'ct', onclick: sortKey}),
-                    th('Time', 'courseTime', {key: 'parsedTime', onclick: sortKey}),
-                    th('Course name', 'courseName', {key: 'cn', onclick: sortKey}),
-                    th('Sel/Avail', 'available', {key: 'a', onclick: sortIntKey}),
-                    th(null, 'nckuhub',
-                        div(null, span('Reward', 'reward'), {key: 'got', onclick: sortNckuhubKey}),
-                        div(null, span('Sweet', 'sweet'), {key: 'sweet', onclick: sortNckuhubKey}),
-                        div(null, span('Cool', 'cool'), {key: 'cold', onclick: sortNckuhubKey}),
-                    ),
+                    th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
+                    th('Serial', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
+                    th('Type', 'courseType', {key: 'courseType', onclick: sortStringKey}),
+                    th('Class', 'class', {key: 'classInfo', onclick: sortStringKey}),
+                    th('Time', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
+                    th('Course name', 'courseName', {key: 'courseName', onclick: sortStringKey}),
+                    th('Credits', 'credits', {key: 'credits', onclick: sortIntKey}),
+                    th('Sel/Avail', 'available', {key: 'available', onclick: sortIntKey}),
+                    // NckuHub
+                    th('Reward', 'nckuhub', {key: 'got', onclick: sortNckuhubKey}),
+                    th('Sweet', 'nckuhub', {key: 'sweet', onclick: sortNckuhubKey}),
+                    th('Cool', 'nckuhub', {key: 'cold', onclick: sortNckuhubKey}),
                     th('Options', 'options'),
                 ),
             ),
         ),
         instructorInfoBubble,
         instructorDetailWindow,
-        courseDetailWindow,
-        ShowIf(showPageLoading, div('loading', loadingElement.cloneNode(true))),
+        nckuhubDetailWindow,
+        ShowIf(instructorInfoLoadSignal, window.loadingElement.cloneNode(true)),
     );
+    onCourseSearchCreate();
+    return courseSearch;
 };
 
-function InstructorInfoElement(
-    [id, mode,
-        name, dept, job,
-        recommend, reward, articulate, pressure, sweet,
-        averageScore, academicQualifications, note, nickname, rollCall
-    ]) {
-    return div(null,
+function InstructorInfoElement(/**@param{UrSchoolInstructorSimple}*/{
+    recommend, reward, articulate, pressure, sweet,
+    averageScore, note, nickname, department, jobTitle, rollCallMethod, qualifications
+}) {
+    return div('instructorInfo',
         div('rate',
             recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
                 ? table(null,
@@ -540,63 +881,63 @@ function InstructorInfoElement(
                 tr(null, th('Average score'), td(averageScore)),
                 tr(null, th('Note'), td(note)),
                 tr(null, th('Nickname'), td(nickname)),
-                tr(null, th('Department'), td(dept)),
-                tr(null, th('Job title'), td(job)),
-                tr(null, th('Roll call method'), td(rollCall)),
+                tr(null, th('Department'), td(department)),
+                tr(null, th('Job title'), td(jobTitle)),
+                tr(null, th('Roll call method'), td(rollCallMethod)),
             ),
         ),
-        span('Academic qualifications: ' + academicQualifications),
+        span('Academic qualifications: ' + qualifications),
     );
 }
 
 function InstructorInfoBubble() {
     const signal = new Signal();
-    const classList = new ClassList('instructorInfo');
-    const state = State(signal, state => {
-        if (!state) return div();
+    const classList = new ClassList('instructorInfoOffset');
+    const offsetElement = div(classList,
+        State(signal, /**@param{target:any, data: UrSchoolInstructorSimple, offsetY: float}state*/state => {
+            if (!state) return div();
 
-        const bound = state.target.getBoundingClientRect();
-        const element = InstructorInfoElement(state.data);
-        element.insertBefore(span(state.data[2]), element.firstChild);
-        element.style.left = bound.left + 'px';
-        classList.init(element);
+            const bound = state.target.getBoundingClientRect();
+            /**@type UrSchoolInstructorSimple*/
+            const instructor = state.data;
+            const element = InstructorInfoElement(instructor);
+            element.insertBefore(span(instructor.name), element.firstChild);
 
-        setTimeout(() => {
-            element.style.top = (bound.top + state.offsetY - 40 - element.offsetHeight) + 'px';
+            offsetElement.style.left = bound.left + 'px';
+            offsetElement.style.top = (bound.top + state.offsetY - 40) + 'px';
             classList.add('show');
-        }, 0);
-        return element;
-    });
-    state.set = signal.set;
-    state.hide = () => classList.remove('show');
-    return state;
+            return element;
+        })
+    );
+    offsetElement.set = signal.set;
+    offsetElement.hide = () => classList.remove('show');
+    return offsetElement;
 }
 
 function InstructorDetailWindow() {
-    return PopupWindow(({id, info, tags, comments, reviewerCount, takeCourseCount, takeCourseUser}) => {
-        const instructorInfo = InstructorInfoElement(info);
-        instructorInfo.className = 'instructorInfo';
+    return PopupWindow(/**@param{UrSchoolInstructor}instructor*/instructor => {
+        const instructorInfo = InstructorInfoElement(instructor.info);
         return div('instructorDetailWindow',
             div('title',
                 span('Evaluation for'),
                 div('name',
-                    span(info[3]),
-                    span(info[2]),
-                    span(info[4]),
+                    span(instructor.info.department),
+                    span(instructor.info.name),
+                    span(instructor.info.jobTitle),
                 ),
             ),
             div('tags',
-                tags.map(i => {
+                instructor.tags.map(i => {
                     return span(i[1]);
                 })
             ),
             div('reviewerCount',
                 span('Total votes'),
-                span(reviewerCount),
+                span(instructor.reviewerCount.toString()),
             ),
             instructorInfo,
             div('comments',
-                comments.map(i => {
+                instructor.comments.map(i => {
                     return div('item',
                         img(`https://graph.facebook.com/v2.8/${i.profile}/picture?type=square`, 'profile'),
                         div('body',
@@ -614,9 +955,9 @@ function getColor(number) {
     return number < 2 ? 'red' : number < 4 ? 'yellow' : 'blue';
 }
 
-function CourseDetailWindow() {
-    return PopupWindow(/**@param {[NckuHub, CourseData]} data*/([nckuhub, ncku]) => {
-        return div('courseDetailWindow',
+function NckuhubDetailWindow() {
+    return PopupWindow(/**@param{NckuHub}nckuhub*/nckuhub => {
+        return div('nckuhubDetailWindow',
             // rates
             span(`Evaluation(${nckuhub.rate_count})`, 'title'),
             nckuhub.rate_count === 0 ? div('rates') : div('rates',
@@ -634,9 +975,9 @@ function CourseDetailWindow() {
                 )),
             ),
             // comment
-            span(`Comments(${nckuhub.comment.length})`, 'title'),
+            span(`Comments(${nckuhub.comments.length})`, 'title'),
             div('comments',
-                ...nckuhub.comment.map(comment => div('commentBlock',
+                nckuhub.comments.map(comment => div('commentBlock',
                     span(comment.semester, 'semester'),
                     p(comment.comment, 'comment'),
                 )),
@@ -653,7 +994,7 @@ function CourseDetailWindow() {
 function PopupWindow(onDataChange) {
     const popupSignal = new Signal();
     const popupClass = new ClassList('popupWindow');
-    const closeButton = button('closeButton', '', () => popupClass.remove('open'), div('icon'));
+    const closeButton = button('closeButton', null, () => popupClass.remove('open'), div('icon'));
     const popupWindow = div(popupClass, State(popupSignal, state => {
         if (!state) return div();
         const body = onDataChange(state);
@@ -666,13 +1007,5 @@ function PopupWindow(onDataChange) {
 }
 
 function sortToEnd(data) {
-    return data === undefined || data.length === 0 || data < 1e-10;
-}
-
-function reverseArray(array, start, end) {
-    while (start < end) {
-        let t = array[start];
-        array[start++] = array[--end];
-        array[end] = t;
-    }
+    return data === null || data === undefined || data.length === 0;
 }

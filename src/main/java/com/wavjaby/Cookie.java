@@ -20,6 +20,17 @@ public class Cookie {
         return httpCookie;
     }
 
+    public static String getCookie(String name, String url, CookieStore cookieStore) {
+        try {
+            for (HttpCookie httpCookie : cookieStore.get(new URI(url)))
+                if (httpCookie.getName().equalsIgnoreCase(name))
+                    return httpCookie.getValue();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static void unpackAuthCookie(String[] cookieIn, CookieStore cookieStore) {
         if (cookieIn == null) return;
         try {
@@ -126,7 +137,7 @@ public class Cookie {
     }
 
     public static String getDefaultCookie(Headers requestHeaders, CookieStore cookieStore) {
-        // unpack cookie
+        // Unpack cookie
         String[] cookieIn = requestHeaders.containsKey("Cookie")
                 ? requestHeaders.get("Cookie").get(0).split(";")
                 : null;
@@ -134,25 +145,22 @@ public class Cookie {
     }
 
     public static String getDefaultLoginCookie(Headers requestHeaders, CookieStore cookieStore) {
-        // unpack cookie
+        // Unpack cookie
         String[] cookieIn = requestHeaders.containsKey("Cookie")
                 ? requestHeaders.get("Cookie").get(0).split(";")
                 : null;
+        // Unpack ncku portal cookie
         unpackAuthCookie(cookieIn, cookieStore);
         return unpackLoginStateCookie(cookieIn, cookieStore);
     }
 
     public static String getCookieInfoData(String refererUrl) {
-        return "; SameSite=None; Secure; Domain=" + getCookieDomain(refererUrl);
+        if (refererUrl == null || refererUrl.contains("localhost"))
+            return "";
+        return "; SameSite=None; Secure; Domain=" + cookieDomain;
     }
 
     public static String removeCookie(String key) {
         return key + "=; Max-Age=0";
-    }
-
-    public static String getCookieDomain(String refererUrl) {
-        if (refererUrl == null || refererUrl.contains("localhost"))
-            return "localhost";
-        return cookieDomain;
     }
 }

@@ -2,7 +2,7 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -21,7 +21,7 @@ import static com.wavjaby.Lib.parseUrlEncodedForm;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
 
-public class ExtractUrl implements Module {
+public class ExtractUrl implements EndpointModule {
     private static final String TAG = "[Extract] ";
 
 
@@ -89,6 +89,7 @@ public class ExtractUrl implements Module {
 
         try {
             String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=moodle")
+                    .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody((System.currentTimeMillis() / 1000) +
@@ -113,6 +114,7 @@ public class ExtractUrl implements Module {
 
         try {
             String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=maps")
+                    .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody((System.currentTimeMillis() / 1000) +

@@ -1,7 +1,8 @@
 'use strict';
 
 /*ExcludeStart*/
-const {div, button, table, Signal, text, span, ShowIf} = require('../domHelper');
+const module = {};
+const {div, button, table, Signal, text, span, ShowIf, input, checkbox} = require('../domHelper');
 /*ExcludeEnd*/
 
 // static
@@ -60,7 +61,7 @@ module.exports = function (loginState) {
     async function onRender() {
         console.log('Course schedule Render');
         // close navLinks when using mobile devices
-        navLinksClass.remove('open');
+        window.navMenu.remove('open');
         loginState.addListener(onLoginState);
         (styles = await styles).add();
     }
@@ -71,8 +72,11 @@ module.exports = function (loginState) {
         loginState.removeListener(onLoginState);
     }
 
+    /**
+     * @param {LoginData} state
+     */
     function onLoginState(state) {
-        if (state)
+        if (state && state.login)
             fetchApi('/courseSchedule').then(scheduleTable.init);
         else
             scheduleTable.clear();
@@ -81,17 +85,42 @@ module.exports = function (loginState) {
     return div('courseSchedule',
         {onRender, onDestroy},
         div('scheduleTab'),
-        scheduleTable.table(),
+        scheduleTable.table,
         ShowIf(showCourseInfoWindow, courseInfoWindow),
     );
 };
 
+/**
+ * @typedef ScheduleData
+ * @property {string} studentId
+ * @property {int} year
+ * @property {int} semester
+ * @property {float} credits
+ * @property {{
+ *     deptID: string,
+ *     sn: string,
+ *     name: string,
+ *     required: boolean,
+ *     credits: float,
+ *     info: {
+ *         type: string,
+ *         time: string,
+ *         roomID: string,
+ *         room: string,
+ *         time: string[],
+ *     }[],
+ * }} schedule
+ */
 function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
     const courseInfo = {};
     const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
     let thead = scheduleTable.createTHead(),
         tbody = scheduleTable.createTBody(),
         caption = scheduleTable.createCaption();
+    scheduleTable.appendChild(div(null,
+        checkbox(null, 'show location')
+    ));
+
 
     function cellClick() {
         const info = courseInfo[this.serialID];
@@ -125,16 +154,20 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         }
     }
 
-    this.init = function ({id, credits, schedule, err}) {
-        if (err) return;
+    /**
+     * @param {ApiResponse} response
+     */
+    this.init = function (response) {
+        if (!response.success) return;
+        /**@type ScheduleData*/
+        const scheduleData = response.data;
         thead.innerHTML = '';
         tbody.innerHTML = '';
-        caption.textContent = id + ' ' + 'credits: ' + credits;
-
+        caption.textContent = scheduleData.studentId + ' ' + 'credits: ' + scheduleData.credits;
 
         let nightTime = false;
         let holiday = false;
-        for (const i of schedule) for (const j of i.info) {
+        for (const i of scheduleData.schedule) for (const j of i.info) {
             // parse time
             const time = j.time = j.time.split(',');
             time[0] = parseInt(time[0]);
@@ -157,7 +190,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         const days = new Array(tableWidth);
         const daysUndecided = [];
         for (let i = 0; i < 7; i++) days[i] = new Array(tableHeight);
-        for (const i of schedule)
+        for (const i of scheduleData.schedule)
             for (const j of i.info) {
                 // Time undecided
                 if (j.time[0] === -1) {
@@ -297,8 +330,8 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         const courseFetchArr = [];
         for (const serialID in courseDept)
             courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
-        const spl = encodeURIComponent('&');
-        const courseFetchData = encodeURIComponent(courseFetchArr.join(spl));
+        const eql = encodeURIComponent('&');
+        const courseFetchData = encodeURIComponent(courseFetchArr.join(eql));
 
         // fetch data
         fetchApi('/search?serial=' + courseFetchData).then(i => {
@@ -308,11 +341,11 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         });
     };
 
-    this.clear = function(){
+    this.clear = function () {
         thead.innerHTML = '';
         tbody.innerHTML = '';
         caption.textContent = '';
     };
 
-    this.table = function () {return scheduleTable;};
+    this.table = scheduleTable;
 }

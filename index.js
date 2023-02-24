@@ -1,5 +1,4 @@
 'use strict';
-
 const {
     Signal,
     ShowIf,
@@ -9,6 +8,7 @@ const {
     ul,
     li,
     input,
+    checkbox,
     button,
     table,
     thead,
@@ -34,49 +34,95 @@ const {
     any,
     debug: doomDebug, footer
 } = require('./res/domHelper');
-const loadingElement = div('loaderCircle',
-    svg('<circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '25 25 50 50', 'circular')
-);
-const navLinksClass = new ClassList('links');
 const apiEndPoint = location.hostname === 'localhost'
     ? 'http://localhost:8080/api'
     : 'https://api.simon.chummydns.com/api';
-const mobile = window.innerWidth <= 700;
+const mobileWidth = 700;
+window.messageAlert = MessageAlert();
 /**
- * @typedef {{err:string, msg:string, warn:string, login:boolean, data:any}} APIResponse
+ * @typedef {Object} ApiResponse
+ * @property {string} success
+ * @property {string[]} err
+ * @property {string[]} warn
+ * @property {string} msg
+ * @property {any} data
  */
 /**
  * @param endpoint {string}
  * @param [option] {RequestInit}
- * @return Promise<APIResponse>
- * */
+ * @return Promise<ApiResponse>
+ */
 window.fetchApi = function (endpoint, option) {
     if (option) option.credentials = 'include';
     else option = {credentials: 'include'};
-    return fetch(apiEndPoint + endpoint, option).then(i => i.json());
+    return fetch(apiEndPoint + endpoint, option)
+        .catch(i => messageAlert.addError(
+            'Api error',
+            i instanceof Error ? i.stack || i || 'Unknown error!' : i, 10000)
+        )
+        .then(i => i.json())
+        .then(i => {
+                if (!i.success)
+                    messageAlert.addError(
+                        'Api request error',
+                        i.err.join('\n'), 10000);
+                return i;
+            }
+        );
 };
 
+window.hashData = {
+    hashMap: window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {},
+    get(key) {
+        return this.hashMap[key];
+    },
+    set(key, value) {
+        this.hashMap[key] = value;
+        window.location.hash = btoa(encodeURIComponent(JSON.stringify(this.hashMap)));
+    },
+    contains(key) {
+        return this.hashMap[key] !== undefined;
+    }
+};
+window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
+window.navMenu = new ClassList('links');
+
+/**
+ * @typedef {Object} LoginData
+ * @property {boolean} login
+ * @property {string} name
+ * @property {string} studentID
+ * @property {int} year
+ * @property {int} semester
+ */
 // Main function
 (function main() {
     // debug
-    let memoryUpdate = null;
+    let debugWindow = null;
     if (location.hostname === 'localhost') {
+        console.log('Debug enabled');
         doomDebug();
-        memoryUpdate = new Signal(window.performance.memory);
+
+        console.log(window.hashData.hashMap);
+        const memoryUpdate = new Signal(window.performance.memory);
         setInterval(() => memoryUpdate.set(window.performance.memory), 1000);
+        debugWindow = span(
+            TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'),
+            null,
+            {style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px; opacity: 0.5;'})
     }
 
     // main code
     const userData = new Signal();
+    const pageLoading = new Signal(false);
     const showLoginWindow = new Signal(false);
-
-    const hashRouter =
-        HashRouter('schedule',
-            {
-                search: () => require('./res/pages/courseSearch')(),
-                schedule: () => require('./res/pages/courseSchedule')(userData),
-            },
-            Footer());
+    const hashRouter = HashRouter('schedule',
+        {
+            search: () => require('./res/pages/courseSearch')(userData),
+            schedule: () => require('./res/pages/courseSchedule')(userData),
+        },
+        Footer()
+    );
     const navPageButtonName = {
         search: 'Search',
         schedule: 'Schedule'
@@ -88,46 +134,21 @@ window.fetchApi = function (endpoint, option) {
     const root = div('root',
         // Pages
         hashRouter,
-        // 選單列
+        // Navbar
         nav('navbar noSelect',
-            ul('loginBtn list',
-                li('btn',
-                    img('./res/assets/github_icon.svg'),
-                    div(null, span(TextState(userData, (userData) => userData ? userData.studentID : 'Login'))),
-                    {
-                        onclick: function () {
-                            // if login state
-                            if (userData.state) listToggle(this.parentElement);
-                            // toggle login window
-                            else showLoginWindow.set(!showLoginWindow.state);
-                        },
-                    },
-                ),
-                ul(null,
-                    li(null, text('Profile'), {
-                        onclick: function () {
-                            listClose(this.parentElement.parentElement);
-                        }
-                    }),
-                    li(null, text('Logout'), {
-                        onclick: function () {
-                            fetchApi('/logout').then(onLoginStateChange);
-                            listClose(this.parentElement.parentElement);
-                        }
-                    }),
-                ),
-            ),
-            ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => navLinksClass.toggle('open')})),
-            ul(navLinksClass,
-                li('list', {onmouseleave: listLeave, onmouseover: listHover},
-                    span('List', null, {
-                        onclick: function () {listToggle(this.parentElement);}
-                    }),
-                    ul(null,
-                        li(null, text('0w0')),
-                        li(null, text('awa')),
-                    ),
-                ),
+            NavSelectList('loginBtn', [
+                img('./res/assets/github_icon.svg'),
+                span(TextState(userData, response => response ? response.studentID : 'Login')),
+            ], [
+                li(null, text('Profile')),
+                li(null, text('Logout'), {onclick: () => fetchApi('/logout').then(onLoginStateChange)})
+            ], false, () => !userData.state && (showLoginWindow.set(!showLoginWindow.state) || true)),
+            ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => window.navMenu.toggle('open')})),
+            ul(window.navMenu,
+                NavSelectList('arrow', text('List'), [
+                    li(null, text('0w0')),
+                    li(null, text('awa'))
+                ]),
                 hashRouter.getRoutesName().map(i =>
                     li(null, text(navPageButtonName[i]), {
                         onclick: () => hashRouter.openPage(i)
@@ -135,83 +156,156 @@ window.fetchApi = function (endpoint, option) {
                 ),
             )
         ),
-        ShowIf(showLoginWindow,
-            LoginWindow(onLoginStateChange)
-        ),
-        memoryUpdate === null ? null :
-            span(TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'), null, {style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px; opacity: 0.5;'}),
+        ShowIf(showLoginWindow, LoginWindow(onLoginStateChange, pageLoading)),
+        ShowIf(pageLoading, div('loading', window.loadingElement.cloneNode(true))),
+        messageAlert,
+        debugWindow,
     );
     window.onload = () => document.body.append(root);
 
     // functions
     function onLoginStateChange(response) {
-        if (response.err === 'loginErr')
-            alert(response.msg);
-        if (response.login) {
-            userData.set(response);
+        /**@type LoginData*/
+        const loginData = response.data;
+        if (loginData.login) {
+            userData.set(loginData);
             showLoginWindow.set(false);
-        } else
+        } else {
+            if (response.msg)
+                messageAlert.addError('Login error', response.msg, 10000);
             userData.set(null);
+        }
+    }
+})();
+
+function NavSelectList(classname, title, items, enableHover, onOpen) {
+    const list = ul(classname ? 'list ' + classname : 'list', enableHover ? {onmouseleave, onmouseenter} : null,
+        li(null, title, {onclick}),
+        ul(null, items)
+    );
+
+    for (const item of items) {
+        const itemOnclick = item.onclick;
+        if (itemOnclick)
+            item.onclick = () => {
+                itemOnclick();
+                onmouseleave();
+            };
+        else
+            item.onclick = onmouseleave;
     }
 
-    function listHover() {
-        if (!mobile)
-            this.style.height = (
-                this.firstElementChild.offsetHeight +
-                this.lastElementChild.offsetHeight
-            ) + 'px';
+    function onmouseenter() {
+        if (window.innerWidth > mobileWidth)
+            list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
     }
 
-    function listLeave() {
-        this.style.height = null;
-    }
-
-    function listClose(list) {
+    function onmouseleave() {
         list.style.height = null;
     }
 
-    function listToggle(list) {
+    function onclick() {
+        if (onOpen && onOpen() && !list.style.height) return;
+
         if (list.style.height)
             list.style.height = null;
         else
             list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
     }
 
-    function LoginWindow(onLoginStateChange) {
-        const username = input('loginField', 'Account', null, {onkeyup, type: 'text'});
-        const password = input('loginField', 'Password', null, {onkeyup, type: 'password'});
+    return list;
+}
 
-        function onkeyup(e) {
-            if (e.key === 'Enter') login();
+function MessageAlert() {
+    const messageBoxRoot = div('messageBox');
+    let updateTop = null;
+    let height = 0;
+
+    messageBoxRoot.addInfo = function (title, description, removeTimeout) {
+        createMessageBox('info', title, description, removeTimeout);
+    }
+
+    messageBoxRoot.addError = function (title, description, removeTimeout) {
+        createMessageBox('error', title, description, removeTimeout);
+    }
+
+    messageBoxRoot.addSuccess = function (title, description, removeTimeout) {
+        createMessageBox('success', title, description, removeTimeout);
+    }
+
+    function onclick() {
+        removeMessageBox(this.parentElement);
+    }
+
+    function createMessageBox(classname, title, description, removeTimeout) {
+        const messageBox = div(classname,
+            span(title, 'title'),
+            span(description, 'description'),
+            div('closeButton', {onclick})
+        );
+        messageBoxRoot.appendChild(messageBox);
+        height += messageBox.offsetHeight + 10;
+        if (removeTimeout !== undefined)
+            setTimeout(() => removeMessageBox(messageBox), removeTimeout);
+        if (!updateTop)
+            updateTop = setTimeout(updateMessageBoxTop, 50);
+    }
+
+    function removeMessageBox(messageBox) {
+        messageBox.style.opacity = '0';
+        setTimeout(() => {
+            messageBoxRoot.removeChild(messageBox);
+            updateMessageBoxTop();
+        }, 200);
+    }
+
+    function updateMessageBoxTop() {
+        height = 0;
+        for (let node of messageBoxRoot.childNodes) {
+            node.style.top = height + 'px';
+            height += node.offsetHeight + 10;
         }
+        updateTop = null;
+    }
 
-        let loading = false;
+    return messageBoxRoot;
+}
 
-        function login() {
+function LoginWindow(onLoginStateChange, pageLoading) {
+    const username = input('loginField', 'Account', null, {onkeyup, type: 'text'});
+    const password = input('loginField', 'Password', null, {onkeyup, type: 'password'});
+    let loading = false;
+
+    function onkeyup(e) {
+        if (e.key === 'Enter') login();
+    }
+
+    function login() {
+        if (!loading) {
+            loading = true;
+            pageLoading.set(true);
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-            if (!loading) {
-                fetchApi('/login', {
-                    method: 'POST',
-                    body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
-                }).then(i => {
-                    onLoginStateChange(i);
-                    loading = false;
-                });
-                loading = true;
-            }
+            fetchApi('/login', {
+                method: 'POST',
+                body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
+            }).then(i => {
+                loading = false;
+                pageLoading.set(false);
+                onLoginStateChange(i);
+            });
         }
-
-        // element
-        return div('loginWindow', {onRender: () => username.focus()},
-            username,
-            password,
-            button('loginField', 'Login', login, {type: 'submit'}),
-        );
     }
 
-    function Footer() {
-        return footer(
+    // element
+    return div('loginWindow', {onRender: () => username.focus()},
+        username,
+        password,
+        button('loginField', 'Login', login, {type: 'submit'}),
+    );
+}
 
-        );
-    }
-})();
+function Footer() {
+    return footer(
+
+    );
+}

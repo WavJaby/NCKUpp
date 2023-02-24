@@ -2,7 +2,7 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
@@ -17,7 +17,7 @@ import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 
-public class PreliminaryCourseSchedule implements Module {
+public class PreliminaryCourseSchedule implements EndpointModule {
     private static final String TAG = "[PreliminaryCourseSchedule] ";
 
     @Override

@@ -2,7 +2,8 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.ApiResponse;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.SimpleThreadFactory;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
@@ -10,6 +11,7 @@ import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -20,10 +22,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -36,25 +35,27 @@ import static com.wavjaby.Lib.*;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.courseQueryNckuOrg;
 
-public class Search implements Module {
+public class Search implements EndpointModule {
     private static final String TAG = "[Search] ";
     private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(4);
     private final Semaphore cosPreCheckPoolLock = new Semaphore(4);
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
 
-    private static final Map<String, Integer> tagColormap = new HashMap<String, Integer>() {{
-        put("default", 0);
-        put("success", 1);
-        put("info", 2);
-        put("primary", 3);
-        put("warning", 4);
-        put("danger", 5);
+    private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
+        put("default", '0');
+        put("success", '1');
+        put("info", '2');
+        put("primary", '3');
+        put("warning", '4');
+        put("danger", '5');
     }};
 
     private final UrSchool urSchool;
+    private final RobotCode robotCode;
 
-    public Search(UrSchool urSchool) {
+    public Search(UrSchool urSchool, RobotCode robotCode) {
         this.urSchool = urSchool;
+        this.robotCode = robotCode;
     }
 
     @Override
@@ -93,25 +94,19 @@ public class Search implements Module {
             String loginState = unpackLoginStateCookie(cookieIn, cookieStore);
 
             // search
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getQuery(), cookieIn);
-            boolean success = true;
+            ApiResponse apiResponse = new ApiResponse();
             if (searchQuery.invalidSerialNumber()) {
-                data.append("err", TAG + "Invalid serial number");
-                success = false;
-            }
-            if (searchQuery.noQuery()) {
-                data.append("err", TAG + "No query string found");
-                success = false;
-            }
-            if (success)
-                success = search(searchQuery, data, cookieStore);
-            data.append("success", success);
+                apiResponse.addError(TAG + "Invalid serial number");
+            } else if (searchQuery.noQuery()) {
+                apiResponse.addError(TAG + "No query string found");
+            } else
+                search(searchQuery, apiResponse, cookieStore);
 
             // set cookie
             Headers responseHeader = req.getResponseHeaders();
             packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
-            if (success) {
+            if (apiResponse.isSuccess()) {
                 String searchID = (searchQuery.searchID == null ? "" : searchQuery.searchID) +
                         '|' +
                         (searchQuery.timeSearchID == null ? "" : searchQuery.timeSearchID);
@@ -120,13 +115,12 @@ public class Search implements Module {
             } else
                 responseHeader.add("Set-Cookie", removeCookie("searchID") +
                         "; Path=/api/search" + getCookieInfoData(refererUrl));
-
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -148,7 +142,7 @@ public class Search implements Module {
 
         String courseName;      // 課程名稱
         String instructor;      // 教師姓名
-        String dayOfWeak;       // 星期 1 ~ 7
+        String dayOfWeek;       // 星期 1 ~ 7
         String deptNo;          // 系所 A...
         String grade;           // 年級 1 ~ 7
         String cl;              // 節次 1 ~ 16 []
@@ -166,6 +160,7 @@ public class Search implements Module {
         }
 
         public SearchQuery(CourseData courseData) {
+            this.courseName = courseData.courseName;
             this.deptNo = courseData.serialNumber == null
                     ? null
                     : courseData.serialNumber.substring(0, courseData.serialNumber.indexOf('-'));
@@ -173,13 +168,13 @@ public class Search implements Module {
             if (courseData.timeList != null) {
                 for (CourseData.TimeData time : courseData.timeList) {
                     if (time.section == null) continue;
-                    this.dayOfWeak = String.valueOf(time.dayOfWeak);
+                    this.dayOfWeek = String.valueOf(time.dayOfWeek);
                     this.cl = String.valueOf(time.getSectionAsInt());
                     break;
                 }
                 // if no section
                 if (this.cl == null)
-                    this.dayOfWeak = String.valueOf(courseData.timeList[0].dayOfWeak);
+                    this.dayOfWeek = String.valueOf(courseData.timeList[0].dayOfWeek);
             }
         }
 
@@ -199,7 +194,7 @@ public class Search implements Module {
 
             Map<String, String> query = parseUrlEncodedForm(queryString);
 
-            getAll = query.containsKey("ALL");
+            getAll = "ALL" .equals(query.get("dept"));
             String serialNum;
             getSerial = (serialNum = query.get("serial")) != null;
             String queryTime;
@@ -221,7 +216,7 @@ public class Search implements Module {
                 } else {
                     courseName = query.get("courseName");   // 課程名稱
                     instructor = query.get("instructor");   // 教師姓名
-                    dayOfWeak = query.get("dayOfWeak");     // 星期 1 ~ 7
+                    dayOfWeek = query.get("dayOfWeek");     // 星期 1 ~ 7
                     deptNo = query.get("dept");             // 系所 A...
                     grade = query.get("grade");             // 年級 1 ~ 7
                     cl = query.get("section");              // 節次 1 ~ 16 []
@@ -230,7 +225,7 @@ public class Search implements Module {
         }
 
         boolean noQuery() {
-            return !getAll && !getSerial && courseName == null && instructor == null && dayOfWeak == null && deptNo == null && grade == null && cl == null;
+            return !getAll && !getSerial && courseName == null && instructor == null && dayOfWeek == null && deptNo == null && grade == null && cl == null;
         }
 
         public boolean invalidSerialNumber() {
@@ -267,9 +262,9 @@ public class Search implements Module {
         private static class TagData {
             String tag;
             String url; // Can be null
-            int colorID;
+            String colorID;
 
-            public TagData(String tag, int colorID, String url) {
+            public TagData(String tag, String colorID, String url) {
                 this.tag = tag;
                 this.url = url;
                 this.colorID = colorID;
@@ -284,7 +279,7 @@ public class Search implements Module {
         }
 
         private static class TimeData {
-            Integer dayOfWeak; // Can be null
+            Integer dayOfWeek; // Can be null
             Character section; // Can be null
             Character sectionTo; // Can be null
             String mapLocation; // Can be null
@@ -294,7 +289,7 @@ public class Search implements Module {
             String extraTimeDataKey; // Can be null
 
             public TimeData() {
-                dayOfWeak = null;
+                dayOfWeek = null;
                 section = null;
                 sectionTo = null;
                 mapLocation = null;
@@ -304,7 +299,7 @@ public class Search implements Module {
             }
 
             public boolean isNotEmpty() {
-                return dayOfWeak != null ||
+                return dayOfWeek != null ||
                         section != null ||
                         sectionTo != null ||
                         mapLocation != null ||
@@ -327,7 +322,7 @@ public class Search implements Module {
             public String toString() {
                 if (extraTimeDataKey != null) return extraTimeDataKey;
                 StringBuilder builder = new StringBuilder();
-                if (dayOfWeak != null) builder.append(dayOfWeak);
+                if (dayOfWeek != null) builder.append(dayOfWeek);
                 builder.append(',');
                 if (section != null) builder.append(section);
                 builder.append(',');
@@ -390,6 +385,36 @@ public class Search implements Module {
             return serialNumber;
         }
 
+        public String getGroup() {
+            return group;
+        }
+
+        public String getForClass() {
+            return forClass;
+        }
+
+        public TimeData[] getTimeList() {
+            return timeList;
+        }
+
+        public String getTimeString() {
+            StringBuilder builder = new StringBuilder();
+            for (TimeData i : timeList) {
+                if (i.extraTimeDataKey != null) continue;
+                if (builder.length() > 0)
+                    builder.append(',');
+
+                builder.append('[').append(i.dayOfWeek).append(']');
+                if (i.section != null) {
+                    if (i.sectionTo != null)
+                        builder.append(i.section).append('~').append(i.sectionTo);
+                    else
+                        builder.append(i.section);
+                }
+            }
+            return builder.toString();
+        }
+
         public String getCourseName() {
             return courseName;
         }
@@ -429,6 +454,60 @@ public class Search implements Module {
             this.allDept = allDept;
             this.deptCount = allDept.size();
             this.cookieStore = cookieStore;
+        }
+
+        public Set<String> getAllDept() {
+            return allDept;
+        }
+    }
+
+    public static class AllDeptGroupData {
+        public static class Group {
+            final String name;
+            final List<DeptData> dept;
+
+            public Group(String name, List<DeptData> dept) {
+                this.name = name;
+                this.dept = dept;
+            }
+        }
+
+        public static class DeptData {
+            final String id, name;
+
+            public DeptData(String id, String name) {
+                this.id = id;
+                this.name = name;
+            }
+        }
+
+        private final List<Group> deptGroup;
+        private final int deptCount;
+
+        public AllDeptGroupData(List<Group> allDept, int total) {
+            this.deptGroup = allDept;
+            this.deptCount = total;
+        }
+
+        @Override
+        public String toString() {
+            JsonObjectStringBuilder outJson = new JsonObjectStringBuilder();
+            JsonArrayStringBuilder outDeptGroup = new JsonArrayStringBuilder();
+            for (Group group : deptGroup) {
+                JsonObjectStringBuilder outGroup = new JsonObjectStringBuilder();
+                outGroup.append("name", group.name);
+                JsonArrayStringBuilder outDeptData = new JsonArrayStringBuilder();
+                for (DeptData deptData : group.dept) {
+                    outDeptData.append(new JsonArrayStringBuilder()
+                            .append(deptData.id).append(deptData.name));
+                }
+                outGroup.append("dept", outDeptData);
+                outDeptGroup.append(outGroup);
+            }
+
+            outJson.append("deptGroup", outDeptGroup);
+            outJson.append("deptCount", deptCount);
+            return outJson.toString();
         }
     }
 
@@ -471,7 +550,7 @@ public class Search implements Module {
         }
     }
 
-    private boolean search(SearchQuery searchQuery, JsonObjectStringBuilder outData, CookieStore cookieStore) {
+    private boolean search(SearchQuery searchQuery, ApiResponse response, CookieStore cookieStore) {
         try {
             List<CourseData> courseDataList = new ArrayList<>();
 
@@ -480,14 +559,18 @@ public class Search implements Module {
             if (searchQuery.getAll) {
                 AllDeptData allDeptData = getAllDeptData(cookieStore);
                 if (allDeptData == null) {
-                    outData.append("err", TAG + "Can not get crypt");
+                    response.addError(TAG + "Can not get crypt");
                     success = false;
                 }
                 // start getting dept
                 else {
                     CountDownLatch countDownLatch = new CountDownLatch(allDeptData.deptCount);
-                    final int poolSize = 4;
+                    final int poolSize = 6;
                     ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(poolSize, new SimpleThreadFactory("Fetch-Thread-"));
+                    AllDeptData[] fragments = new AllDeptData[poolSize];
+                    for (int i = 0; i < poolSize; i++)
+                        fragments[i] = getAllDeptData(createCookieStore());
+                    int i = 0;
                     Semaphore fetchPoolLock = new Semaphore(poolSize);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
                     ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
@@ -501,12 +584,16 @@ public class Search implements Module {
                                 countDownLatch.countDown();
                             break;
                         }
+                        // Switch fragment
+                        AllDeptData fragment = fragments[i++];
+                        if (i == fragments.length)
+                            i = 0;
                         fetchPool.submit(() -> {
                             try {
-                                long start = System.currentTimeMillis();
-                                if (allSuccess.get() && !getDeptCourseData(dept, allDeptData, false, outData, courseDataList))
+//                                long start = System.currentTimeMillis();
+                                if (allSuccess.get() && !getDeptCourseData(dept, fragment, false, response, courseDataList))
                                     allSuccess.set(false);
-                                Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
+//                                Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -531,44 +618,97 @@ public class Search implements Module {
                 JsonObjectStringBuilder result = new JsonObjectStringBuilder();
                 for (Map.Entry<String, String> i : searchQuery.serialIdNumber.entrySet()) {
                     courseDataList.clear();
-                    if (!getQueryCourseData(searchQuery, i, cookieStore, outData, courseDataList)) {
+                    if (!getQueryCourseData(searchQuery, i, cookieStore, response, courseDataList)) {
                         success = false;
                         break;
                     }
                     result.appendRaw(i.getKey(), courseDataList.toString());
                 }
-                outData.appendRaw("data", result.toString());
+                response.setData(result.toString());
             } else
-                success = getQueryCourseData(searchQuery, null, cookieStore, outData, courseDataList);
+                success = getQueryCourseData(searchQuery, null, cookieStore, response, courseDataList);
 
             if (success && !searchQuery.getSerial)
-                outData.appendRaw("data", courseDataList.toString());
+                response.setData(courseDataList.toString());
             return success;
         } catch (Exception e) {
-            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
         }
         return false;
     }
 
-    public AllDeptData getAllDeptData(CookieStore cookieStore) throws IOException {
-        Connection.Response allDeptRes = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
-                .cookieStore(cookieStore)
-                .execute();
-        String allDeptBody = allDeptRes.body();
-        cosPreCheck(allDeptBody, cookieStore, null);
+    public static CookieStore createCookieStore() {
+        CookieManager cookieManager = new CookieManager();
+        CookieStore cookieStore = cookieManager.getCookieStore();
+        try {
+            HttpConnection.connect(courseNckuOrg + "/index.php")
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .execute();
+            for (HttpCookie cookie : cookieStore.getCookies())
+                if (cookie.getName().equals("PHPSESSID")) {
+//                    Logger.log(TAG, cookie.toString());
+                    break;
+                }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return cookieStore;
+    }
+
+    public AllDeptData getAllDeptData(CookieStore cookieStore) {
+        Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
+                .header("Connection", "keep-alive")
+                .cookieStore(cookieStore);
+        String body = checkRobot(request, cookieStore);
+        if (body == null)
+            return null;
+
+        cosPreCheck(body, cookieStore, null);
 
         Set<String> allDept = new HashSet<>();
-        for (Element element : allDeptRes.parse().getElementsByClass("pnl_dept"))
+        for (Element element : Jsoup.parse(body).getElementsByClass("pnl_dept"))
             allDept.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
 
         int cryptStart, cryptEnd;
-        if ((cryptStart = allDeptBody.indexOf("'crypt'")) == -1 ||
-                (cryptStart = allDeptBody.indexOf('\'', cryptStart + 7)) == -1 ||
-                (cryptEnd = allDeptBody.indexOf('\'', ++cryptStart)) == -1
+        if ((cryptStart = body.indexOf("'crypt'")) == -1 ||
+                (cryptStart = body.indexOf('\'', cryptStart + 7)) == -1 ||
+                (cryptEnd = body.indexOf('\'', ++cryptStart)) == -1
         )
             return null;
-        return new AllDeptData(allDeptBody.substring(cryptStart, cryptEnd), allDept, cookieStore);
+        return new AllDeptData(body.substring(cryptStart, cryptEnd), allDept, cookieStore);
+    }
+
+    public AllDeptGroupData getAllDeptGroupData(CookieStore cookieStore) {
+        Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
+                .header("Connection", "keep-alive")
+                .cookieStore(cookieStore);
+        String body = checkRobot(request, cookieStore);
+        if (body == null)
+            return null;
+
+        cosPreCheck(body, cookieStore, null);
+
+        int total = 0;
+        List<AllDeptGroupData.Group> groups = new ArrayList<>();
+        for (Element deptGroup : Jsoup.parse(body).getElementsByClass("pnl_dept")) {
+            List<AllDeptGroupData.DeptData> dept = new ArrayList<>();
+            for (Element deptEle : deptGroup.getElementsByAttribute("data-dept")) {
+                String deptName = deptEle.text();
+                dept.add(new AllDeptGroupData.DeptData(
+                        deptEle.attr("data-dept"),
+                        deptName.substring(deptName.indexOf(')') + 1)
+                ));
+                total++;
+            }
+            String groupName = deptGroup.getElementsByClass("panel-heading").text();
+            groups.add(new AllDeptGroupData.Group(groupName, dept));
+        }
+
+        return new AllDeptGroupData(groups, total);
     }
 
     public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData) throws IOException {
@@ -606,6 +746,7 @@ public class Search implements Module {
 //        }
 
         Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
+                .header("Connection", "keep-alive")
                 .cookieStore(allDeptData.cookieStore)
                 .ignoreContentType(true)
                 .method(Connection.Method.POST)
@@ -636,24 +777,24 @@ public class Search implements Module {
         return true;
     }
 
-    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache, JsonObjectStringBuilder outData, List<CourseData> courseDataList) throws IOException {
+    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache, ApiResponse response, List<CourseData> courseDataList) throws IOException {
         DeptToken deptToken = createDeptToken(deptNo, allDeptData);
         if (deptToken == null) {
-            outData.append("err", TAG + "Network error");
+            response.addError(TAG + "Network error");
             return false;
         }
         if (deptToken.error != null) {
-            outData.append("err", TAG + "Error from NCKU course: " + deptToken.error);
+            response.addError(TAG + "Error from NCKU course: " + deptToken.error);
             return false;
         }
 
         String searchResultBody = getDeptNCKU(deptToken);
         if (searchResultBody == null) {
-            outData.append("warn", TAG + "Dept.No " + deptNo + " not found");
+            response.addWarn(TAG + "Dept.No " + deptNo + " not found");
             return true;
         }
 
-        Element table = findCourseTable(searchResultBody, "Dept.No " + deptNo, outData);
+        Element table = findCourseTable(searchResultBody, "Dept.No " + deptNo, response);
         if (table == null)
             return false;
 
@@ -666,21 +807,22 @@ public class Search implements Module {
         return true;
     }
 
-    private String getDeptNCKU(DeptToken deptToken) throws IOException {
-        Connection.Response result = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" +
-                        URLEncoder.encode(deptToken.id, "UTF-8"))
+    private String getDeptNCKU(DeptToken deptToken) {
+        String deptTokenId;
+        try {
+            deptTokenId = URLEncoder.encode(deptToken.id, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" + deptTokenId)
+                .header("Connection", "keep-alive")
                 .cookieStore(deptToken.cookieStore)
                 .ignoreContentType(true)
                 .header("Referer", courseNckuOrg + "/index.php?c=qry_all")
-                .maxBodySize(20 * 1024 * 1024)
-                .execute();
-        if (result.url().getQuery().equals("c=qry_all"))
-            return null;
-        String searchResultBody = result.body();
-//            cosPreCheck(searchResultBody, deptToken.cookieStore, null);
-//            Logger.log(TAG, deptToken.cookieStore.getCookies().toString());
-        deptToken.awaitCosPreCheck();
-        deptToken.lockCosPreCheck();
+                .maxBodySize(20 * 1024 * 1024);
+        String body = checkRobot(request, deptToken.cookieStore);
         try {
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
@@ -688,31 +830,30 @@ public class Search implements Module {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(searchResultBody, deptToken.cookieStore, null);
-            deptToken.unlockCosPreCheckLock();
+            cosPreCheck(body, deptToken.cookieStore, null);
             cosPreCheckPoolLock.release();
         });
-        return searchResultBody;
+        return body;
     }
 
     private boolean getQueryCourseData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
-                                       CookieStore cookieStore, JsonObjectStringBuilder outData, List<CourseData> courseDataList) throws IOException {
+                                       CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
         // If getSerialNum is given, set query dept to get courses
         if (getSerialNum != null)
             searchQuery.deptNo = getSerialNum.getKey();
 
-        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, outData);
+        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, response);
         if (saveQueryToken == null) {
-            outData.append("err", TAG + "Failed to save query");
+            response.addError(TAG + "Failed to save query");
             return false;
         }
 
         String searchResultBody = getCourseNCKU(saveQueryToken);
 
-        if ((searchQuery.searchID = getSearchID(searchResultBody, outData)) == null)
+        if (searchResultBody == null || (searchQuery.searchID = getSearchID(searchResultBody, response)) == null)
             return false;
 
-        Element table = findCourseTable(searchResultBody, "Query " + searchQuery, outData);
+        Element table = findCourseTable(searchResultBody, "Query " + searchQuery, response);
         if (table == null)
             return false;
 
@@ -729,7 +870,7 @@ public class Search implements Module {
     public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList, boolean addUrSchoolCache) throws IOException {
         String searchResultBody = getCourseNCKU(saveQueryToken);
 
-        if ((searchQuery.searchID = getSearchID(searchResultBody, null)) == null)
+        if (searchResultBody == null || (searchQuery.searchID = getSearchID(searchResultBody, null)) == null)
             return false;
 
         Element table = findCourseTable(searchResultBody, "Query " + searchQuery, null);
@@ -746,7 +887,7 @@ public class Search implements Module {
         return true;
     }
 
-    public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, JsonObjectStringBuilder outData) {
+    public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, ApiResponse response) {
         try {
             StringBuilder postData = new StringBuilder();
             String host;
@@ -757,12 +898,18 @@ public class Search implements Module {
                 host = courseNckuOrg;
                 // Get searchID if it's null
                 if (searchQuery.searchID == null) {
-                    final String body = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                    Logger.log(TAG, "Renew search id");
+
+                    Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                            .header("Connection", "keep-alive")
                             .cookieStore(cookieStore)
-                            .ignoreContentType(true)
-                            .execute().body();
-                    cosPreCheck(body, cookieStore, outData);
-                    if ((searchQuery.searchID = getSearchID(body, outData)) == null)
+                            .ignoreContentType(true);
+                    String body = checkRobot(request, cookieStore);
+                    if (body == null)
+                        return null;
+
+                    cosPreCheck(body, cookieStore, response);
+                    if ((searchQuery.searchID = getSearchID(body, response)) == null)
                         return null;
                 }
                 postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
@@ -770,71 +917,72 @@ public class Search implements Module {
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
                 if (searchQuery.instructor != null)
                     postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
-                if (searchQuery.dayOfWeak != null) postData.append("&wk=").append(searchQuery.dayOfWeak);
+                if (searchQuery.dayOfWeek != null) postData.append("&wk=").append(searchQuery.dayOfWeek);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
                 if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
             }
 
 //            Logger.log(TAG, TAG + "Post search query");
-            Connection.Response search = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
+            Connection request = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
+                    .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .method(Connection.Method.POST)
                     .requestBody(postData.toString())
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .execute();
-            String searchBody = search.body();
-            if (searchBody.equals("0")) {
-                if (outData != null)
-                    outData.append("err", TAG + "Condition not set");
+                    .header("X-Requested-With", "XMLHttpRequest");
+            String body = checkRobot(request, cookieStore);
+            if (body == null)
+                return null;
+
+            if (body.equals("0")) {
+                if (response != null)
+                    response.addError(TAG + "Condition not set");
                 return null;
             }
-            if (searchBody.equals("1")) {
-                if (outData != null)
-                    outData.append("err", TAG + "Wrong condition format");
+            if (body.equals("1")) {
+                if (response != null)
+                    response.addError(TAG + "Wrong condition format");
                 return null;
             }
-            return new SaveQueryToken(host, searchBody, cookieStore);
+            return new SaveQueryToken(host, body, cookieStore);
         } catch (UnsupportedEncodingException encodingException) {
             encodingException.printStackTrace();
-            if (outData != null)
-                outData.append("err", TAG + "Unsupported encoding");
-        } catch (IOException e) {
-            e.printStackTrace();
-            if (outData != null)
-                outData.append("err", TAG + "Unknown error" + Arrays.toString(e.getStackTrace()));
+            if (response != null)
+                response.addError(TAG + "Unsupported encoding");
         }
         return null;
     }
 
-    private String getCourseNCKU(SaveQueryToken saveQueryToken) throws IOException {
+    private String getCourseNCKU(SaveQueryToken saveQueryToken) {
 //            Logger.log(TAG, TAG + "Get search result");
-        Connection.Response searchResult = HttpConnection.connect(saveQueryToken.host + "/index.php?c=qry11215" + saveQueryToken.search)
+        Connection request = HttpConnection.connect(saveQueryToken.host + "/index.php?c=qry11215" + saveQueryToken.search)
+                .header("Connection", "keep-alive")
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
-                .maxBodySize(20 * 1024 * 1024)
-                .execute();
-
-        String searchResultBody = searchResult.body();
+                .maxBodySize(20 * 1024 * 1024);
+        String body = checkRobot(request, saveQueryToken.cookieStore);
+        if (body == null)
+            return null;
         try {
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(searchResultBody, saveQueryToken.cookieStore, null);
+            cosPreCheck(body, saveQueryToken.cookieStore, null);
             cosPreCheckPoolLock.release();
         });
-        return searchResultBody;
+        return body;
     }
 
-    private Element findCourseTable(String html, String errorMessage, JsonObjectStringBuilder outData) {
+    private Element findCourseTable(String html, String errorMessage, ApiResponse response) {
         int resultTableStart;
         if ((resultTableStart = html.indexOf("<table")) == -1) {
-            if (outData != null)
-                outData.append("err", TAG + errorMessage + " result table not found");
+            if (response != null)
+                response.addError(TAG + errorMessage + " result table not found");
             return null;
         }
         // get table body
@@ -842,8 +990,8 @@ public class Search implements Module {
         if ((resultTableBodyStart = html.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
                 (resultTableBodyEnd = html.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
         ) {
-            if (outData != null)
-                outData.append("err", TAG + errorMessage + " result table body not found");
+            if (response != null)
+                response.addError(TAG + errorMessage + " result table body not found");
             return null;
         }
 
@@ -955,16 +1103,27 @@ public class Search implements Module {
                 for (int i = 0; i < tags.length; i++) {
                     Element tagElement = tagElements.get(i);
                     // Get tag Color
-                    String tagType = null;
-                    for (String j : tagElement.classNames())
-                        if (j.length() > 6 && j.startsWith("label")) {
-                            tagType = j.substring(6);
-                            break;
+                    String tagColor;
+                    String styleOverride = tagElement.attr("style");
+                    if (styleOverride.length() > 0) {
+                        int backgroundColorStart, backgroundColorEnd;
+                        if ((backgroundColorStart = styleOverride.indexOf("background-color:")) != -1 &&
+                                (backgroundColorEnd = styleOverride.indexOf(';', backgroundColorStart + 17)) != -1)
+                            tagColor = styleOverride.substring(backgroundColorStart + 17, backgroundColorEnd).trim();
+                        else
+                            tagColor = "0";
+                    } else {
+                        String tagType = null;
+                        for (String j : tagElement.classNames())
+                            if (j.length() > 6 && j.startsWith("label")) {
+                                tagType = j.substring(6);
+                                break;
+                            }
+                        tagColor = String.valueOf(tagColormap.get(tagType));
+                        if (tagColor == null) {
+                            Logger.log(TAG, "Unknown tag color: " + tagType);
+                            tagColor = "0";
                         }
-                    Integer tagColor = tagColormap.get(tagType);
-                    if (tagColor == null) {
-                        Logger.log(TAG, "Unknown tag color: " + tagType);
-                        tagColor = -1;
                     }
 
                     Element j = tagElement.firstElementChild();
@@ -1020,15 +1179,15 @@ public class Search implements Module {
                     timeParseState++;
                     String text;
                     if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
-                        // Get dayOfWeak
-                        int dayOfWeakEnd = text.indexOf(']', 1);
-                        if (dayOfWeakEnd != -1) {
-                            timeDataCache.dayOfWeak = Integer.parseInt(text.substring(1, dayOfWeakEnd));
+                        // Get dayOfWeek
+                        int dayOfWeekEnd = text.indexOf(']', 1);
+                        if (dayOfWeekEnd != -1) {
+                            timeDataCache.dayOfWeek = Integer.parseInt(text.substring(1, dayOfWeekEnd));
                             // Get section
-                            if (text.length() > dayOfWeakEnd + 1) {
-                                timeDataCache.section = text.charAt(dayOfWeakEnd + 1);
+                            if (text.length() > dayOfWeekEnd + 1) {
+                                timeDataCache.section = text.charAt(dayOfWeekEnd + 1);
                                 // Get section end
-                                int split = text.indexOf('~', dayOfWeakEnd + 1);
+                                int split = text.indexOf('~', dayOfWeekEnd + 1);
                                 if (split != -1 && text.length() > split + 1) {
                                     timeDataCache.sectionTo = text.charAt(split + 1);
                                 }
@@ -1062,9 +1221,14 @@ public class Search implements Module {
                             timeDataCache = new CourseData.TimeData();
                         }
                     } else if (((Element) node).tagName().equals("div")) {
+                        if (timeDataCache.isNotEmpty()) {
+                            timeDataList.add(timeDataCache);
+                            timeDataCache = new CourseData.TimeData();
+                        }
                         // Detailed time data
                         timeDataCache.extraTimeDataKey = node.attr("data-mkey");
                         timeDataList.add(timeDataCache);
+                        timeDataCache = new CourseData.TimeData();
                     }
                     timeParseState = 0;
                 }
@@ -1158,12 +1322,12 @@ public class Search implements Module {
         }
     }
 
-    private String getSearchID(String body, JsonObjectStringBuilder outData) {
+    private String getSearchID(String body, ApiResponse response) {
         // get entry function
         int searchFunctionStart = body.indexOf("function setdata()");
         if (searchFunctionStart == -1) {
-            if (outData != null)
-                outData.append("err", TAG + "Search function not found");
+            if (response != null)
+                response.addError(TAG + "Search function not found");
             return null;
         } else searchFunctionStart += 18;
 
@@ -1172,10 +1336,51 @@ public class Search implements Module {
                 (idStart = body.indexOf('\'', idStart + 4)) == -1 ||
                 (idEnd = body.indexOf('\'', idStart + 1)) == -1
         ) {
-            if (outData != null)
-                outData.append("err", TAG + "Search id not found");
+            if (response != null)
+                response.addError(TAG + "Search id not found");
             return null;
         }
         return body.substring(idStart + 1, idEnd);
+    }
+
+    public String checkRobot(Connection request, CookieStore cookieStore) {
+        for (int i = 0; i < 5; i++) {
+            String response;
+            try {
+                response = request.execute().body();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+
+            // Check if no robot
+            int codeTicketStart, codeTicketEnd;
+            if ((codeTicketStart = response.indexOf("index.php?c=portal&m=robot")) == -1 ||
+                    (codeTicketStart = response.indexOf("code_ticket=", codeTicketStart)) == -1 ||
+                    (codeTicketEnd = response.indexOf("&", codeTicketStart)) == -1
+            ) return response;
+
+            // Crack robot
+            Logger.warn(TAG, "Crack check robot");
+            String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);
+            String code = robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
+            Logger.warn(TAG, "Crack check code: " + code);
+            try {
+                HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=robot")
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .method(Connection.Method.POST)
+                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                        .header("X-Requested-With", "XMLHttpRequest")
+                        .requestBody("time=" + (System.currentTimeMillis() / 1000) +
+                                "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
+                                "&code=" + code)
+                        .execute();
+//            System.out.println(new JsonObject(allDeptRes.body()).toStringBeauty());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 }

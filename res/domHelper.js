@@ -10,22 +10,17 @@ function addOption(element, options) {
         }
         if (option instanceof Element || option instanceof Text)
             element.appendChild(option);
-        else if (option instanceof StateChanger)
+        else if (option instanceof StateChanger || option instanceof ShowIfStateChanger)
             option.init(element);
         else if (option instanceof Signal)
             new StateChanger(option).init(element);
-        // Show if
-        else if (option instanceof Function)
-            element.appendChild(option(element));
-        else if (option instanceof Array)
-            element[option[0]] = option[1];
         else
             Object.assign(element, option);
     }
 }
 
 /**
- * @param {string | boolean | number} [initState] Init data
+ * @param {string | boolean | number | object} [initState] Init data
  * */
 function Signal(initState) {
     const thisListener = [];
@@ -40,8 +35,12 @@ function Signal(initState) {
         if (index !== -1) thisListener.splice(index, 1);
     };
 
-    this.set = function (newState) {
-        if (this.state === newState) return;
+    /**
+     * @param {any} newState
+     * @param {boolean} [forceUpdate]
+     */
+    this.set = function (newState, forceUpdate) {
+        if (this.state === newState && !forceUpdate) return;
         this.state = newState;
         for (let i = 0; i < thisListener.length; i++)
             thisListener[i](newState);
@@ -55,10 +54,10 @@ function Signal(initState) {
 
 /**
  * @param {Signal} signal
- * @param {function(state)} renderState
+ * @param {function(state: any)} renderState
  * */
 function State(signal, renderState) {
-    if (signal === null || signal === undefined) return document.createElement('div');
+    if (signal === null || signal === undefined) throw new TypeError('State signal not given');
     return new StateChanger(signal, renderState);
 }
 
@@ -81,9 +80,10 @@ function StateChanger(signal, renderState) {
 
 /**
  * @param {Signal} signal
- * @param {function(state)} [toString]
+ * @param {function(state: any)} [toString]
  * */
 function TextState(signal, toString) {
+    if (signal === null || signal === undefined) throw new TypeError('State signal not given');
     return new TextStateChanger(signal, toString);
 }
 
@@ -115,15 +115,26 @@ function parseTextInput(text, element) {
  * */
 function ClassList(...className) {
     const classList = className;
-    this.add = this.remove = this.toggle = this.contains = function () {}
+    this.add = this.remove = this.toggle = this.contains = function () {
+    }
 
     this.init = function (element) {
         if (element.classList) {
-            if (classList.length > 0) element.classList.add(...classList);
-            this.add = function (names) {element.classList.add(names);};
-            this.remove = function (names) {element.classList.remove(names);};
-            this.toggle = function (name) {return element.classList.toggle(name);};
-            this.contains = function (name) {element.classList.contains(name);};
+            for (let i = 0; i < classList.length; i++) {
+                element.classList.add(classList[i]);
+            }
+            this.add = function (names) {
+                element.classList.add(names);
+            };
+            this.remove = function (names) {
+                element.classList.remove(names);
+            };
+            this.toggle = function (name) {
+                return element.classList.toggle(name);
+            };
+            this.contains = function (name) {
+                element.classList.contains(name);
+            };
         } else {
             this.add = function (...className) {
                 Array.prototype.push.apply(classList, className);
@@ -177,13 +188,13 @@ function parseClassInput(className, element) {
 function HashRouter(defaultPage, routs, footer) {
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
-    let lastState, lastPage;
+    let lastState, lastPage = null;
     routerRoot.openPage = function (newPage) {
         // if same page
         if (lastPage === newPage) return;
         lastPage = newPage;
 
-        window.location.hash = newPage;
+        window.hashData.set('page', newPage);
         // open page
         window.history.pushState(null, document.title, window.location.href)
         let state = routs[newPage];
@@ -232,7 +243,7 @@ function HashRouter(defaultPage, routs, footer) {
         routerRoot.appendChild(footer);
     }
     // open default page
-    routerRoot.openPage(window.location.hash.length < 2 ? defaultPage : window.location.hash.slice(1));
+    routerRoot.openPage(window.hashData.get('page') || defaultPage);
     return routerRoot;
 }
 
@@ -241,6 +252,11 @@ function HashRouter(defaultPage, routs, footer) {
  * @param {HTMLElement | function} element
  * */
 function ShowIf(signal, element) {
+    if (signal === null || signal === undefined) throw new TypeError('State signal not given');
+    return new ShowIfStateChanger(signal, element);
+}
+
+function ShowIfStateChanger(signal, element) {
     const emptyDiv = document.createElement('div');
     let showState = signal.state;
     let parent;
@@ -260,7 +276,7 @@ function ShowIf(signal, element) {
             }
         }
     });
-    return function (parentElement) {
+    this.init = function (parentElement) {
         parent = parentElement;
         if (showState) {
             if (element instanceof Function)
@@ -268,7 +284,7 @@ function ShowIf(signal, element) {
             if (element.onRender)
                 element.onRender();
         }
-        return showState ? element : emptyDiv;
+        parentElement.appendChild(showState ? element : emptyDiv);
     };
 }
 
@@ -341,6 +357,27 @@ module.exports = {
         if (id) element.id = id;
         if (options.length) addOption(element, options);
         return element;
+    },
+
+    /**
+     * @param {string | ClassList} [classN] Class Name
+     * @param {string} [label]
+     * @param [options] Options for element
+     * @return {HTMLInputElement|HTMLInputElement[]}
+     * */
+    checkbox(classN, label, ...options) {
+        const element = document.createElement('input');
+        element.type = 'checkbox';
+        if (classN) parseClassInput(classN, element);
+        let labelElement = null;
+        if (label) {
+            labelElement = document.createElement('label');
+        }
+        if (options.length) addOption(element, options);
+        if (labelElement)
+            return [element, labelElement];
+        else
+            return element;
     },
 
     /**
@@ -487,7 +524,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextState | TextStateChanger} text
+     * @param {string | Signal | TextState | TextStateChanger} [text]
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLSpanElement}

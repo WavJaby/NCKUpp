@@ -1,0 +1,57 @@
+.messageBox {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    z-index: 1;
+}
+
+.messageBox > .info {
+    background: rgba(30, 30, 30, 0.7);
+}
+
+.messageBox > .error {
+    background: rgba(70, 0, 0, 0.7);
+}
+
+.messageBox > .success {
+    background: rgba(0, 70, 0, 0.7);
+}
+
+.messageBox > div {
+    min-height: 120px;
+    width: 600px;
+    top: -130px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    position: absolute;
+    transition: 500ms top, 200ms opacity;
+    -moz-transition: 500ms top, 200ms opacity;
+    -o-transition: 500ms top, 200ms opacity;
+    -webkit-transition: 500ms top, 200ms opacity;
+}
+
+.messageBox > div > .title {
+    font-size: 20px;
+    display: block;
+    padding: 0 5px;
+}
+
+.messageBox > div > .description {
+    word-wrap: break-word;
+    display: block;
+    padding: 0 5px;
+    white-space: pre-wrap;
+}
+
+.messageBox > div > .closeButton {
+    content: url('./assets/close_icon.svg');
+    width: 1em;
+    height: 1em;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    cursor: pointer;
+}

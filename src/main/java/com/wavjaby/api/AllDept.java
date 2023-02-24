@@ -17,13 +17,21 @@ import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 
-@SuppressWarnings("ALL")
-public class Template implements EndpointModule {
-    private static final String TAG = "[Template] ";
+public class AllDept implements EndpointModule {
+    private static final String TAG = "[AllDept] ";
+    private final Search search;
+    private String deptGroup;
+
+    public AllDept(Search search) {
+        this.search = search;
+    }
+
 
     @Override
     public void start() {
-
+        Search.AllDeptGroupData allDept = search.getAllDeptGroupData(new CookieManager().getCookieStore());
+        deptGroup = allDept.toString();
+//        Logger.log(TAG, "Get " + allDeptID.size() + " dept");
     }
 
     @Override
@@ -42,6 +50,8 @@ public class Template implements EndpointModule {
         try {
             ApiResponse apiResponse = new ApiResponse();
 
+            apiResponse.setData(deptGroup);
+
             Headers responseHeader = req.getResponseHeaders();
             packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
@@ -58,7 +68,7 @@ public class Template implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        Logger.log(TAG, "Get all dept " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

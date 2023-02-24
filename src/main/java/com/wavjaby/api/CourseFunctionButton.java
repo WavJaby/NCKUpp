@@ -2,9 +2,9 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.ApiResponse;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonObject;
-import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -15,6 +15,7 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 
 import static com.wavjaby.Cookie.getDefaultCookie;
@@ -22,11 +23,11 @@ import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.*;
 import static com.wavjaby.Main.courseNckuOrg;
 
-public class PreferenceEnter implements Module {
-    private static final String TAG = "[PreferenceEnter] ";
+public class CourseFunctionButton implements EndpointModule {
+    private static final String TAG = "[CourseFunctionButton] ";
     private final RobotCode robotCode;
 
-    public PreferenceEnter(RobotCode robotCode) {
+    public CourseFunctionButton(RobotCode robotCode) {
         this.robotCode = robotCode;
     }
 
@@ -47,21 +48,20 @@ public class PreferenceEnter implements Module {
         Headers requestHeaders = req.getRequestHeaders();
         String refererUrl = getRefererUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
 
         try {
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
-            boolean success = addPreferenceEnter(query, data, cookieStore);
-            data.append("success", success);
+            ApiResponse apiResponse = new ApiResponse();
+            Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
+            sendCosData(query, apiResponse, cookieStore);
 
             Headers responseHeader = req.getResponseHeaders();
             packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -70,7 +70,7 @@ public class PreferenceEnter implements Module {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Add preference " + (System.currentTimeMillis() - startTime) + "ms");
+        Logger.log(TAG, "Send cosdata " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -78,22 +78,23 @@ public class PreferenceEnter implements Module {
         return httpHandler;
     }
 
-    private boolean addPreferenceEnter(Map<String, String> query, JsonObjectStringBuilder outData, CookieStore cookieStore) {
+    private void sendCosData(Map<String, String> query, ApiResponse apiResponse, CookieStore cookieStore) {
         String key;
-        if ((key = query.get("key")) == null) {
-            outData.append("err", TAG + "Key not found");
-            return false;
+        if ((key = query.get("cosdata")) == null) {
+            apiResponse.addError(TAG + "Key not found");
+            return;
         }
 
         try {
             JsonObject resultData = null;
             String postData;
             int i;
-
+            boolean success = false;
             for (i = 0; i < 10; i++) {
                 // Get ticket
                 postData = "time=" + (System.currentTimeMillis() / 1000) + "&cosdata=" + URLEncoder.encode(key, "UTF-8");
                 Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21112")
+                        .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .method(Connection.Method.POST)
@@ -103,18 +104,23 @@ public class PreferenceEnter implements Module {
                         .execute();
                 JsonObject postResult = new JsonObject(post.body());
                 if (!postResult.getBoolean("status")) {
-                    outData.append("err", "Cant get ticket");
-                    outData.append("msg", parseUnicode(postResult.getString("msg")));
-                    return false;
+                    apiResponse.addError(parseUnicode(postResult.getString("msg")));
+                    return;
                 }
 
                 // Post request
-                String code = robotCode.getCode(courseNckuOrg + "/index.php?c=cos21112&m=captcha", cookieStore);
+                String code = robotCode.getCode(
+                        courseNckuOrg + "/index.php?c=cos21112&m=captcha",
+                        cookieStore,
+                        RobotCode.Mode.SINGLE,
+                        RobotCode.WordType.HEX
+                );
                 postData = "time=" + (System.currentTimeMillis() / 1000) +
                         "&ticket=" + URLEncoder.encode(postResult.getString("ticket"), "UTF-8") +
                         "&code=" + code +
                         "&cosdata=" + URLEncoder.encode(postResult.getString("cosdata"), "UTF-8");
                 Connection.Response result = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21112")
+                        .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .method(Connection.Method.POST)
@@ -124,17 +130,25 @@ public class PreferenceEnter implements Module {
                         .execute();
 
                 resultData = new JsonObject(result.body());
-                if (resultData.getBoolean("status"))
+                String msg = resultData.getString("msg");
+                if (resultData.getBoolean("status")) {
+                    success = true;
+                    break;
+                }
+                if (!msg.contains("CAPTCHA") && !msg.contains("驗證碼"))
                     break;
             }
             String msg = parseUnicode(resultData.getString("msg"));
-            int end = msg.indexOf('<');
-            if (end != -1)
-                msg = msg.substring(0, end);
-            outData.append("msg", msg);
-            return true;
+            msg = msg.replace("<br>", "\\n");
+            int start = msg.indexOf('>'), end = msg.lastIndexOf('<');
+            if (start != -1 && end != -1) msg = msg.substring(start + 1, end);
+            if (success)
+                apiResponse.setMessage(msg);
+            else
+                apiResponse.addError(msg);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
     }
 }

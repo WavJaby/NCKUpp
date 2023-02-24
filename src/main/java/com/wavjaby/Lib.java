@@ -2,7 +2,6 @@ package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
-import com.wavjaby.json.JsonObjectStringBuilder;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -23,7 +22,7 @@ import static com.wavjaby.Main.courseNckuOrg;
 public class Lib {
     private static final String TAG = "[CosPreCheck] ";
 
-    public static void cosPreCheck(String body, CookieStore cookieStore, JsonObjectStringBuilder data) {
+    public static void cosPreCheck(String body, CookieStore cookieStore, ApiResponse response) {
         String cosPreCheckKey = null;
         int cosPreCheckStart = body.indexOf("m=cosprecheck");
         if (cosPreCheckStart != -1) {
@@ -35,8 +34,8 @@ public class Lib {
                     cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
             }
         } else {
-            if (data != null)
-                data.append("warn", TAG + "CosPreCheck key not found");
+            if (response != null)
+                response.addWarn(TAG + "CosPreCheck key not found");
             return;
         }
 //        Logger.log(TAG, "Make CosPreCheck " + cookieStore.getCookies().toString());
@@ -45,6 +44,7 @@ public class Lib {
         try {
             String postData = cosPreCheckKey == null ? ("time=" + now) : ("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"));
             HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=cosprecheck&time=" + now)
+                    .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .method(Connection.Method.POST)
@@ -53,7 +53,7 @@ public class Lib {
                     .requestBody(postData)
                     .execute();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 
@@ -98,12 +98,9 @@ public class Lib {
     }
 
     public static void setAllowOrigin(Headers requestHeaders, Headers responseHeader) {
-        String refererUrl;
-        List<String> clientUrl = requestHeaders.get("Referer");
-//        Logger.log(TAG, "Referer: " + clientUrl);
-        if (clientUrl != null && clientUrl.size() > 0)
-            refererUrl = clientUrl.get(0);
-        else return;
+        String refererUrl = requestHeaders.getFirst("Referer");
+        if (refererUrl == null)
+            return;
 
         for (String i : accessControlAllowOrigin)
             if (refererUrl.startsWith(i)) {

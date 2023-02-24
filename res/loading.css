@@ -10,24 +10,19 @@
     --ritationTime: 1.25s;
 }
 
-.loaderCircle > .circular {
-    height: 100%;
-    width: 100%;
-    animation: rotate var(--ritationTime) linear infinite;
+.loaderCircle > .path {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
     transform-origin: center center;
     -ms-transform-origin: center center;
     -moz-transform-origin: center center;
     -webkit-transform-origin: center center;
-}
-
-.loaderCircle > .circular > .path {
-    stroke-dasharray: 1, 200;
-    stroke-dashoffset: 0;
-    animation: dash var(--extrusionTime) ease-in-out infinite, color calc(var(--extrusionTime) * 4) ease-in-out infinite;
+    animation: var(--extrusionTime) ease-in-out infinite dash,
+    calc(var(--extrusionTime) * 4) ease-in-out infinite color,
+    var(--ritationTime) linear infinite rotate;
 }
 
 .loaderCircle {
-    position: relative;
     width: var(--loadingSize);
     height: var(--loadingSize);
 }

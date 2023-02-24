@@ -2,12 +2,13 @@ package com.wavjaby;
 
 import com.wavjaby.api.*;
 import com.wavjaby.logger.Logger;
+import com.wavjaby.sql.SQLite;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -24,12 +25,12 @@ public class Main {
     public static final String[] accessControlAllowOrigin = {
             "https://api.simon.chummydns.com",
             "https://wavjaby.github.io",
-            "http://localhost:63342",
+            "http://localhost:52441",
     };
     public static final String cookieDomain = "simon.chummydns.com";
 
     private HttpServer server;
-    private final Map<String, Module> modules = new HashMap<>();
+    private final Map<String, Module> modules = new LinkedHashMap<>();
 
 
     Main() {
@@ -59,21 +60,27 @@ public class Main {
         server = new HttpServer(serverSettings);
         if (!server.Opened) return;
 
-        UrSchool urSchool = new UrSchool();
-        Search search = new Search(urSchool);
         RobotCode robotCode = new RobotCode(serverSettings);
+        SQLite sqLite = new SQLite();
         registerModule("FileHost", new FileHost(serverSettings), "/NCKUpp/");
+        registerModule("SQLite", sqLite);
 
         // API
+        DeptWatchDog watchDog = new DeptWatchDog(sqLite);
+        UrSchool urSchool = new UrSchool();
+        Search search = new Search(urSchool, robotCode);
+        registerModule("DeptWatchDog", watchDog, "/api/watchdog");
         registerModule("NCKUHub", new NCKUHub(), "/api/nckuhub");
         registerModule("UrSchool", urSchool, "/api/urschool");
+        registerModule("AllDept", new AllDept(search), "/api/alldept");
         registerModule("Search", search, "/api/search");
-        registerModule("Login", new Login(), "/api/login");
+        registerModule("Login", new Login(sqLite), "/api/login");
         registerModule("Logout", new Logout(), "/api/logout");
         registerModule("CourseSchedule", new CourseSchedule(), "/api/courseSchedule");
         registerModule("ExtractUrl", new ExtractUrl(), "/api/extract");
         registerModule("RobotCode", robotCode, "/api/robotCode");
-        registerModule("PreferenceEnter", new PreferenceEnter(robotCode), "/api/preferenceEnter");
+        registerModule("CourseFunctionButton", new CourseFunctionButton(robotCode), "/api/courseFuncBtn");
+        registerModule("PreferenceAdjust", new PreferenceAdjust(), "/api/preferenceAdjust");
 
         server.start();
         Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
@@ -87,12 +94,16 @@ public class Main {
             module.start();
         Logger.log(TAG, "Ready");
 
-        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, serverSettings);
+//        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
     }
 
-    private void registerModule(String moduleName, Module module, String contextPath) {
+    private void registerModule(String moduleName, EndpointModule module, String contextPath) {
         if (contextPath != null)
             server.createContext(contextPath, module.getHttpHandler());
+        modules.put(moduleName, module);
+    }
+
+    private void registerModule(String moduleName, Module module) {
         modules.put(moduleName, module);
     }
 

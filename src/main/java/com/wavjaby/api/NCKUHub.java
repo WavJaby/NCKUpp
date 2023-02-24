@@ -2,7 +2,7 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
@@ -22,7 +22,7 @@ import static com.wavjaby.Cookie.getDefaultCookie;
 import static com.wavjaby.Lib.parseUrlEncodedForm;
 import static com.wavjaby.Lib.setAllowOrigin;
 
-public class NCKUHub implements Module {
+public class NCKUHub implements EndpointModule {
     private static final String TAG = "[NCKU Hub] ";
 
     private String nckuHubCourseIdJson;
@@ -45,7 +45,6 @@ public class NCKUHub implements Module {
         CookieManager cookieManager = new CookieManager();
         Headers requestHeaders = req.getRequestHeaders();
         getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
-
 
         try {
             JsonObjectStringBuilder data = new JsonObjectStringBuilder();

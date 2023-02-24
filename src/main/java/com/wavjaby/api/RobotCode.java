@@ -2,7 +2,7 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
@@ -22,12 +22,22 @@ import static com.wavjaby.Cookie.packLoginStateCookie;
 import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 
-public class RobotCode implements Module {
+public class RobotCode implements EndpointModule {
     private static final String TAG = "[RobotCode] ";
 
     private final ProcessBuilder processBuilder;
     BufferedReader stdout;
     OutputStream stdin;
+
+    public enum Mode {
+        SINGLE,
+        MULTIPLE_CHECK
+    }
+
+    public enum WordType {
+        HEX,
+        ALPHA
+    }
 
     public RobotCode(Properties serverSettings) {
         String workDirProp = serverSettings.getProperty("ocrWorkDir");
@@ -55,8 +65,7 @@ public class RobotCode implements Module {
             mainPyPath = mainPyPathProp;
 
         // Create process
-        String connect = "&&";
-        processBuilder = new ProcessBuilder(venvPath, connect, "python", mainPyPath);
+        processBuilder = new ProcessBuilder(venvPath, mainPyPath);
         processBuilder.directory(new File(workDir));
         processBuilder.redirectErrorStream(true);
     }
@@ -101,11 +110,9 @@ public class RobotCode implements Module {
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
         String refererUrl = getRefererUrl(requestHeaders);
+        String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
-            // Unpack cookie
-            String loginState = getDefaultCookie(requestHeaders, cookieStore);
-
             // Crack robot code
             JsonObjectStringBuilder data = new JsonObjectStringBuilder();
             boolean success = true;
@@ -186,14 +193,14 @@ public class RobotCode implements Module {
         }
     });
 
-    public String getCode(String url, CookieStore cookieStore) {
+    public String getCode(String url, CookieStore cookieStore, Mode mode, WordType wordType) {
         Task task = new Task();
         String uuid = UUID.randomUUID().toString();
         tasks.put(uuid, task);
         String cookies = cookieStore.getCookies().stream()
                 .map(i -> '"' + i.getName() + '"' + ':' + '"' + i.getValue() + '"')
                 .collect(Collectors.joining(","));
-        sendCommand(uuid + ',' + url + ',' + '{' + cookies + '}');
+        sendCommand(uuid + '|' + mode.toString() + '|' + wordType.toString() + '|' + url + '|' + '{' + cookies + '}');
         task.await();
         return task.result;
     }

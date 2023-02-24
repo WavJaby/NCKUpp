@@ -1,5 +1,6 @@
 package com.wavjaby;
 
+import com.wavjaby.api.DeptWatchDog;
 import com.wavjaby.api.Search;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
@@ -8,36 +9,32 @@ import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
-import java.net.CookieManager;
 import java.net.CookieStore;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.wavjaby.Cookie.createHttpCookie;
-import static com.wavjaby.Main.courseNcku;
-import static com.wavjaby.Main.courseNckuOrg;
-
 public class GetCourseDataUpdate implements Runnable {
     private final static String TAG = "[CourseListener] ";
-    private final CookieManager cookieManager = new CookieManager();
-    private final CookieStore cookieStore = cookieManager.getCookieStore();
+    private final static String apiUrl = "https://discord.com/api/v10";
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private final Search search;
+    private final DeptWatchDog watchDog;
+    private final CookieStore baseCookieStore;
 
-    private final long updateInterval = 1700;
-    private long lastUpdateTime = 0;
+    private final long updateInterval = 1600;
+    private long lastScheduleStart = 0;
+    private long lastUpdateStart = System.currentTimeMillis();
     private int count = 0;
     private int taskSkipped = 0;
     private long taskSkippedStartTime = 0;
 
-    private final List<String> listenDept = new ArrayList<>();
+    private final Map<String, CookieStore> listenDept = new HashMap<>();
     private final Map<String, Search.DeptToken> deptTokenMap = new HashMap<>();
-    private List<Search.CourseData> lastCourseDataList = null;
+    private List<Search.CourseData> courseDataList = null;
     private final String botToken;
+    private final HashMap<String, String> userDmChannelCache = new HashMap<>();
 
 
     private static class CourseDataDifference {
@@ -66,8 +63,9 @@ public class GetCourseDataUpdate implements Runnable {
         }
     }
 
-    public GetCourseDataUpdate(Search search, Properties serverSettings) {
+    public GetCourseDataUpdate(Search search, DeptWatchDog watchDog, Properties serverSettings) {
         this.search = search;
+        this.watchDog = watchDog;
         botToken = serverSettings.getProperty("botToken");
 //        Search.SearchQuery searchQuery = new Search.SearchQuery("F7");
 //        Search.SaveQueryToken saveQueryToken = search.getSaveQueryToken(searchQuery, cookieManager.getCookieStore(), null);
@@ -84,28 +82,50 @@ public class GetCourseDataUpdate implements Runnable {
 //        Search.AllDeptData allDeptData = search.getAllDeptData(cookieManager.getCookieStore());
 //        Search.DeptToken deptToken = search.getDeptToken("F7", allDeptData);
 //        Logger.log(TAG, (System.currentTimeMillis() - start) + "ms");
-
-
-        try {
-            URI uri = new URI(courseNckuOrg);
-            cookieStore.add(uri, createHttpCookie("PHPSESSID", "F741147602f1fa9139804c750869ea09d1aa70a9c", courseNcku));
-            cookieStore.add(uri, createHttpCookie("COURSE_WEB", "ffffffff8f7cbb0345525d5f4f58455e445a4a423660", courseNcku));
-            cookieStore.add(uri, createHttpCookie("COURSE_CDN", "ffffffff8f7ce72345525d5f4f58455e445a4a42cbd9", courseNcku));
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-
-        listenDept.add("A9");
-        listenDept.add("A2");
-        listenDept.add("F7");
+        baseCookieStore = Search.createCookieStore();
+        watchDog.getAllCourse().forEach(this::addListenDept);
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
     }
 
+
+    private void getWatchDogUpdate() {
+        watchDog.getNewDept().forEach(this::addListenDept);
+    }
+
+    private void addListenDept(String deptID) {
+        Logger.log(TAG, "Add watch: " + deptID);
+        listenDept.put(deptID, Search.createCookieStore());
+    }
+
+
+    private String getDmChannel(String userID) {
+        String dmChannelID = userDmChannelCache.get(userID);
+        if (dmChannelID != null) return dmChannelID;
+        try {
+//            Logger.log(TAG, jsonObject.toString());
+            String result = HttpConnection.connect(apiUrl + "/users/@me/channels")
+                    .header("Connection", "keep-alive")
+                    .header("Authorization", "Bot " + botToken)
+                    .header("Content-Type", "application/json; charset=utf-8")
+                    .userAgent("DiscordBot (https://github.com/WavJaby/NCKUpp, 1.0)")
+                    .method(Connection.Method.POST)
+                    .requestBody(new JsonObject().put("recipient_id", userID).toString())
+                    .ignoreContentType(true)
+                    .ignoreHttpErrors(true)
+                    .execute().body();
+            userDmChannelCache.put(userID, dmChannelID = new JsonObject(result).getString("id"));
+            return dmChannelID;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void postToChannel(String channelID, JsonObject jsonObject) {
-        final String apiUrl = "https://discord.com/api/v10";
         try {
 //            Logger.log(TAG, jsonObject.toString());
             String result = HttpConnection.connect(apiUrl + "/channels/" + channelID + "/messages")
+                    .header("Connection", "keep-alive")
                     .header("Authorization", "Bot " + botToken)
                     .header("Content-Type", "application/json; charset=utf-8")
                     .userAgent("DiscordBot (https://github.com/WavJaby/NCKUpp, 1.0)")
@@ -122,120 +142,167 @@ public class GetCourseDataUpdate implements Runnable {
 
     @Override
     public void run() {
-        long lastInterval = System.currentTimeMillis() - lastUpdateTime;
-        lastUpdateTime = System.currentTimeMillis();
-        // Skip if last task take too long
-        if (taskSkipped > 0 && lastInterval > updateInterval - 100) {
-            Logger.log(TAG, "Skipped " + taskSkipped + ", " + (System.currentTimeMillis() - taskSkippedStartTime));
-            taskSkipped = 0;
-        } else if (lastInterval < updateInterval - 100) {
-            if (taskSkipped++ == 0)
-                taskSkippedStartTime = lastUpdateTime;
-            return;
-        }
-//        Logger.log(TAG, "Start " + lastInterval + "ms");
-
-
         long start = System.currentTimeMillis();
-        List<Search.CourseData> courseDataList = new ArrayList<>();
-        CountDownLatch taskLeft = new CountDownLatch(listenDept.size());
-        AtomicBoolean allSuccess = new AtomicBoolean(true);
-        for (String dept : listenDept) {
-            pool.submit(() -> {
-                try {
-                    Search.DeptToken deptToken = deptTokenMap.get(dept);
-                    if (deptToken == null)
-                        deptTokenMap.put(dept, (deptToken = renewDeptToken(dept, cookieStore)));
-                    if (deptToken == null)
-                        return;
-                    // Get dept course data
-                    if (!search.getDeptCourseData(deptToken, courseDataList, false)) {
-                        deptTokenMap.put(dept, null);
-                        return;
-                    }
+        long lastInterval = start - lastScheduleStart;
+        lastScheduleStart = start;
+        // Skip if last task take too long
+        if (taskSkipped > 0 && start - lastUpdateStart > updateInterval) {
+            Logger.log(TAG, "Skipped " + taskSkipped + ", " + (start - taskSkippedStartTime));
+            taskSkipped = 0;
+        } else if (lastInterval < updateInterval - 50) {
+            if (taskSkipped++ == 0)
+                taskSkippedStartTime = lastScheduleStart;
+            return;
+        }
+        Logger.log(TAG, "Interval " + (start - lastUpdateStart) + "ms");
+        lastUpdateStart = start;
 
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    allSuccess.set(false);
+        getWatchDogUpdate();
+        try {
+            CountDownLatch taskLeft = new CountDownLatch(listenDept.size());
+            AtomicBoolean allSuccess = new AtomicBoolean(true);
+            List<Search.CourseData> newCourseDataList = new ArrayList<>();
+
+            if (count >= 3000) {
+                for (String dept : listenDept.keySet())
                     deptTokenMap.put(dept, null);
-                }
-                taskLeft.countDown();
-            });
-        }
-        try {
-            taskLeft.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return;
-        }
-        if (!allSuccess.get())
-            return;
-
-        try {
-            // Get different
-            List<CourseDataDifference> diff = getDifferent(lastCourseDataList, courseDataList);
-            lastCourseDataList = courseDataList;
-
-            JsonObject jsonObject = new JsonObject();
-            JsonArray embeds = new JsonArray();
-            jsonObject.put("embeds", embeds);
-
-            // Print result
-            if (diff != null) {
-                for (CourseDataDifference i : diff) {
-                    switch (i.type) {
-                        case CREATE:
-                            Logger.log(TAG, "CREATE: " +
-                                    new JsonObject(i.courseData.toString()).toStringBeauty());
-                            break;
-                        case UPDATE:
-                            Search.SearchQuery searchQuery = new Search.SearchQuery(courseDataList.get(0));
-                            Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, cookieStore, null);
-                            embeds.add(new JsonObject()
-                                            .put("type", "rich")
-                                            .put("color", 0x00FFFF)
-                                            .put("title", i.courseData.getSerialNumber() + " " + i.courseData.getCourseName())
-//                        .put("description", "0w0")
-                                            .put("url", token.getUrl())
-                                            .put("fields", new JsonArray()
-                                                            .add(new JsonObject()
-                                                                    .put("name", "餘額 " + intToString(i.availableDiff))
-                                                                    .put("value", "總餘額: " + i.courseData.getAvailable())
-                                                                    .put("inline", true)
-                                                            )
-                                                            .add(new JsonObject()
-                                                                    .put("name", "已選人數 " + intToString(i.selectDiff))
-                                                                    .put("value", "總已選人數: " + i.courseData.getSelected())
-                                                                    .put("inline", true)
-                                                            )
-//                                                .add(new JsonObject()
-//                                                        .put("name", "")
-//                                                        .put("value", "")
-//                                                        .put("inline", false)
-//                                                )
-//                                                .add(new JsonObject()
-//                                                        .put("name", "w")
-//                                                        .put("value", "w")
-//                                                        .put("inline", true)
-//                                                )
-                                            )
-                            );
-                            Search.CourseData c = i.courseData;
-                            Logger.log(TAG, "UPDATE " + c.getSerialNumber() + " " + c.getCourseName() + "\n" +
-                                    "available: " + i.availableDiff + ", select: " + i.selectDiff);
-                            break;
-                    }
-                }
+                count = 0;
             }
-            if (embeds.length > 0)
-                postToChannel("1018756061911601224", jsonObject);
 
-            Logger.log(TAG, count++ + ", " +
-                    courseDataList.size() + ", " +
-                    (System.currentTimeMillis() - start) + "ms");
+            for (Map.Entry<String, CookieStore> i : listenDept.entrySet()) {
+                String dept = i.getKey();
+                CookieStore cookieStore = i.getValue();
+                pool.submit(() -> {
+                    try {
+                        Search.DeptToken deptToken = deptTokenMap.get(dept);
+                        if (deptToken == null)
+                            deptTokenMap.put(dept, (deptToken = renewDeptToken(dept, cookieStore)));
+                        if (deptToken == null)
+                            return;
+                        // Get dept course data
+                        List<Search.CourseData> thisCourseDataList = new ArrayList<>();
+                        if (!search.getDeptCourseData(deptToken, thisCourseDataList, false)) {
+                            deptTokenMap.put(dept, null);
+                            return;
+                        }
+                        if (thisCourseDataList.size() == 0) {
+                            deptTokenMap.put(dept, null);
+                            return;
+                        }
+                        newCourseDataList.addAll(thisCourseDataList);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        allSuccess.set(false);
+                        deptTokenMap.put(dept, null);
+                    }
+                    taskLeft.countDown();
+                });
+            }
+            if (!taskLeft.await(10, TimeUnit.SECONDS)) {
+                for (String dept : listenDept.keySet())
+                    deptTokenMap.put(dept, null);
+                count = 0;
+                return;
+            }
+
+            if (!allSuccess.get())
+                return;
+
+            // Get different
+            List<CourseDataDifference> diff = getDifferent(courseDataList, newCourseDataList);
+            courseDataList = newCourseDataList;
+
+            // Build notification
+            if (diff != null && diff.size() > 0)
+                pool.submit(() -> buildAndSendNotification(diff));
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Logger.log(TAG, count++ + ", " +
+                courseDataList.size() + ", " +
+                (System.currentTimeMillis() - start) + "ms");
+    }
+
+    private void buildAndSendNotification(List<CourseDataDifference> diff) {
+        JsonObject mainChannelNotification = new JsonObject();
+        JsonArray mainChannelNotificationEmbeds = new JsonArray();
+        mainChannelNotification.put("embeds", mainChannelNotificationEmbeds);
+
+        // User notification
+        HashMap<String, JsonObject> userNotifications = new HashMap<>();
+        HashMap<String, JsonArray> userNotificationEmbeds = new HashMap<>();
+
+        // Print result
+        for (CourseDataDifference i : diff) {
+            switch (i.type) {
+                case CREATE:
+                    Logger.log(TAG, "CREATE: " + i.courseData.getCourseName());
+                    break;
+                case UPDATE:
+                    Search.CourseData cosData = i.courseData;
+                    Logger.log(TAG, "UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() + "\n" +
+                            "available: " + i.availableDiff + ", select: " + i.selectDiff);
+
+                    Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
+                    Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, baseCookieStore, null);
+                    JsonObject deptEmbed = new JsonObject()
+                            .put("type", "rich")
+                            .put("color", i.availableDiff > 0
+                                    ? (cosData.getAvailable() == 1 ? 0x00FF00 : 0x00FFFF)
+                                    : cosData.getAvailable() > 0
+                                    ? 0xFFFF00
+                                    : 0xFF0000)
+                            .put("title", cosData.getSerialNumber() + " " + cosData.getCourseName())
+                            .put("description", cosData.getGroup())
+                            .put("url", token.getUrl())
+                            .put("fields", new JsonArray()
+                                    .add(new JsonObject()
+                                            .put("name", "餘額 " + intToString(i.availableDiff))
+                                            .put("value", "總餘額: " + cosData.getAvailable())
+                                            .put("inline", true)
+                                    )
+                                    .add(new JsonObject()
+                                            .put("name", "已選人數 " + intToString(i.selectDiff))
+                                            .put("value", "總已選人數: " + cosData.getSelected())
+                                            .put("inline", true)
+                                    )
+                                    .add(new JsonObject()
+                                            .put("name", "")
+                                            .put("value", "")
+                                            .put("inline", false)
+                                    )
+                                    .add(new JsonObject()
+                                            .put("name", "時間")
+                                            .put("value", cosData.getTimeString())
+                                            .put("inline", true)
+                                    )
+                                    .add(new JsonObject()
+                                            .put("name", "組別")
+                                            .put("value", cosData.getForClass())
+                                            .put("inline", true)
+                                    )
+                            );
+                    mainChannelNotificationEmbeds.add(deptEmbed);
+
+                    // Build user notification embed
+                    if (i.courseData.getSerialNumber() == null)
+                        break;
+                    for (String discordID : watchDog.getWatchedUserDiscordID(i.courseData.getSerialNumber())) {
+                        JsonArray userEmbeds = userNotificationEmbeds.get(discordID);
+                        if (userEmbeds == null) {
+                            userNotificationEmbeds.put(discordID, userEmbeds = new JsonArray());
+                            userNotifications.put(discordID, new JsonObject().put("embeds", userEmbeds));
+                        }
+                        userEmbeds.add(deptEmbed);
+                    }
+                    break;
+            }
+        }
+        for (Map.Entry<String, JsonObject> userNotificationData : userNotifications.entrySet())
+            pool.submit(() -> postToChannel(getDmChannel(userNotificationData.getKey()), userNotificationData.getValue()));
+        if (mainChannelNotificationEmbeds.length > 0)
+            pool.submit(() -> postToChannel("1018382309197623366", mainChannelNotification));
     }
 
     private String intToString(int integer) {

@@ -12,7 +12,7 @@ import java.util.Properties;
 
 import static com.wavjaby.Lib.setAllowOrigin;
 
-public class FileHost implements Module {
+public class FileHost implements EndpointModule {
     private static final String TAG = "[FileHost] ";
     private final File fileRoot;
     private final HttpHandler httpHandler;

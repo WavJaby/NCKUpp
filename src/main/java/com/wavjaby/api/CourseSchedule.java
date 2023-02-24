@@ -2,7 +2,8 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.ApiResponse;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
@@ -28,7 +29,7 @@ import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
 
-public class CourseSchedule implements Module {
+public class CourseSchedule implements EndpointModule {
     private static final String TAG = "[Schedule] ";
     private static final HashMap<String, Integer> DayTextToInt = new HashMap<String, Integer>() {{
         put("時間未定", -1);
@@ -66,14 +67,11 @@ public class CourseSchedule implements Module {
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
         String refererUrl = getRefererUrl(requestHeaders);
+        String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
-            // unpack cookie
-            String loginState = getDefaultCookie(requestHeaders, cookieStore);
-
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
+            ApiResponse data = new ApiResponse();
             boolean success = getCourseSchedule(cookieStore, data);
-            data.append("success", success);
 
             Headers responseHeader = req.getResponseHeaders();
             packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
@@ -100,8 +98,9 @@ public class CourseSchedule implements Module {
         return httpHandler;
     }
 
-    private boolean getCourseSchedule(CookieStore cookieStore, JsonObjectStringBuilder data) {
+    private boolean getCourseSchedule(CookieStore cookieStore, ApiResponse response) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215")
+                .header("Connection", "keep-alive")
                 .cookieStore(cookieStore);
         Document root = null;
         try {
@@ -109,21 +108,20 @@ public class CourseSchedule implements Module {
         } catch (IOException ignore) {
         }
         if (root == null) {
-            data.append("err", TAG + "Can not fetch schedule");
+            response.addError(TAG + "Can not fetch schedule");
             return false;
         }
 
 
-        // get year, semester
+        // Get year, semester
         Elements pagePath = root.getElementsByClass("breadcrumb");
         if (pagePath.size() == 0) {
-            data.append("err", TAG + "Year and Semester not found");
-            return false;
-        } else
+            response.addWarn(TAG + "Year and Semester not found");
+        } else {
             pagePath = pagePath.first().getElementsByTag("a");
-        if (pagePath.size() < 2) {
-            data.append("err", TAG + "Year and Semester not found");
-            return false;
+            if (pagePath.size() < 2) {
+                response.addWarn(TAG + "Year and Semester not found");
+            }
         }
         String pageName = pagePath.get(1).text();
         int year = -1, semester = -1;
@@ -144,13 +142,13 @@ public class CourseSchedule implements Module {
             semester = Integer.parseInt(pageName.substring(start, end));
         }
 
-        // get student ID
+        // Get student ID
         Element userIdEle = root.getElementById("current_time");
         List<TextNode> textNodes;
         if (userIdEle == null ||
                 userIdEle.childNodeSize() != 3 ||
                 (textNodes = userIdEle.textNodes()).size() != 2) {
-            data.append("err", TAG + "Student ID not found");
+            response.addError(TAG + "Student ID not found");
             return false;
         }
         String studentID = textNodes.get(1).toString();
@@ -158,40 +156,40 @@ public class CourseSchedule implements Module {
         if (idStart != -1) studentID = studentID.substring(idStart + 1);
 
 
-        // get student credits
+        // Get credits
         Element creditsEle = userIdEle.parent();
         if (creditsEle == null || creditsEle.childrenSize() != 2) {
-            data.append("err", TAG + "Credits not found");
+            response.addError(TAG + "Credits not found");
             return false;
         }
-        String credits = creditsEle.child(1).text();
+        String creditsStr = creditsEle.child(1).text();
         int creditsStart = -1, creditsEnd = -1;
-        char[] chars = credits.toCharArray();
+        char[] chars = creditsStr.toCharArray();
         for (int i = 0; i < chars.length; i++) {
             if (creditsStart == -1) {
                 if (chars[i] >= '0' && chars[i] <= '9')
                     creditsStart = i;
-            } else if (chars[i] < '0' || chars[i] > '9') {
+            } else if ((chars[i] < '0' || chars[i] > '9') && chars[i] != '.') {
                 creditsEnd = i;
                 break;
             }
         }
         if (creditsStart == -1) {
-            data.append("err", TAG + "Credits parse error");
+            response.addError(TAG + "Credits parse error");
             return false;
         }
-        credits = creditsEnd == -1 ? credits.substring(creditsStart) : credits.substring(creditsStart, creditsEnd);
+        float credits = Float.parseFloat(creditsEnd == -1 ? creditsStr.substring(creditsStart) : creditsStr.substring(creditsStart, creditsEnd));
 
         // get table
         JsonArray courseScheduleData = new JsonArray();
         Elements tables = root.getElementsByTag("table");
         if (tables.size() == 0) {
-            data.append("err", TAG + "Table not found");
+            response.addError(TAG + "Table not found");
             return false;
         }
         Elements tbody = tables.get(0).getElementsByTag("tbody");
         if (tbody.size() == 0) {
-            data.append("err", TAG + "Table body not found");
+            response.addError(TAG + "Table body not found");
             return false;
         }
         Elements eachCourse = tbody.get(0).getElementsByTag("tr");
@@ -200,7 +198,7 @@ public class CourseSchedule implements Module {
 
         for (Element row : eachCourse) {
             if (row.childNodeSize() < 10) {
-                data.append("err", TAG + "Course info not found");
+                response.addError(TAG + "Course info not found");
                 return false;
             }
             Elements rowElements = row.children();
@@ -236,10 +234,11 @@ public class CourseSchedule implements Module {
             // parse time
             String time = rowElements.get(7).text();
             int dayEnd = time.indexOf(' ');
-            Integer date = DayTextToInt.get(dayEnd == -1 ? time : time.substring(0, dayEnd));
+            String day = dayEnd == -1 ? time : time.substring(0, dayEnd);
+            Integer date = DayTextToInt.get(day);
             if (date == null) {
-                data.append("err", TAG + "Course Time parse error, unknown date: " + time.substring(0, dayEnd));
-                return false;
+                response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
+                continue;
             }
             StringBuilder builder = new StringBuilder();
             if (dayEnd != -1) {
@@ -256,7 +255,7 @@ public class CourseSchedule implements Module {
             String room = rowElements.get(8).text();
             int roomIdEnd = room.indexOf(' ');
             if (room.length() > 0 && roomIdEnd == -1) {
-                data.append("err", TAG + "Course room id not found: " + room);
+                response.addError(TAG + "Course room id not found: " + room);
                 return false;
             }
             String roomID = roomIdEnd == -1 ? null : room.substring(0, roomIdEnd);
@@ -272,11 +271,13 @@ public class CourseSchedule implements Module {
             courseInfo.add(info);
         }
 
-        data.append("year", year);
-        data.append("semester", semester);
-        data.append("id", studentID);
-        data.append("credits", credits);
-        data.append("schedule", courseScheduleData);
+        JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
+        builder.append("year", year);
+        builder.append("semester", semester);
+        builder.append("studentId", studentID);
+        builder.append("credits", credits);
+        builder.append("schedule", courseScheduleData);
+        response.setData(builder.toString());
         return true;
     }
 }

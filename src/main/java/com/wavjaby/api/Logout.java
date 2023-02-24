@@ -2,7 +2,8 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.Module;
+import com.wavjaby.ApiResponse;
+import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -20,7 +21,7 @@ import static com.wavjaby.Lib.getRefererUrl;
 import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
 
-public class Logout implements Module {
+public class Logout implements EndpointModule {
     private static final String TAG = "[Logout] ";
 
 
@@ -40,27 +41,24 @@ public class Logout implements Module {
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
         String refererUrl = getRefererUrl(requestHeaders);
+        String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
-            // unpack cookie
-            String loginState = getDefaultCookie(requestHeaders, cookieStore);
-
-            // login
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
-            boolean success = logout(data, cookieStore);
-            data.append("success", success);
+            // Logout
+            ApiResponse apiResponse = new ApiResponse();
+            logout(apiResponse, cookieStore);
 
             Headers responseHeader = req.getResponseHeaders();
             packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
             responseHeader.add("Set-Cookie",
                     removeCookie("authData") + "; Path=/api/login" + getCookieInfoData(refererUrl));
 
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -77,18 +75,20 @@ public class Logout implements Module {
         return httpHandler;
     }
 
-    private boolean logout(JsonObjectStringBuilder outData, CookieStore cookieStore) {
+    private void logout(ApiResponse apiResponse, CookieStore cookieStore) {
         try {
             Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=logout")
+                    .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .execute();
 
-            outData.append("login", toLogin.body().contains("/index.php?c=auth&m=logout"));
-            return true;
+            apiResponse.setData(new JsonObjectStringBuilder()
+                    .append("login", toLogin.body().contains("/index.php?c=auth&m=logout"))
+                    .toString()
+            );
         } catch (Exception e) {
-            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
-        return false;
     }
 }
