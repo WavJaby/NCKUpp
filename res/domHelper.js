@@ -361,17 +361,26 @@ module.exports = {
 
     /**
      * @param {string | ClassList} [classN] Class Name
-     * @param {string} [label]
+     * @param {string} [labelText]
+     * @param {function(this: GlobalEventHandlers, ev: Event)} [onchange]
+     * @param {string} [id]
      * @param [options] Options for element
      * @return {HTMLInputElement|HTMLInputElement[]}
      * */
-    checkbox(classN, label, ...options) {
+    checkbox(classN, labelText, onchange, id, ...options) {
         const element = document.createElement('input');
         element.type = 'checkbox';
         if (classN) parseClassInput(classN, element);
+        element.onchange = onchange;
+        if (id !== undefined)
+            element.id = id;
         let labelElement = null;
-        if (label) {
+        if (labelText) {
+            if (id === undefined)
+                element.id = Math.random().toString(16).substring(2);
             labelElement = document.createElement('label');
+            labelElement.textContent = labelText;
+            labelElement.htmlFor = element.id;
         }
         if (options.length) addOption(element, options);
         if (labelElement)

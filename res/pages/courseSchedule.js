@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, table, Signal, text, span, ShowIf, input, checkbox} = require('../domHelper');
+const {div, button, table, Signal, text, span, ShowIf, input, checkbox, th} = require('../domHelper');
 /*ExcludeEnd*/
 
 // static
@@ -85,6 +85,15 @@ module.exports = function (loginState) {
     return div('courseSchedule',
         {onRender, onDestroy},
         div('scheduleTab'),
+        div(null,
+            checkbox(null, 'Show classroom', function () {
+                const display = this.checked ? 'none' : null;
+                console.log(display)
+                for (const roomNameElement of scheduleTable.roomNameElements) {
+                    roomNameElement.style.display = display;
+                }
+            })
+        ),
         scheduleTable.table,
         ShowIf(showCourseInfoWindow, courseInfoWindow),
     );
@@ -113,13 +122,11 @@ module.exports = function (loginState) {
  */
 function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
     const courseInfo = {};
+    const roomNameElements = this.roomNameElements = [];
     const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
     let thead = scheduleTable.createTHead(),
         tbody = scheduleTable.createTBody(),
         caption = scheduleTable.createCaption();
-    scheduleTable.appendChild(div(null,
-        checkbox(null, 'show location')
-    ));
 
 
     function cellClick() {
@@ -163,6 +170,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         const scheduleData = response.data;
         thead.innerHTML = '';
         tbody.innerHTML = '';
+        roomNameElements.length = 0;
         caption.textContent = scheduleData.studentId + ' ' + 'credits: ' + scheduleData.credits;
 
         let nightTime = false;
@@ -180,7 +188,8 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
                 time[2] = time[2] === 'N' ? -1 : parseInt(time[2], 16);
                 if (time[2] > 4) time[2]++;
                 else if (time[1] === -1) time[2] = 5;
-            }
+            } else
+                time[2] = time[1];
             if (time.length > 0 && time[0] > 4) holiday = true;
             if (time.length > 1 && time[1] > nightTimeStart || time.length > 2 && time[2] > nightTimeStart) nightTime = true;
         }
@@ -239,24 +248,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
                     rows[j].insertCell().colSpan = i - rowSize[j];
 
                 // Build cell
-                const info = course[0];
-                const cell = rows[j].insertCell();
-                cell.className = 'activateCell';
-                cell.serialID = info.deptID + '-' + info.sn;
-                cell.onclick = cellClick;
-                courseInfo[cell.serialID] = null;
-
-                const rooms = [];
-                for (let k = 1; k < course.length; k++)
-                    rooms.push(span(course[k].room));
-
-                cell.appendChild(
-                    div(null,
-                        span(info.name),
-                        rooms,
-                    )
-                );
-
+                const cell = createCourseCell(rows[j], course);
 
                 // Add space
                 if (course[1].time.length === 3) {
@@ -272,10 +264,6 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
                 } else if (course[1].time.length === 2)
                     rowSize[j] = i + 1;
             }
-        }
-
-        for (let i = 0; i < tableHeight; i++) {
-            rows[i].appendChild(div('splitLine'));
         }
 
         // Add day undecided
@@ -294,27 +282,12 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 
             // Build cell
             const course = daysUndecided[i];
-            const info = course[0];
-            const cell = row.insertCell();
-            cell.className = 'activateCell';
+            const cell = createCourseCell(row, course);
             cell.colSpan = tableWidth;
-            cell.serialID = info.deptID + '-' + info.sn;
-            cell.onclick = cellClick;
-            courseInfo[cell.serialID] = null;
+        }
 
-            const rooms = [];
-            for (let k = 1; k < course.length; k++)
-                rooms.push(span(course[k].room));
-
-            cell.appendChild(
-                div(null,
-                    span(info.name),
-                    rooms,
-                )
-            );
-
-
-            row.appendChild(div('splitLine'));
+        for (let i = 0; i < tableHeight; i++) {
+            rows[i].appendChild(div('splitLine'));
         }
 
         // get course info
@@ -348,4 +321,28 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
     };
 
     this.table = scheduleTable;
+
+    function createCourseCell(row, course) {
+        const cell = row.insertCell();
+        const info = course[0];
+        cell.className = 'activateCell';
+        cell.serialID = info.deptID + '-' + info.sn;
+        cell.onclick = cellClick;
+        courseInfo[cell.serialID] = null;
+
+        const rooms = [];
+        for (let k = 1; k < course.length; k++) {
+            const roomName = span(course[k].room);
+            rooms.push(roomName);
+            roomNameElements.push(roomName);
+        }
+
+        cell.appendChild(
+            div(null,
+                span(info.name),
+                rooms,
+            )
+        );
+        return cell;
+    }
 }

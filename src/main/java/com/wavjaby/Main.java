@@ -25,7 +25,7 @@ public class Main {
     public static final String[] accessControlAllowOrigin = {
             "https://api.simon.chummydns.com",
             "https://wavjaby.github.io",
-            "http://localhost:52441",
+            "http://localhost:50554",
     };
     public static final String cookieDomain = "simon.chummydns.com";
 
