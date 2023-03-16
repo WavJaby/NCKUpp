@@ -1,4 +1,4 @@
-package com.wavjaby;
+package com.wavjaby.lib;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -9,7 +9,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class LoginVerifyCode {
-    private final static byte[][][] numbers = {
+    private static final byte[][][] numbers = {
             // 0
             {
                     {0, 0, 0, 1, 1, 0, 0, 0},
@@ -151,7 +151,7 @@ public class LoginVerifyCode {
             in.close();
             connection.disconnect();
 
-            byte[][][] image = convertTo2DRGB(img);
+            int[] image = convertTo2DRGB(img);
             ImageIO.write(img, "png", new File("C:\\Users\\WavJaby\\Desktop\\index.png"));
             final int width = img.getWidth();
             final int height = img.getHeight();
@@ -161,7 +161,10 @@ public class LoginVerifyCode {
 
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
-                    int r = image[y][x][0] & 0xFF, g = image[y][x][1] & 0xFF, b = image[y][x][2] & 0xFF;
+                    int offset = y * width + width;
+                    byte r = (byte) (image[offset] >> 16),
+                            g = (byte) (image[offset] >> 8),
+                            b = (byte) image[offset];
                     boolean text = (r + g + b) < 15;
                     if (text && x < cropX1)
                         cropX1 = x;
@@ -177,14 +180,17 @@ public class LoginVerifyCode {
             while (cropX1 != -1) {
                 int highestScoreNumber = 0;
                 float highestScore = 0;
-                int end = findTextEnd(cropX1, cropY1, cropHeight, image);
+                int end = findTextEnd(cropX1, cropY1, cropHeight, width, image);
                 int cropWidth = end - cropX1;
                 for (int i = 0; i < 10; i++) {
                     int count = 0;
                     for (int y = 0; y < cropHeight; y++) {
                         for (int x = 0; x < cropWidth; x++) {
-                            int r = image[cropY1 + y][cropX1 + x][0] & 0xFF, g = image[cropY1 + y][cropX1 + x][1] & 0xFF, b = image[cropY1 + y][cropX1 + x][2] & 0xFF;
-                            boolean text = (r + g + b) == 0;
+                            int offset = (cropY1 + y) * width + (cropX1 + x);
+                            byte r = (byte) (image[offset] >> 16),
+                                    g = (byte) (image[offset] >> 8),
+                                    b = (byte) image[offset];
+                            boolean text = ((int) r + g + b) == 0;
 
                             if (text && numbers[i][y][x] == 1 || !text && numbers[i][y][x] == 0)
                                 count++;
@@ -201,7 +207,7 @@ public class LoginVerifyCode {
                     }
                 }
                 builder.append(highestScoreNumber);
-                cropX1 = findNextText(end, cropY1, cropHeight, image);
+                cropX1 = findNextText(end, cropY1, cropHeight, width, image);
             }
             return builder.toString();
         } catch (IOException e) {
@@ -210,15 +216,17 @@ public class LoginVerifyCode {
         return null;
     }
 
-    private static int findNextText(int start, int cropY1, int cropHeight, byte[][][] image) {
+    private static int findNextText(int start, int cropY1, int cropHeight, int width, int[] image) {
         if (image.length == 0) return -1;
-        int width = image[0].length;
 
         for (int x = start; x < width; x++) {
             boolean empty = true;
             for (int y = 0; y < cropHeight; y++) {
-                int r = image[cropY1 + y][x][0] & 0xFF, g = image[cropY1 + y][x][1] & 0xFF, b = image[cropY1 + y][x][2] & 0xFF;
-                if ((r + g + b) == 0) {
+                int offset = (cropY1 + y) * width + x;
+                byte r = (byte) (image[offset] >> 16),
+                        g = (byte) (image[offset] >> 8),
+                        b = (byte) image[offset];
+                if (((int) r + g + b) == 0) {
                     empty = false;
                     break;
                 }
@@ -229,15 +237,17 @@ public class LoginVerifyCode {
         return -1;
     }
 
-    private static int findTextEnd(int start, int cropY1, int cropHeight, byte[][][] image) {
+    private static int findTextEnd(int start, int cropY1, int cropHeight, int width, int[] image) {
         if (image.length == 0) return -1;
-        int width = image[0].length;
 
         for (int x = start; x < width; x++) {
             boolean empty = true;
             for (int y = 0; y < cropHeight; y++) {
-                int r = image[cropY1 + y][x][0] & 0xFF, g = image[cropY1 + y][x][1] & 0xFF, b = image[cropY1 + y][x][2] & 0xFF;
-                if ((r + g + b) == 0) {
+                int offset = (cropY1 + y) * width + x;
+                byte r = (byte) (image[offset] >> 16),
+                        g = (byte) (image[offset] >> 8),
+                        b = (byte) image[offset];
+                if (((int) r + g + b) == 0) {
                     empty = false;
                     break;
                 }
@@ -248,19 +258,13 @@ public class LoginVerifyCode {
         return -1;
     }
 
-    private static byte[][][] convertTo2DRGB(BufferedImage image) {
+    private static int[] convertTo2DRGB(BufferedImage image) {
         final int width = image.getWidth();
         final int height = image.getHeight();
 
-        byte[][][] result = new byte[height][width][4];
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int color = image.getRGB(x, y);
-                result[y][x][0] = (byte) (color >> 16);
-                result[y][x][1] = (byte) (color >> 8);
-                result[y][x][2] = (byte) (color);
-            }
-        }
+        int[] result = new int[width * height];
+
+        image.getRGB(0, 0, width, height, result, 0, width);
         return result;
     }
 }

@@ -2,11 +2,12 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.ApiResponse;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -23,11 +24,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.wavjaby.Cookie.getDefaultCookie;
-import static com.wavjaby.Cookie.packLoginStateCookie;
-import static com.wavjaby.Lib.getRefererUrl;
-import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
+import static com.wavjaby.lib.Cookie.getDefaultCookie;
+import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
+import static com.wavjaby.lib.Lib.getOriginUrl;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class CourseSchedule implements EndpointModule {
     private static final String TAG = "[Schedule] ";
@@ -49,16 +50,24 @@ public class CourseSchedule implements EndpointModule {
         put("星期日", 6);
         put("Sunday", 6);
     }};
+    private final ProxyManager proxyManager;
+
+    public CourseSchedule(ProxyManager proxyManager) {
+        this.proxyManager = proxyManager;
+    }
 
 
     @Override
     public void start() {
-
     }
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     private final HttpHandler httpHandler = req -> {
@@ -66,7 +75,7 @@ public class CourseSchedule implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String refererUrl = getRefererUrl(requestHeaders);
+        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -74,7 +83,7 @@ public class CourseSchedule implements EndpointModule {
             boolean success = getCourseSchedule(cookieStore, data);
 
             Headers responseHeader = req.getResponseHeaders();
-            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
 
             byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
@@ -101,7 +110,8 @@ public class CourseSchedule implements EndpointModule {
     private boolean getCourseSchedule(CookieStore cookieStore, ApiResponse response) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215")
                 .header("Connection", "keep-alive")
-                .cookieStore(cookieStore);
+                .cookieStore(cookieStore)
+                .proxy(proxyManager.getProxy());
         Document root = null;
         try {
             root = conn.get();

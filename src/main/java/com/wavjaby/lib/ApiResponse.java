@@ -1,4 +1,4 @@
-package com.wavjaby;
+package com.wavjaby.lib;
 
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObjectStringBuilder;

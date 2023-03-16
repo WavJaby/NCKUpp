@@ -18,9 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 
-import static com.wavjaby.Cookie.getDefaultCookie;
-import static com.wavjaby.Lib.parseUrlEncodedForm;
-import static com.wavjaby.Lib.setAllowOrigin;
+import static com.wavjaby.lib.Cookie.getDefaultCookie;
+import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class NCKUHub implements EndpointModule {
     private static final String TAG = "[NCKU Hub] ";
@@ -32,12 +32,15 @@ public class NCKUHub implements EndpointModule {
     @Override
     public void start() {
         updateNckuHubCourseID();
-        Logger.log(TAG, "Ready");
     }
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     private final HttpHandler httpHandler = req -> {

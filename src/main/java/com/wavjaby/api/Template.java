@@ -2,8 +2,8 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.ApiResponse;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 
 import java.io.IOException;
@@ -12,23 +12,27 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 
-import static com.wavjaby.Cookie.getDefaultCookie;
-import static com.wavjaby.Cookie.packLoginStateCookie;
-import static com.wavjaby.Lib.getRefererUrl;
-import static com.wavjaby.Lib.setAllowOrigin;
+import static com.wavjaby.lib.Cookie.getDefaultCookie;
+import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
+import static com.wavjaby.lib.Lib.getOriginUrl;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 @SuppressWarnings("ALL")
 public class Template implements EndpointModule {
     private static final String TAG = "[Template] ";
 
+
     @Override
     public void start() {
-
     }
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     private final HttpHandler httpHandler = req -> {
@@ -36,14 +40,14 @@ public class Template implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String refererUrl = getRefererUrl(requestHeaders);
+        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
             ApiResponse apiResponse = new ApiResponse();
 
             Headers responseHeader = req.getResponseHeaders();
-            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 

@@ -113,19 +113,21 @@ window.navMenu = new ClassList('links');
     }
 
     // main code
-    const userData = new Signal();
+    const userLoginData = new Signal();
     const pageLoading = new Signal(false);
     const showLoginWindow = new Signal(false);
     const hashRouter = HashRouter('schedule',
         {
-            search: () => require('./res/pages/courseSearch')(userData),
-            schedule: () => require('./res/pages/courseSchedule')(userData),
+            search: () => require('./res/pages/courseSearch')(userLoginData),
+            schedule: () => require('./res/pages/courseSchedule')(userLoginData),
+            grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
         },
         Footer()
     );
     const navPageButtonName = {
         search: 'Search',
-        schedule: 'Schedule'
+        schedule: 'Schedule',
+        grades: 'Grades',
     };
 
     // check login
@@ -138,11 +140,11 @@ window.navMenu = new ClassList('links');
         nav('navbar noSelect',
             NavSelectList('loginBtn', [
                 img('./res/assets/github_icon.svg'),
-                span(TextState(userData, response => response ? response.studentID : 'Login')),
+                span(TextState(userLoginData, response => response ? response.studentID : 'Login')),
             ], [
                 li(null, text('Profile')),
                 li(null, text('Logout'), {onclick: () => fetchApi('/logout').then(onLoginStateChange)})
-            ], false, () => !userData.state && (showLoginWindow.set(!showLoginWindow.state) || true)),
+            ], false, () => !userLoginData.state && (showLoginWindow.set(!showLoginWindow.state) || true)),
             ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => window.navMenu.toggle('open')})),
             ul(window.navMenu,
                 NavSelectList('arrow', text('List'), [
@@ -167,13 +169,13 @@ window.navMenu = new ClassList('links');
     function onLoginStateChange(response) {
         /**@type LoginData*/
         const loginData = response.data;
-        if (loginData.login) {
-            userData.set(loginData);
+        if (loginData && loginData.login) {
+            userLoginData.set(loginData);
             showLoginWindow.set(false);
         } else {
             if (response.msg)
                 messageAlert.addError('Login error', response.msg, 10000);
-            userData.set(null);
+            userLoginData.set(null);
         }
     }
 })();

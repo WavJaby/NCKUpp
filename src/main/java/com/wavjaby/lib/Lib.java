@@ -1,7 +1,8 @@
-package com.wavjaby;
+package com.wavjaby.lib;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.ProxyManager;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -13,7 +14,6 @@ import java.net.CookieStore;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static com.wavjaby.Main.accessControlAllowOrigin;
@@ -22,7 +22,7 @@ import static com.wavjaby.Main.courseNckuOrg;
 public class Lib {
     private static final String TAG = "[CosPreCheck] ";
 
-    public static void cosPreCheck(String body, CookieStore cookieStore, ApiResponse response) {
+    public static void cosPreCheck(String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
         String cosPreCheckKey = null;
         int cosPreCheckStart = body.indexOf("m=cosprecheck");
         if (cosPreCheckStart != -1) {
@@ -47,6 +47,7 @@ public class Lib {
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
+                    .proxy(proxyManager.getProxy())
                     .method(Connection.Method.POST)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
@@ -76,48 +77,57 @@ public class Lib {
         Map<String, String> query = new HashMap<>();
         if (data == null)
             return query;
-        String[] pairs = data.split("&");
+
+        char[] arr = data.toCharArray();
+        int start = 0;
+        String key = null;
         try {
-            for (String pair : pairs) {
-                int idx = pair.indexOf("=");
-                if (idx == -1) {
-                    query.put(
-                            URLDecoder.decode(pair, "UTF-8"),
-                            null
-                    );
-                } else
-                    query.put(
-                            URLDecoder.decode(pair.substring(0, idx), "UTF-8"),
-                            URLDecoder.decode(pair.substring(idx + 1), "UTF-8")
-                    );
+            for (int i = 0; i < arr.length; i++) {
+                if (arr[i] == '=') {
+                    key = data.substring(start, i);
+                    start = i + 1;
+                } else if (arr[i] == '&') {
+                    if (key != null)
+                        query.put(
+                                URLDecoder.decode(key, "UTF-8"),
+                                start == i ? null : URLDecoder.decode(data.substring(start, i), "UTF-8")
+                        );
+                    start = i + 1;
+                }
+                // Last
+                if (i + 1 == arr.length)
+                    if (key != null)
+                        query.put(
+                                URLDecoder.decode(key, "UTF-8"),
+                                start == i + 1 ? null : URLDecoder.decode(data.substring(start), "UTF-8")
+                        );
             }
-            return query;
         } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
+        return query;
     }
 
     public static void setAllowOrigin(Headers requestHeaders, Headers responseHeader) {
-        String refererUrl = requestHeaders.getFirst("Referer");
-        if (refererUrl == null)
+        String originUrl = requestHeaders.getFirst("Origin");
+        if (originUrl == null)
             return;
 
         for (String i : accessControlAllowOrigin)
-            if (refererUrl.startsWith(i)) {
+            if (originUrl.equals(i)) {
                 responseHeader.set("Access-Control-Allow-Origin", i);
                 responseHeader.set("Access-Control-Allow-Credentials", "true");
                 return;
             }
-
-        responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);
+        if (originUrl.startsWith("http://localhost"))
+            responseHeader.set("Access-Control-Allow-Origin", originUrl);
+        else
+            responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);
         responseHeader.set("Access-Control-Allow-Credentials", "true");
     }
 
-    public static String getRefererUrl(Headers requestHeaders) {
-        List<String> clientUrl = requestHeaders.get("Referer");
-        if (clientUrl != null && clientUrl.size() > 0)
-            return clientUrl.get(0);
-        return null;
+    public static String getOriginUrl(Headers requestHeaders) {
+        return requestHeaders.getFirst("Origin");
     }
 
     public static String parseUnicode(String input) {

@@ -2,8 +2,9 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.ApiResponse;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.ProxyManager;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -14,23 +15,32 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 
-import static com.wavjaby.Cookie.getDefaultCookie;
-import static com.wavjaby.Cookie.packLoginStateCookie;
-import static com.wavjaby.Lib.getRefererUrl;
-import static com.wavjaby.Lib.setAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
+import static com.wavjaby.lib.Cookie.getDefaultCookie;
+import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
+import static com.wavjaby.lib.Lib.getOriginUrl;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class PreferenceAdjust implements EndpointModule {
     private static final String TAG = "[PreferenceAdjust] ";
+    private final ProxyManager proxyManager;
+
+    public PreferenceAdjust(ProxyManager proxyManager) {
+        this.proxyManager = proxyManager;
+    }
+
 
     @Override
     public void start() {
-
     }
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     private final HttpHandler httpHandler = req -> {
@@ -38,7 +48,7 @@ public class PreferenceAdjust implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String refererUrl = getRefererUrl(requestHeaders);
+        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -46,7 +56,7 @@ public class PreferenceAdjust implements EndpointModule {
 
             preferenceAdjust(apiResponse, cookieStore);
             Headers responseHeader = req.getResponseHeaders();
-            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -68,9 +78,10 @@ public class PreferenceAdjust implements EndpointModule {
         Connection pageFetch = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21342")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
-                .ignoreContentType(true);
+                .ignoreContentType(true)
+                .proxy(proxyManager.getProxy());
 
-        String body = null;
+        String body;
         try {
             body = pageFetch.execute().body();
         } catch (IOException e) {

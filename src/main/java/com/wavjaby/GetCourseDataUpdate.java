@@ -15,8 +15,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GetCourseDataUpdate implements Runnable {
-    private final static String TAG = "[CourseListener] ";
-    private final static String apiUrl = "https://discord.com/api/v10";
+    private static final String TAG = "[CourseListener] ";
+    private static final String apiUrl = "https://discord.com/api/v10";
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private final Search search;
@@ -82,7 +82,7 @@ public class GetCourseDataUpdate implements Runnable {
 //        Search.AllDeptData allDeptData = search.getAllDeptData(cookieManager.getCookieStore());
 //        Search.DeptToken deptToken = search.getDeptToken("F7", allDeptData);
 //        Logger.log(TAG, (System.currentTimeMillis() - start) + "ms");
-        baseCookieStore = Search.createCookieStore();
+        baseCookieStore = search.createCookieStore();
         watchDog.getAllCourse().forEach(this::addListenDept);
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
     }
@@ -94,7 +94,7 @@ public class GetCourseDataUpdate implements Runnable {
 
     private void addListenDept(String deptID) {
         Logger.log(TAG, "Add watch: " + deptID);
-        listenDept.put(deptID, Search.createCookieStore());
+        listenDept.put(deptID, search.createCookieStore());
     }
 
 

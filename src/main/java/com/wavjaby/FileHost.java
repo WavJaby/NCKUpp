@@ -10,7 +10,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Properties;
 
-import static com.wavjaby.Lib.setAllowOrigin;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class FileHost implements EndpointModule {
     private static final String TAG = "[FileHost] ";
@@ -19,12 +19,15 @@ public class FileHost implements EndpointModule {
 
     @Override
     public void start() {
-
     }
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     public FileHost(Properties serverSettings) {

@@ -1,0 +1,25 @@
+.stuIdSysGrades {
+
+}
+
+.stuIdSysGrades > .semestersInfo {
+    padding: 5px;
+}
+
+.stuIdSysGrades > .semesterGrades {
+    padding: 5px;
+}
+
+.stuIdSysGrades > .semesterGrades > div {
+    margin-top: 5px;
+}
+
+.stuIdSysGrades span {
+    display: block;
+}
+
+.stuIdSysGrades img {
+    top: 0;
+    float: right;
+    position: sticky;
+}

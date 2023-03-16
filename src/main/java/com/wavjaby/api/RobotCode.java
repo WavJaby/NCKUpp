@@ -3,6 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
@@ -17,17 +18,19 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
-import static com.wavjaby.Cookie.getDefaultCookie;
-import static com.wavjaby.Cookie.packLoginStateCookie;
-import static com.wavjaby.Lib.getRefererUrl;
-import static com.wavjaby.Lib.setAllowOrigin;
+import static com.wavjaby.lib.Cookie.getDefaultCookie;
+import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
+import static com.wavjaby.lib.Lib.getOriginUrl;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class RobotCode implements EndpointModule {
     private static final String TAG = "[RobotCode] ";
 
+    private final ProxyManager proxyManager;
     private final ProcessBuilder processBuilder;
-    BufferedReader stdout;
-    OutputStream stdin;
+    private BufferedReader stdout;
+    private OutputStream stdin;
+    private Process process;
 
     public enum Mode {
         SINGLE,
@@ -39,7 +42,8 @@ public class RobotCode implements EndpointModule {
         ALPHA
     }
 
-    public RobotCode(Properties serverSettings) {
+    public RobotCode(Properties serverSettings, ProxyManager proxyManager) {
+        this.proxyManager = proxyManager;
         String workDirProp = serverSettings.getProperty("ocrWorkDir");
         String workDir;
         if (workDirProp == null) {
@@ -72,36 +76,37 @@ public class RobotCode implements EndpointModule {
 
     @Override
     public void start() {
+        String startMessage = null;
         try {
             // Start python
-            Process process = processBuilder.start();
+            process = processBuilder.start();
             stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
             stdin = process.getOutputStream();
+            // Force stop subprocess when main program stop
+            Runtime.getRuntime().addShutdownHook(new Thread(this::stopSubprocess));
 
-            Logger.log(TAG, stdout.readLine());
+            // Read ready
+            startMessage = stdout.readLine();
 
             // Start read thread
             stdoutRead.start();
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                int result;
-                try {
-                    sendStopCommand();
-                    result = process.waitFor();
-                    stdoutRead.join();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                Logger.log(TAG, "Process exited with code " + result);
-            }));
         } catch (IOException e) {
             e.printStackTrace();
         }
+        if (startMessage == null)
+            Logger.err(TAG, "Start error");
+        else
+            Logger.log(TAG, "Python: " + startMessage);
     }
 
     @Override
     public void stop() {
+        stopSubprocess();
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     private final HttpHandler httpHandler = req -> {
@@ -109,7 +114,7 @@ public class RobotCode implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String refererUrl = getRefererUrl(requestHeaders);
+        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -120,7 +125,7 @@ public class RobotCode implements EndpointModule {
 
             // Set cookie
             Headers responseHeader = req.getResponseHeaders();
-            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
 
             byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
@@ -141,6 +146,21 @@ public class RobotCode implements EndpointModule {
     @Override
     public HttpHandler getHttpHandler() {
         return httpHandler;
+    }
+
+    private void stopSubprocess() {
+        if (process == null) return;
+        int result = -1;
+        try {
+            sendStopCommand();
+            result = process.waitFor();
+            stdoutRead.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            process.destroy();
+        }
+        Logger.log(TAG, "Process exited with code " + result);
+        process = null;
     }
 
     private void sendStopCommand() {
@@ -200,7 +220,12 @@ public class RobotCode implements EndpointModule {
         String cookies = cookieStore.getCookies().stream()
                 .map(i -> '"' + i.getName() + '"' + ':' + '"' + i.getValue() + '"')
                 .collect(Collectors.joining(","));
-        sendCommand(uuid + '|' + mode.toString() + '|' + wordType.toString() + '|' + url + '|' + '{' + cookies + '}');
+        sendCommand(uuid + '|' +
+                mode.toString() + '|' +
+                wordType.toString() + '|' +
+                url + '|' +
+                '{' + cookies + '}' + '|' +
+                proxyManager.getProxy().toString());
         task.await();
         return task.result;
     }

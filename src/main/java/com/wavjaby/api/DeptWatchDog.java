@@ -2,9 +2,9 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.ApiResponse;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
@@ -18,9 +18,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
-import static com.wavjaby.Cookie.*;
-import static com.wavjaby.Lib.*;
 import static com.wavjaby.Main.courseNckuOrg;
+import static com.wavjaby.lib.Cookie.*;
+import static com.wavjaby.lib.Lib.*;
 
 public class DeptWatchDog implements EndpointModule {
     private static final String TAG = "[DeptWatchDog] ";
@@ -64,7 +64,11 @@ public class DeptWatchDog implements EndpointModule {
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     private void watchListAdd(String studentID, String watchSerialID) {
@@ -163,7 +167,7 @@ public class DeptWatchDog implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String refererUrl = getRefererUrl(requestHeaders);
+        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -196,7 +200,7 @@ public class DeptWatchDog implements EndpointModule {
             }
 
             Headers responseHeader = req.getResponseHeaders();
-            packLoginStateCookie(responseHeader, loginState, refererUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 

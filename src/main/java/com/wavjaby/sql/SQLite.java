@@ -38,7 +38,7 @@ public class SQLite implements Module {
         try {
             File databaseFile = new File(database);
             if (!databaseFile.exists()) {
-                System.err.println("Database file not found! " + databaseFile.getAbsolutePath());
+                Logger.err(TAG, "Database file not found! " + databaseFile.getAbsolutePath());
                 return;
             }
             Logger.log(TAG, "Connecting to database: " + databaseFile.getAbsolutePath());
@@ -46,7 +46,7 @@ public class SQLite implements Module {
             // Load sqlite driver
             File driverFile = new File(driverJar);
             if (!driverFile.exists()) {
-                System.err.println("Driver not found! " + driverFile.getAbsolutePath());
+                Logger.err(TAG, "Driver not found! " + driverFile.getAbsolutePath());
                 return;
             }
             URLClassLoader ucl = new URLClassLoader(new URL[]{driverFile.toURI().toURL()});
@@ -58,7 +58,7 @@ public class SQLite implements Module {
             Properties props = new Properties();
             File propsFile = new File(databaseProperties);
             if (!propsFile.exists()) {
-                System.err.println("Database properties not found! " + propsFile.getAbsolutePath());
+                Logger.err(TAG, "Database properties not found! " + propsFile.getAbsolutePath());
                 return;
             }
             props.load(Files.newInputStream(propsFile.toPath()));
@@ -72,12 +72,15 @@ public class SQLite implements Module {
             e.printStackTrace();
             return;
         }
-        Logger.log(TAG, "Ready");
     }
 
     @Override
     public void stop() {
+    }
 
+    @Override
+    public String getTag() {
+        return TAG;
     }
 
     public Connection getDatabase() {

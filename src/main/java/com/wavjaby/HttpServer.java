@@ -77,7 +77,7 @@ public class HttpServer {
             Properties prop = new Properties();
             File keystoreProperties = new File(keystorePropertyPath);
             if (!keystoreProperties.exists()) {
-                Logger.err(TAG, "Keystore info at: \"" + keystoreProperties.getAbsolutePath() + "\" not found.");
+                Logger.err(TAG, "Keystore info at: \"" + keystoreProperties.getAbsolutePath() + "\" not found");
                 return false;
             }
             InputStream keystorePropertiesIn = Files.newInputStream(keystoreProperties.toPath());
@@ -103,7 +103,7 @@ public class HttpServer {
             // Initialise the keystore
             File keystoreFile = new File(keystoreFilePath);
             if (!keystoreFile.exists()) {
-                Logger.err(TAG, "Keystore file at: \"" + keystoreFile.getAbsolutePath() + "\" not found.");
+                Logger.err(TAG, "Keystore file at: \"" + keystoreFile.getAbsolutePath() + "\" not found");
                 return false;
             }
             InputStream keystoreIn = Files.newInputStream(keystoreFile.toPath());
@@ -181,5 +181,9 @@ public class HttpServer {
 
     public void createContext(String path, HttpHandler handler) {
         httpServer.createContext(path, handler);
+    }
+
+    public void stop() {
+        httpServer.stop(0);
     }
 }

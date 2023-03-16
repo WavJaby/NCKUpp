@@ -609,7 +609,7 @@ module.exports = {
 
     /**
      * @param {string} svgText
-     * @param {string} viewBox
+     * @param {string} [viewBox]
      * @param {string} [classN] Class Name
      * @param [options] Options for element
      * @return {SVGSVGElement}
@@ -618,7 +618,7 @@ module.exports = {
         const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         element.innerHTML = svgText;
         if (classN) element.setAttributeNS(null, 'class', classN);
-        if (classN) element.setAttributeNS(null, 'viewBox', viewBox);
+        if (viewBox) element.setAttributeNS(null, 'viewBox', viewBox);
         if (options.length) addOption(element, options);
         return element;
     },
