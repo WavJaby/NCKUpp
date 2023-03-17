@@ -54,7 +54,7 @@ public class CourseFunctionButton implements EndpointModule {
 
         try {
             ApiResponse apiResponse = new ApiResponse();
-            Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
+            Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
             sendCosData(query, apiResponse, cookieStore);
 
             Headers responseHeader = req.getResponseHeaders();

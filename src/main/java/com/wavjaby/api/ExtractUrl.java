@@ -52,7 +52,7 @@ public class ExtractUrl implements EndpointModule {
 
         try {
             ApiResponse apiResponse = new ApiResponse();
-            String queryString = req.getRequestURI().getQuery();
+            String queryString = req.getRequestURI().getRawQuery();
             boolean success = false;
             if (queryString == null)
                 apiResponse.addError(TAG + "No query string found");

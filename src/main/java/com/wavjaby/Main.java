@@ -83,6 +83,7 @@ public class Main {
         registerModule(sqLite);
         registerModule(new FileHost(serverSettings), "/NCKUpp/");
         ProxyManager proxyManager = new ProxyManager();
+        registerModule(new IP(), "/api/ip");
 
         // API
         DeptWatchDog watchDog = new DeptWatchDog(sqLite);

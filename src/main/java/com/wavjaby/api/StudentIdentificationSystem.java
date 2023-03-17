@@ -226,7 +226,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         String[] cookies = splitCookie(requestHeaders);
         String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
 
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
+        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
         String mode = query.get("m");
         // Get semesters info
         if (mode == null || mode.equals("s")) {

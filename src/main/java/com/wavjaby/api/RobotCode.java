@@ -10,6 +10,7 @@ import com.wavjaby.logger.Logger;
 import java.io.*;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -220,12 +221,13 @@ public class RobotCode implements EndpointModule {
         String cookies = cookieStore.getCookies().stream()
                 .map(i -> '"' + i.getName() + '"' + ':' + '"' + i.getValue() + '"')
                 .collect(Collectors.joining(","));
+        Proxy proxy = proxyManager.getProxy();
         sendCommand(uuid + '|' +
                 mode.toString() + '|' +
                 wordType.toString() + '|' +
                 url + '|' +
                 '{' + cookies + '}' + '|' +
-                proxyManager.getProxy().toString());
+                (proxy == null ? "" : (proxy.type().name() + '@' + proxy.address().toString().substring(1))));
         task.await();
         return task.result;
     }

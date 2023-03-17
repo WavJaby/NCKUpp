@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.net.HttpCookie;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
@@ -209,7 +210,7 @@ public class Login implements EndpointModule {
         String[] cookies = splitCookie(requestHeaders);
         String authState = unpackAuthCookie(cookies, cookieStore);
 
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
+        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
         String mode = query.get("m");
         // Login course ncku
         if (mode == null || mode.equals("c")) {
@@ -361,6 +362,10 @@ public class Login implements EndpointModule {
                 response.setData("{\"login\":true}");
                 return;
             }
+
+            // Remove cookie
+            for (HttpCookie httpCookie : cookieStore.get(stuIdSysNckuOrgUri))
+                cookieStore.remove(stuIdSysNckuOrgUri, httpCookie);
 
             // Use portal
             Connection.Response portalPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp?oauth=" + (System.currentTimeMillis() / 1000))

@@ -98,7 +98,7 @@ public class Search implements EndpointModule {
             String loginState = unpackCourseLoginStateCookie(cookieIn, cookieStore);
 
             // search
-            SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getQuery(), cookieIn);
+            SearchQuery searchQuery = new SearchQuery(req.getRequestURI().getRawQuery(), cookieIn);
             ApiResponse apiResponse = new ApiResponse();
             if (searchQuery.invalidSerialNumber()) {
                 apiResponse.addError(TAG + "Invalid serial number");
@@ -595,10 +595,10 @@ public class Search implements EndpointModule {
                             i = 0;
                         fetchPool.submit(() -> {
                             try {
-//                                long start = System.currentTimeMillis();
+                                long start = System.currentTimeMillis();
                                 if (allSuccess.get() && !getDeptCourseData(dept, fragment, false, response, courseDataList))
                                     allSuccess.set(false);
-//                                Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
+                                Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }

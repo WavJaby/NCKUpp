@@ -52,7 +52,7 @@ public class NCKUHub implements EndpointModule {
         try {
             JsonObjectStringBuilder data = new JsonObjectStringBuilder();
 
-            String queryString = req.getRequestURI().getQuery();
+            String queryString = req.getRequestURI().getRawQuery();
             boolean success = true;
             if (queryString == null) {
                 // get courseID

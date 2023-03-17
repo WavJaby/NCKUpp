@@ -303,8 +303,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         const courseFetchArr = [];
         for (const serialID in courseDept)
             courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
-        const eql = encodeURIComponent('&');
-        const courseFetchData = encodeURIComponent(courseFetchArr.join(eql));
+        const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
 
         // fetch data
         fetchApi('/search?serial=' + courseFetchData).then(i => {

@@ -193,7 +193,7 @@ public class DeptWatchDog implements EndpointModule {
 
                     }
                 } else if (method.equalsIgnoreCase("GET")) {
-                    Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
+                    Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
                     String studentID = query.get("studentID");
                     getWatchDog(studentID, PHPSESSID, apiResponse);
                 }
