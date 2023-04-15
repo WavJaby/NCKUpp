@@ -10,10 +10,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Scanner;
+import java.util.*;
 
 
 public class Main {
@@ -77,13 +74,15 @@ public class Main {
         }
 
         server = new HttpServer(serverSettings);
-        if (!server.Opened) return;
+        if (!server.opened) return;
 
         SQLite sqLite = new SQLite();
         registerModule(sqLite);
         registerModule(new FileHost(serverSettings), "/NCKUpp/");
         ProxyManager proxyManager = new ProxyManager();
         registerModule(new IP(), "/api/ip");
+        registerModule(new Route(), "/api/route");
+        registerModule(new WebSocket(), "/api/v0/socket");
 
         // API
         DeptWatchDog watchDog = new DeptWatchDog(sqLite);

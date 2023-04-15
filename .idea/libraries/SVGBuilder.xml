@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="SVGBuilder">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../SVGBuilder/out/SVGBuilder.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../SVGBuilder/src" />
+    </SOURCES>
+  </library>
+</component>

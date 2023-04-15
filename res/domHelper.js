@@ -361,46 +361,37 @@ module.exports = {
 
     /**
      * @param {string | ClassList} [classN] Class Name
-     * @param {string} [labelText]
      * @param {function(this: GlobalEventHandlers, ev: Event)} [onchange]
      * @param {string} [id]
      * @param [options] Options for element
-     * @return {HTMLInputElement|HTMLInputElement[]}
+     * @return {HTMLInputElement}
      * */
-    checkbox(classN, labelText, onchange, id, ...options) {
+    checkbox(classN, onchange, id, ...options) {
         const element = document.createElement('input');
         element.type = 'checkbox';
         if (classN) parseClassInput(classN, element);
         element.onchange = onchange;
-        if (id !== undefined)
-            element.id = id;
-        let labelElement = null;
-        if (labelText) {
-            if (id === undefined)
-                element.id = Math.random().toString(16).substring(2);
-            labelElement = document.createElement('label');
-            labelElement.textContent = labelText;
-            labelElement.htmlFor = element.id;
-        }
+        if (id) element.id = id;
         if (options.length) addOption(element, options);
-        if (labelElement)
-            return [element, labelElement];
-        else
-            return element;
+        return element;
     },
 
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param {string | Signal | TextState | TextStateChanger} text
-     * @param {string} forId
+     * @param {HTMLInputElement} inputElement
      * @param [options] Options for element
      * @return {HTMLLabelElement}
      * */
-    label(classN, text, forId, ...options) {
+    label(classN, text, inputElement, ...options) {
         const element = document.createElement('label');
         if (classN) parseClassInput(classN, element);
         if (text) parseTextInput(text, element);
-        if (forId) element.htmlFor = forId;
+        if (inputElement) {
+            if (!inputElement.id)
+                inputElement.id = Math.random().toString(16).substring(2);
+            element.htmlFor = inputElement.id;
+        }
         if (options.length) addOption(element, options);
         return element;
     },

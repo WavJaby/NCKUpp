@@ -232,7 +232,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         if (mode == null || mode.equals("s")) {
             List<SemesterOverview> data = getSemestersOverview(cookieStore);
             if (data == null)
-                apiResponse.addError(TAG + "Cant get semesters info");
+                apiResponse.addError(TAG + "Cant get semesters table");
             else
                 apiResponse.setData(data.toString());
         }
@@ -287,7 +287,10 @@ public class StudentIdentificationSystem implements EndpointModule {
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .execute();
-            tbody = gradesHistoryListPage.parse().getElementsByTag("tbody").last();
+            Elements tbodyElements = gradesHistoryListPage.parse().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4)
+                return null;
+            tbody = tbodyElements.get(3);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -311,14 +314,17 @@ public class StudentIdentificationSystem implements EndpointModule {
     private List<CourseGrade> getSemesterGradeTable(String semesterID, CookieStore cookieStore) {
         Element tbody = null;
         try {
-            Connection.Response gradesHistoryListPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
+            Connection.Response gradesListPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody("submit1=" + semesterID)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .execute();
-            tbody = gradesHistoryListPage.parse().getElementsByTag("tbody").last();
+            Elements tbodyElements = gradesListPage.parse().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4)
+                return null;
+            tbody = tbodyElements.get(3);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -352,7 +358,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             int imageHeight = image.getHeight();
             int[] imageRGB = image.getRGB(0, 0, imageWidth, imageHeight, null, 0, imageWidth);
 
-            int[] studentCount = parseImage(imageRGB, imageWidth, imageHeight, true);
+            int[] studentCount = parseImage(imageRGB, imageWidth, imageHeight, false);
             image.setRGB(0, 0, imageWidth, imageHeight, imageRGB, 0, imageWidth);
             ImageIO.write(image, "png", new File("image1.png"));
 
@@ -623,7 +629,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         return out;
     }
 
-    private final double sqrt2pi = Math.sqrt(2 * Math.PI);
+//    private final double sqrt2pi = Math.sqrt(2 * Math.PI);
 
     private double stdDevFunction(double x, double stdDev, double avg) {
         double a = x - avg;

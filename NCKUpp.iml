@@ -8,11 +8,13 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <excludeFolder url="file://$MODULE_DIR$/key" />
       <excludeFolder url="file://$MODULE_DIR$/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/res/quizlet" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="lib" level="project" />
     <orderEntry type="library" name="SVGBuilder" level="project" />
     <orderEntry type="library" name="TinyJson-0.0.4" level="project" />
+    <orderEntry type="library" name="WebSocket" level="project" />
   </component>
 </module>

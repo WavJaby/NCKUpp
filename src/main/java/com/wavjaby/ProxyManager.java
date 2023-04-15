@@ -16,17 +16,20 @@ public class ProxyManager {
         public final String ip;
         public final int port;
         public final String protocol;
+
+        public final String providerUrl;
         public long ping;
 
 
-        public ProxyData(String ip, int port, String protocol) {
+        public ProxyData(String ip, int port, String protocol, String providerUrl) {
             this.ip = ip;
             this.port = port;
             this.protocol = protocol;
+            this.providerUrl = providerUrl;
             this.ping = -1;
         }
 
-        public ProxyData(String url) {
+        public ProxyData(String url, String providerUrl) {
             int protocolEnd = url.indexOf("://");
             this.protocol = url.substring(0, protocolEnd);
             int ipEnd = url.indexOf(':', protocolEnd + 3);
@@ -36,14 +39,9 @@ public class ProxyManager {
                 if (url.charAt(portEnd) < '0' || url.charAt(portEnd) > '9')
                     break;
             this.port = Integer.parseInt(url.substring(ipEnd + 1, portEnd));
-            this.ping = -1;
-        }
 
-        @Override
-        public String toString() {
-            return "ping: " + ping + '\n' +
-                    "ip: " + ip + '\n' +
-                    "port: " + port;
+            this.providerUrl = providerUrl;
+            this.ping = -1;
         }
 
         public String getUrl() {
@@ -51,7 +49,15 @@ public class ProxyManager {
         }
 
         public Proxy.Type getProxyType() {
-            return protocol.startsWith("socks") ? Proxy.Type.SOCKS : Proxy.Type.valueOf(protocol.toUpperCase());
+            return protocol.startsWith("socks")
+                    ? Proxy.Type.SOCKS
+                    : protocol.startsWith("http")
+                    ? Proxy.Type.HTTP
+                    : Proxy.Type.valueOf(protocol.toUpperCase());
+        }
+
+        public Proxy toProxy() {
+            return new Proxy(getProxyType(), new InetSocketAddress(ip, port));
         }
 
         @Override
@@ -73,9 +79,13 @@ public class ProxyManager {
                     ((ProxyData) obj).port == port;
         }
 
-        public Proxy toProxy() {
-            return new Proxy(getProxyType(), new InetSocketAddress(ip, port));
+        @Override
+        public String toString() {
+            return "ping: " + ping + '\n' +
+                    "url: " + getUrl() + '\n' +
+                    "providerUrl: " + providerUrl;
         }
+
     }
 
     ProxyManager() {
@@ -87,15 +97,21 @@ public class ProxyManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        ProxyData proxyData;
         if (proxiesString != null) {
             String[] proxies = proxiesString.split("\r?\n");
-            ProxyData proxyData = new ProxyData(proxies[0]);
+            if (proxies[0].length() == 0)
+                proxyData = null;
+            else
+                proxyData = new ProxyData(proxies[0], "local");
+        } else
+            proxyData = null;
+
+        if (proxyData != null) {
+            Logger.log(TAG, "Using proxy: " + proxyData.getUrl());
             proxy = proxyData.toProxy();
         } else
             proxy = null;
-
-        if (proxy != null)
-            Logger.log(TAG, "Using proxy: " + proxy);
     }
 
     public Proxy getProxy() {

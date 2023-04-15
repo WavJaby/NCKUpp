@@ -50,11 +50,19 @@ public class FileHost implements EndpointModule {
                     in = Files.newInputStream(new File(fileRoot, "index.html").toPath());
                 } else {
                     String resFilePath = path.substring(8);
-                    if (!resFilePath.startsWith("res/") && !resFilePath.equals("index.js")) {
+                    if (!resFilePath.startsWith("res/") &&
+                            !resFilePath.startsWith("quizlet/") &&
+                            !resFilePath.startsWith("GameOfLife/") &&
+                            !resFilePath.equals("index.js")) {
                         req.sendResponseHeaders(404, 0);
                         req.close();
                         return;
                     }
+                    if(resFilePath.startsWith("GameOfLife/"))
+                        resFilePath = "../GameOfLife/GameOfLife/src/com/java/Web/" +
+                                resFilePath.substring(11);
+                    if (resFilePath.lastIndexOf('.') == -1)
+                        resFilePath += ".html";
 
                     File file = new File(fileRoot, resFilePath);
                     if (!file.getAbsolutePath().startsWith(fileRoot.getAbsolutePath())) {
@@ -62,18 +70,22 @@ public class FileHost implements EndpointModule {
                         req.close();
                         return;
                     }
+//                    System.out.println(file.getAbsolutePath());
 
                     if (file.exists()) {
-                        if (path.endsWith(".js"))
+                        if (resFilePath.endsWith(".js"))
                             responseHeader.set("Content-Type", "application/javascript; charset=UTF-8");
-                        else if (path.endsWith(".css"))
+                        else if (resFilePath.endsWith(".css"))
                             responseHeader.set("Content-Type", "text/css; charset=UTF-8");
-                        else if (path.endsWith(".svg"))
+                        else if (resFilePath.endsWith(".svg"))
                             responseHeader.set("Content-Type", "image/svg+xml; charset=UTF-8");
+                        else if (resFilePath.endsWith(".html"))
+                            responseHeader.set("Content-Type", "text/html; charset=UTF-8");
 
                         in = Files.newInputStream(file.toPath());
                     }
                 }
+
                 if (in != null) {
                     setAllowOrigin(req.getRequestHeaders(), responseHeader);
                     req.sendResponseHeaders(200, in.available());
@@ -82,6 +94,7 @@ public class FileHost implements EndpointModule {
                     int len;
                     while ((len = in.read(buff, 0, buff.length)) > 0)
                         response.write(buff, 0, len);
+                    in.close();
                     response.flush();
                 } else
                     req.sendResponseHeaders(404, 0);

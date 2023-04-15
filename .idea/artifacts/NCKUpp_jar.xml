@@ -6,6 +6,7 @@
       <element id="extracted-dir" path="$PROJECT_DIR$/lib/jsoup-1.15.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/../TinyJson/build/libs/TinyJson-0.0.4.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/../SVGBuilder/out/SVGBuilder.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../WebSocket/out/WebSocket.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

@@ -22,8 +22,8 @@ public class HttpServer {
     private static final int defaultPort = 443;
     private com.sun.net.httpserver.HttpServer httpServer;
 
-    public boolean Opened = false;
-    public boolean Error = false;
+    public boolean opened = false;
+    public boolean error = false;
     public int port;
     public String hostname;
 
@@ -51,9 +51,9 @@ public class HttpServer {
         }
 
         if (protocolName.equals("https"))
-            Error = createHttpsServer(hostname, port, serverSettings);
+            error = createHttpsServer(hostname, port, serverSettings);
         else if (protocolName.equals("http"))
-            Error = createHttpServer(hostname, port);
+            error = createHttpServer(hostname, port);
     }
 
     private synchronized boolean createHttpsServer(String hostname, int port, Properties serverSettings) {
@@ -68,10 +68,11 @@ public class HttpServer {
             Logger.warn(TAG, "Host name not found, using default: " + keystorePropertyPath);
         }
 
-        if (Opened) {
+        if (opened) {
             Logger.warn(TAG, "Server already opened");
             return false;
         }
+        HttpsServer httpsServer;
         SSLContext sslContext;
         try {
             Properties prop = new Properties();
@@ -124,7 +125,7 @@ public class HttpServer {
             tmf.init(keystore);
 
             // create https server
-            httpServer = com.sun.net.httpserver.HttpsServer.create(
+            httpsServer = HttpsServer.create(
                     new InetSocketAddress(hostname, port), 0);
             // create ssl context
             sslContext = SSLContext.getInstance("TLSv1");
@@ -135,7 +136,7 @@ public class HttpServer {
             e.printStackTrace();
             return false;
         }
-        ((HttpsServer) httpServer).setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+        httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
             public void configure(HttpsParameters params) {
                 try {
                     // Initialise the SSL context
@@ -154,12 +155,13 @@ public class HttpServer {
                 }
             }
         });
-        Opened = true;
+        httpServer = httpsServer;
+        opened = true;
         return true;
     }
 
     private synchronized boolean createHttpServer(String hostname, int port) {
-        if (Opened) {
+        if (opened) {
             Logger.warn(TAG, "Server already opened");
             return false;
         }
@@ -170,7 +172,7 @@ public class HttpServer {
         } catch (IOException e) {
             return false;
         }
-        Opened = true;
+        opened = true;
         return true;
     }
 

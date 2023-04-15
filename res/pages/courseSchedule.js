@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, table, Signal, text, span, ShowIf, input, checkbox, th} = require('../domHelper');
+const {div, button, table, Signal, text, span, ShowIf, input, checkbox, th, label} = require('../domHelper');
 /*ExcludeEnd*/
 
 // static
@@ -54,7 +54,8 @@ module.exports = function (loginState) {
     let styles = async_require('./courseSchedule.css');
     const showCourseInfoWindow = new Signal(false);
     const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
-    const scheduleTable = new ScheduleTable(showCourseInfoWindow, courseInfoWindow);
+    const showClassroomCheckBox = checkbox();
+    const scheduleTable = new ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomCheckBox);
 
     onLoginState(loginState.state);
 
@@ -85,15 +86,7 @@ module.exports = function (loginState) {
     return div('courseSchedule',
         {onRender, onDestroy},
         div('scheduleTab'),
-        div(null,
-            checkbox(null, 'Show classroom', function () {
-                const display = this.checked ? 'none' : null;
-                console.log(display)
-                for (const roomNameElement of scheduleTable.roomNameElements) {
-                    roomNameElement.style.display = display;
-                }
-            })
-        ),
+        div(null, label(null, 'Show classroom', showClassroomCheckBox), showClassroomCheckBox),
         scheduleTable.table,
         ShowIf(showCourseInfoWindow, courseInfoWindow),
     );
@@ -120,14 +113,14 @@ module.exports = function (loginState) {
  *     }[],
  * }} schedule
  */
-function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
+function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomCheckBox) {
     const courseInfo = {};
-    const roomNameElements = this.roomNameElements = [];
+    const roomNameElements = [];
     const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
     let thead = scheduleTable.createTHead(),
         tbody = scheduleTable.createTBody(),
         caption = scheduleTable.createCaption();
-
+    showClassroomCheckBox.onchange = showRoomName;
 
     function cellClick() {
         const info = courseInfo[this.serialID];
@@ -331,9 +324,12 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 
         const rooms = [];
         for (let k = 1; k < course.length; k++) {
-            const roomName = span(course[k].room);
-            rooms.push(roomName);
-            roomNameElements.push(roomName);
+            const roomNameElement = span(course[k].room);
+            // Show roomName or not
+            if (!showClassroomCheckBox.checked)
+                roomNameElement.style.display = 'none';
+            rooms.push(roomNameElement);
+            roomNameElements.push(roomNameElement);
         }
 
         cell.appendChild(
@@ -343,5 +339,11 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
             )
         );
         return cell;
+    }
+
+    function showRoomName() {
+        const display = showClassroomCheckBox.checked ? null : 'none';
+        for (const roomNameElement of roomNameElements)
+            roomNameElement.style.display = display;
     }
 }
