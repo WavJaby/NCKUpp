@@ -23,7 +23,8 @@ import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class Logout implements EndpointModule {
-    private static final String TAG = "[Logout] ";
+    private static final String TAG = "[Logout]";
+    private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
     public Logout(ProxyManager proxyManager) {
@@ -76,7 +77,7 @@ public class Logout implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Logout " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Logout " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

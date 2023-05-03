@@ -13,7 +13,8 @@ import java.util.Properties;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class FileHost implements EndpointModule {
-    private static final String TAG = "[FileHost] ";
+    private static final String TAG = "[FileHost]";
+    private static final Logger logger = new Logger(TAG);
     private final File fileRoot;
     private final HttpHandler httpHandler;
 
@@ -34,11 +35,11 @@ public class FileHost implements EndpointModule {
         String frontendFilePath = serverSettings.getProperty("frontendFilePath");
         if (frontendFilePath == null) {
             frontendFilePath = "./";
-            Logger.warn(TAG, "Frontend file path not found, using current path");
+            logger.warn("Frontend file path not found, using current path");
         }
         fileRoot = new File(frontendFilePath);
         if (!fileRoot.exists())
-            Logger.err(TAG, "Frontend file path not found");
+            logger.err("Frontend file path not found");
 
         httpHandler = req -> {
             String path = req.getRequestURI().getPath();
@@ -58,7 +59,7 @@ public class FileHost implements EndpointModule {
                         req.close();
                         return;
                     }
-                    if(resFilePath.startsWith("GameOfLife/"))
+                    if (resFilePath.startsWith("GameOfLife/"))
                         resFilePath = "../GameOfLife/GameOfLife/src/com/java/Web/" +
                                 resFilePath.substring(11);
                     if (resFilePath.lastIndexOf('.') == -1)

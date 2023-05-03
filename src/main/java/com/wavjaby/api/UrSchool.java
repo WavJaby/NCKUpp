@@ -27,9 +27,10 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Lib.*;
 
 public class UrSchool implements EndpointModule {
-    private static final String TAG = "[UrSchool] ";
+    private static final String TAG = "[UrSchool]";
+    private static final Logger logger = new Logger(TAG);
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
-    private static final long updateInterval = 60 * 60 * 1000;
+    private static final long updateInterval = 2 * 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 5 * 60 * 1000;
 
     private String urSchoolDataJson;
@@ -62,20 +63,20 @@ public class UrSchool implements EndpointModule {
         }
 
         if (updateUrSchoolData())
-            Logger.log(TAG, "Up to date");
+            logger.log("Up to date");
     }
 
     @Override
     public void stop() {
         pool.shutdown();
         try {
-            if (!pool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                Logger.warn(TAG, "Data update pool close timeout");
+            if (!pool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+                logger.warn("Data update pool close timeout");
                 pool.shutdownNow();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
-            Logger.warn(TAG, "Data update pool close error");
+            logger.warn("Data update pool close error");
             pool.shutdownNow();
         }
     }
@@ -127,7 +128,7 @@ public class UrSchool implements EndpointModule {
         } catch (IOException e) {
             req.close();
         }
-        Logger.log(TAG, "Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -139,12 +140,12 @@ public class UrSchool implements EndpointModule {
         // check if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
-//            Logger.log(TAG, id + " use cache");
+//            logger.log(id + " use cache");
             if (outData != null)
                 outData.appendRaw("data", (String) cacheData[1]);
             return true;
         }
-//        Logger.log(TAG, id + " fetch data");
+//        logger.log(id + " fetch data");
 
         try {
             Connection.Response result;
@@ -316,7 +317,7 @@ public class UrSchool implements EndpointModule {
             if (outData != null)
                 outData.append("data", jsonBuilder);
             instructorCache.put(id + '-' + mode, new Object[]{System.currentTimeMillis(), jsonBuilder.toString()});
-//            Logger.log(TAG, id + " done");
+//            logger.log(id + " done");
             return true;
         } catch (Exception e) {
             if (outData != null)
@@ -351,16 +352,25 @@ public class UrSchool implements EndpointModule {
             for (int i = 1; i < maxPage[0]; i++) {
                 try {
                     fetchPoolLock.acquire();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                } catch (InterruptedException ignore) {
+                    // Stop all
+                    shutdownFetchPool(1000, fetchPool);
+                    return;
                 }
+                // Stop all
+                if (pool.isShutdown()) {
+                    shutdownFetchPool(1000, fetchPool);
+                    return;
+                }
+
                 int finalI = i + 1;
                 fetchPool.submit(() -> {
                     String page = fetchUrSchoolData(finalI, null);
+                    fetchPoolLock.release();
+                    if (pool.isShutdown()) return;
                     synchronized (result) {
                         result.append(page);
                     }
-                    fetchPoolLock.release();
                     fetchLeft.countDown();
                     progressBar.setProgress(((float) (maxPage[0] - fetchLeft.getCount() + 1) / maxPage[0]) * 100);
                 });
@@ -368,15 +378,12 @@ public class UrSchool implements EndpointModule {
             // Wait result
             try {
                 fetchLeft.await();
-                fetchPool.shutdown();
-                if (!fetchPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                    fetchPool.shutdownNow();
-                    Logger.warn(TAG, "FetchPool shutdown timeout");
-                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 return;
             }
+            shutdownFetchPool(1000, fetchPool);
+
             progressBar.setProgress(100f);
             Logger.removeProgressBar(progressBar);
             if (result.length() > 0) result.setCharAt(0, '[');
@@ -394,9 +401,22 @@ public class UrSchool implements EndpointModule {
                 e.printStackTrace();
             }
 
-            Logger.log(TAG, "Used " + (System.currentTimeMillis() - start) + "ms");
+            logger.log("Used " + (System.currentTimeMillis() - start) + "ms");
         });
         return false;
+    }
+
+    private void shutdownFetchPool(long timeout, ExecutorService pool) {
+        pool.shutdown();
+        try {
+            if (!pool.awaitTermination(timeout, TimeUnit.MILLISECONDS)) {
+                pool.shutdownNow();
+                logger.warn("FetchPool shutdown timeout");
+            }
+        } catch (InterruptedException ignore) {
+            logger.warn("FetchPool shutdown interrupted");
+            pool.shutdownNow();
+        }
     }
 
     private String fetchUrSchoolData(int page, int[] maxPage) {
@@ -412,7 +432,7 @@ public class UrSchool implements EndpointModule {
                 try {
                     resultBody = pageFetch.execute().body();
                     break;
-                } catch (Exception ignore) {
+                } catch (IOException ignore) {
                 }
             }
 
@@ -421,7 +441,7 @@ public class UrSchool implements EndpointModule {
                 if ((maxPageStart = resultBody.lastIndexOf("https://urschool.org/ncku/list?page=")) == -1 ||
                         (maxPageStart = resultBody.lastIndexOf("https://urschool.org/ncku/list?page=", maxPageStart - 36)) == -1 ||
                         (maxPageEnd = resultBody.indexOf('"', maxPageStart + 36)) == -1) {
-                    Logger.log(TAG, "Max page number not found");
+                    logger.log("Max page number not found");
                     return null;
                 }
                 maxPage[0] = Integer.parseInt(resultBody.substring(maxPageStart + 36, maxPageEnd));
@@ -429,7 +449,7 @@ public class UrSchool implements EndpointModule {
 
             int resultTableStart;
             if ((resultTableStart = resultBody.indexOf("<table")) == -1) {
-                Logger.log(TAG, "Result table not found");
+                logger.log("Result table not found");
                 return null;
             }
             // get table body
@@ -437,7 +457,7 @@ public class UrSchool implements EndpointModule {
             if ((resultTableBodyStart = resultBody.indexOf("<tbody", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = resultBody.indexOf("</tbody>", resultTableBodyStart + 6)) == -1
             ) {
-                Logger.log(TAG, "Result table body not found");
+                logger.log("Result table body not found");
                 return null;
             }
 
@@ -452,14 +472,14 @@ public class UrSchool implements EndpointModule {
                 if ((idStart = id.indexOf('\'')) == -1 ||
                         (idEnd = id.indexOf('\'', idStart + 1)) == -1
                 ) {
-                    Logger.log(TAG, "Instructor ID not found");
+                    logger.log("Instructor ID not found");
                     return null;
                 }
                 int modeStart, modeEnd;
                 if ((modeStart = id.indexOf('\'', idEnd + 1)) == -1 ||
                         (modeEnd = id.indexOf('\'', modeStart + 1)) == -1
                 ) {
-                    Logger.log(TAG, "Open mode not found");
+                    logger.log("Open mode not found");
                     return null;
                 }
                 String mode = id.substring(modeStart + 1, modeEnd);
@@ -499,7 +519,7 @@ public class UrSchool implements EndpointModule {
     }
 
     public void addInstructorCache(String[] instructors) {
-//        Logger.log(TAG, Arrays.toString(instructors));
+//        logger.log(Arrays.toString(instructors));
         pool.submit(() -> {
             for (String name : instructors) {
                 List<JsonArray> results = new ArrayList<>();
@@ -519,7 +539,7 @@ public class UrSchool implements EndpointModule {
                 }
 
                 if (id != null && mode != null) {
-//                    Logger.log(TAG, "Add cache " + id);
+//                    logger.log("Add cache " + id);
                     getInstructorInfo(id, mode, null);
                 }
             }

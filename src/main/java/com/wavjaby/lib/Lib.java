@@ -3,6 +3,7 @@ package com.wavjaby.lib;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
@@ -20,7 +21,8 @@ import static com.wavjaby.Main.accessControlAllowOrigin;
 import static com.wavjaby.Main.courseNckuOrg;
 
 public class Lib {
-    private static final String TAG = "[CosPreCheck] ";
+    private static final String TAG = "[CosPreCheck]";
+    private static final Logger logger = new Logger(TAG);
 
     public static void cosPreCheck(String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
         String cosPreCheckKey = null;
@@ -38,7 +40,7 @@ public class Lib {
                 response.addWarn(TAG + "CosPreCheck key not found");
             return;
         }
-//        Logger.log(TAG, "Make CosPreCheck " + cookieStore.getCookies().toString());
+//        logger.log("Make CosPreCheck " + cookieStore.getCookies().toString());
 
         long now = System.currentTimeMillis() / 1000;
         try {
@@ -54,7 +56,7 @@ public class Lib {
                     .requestBody(postData)
                     .execute();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
         }
     }
 

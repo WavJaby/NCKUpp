@@ -23,7 +23,8 @@ import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class NCKUHub implements EndpointModule {
-    private static final String TAG = "[NCKU Hub] ";
+    private static final String TAG = "[NCKU Hub]";
+    private static final Logger logger = new Logger(TAG);
 
     private String nckuHubCourseIdJson;
     private final long courseIDUpdateInterval = 10 * 60 * 1000;
@@ -82,7 +83,7 @@ public class NCKUHub implements EndpointModule {
         } catch (IOException e) {
             req.close();
         }
-        Logger.log(TAG, "Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -118,7 +119,7 @@ public class NCKUHub implements EndpointModule {
 
     private boolean updateNckuHubCourseID() {
         try {
-            Logger.log(TAG, "Updating course id");
+            logger.log("Updating course id");
             Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/")
                     .ignoreContentType(true)
                     .execute();
@@ -142,7 +143,7 @@ public class NCKUHub implements EndpointModule {
             return true;
         } catch (IOException e) {
             e.printStackTrace();
-            Logger.err(TAG, "Update course id failed");
+            logger.err("Update course id failed");
             return false;
         }
     }

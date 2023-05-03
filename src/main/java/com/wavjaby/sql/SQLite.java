@@ -17,11 +17,12 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 public class SQLite implements Module {
-    private static final String TAG = "[SQLite] ";
+    private static final String TAG = "[SQLite]";
+    private static final Logger logger = new Logger(TAG);
     private java.sql.Connection sqlite;
 
     public static void printSqlError(SQLException e, String tag) {
-        Logger.err(tag, e.getClass().getName() + ": " + e.getMessage() + '\n' +
+        logger.err(e.getClass().getName() + ": " + e.getMessage() + '\n' +
                 "\tat " + Arrays.stream(e.getStackTrace())
                 .filter(i -> !i.getClassName().startsWith("org.sqlite"))
                 .map(StackTraceElement::toString)
@@ -38,15 +39,15 @@ public class SQLite implements Module {
         try {
             File databaseFile = new File(database);
             if (!databaseFile.exists()) {
-                Logger.err(TAG, "Database file not found! " + databaseFile.getAbsolutePath());
+                logger.err("Database file not found! " + databaseFile.getAbsolutePath());
                 return;
             }
-            Logger.log(TAG, "Connecting to database: " + databaseFile.getAbsolutePath());
+            logger.log("Connecting to database: " + databaseFile.getAbsolutePath());
 
             // Load sqlite driver
             File driverFile = new File(driverJar);
             if (!driverFile.exists()) {
-                Logger.err(TAG, "Driver not found! " + driverFile.getAbsolutePath());
+                logger.err("Driver not found! " + driverFile.getAbsolutePath());
                 return;
             }
             URLClassLoader ucl = new URLClassLoader(new URL[]{driverFile.toURI().toURL()});
@@ -58,7 +59,7 @@ public class SQLite implements Module {
             Properties props = new Properties();
             File propsFile = new File(databaseProperties);
             if (!propsFile.exists()) {
-                Logger.err(TAG, "Database properties not found! " + propsFile.getAbsolutePath());
+                logger.err("Database properties not found! " + propsFile.getAbsolutePath());
                 return;
             }
             props.load(Files.newInputStream(propsFile.toPath()));

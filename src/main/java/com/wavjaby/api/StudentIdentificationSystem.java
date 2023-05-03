@@ -32,7 +32,8 @@ import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
 public class StudentIdentificationSystem implements EndpointModule {
-    private static final String TAG = "[StuIdSys] ";
+    private static final String TAG = "[StuIdSys]";
+    private static final Logger logger = new Logger(TAG);
 
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
@@ -208,7 +209,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

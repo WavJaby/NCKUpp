@@ -18,7 +18,8 @@ import java.util.Properties;
 import java.util.concurrent.Executors;
 
 public class HttpServer {
-    private static final String TAG = "[HttpServer] ";
+    private static final String TAG = "[HttpServer]";
+    private static final Logger logger = new Logger(TAG);
     private static final int defaultPort = 443;
     private com.sun.net.httpserver.HttpServer httpServer;
 
@@ -32,22 +33,22 @@ public class HttpServer {
             String portStr = serverSettings.getProperty("port");
             if (portStr == null) {
                 port = 443;
-                Logger.warn(TAG, "Port not found, using default: " + port);
+                logger.warn("Port not found, using default: " + port);
             } else
                 port = Integer.parseInt(portStr);
         } catch (ClassCastException | NumberFormatException e) {
             port = defaultPort;
-            Logger.warn(TAG, "Wrong port format: \"" + serverSettings.get("port") + "\", Using Default " + port);
+            logger.warn("Wrong port format: \"" + serverSettings.get("port") + "\", Using Default " + port);
         }
         String protocolName = serverSettings.getProperty("protocol");
         hostname = serverSettings.getProperty("hostname");
         if (protocolName == null) {
             protocolName = "https";
-            Logger.warn(TAG, "Protocol name not found, using default: " + protocolName);
+            logger.warn("Protocol name not found, using default: " + protocolName);
         }
         if (hostname == null) {
             hostname = "localhost";
-            Logger.warn(TAG, "Host name not found, using default: " + hostname);
+            logger.warn("Host name not found, using default: " + hostname);
         }
 
         if (protocolName.equals("https"))
@@ -61,15 +62,15 @@ public class HttpServer {
         String keystorePropertyPath = serverSettings.getProperty("keystorePropertyPath");
         if (keystoreFilePath == null) {
             keystoreFilePath = "key/key.keystore";
-            Logger.warn(TAG, "Protocol name not found, using default: " + keystoreFilePath);
+            logger.warn("Protocol name not found, using default: " + keystoreFilePath);
         }
         if (keystorePropertyPath == null) {
             keystorePropertyPath = "key/key.properties";
-            Logger.warn(TAG, "Host name not found, using default: " + keystorePropertyPath);
+            logger.warn("Host name not found, using default: " + keystorePropertyPath);
         }
 
         if (opened) {
-            Logger.warn(TAG, "Server already opened");
+            logger.warn("Server already opened");
             return false;
         }
         HttpsServer httpsServer;
@@ -78,7 +79,7 @@ public class HttpServer {
             Properties prop = new Properties();
             File keystoreProperties = new File(keystorePropertyPath);
             if (!keystoreProperties.exists()) {
-                Logger.err(TAG, "Keystore info at: \"" + keystoreProperties.getAbsolutePath() + "\" not found");
+                logger.err("Keystore info at: \"" + keystoreProperties.getAbsolutePath() + "\" not found");
                 return false;
             }
             InputStream keystorePropertiesIn = Files.newInputStream(keystoreProperties.toPath());
@@ -88,11 +89,11 @@ public class HttpServer {
             String storePassword = prop.getProperty("storePassword");
             String keyPassword = prop.getProperty("keyPassword");
             if (storePassword == null) {
-                Logger.warn(TAG, "Keystore password not found, fill with empty");
+                logger.warn("Keystore password not found, fill with empty");
                 storePassword = "";
             }
             if (keyPassword == null) {
-                Logger.warn(TAG, "Key password not found, fill with empty");
+                logger.warn("Key password not found, fill with empty");
                 keyPassword = "";
             }
 
@@ -104,7 +105,7 @@ public class HttpServer {
             // Initialise the keystore
             File keystoreFile = new File(keystoreFilePath);
             if (!keystoreFile.exists()) {
-                Logger.err(TAG, "Keystore file at: \"" + keystoreFile.getAbsolutePath() + "\" not found");
+                logger.err("Keystore file at: \"" + keystoreFile.getAbsolutePath() + "\" not found");
                 return false;
             }
             InputStream keystoreIn = Files.newInputStream(keystoreFile.toPath());
@@ -114,7 +115,7 @@ public class HttpServer {
 
             // display certificate
 //            Certificate cert = keystore.getCertificate(alias);
-//            Logger.log(TAG, cert);
+//            logger.log(cert);
 
             // Set up the key manager factory
             KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
@@ -125,8 +126,7 @@ public class HttpServer {
             tmf.init(keystore);
 
             // create https server
-            httpsServer = HttpsServer.create(
-                    new InetSocketAddress(hostname, port), 0);
+            httpsServer = HttpsServer.create(new InetSocketAddress(hostname, port), 0);
             // create ssl context
             sslContext = SSLContext.getInstance("TLSv1");
             // setup HTTPS context and parameters
@@ -151,7 +151,7 @@ public class HttpServer {
                     params.setSSLParameters(defaultSSLParameters);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    Logger.err(TAG, "Failed to create HTTPS server");
+                    logger.err("Failed to create HTTPS server");
                 }
             }
         });
@@ -162,7 +162,7 @@ public class HttpServer {
 
     private synchronized boolean createHttpServer(String hostname, int port) {
         if (opened) {
-            Logger.warn(TAG, "Server already opened");
+            logger.warn("Server already opened");
             return false;
         }
         try {

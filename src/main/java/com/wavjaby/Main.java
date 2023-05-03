@@ -10,11 +10,15 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Scanner;
 
 
 public class Main {
-    private static final String TAG = "[Main] ";
+    private static final String TAG = "[Main]";
+    private static final Logger logger = new Logger(TAG);
     public static final String courseNcku = "course.ncku.edu.tw";
 
     public static final String courseNckuOrg = "https://" + courseNcku;
@@ -56,10 +60,10 @@ public class Main {
         try {
             File file = new File("./server.properties");
             if (!file.exists()) {
-                Logger.log(TAG, "Server properties not found, create default");
+                logger.log("Server properties not found, create default");
                 InputStream stream = Main.class.getResourceAsStream("/server.properties");
                 if (stream == null) {
-                    Logger.log(TAG, "Default server properties not found");
+                    logger.log("Default server properties not found");
                     return;
                 }
                 Files.copy(stream, file.toPath());
@@ -75,6 +79,7 @@ public class Main {
 
         server = new HttpServer(serverSettings);
         if (!server.opened) return;
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stopAll));
 
         SQLite sqLite = new SQLite();
         registerModule(sqLite);
@@ -104,14 +109,50 @@ public class Main {
         registerModule(new StudentIdentificationSystem(), "/api/stuIdSys");
 
         server.start();
-        Logger.log(TAG, "Server started, " + server.hostname + ':' + server.port);
+        logger.log("Server started, " + server.hostname + ':' + server.port);
 
         startModules();
-        Logger.log(TAG, "Ready");
+        logger.log("Ready");
 
-//        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
+        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(this::stopAll));
+//        long start = System.currentTimeMillis();
+//        Thread t1 = new Thread(() ->
+//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
+//        );
+//        Thread t2 = new Thread(() ->
+//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
+//        );
+//        Thread t3 =  new Thread(() ->
+//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
+//        );
+//        Thread t4 =  new Thread(() ->
+//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
+//        );
+//        Thread t5 =  new Thread(() ->
+//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
+//        );
+//        Thread t6 =  new Thread(() ->
+//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
+//        );
+//        t1.start();
+//        t2.start();
+//        t3.start();
+//        t4.start();
+//        t5.start();
+//        t6.start();
+//        try {
+//            t1.join();
+//            t2.join();
+//            t3.join();
+//            t4.join();
+//            t5.join();
+//            t6.join();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        logger.log(System.currentTimeMillis() - start);
+
 
         // Stop
         new Scanner(System.in).nextLine();
@@ -124,7 +165,7 @@ public class Main {
         for (Module module : modules.values()) {
             long start = System.currentTimeMillis();
             module.start();
-            Logger.log("##### ", module.getTag() + "Ready " + (System.currentTimeMillis() - start) + "ms #####");
+            logger.log("##### " + module.getTag() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
         }
     }
 
@@ -132,8 +173,9 @@ public class Main {
         if (!running) return;
         running = false;
         for (Module module : modules.values()) {
+            logger.log("##### Stopping" + module.getTag() + " #####");
             module.stop();
-            Logger.log("##### ", module.getTag() + "Stopped #####");
+//            Logger.log("##### ", module.getTag() + "Stopped #####");
         }
         server.stop();
     }

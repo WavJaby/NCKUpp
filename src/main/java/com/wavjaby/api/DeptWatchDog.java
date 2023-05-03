@@ -23,7 +23,8 @@ import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
 public class DeptWatchDog implements EndpointModule {
-    private static final String TAG = "[DeptWatchDog] ";
+    private static final String TAG = "[DeptWatchDog]";
+    private static final Logger logger = new Logger(TAG);
     private final SQLite sqLite;
     private PreparedStatement watchListAdd, watchListRemove, getWatchedUser, getUserLoginData, getWatchedCourse, getAllCourse;
 
@@ -55,6 +56,17 @@ public class DeptWatchDog implements EndpointModule {
             getAllCourse = sqLite.getDatabase().prepareStatement(
                     "SELECT watched_serial_id FROM watch_list"
             );
+
+            // Get watching course
+            ResultSet result = getAllCourse.executeQuery();
+            while (result.next()) {
+                String dept = result.getString("watched_serial_id");
+                int index = dept.indexOf('-');
+                if (index == -1) continue;
+                newDeptData.add(dept.substring(0, index));
+            }
+            result.close();
+
         } catch (SQLException e) {
             SQLite.printSqlError(e, TAG);
         }
@@ -143,23 +155,12 @@ public class DeptWatchDog implements EndpointModule {
         return null;
     }
 
-    public Set<String> getAllCourse() {
-        try {
-            ResultSet result = getAllCourse.executeQuery();
-            Set<String> watchedCurse = new HashSet<>();
-            while (result.next()) {
-                String dept = result.getString("watched_serial_id");
-                int index = dept.indexOf('-');
-                if (index == -1) continue;
-                watchedCurse.add(dept.substring(0, index));
-            }
-            getAllCourse.clearParameters();
-            result.close();
-            return watchedCurse;
-        } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
-        }
-        return null;
+    public String[] getNewDept() {
+        if (newDeptData.size() == 0)
+            return null;
+        String[] copy = newDeptData.toArray(new String[0]);
+        newDeptData.clear();
+        return copy;
     }
 
     private final HttpHandler httpHandler = req -> {
@@ -215,7 +216,7 @@ public class DeptWatchDog implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Done in " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Done in " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void addWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse apiResponse) {
@@ -277,15 +278,6 @@ public class DeptWatchDog implements EndpointModule {
         }
 
         apiResponse.setData(new JsonObject(data).toString());
-    }
-
-    public List<String> getNewDept() {
-        List<String> copy;
-        synchronized (newDeptData) {
-            copy = new ArrayList<>(newDeptData);
-            newDeptData.clear();
-        }
-        return copy;
     }
 
     @Override

@@ -10,14 +10,16 @@ import com.wavjaby.logger.Logger;
 import java.io.*;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.net.Proxy;
+import java.net.HttpCookie;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
@@ -25,7 +27,8 @@ import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class RobotCode implements EndpointModule {
-    private static final String TAG = "[RobotCode] ";
+    private static final String TAG = "[RobotCode]";
+    private static final Logger logger = new Logger(TAG);
 
     private final ProxyManager proxyManager;
     private final ProcessBuilder processBuilder;
@@ -49,7 +52,7 @@ public class RobotCode implements EndpointModule {
         String workDir;
         if (workDirProp == null) {
             workDir = "./";
-            Logger.warn(TAG, "OCR work dir not found, using current dir");
+            logger.warn("OCR work dir not found, using current dir");
         } else
             workDir = workDirProp;
 
@@ -57,7 +60,7 @@ public class RobotCode implements EndpointModule {
         String venvPath;
         if (venvPathProp == null) {
             venvPath = "./venv/bin/activate";
-            Logger.warn(TAG, "OCR venv path not found, using default path");
+            logger.warn("OCR venv path not found, using default path");
         } else
             venvPath = venvPathProp;
 
@@ -65,7 +68,7 @@ public class RobotCode implements EndpointModule {
         String mainPyPath;
         if (mainPyPathProp == null) {
             mainPyPath = "./main.py";
-            Logger.warn(TAG, "OCR main python file not found, using default path");
+            logger.warn("OCR main python file not found, using default path");
         } else
             mainPyPath = mainPyPathProp;
 
@@ -95,9 +98,9 @@ public class RobotCode implements EndpointModule {
             e.printStackTrace();
         }
         if (startMessage == null)
-            Logger.err(TAG, "Start error");
+            logger.err("Start error");
         else
-            Logger.log(TAG, "Python: " + startMessage);
+            logger.log("Python: " + startMessage);
     }
 
     @Override
@@ -141,7 +144,7 @@ public class RobotCode implements EndpointModule {
         } catch (IOException e) {
             req.close();
         }
-        Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -149,7 +152,7 @@ public class RobotCode implements EndpointModule {
         return httpHandler;
     }
 
-    private void stopSubprocess() {
+    private synchronized void stopSubprocess() {
         if (process == null) return;
         int result = -1;
         try {
@@ -160,8 +163,8 @@ public class RobotCode implements EndpointModule {
             e.printStackTrace();
             process.destroy();
         }
-        Logger.log(TAG, "Process exited with code " + result);
         process = null;
+        logger.log("Process exited with code " + result);
     }
 
     private void sendStopCommand() {
@@ -172,63 +175,112 @@ public class RobotCode implements EndpointModule {
         }
     }
 
-    private void sendCommand(String command) {
-        try {
-            stdin.write((command + '\n').getBytes());
-            stdin.flush();
-        } catch (IOException ignore) {
-        }
-    }
-
-    static class Task {
-        private final CountDownLatch countDown = new CountDownLatch(1);
-        public String result;
+    static class Task implements Future<String> {
+        private final Object lock = new Object();
+        private String result;
+        private boolean done = false;
+        private boolean cancel = false;
 
         public void done(String result) {
             this.result = result;
-            countDown.countDown();
+            done = true;
+            synchronized (lock) {
+                lock.notify();
+            }
         }
 
-        public void await() {
-            try {
-                countDown.await();
-            } catch (InterruptedException ignore) {
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancel;
+        }
+
+        @Override
+        public boolean isDone() {
+            return done;
+        }
+
+        @Override
+        public String get() throws InterruptedException, ExecutionException {
+            synchronized (lock) {
+                lock.wait();
             }
+            return result;
+        }
+
+        @Override
+        public String get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            if (unit == TimeUnit.MICROSECONDS || unit == TimeUnit.NANOSECONDS)
+                synchronized (lock) {
+                    lock.wait(unit.toMillis(timeout), (int) (unit.toNanos(timeout) % 1000000));
+                }
+            else
+                synchronized (lock) {
+                    lock.wait(unit.toMillis(timeout));
+                }
+            return result;
         }
     }
 
     Map<String, Task> tasks = new HashMap<>();
+
+    private Task sendCommand(String command) {
+        Task task = new Task();
+        String uuid;
+        do {
+            uuid = UUID.randomUUID().toString();
+        } while (tasks.containsKey(uuid));
+        tasks.put(uuid, task);
+        try {
+            stdin.write((uuid + '|' + command + '\n').getBytes());
+            stdin.flush();
+        } catch (IOException ignore) {
+        }
+        return task;
+    }
+
     private final Thread stdoutRead = new Thread(() -> {
         try {
             while (true) {
                 String output = stdout.readLine();
                 if (output == null) break;
-                String[] data = output.split(",");
-                Task task = tasks.remove(data[0]);
-                if (task == null)
-                    Logger.err(TAG, output);
+                int split = output.indexOf(',');
+                Task task;
+                if (split != -1 && (task = tasks.remove(output.substring(0, split))) != null)
+                    task.done(output.substring(split + 1));
                 else
-                    task.done(data[1]);
+                    logger.err(output);
             }
         } catch (IOException ignore) {
         }
     });
 
     public String getCode(String url, CookieStore cookieStore, Mode mode, WordType wordType) {
-        Task task = new Task();
-        String uuid = UUID.randomUUID().toString();
-        tasks.put(uuid, task);
-        String cookies = cookieStore.getCookies().stream()
-                .map(i -> '"' + i.getName() + '"' + ':' + '"' + i.getValue() + '"')
-                .collect(Collectors.joining(","));
-        Proxy proxy = proxyManager.getProxy();
-        sendCommand(uuid + '|' +
-                mode.toString() + '|' +
-                wordType.toString() + '|' +
-                url + '|' +
-                '{' + cookies + '}' + '|' +
-                (proxy == null ? "" : (proxy.type().name() + '@' + proxy.address().toString().substring(1))));
-        task.await();
-        return task.result;
+        StringBuilder builder = new StringBuilder();
+        builder.append(mode.toString()).append('|').append(wordType.toString()).append('|').append(url).append("|{");
+        if (cookieStore != null) {
+            boolean mutiple = false;
+            for (HttpCookie cookie : cookieStore.getCookies()) {
+                if (mutiple)
+                    builder.append(',');
+                mutiple = true;
+                builder.append('"').append(cookie.getName()).append("\":\"").append(cookie.getValue()).append('"');
+            }
+        }
+        builder.append("}|");
+        ProxyManager.ProxyData proxy = proxyManager.getProxyData();
+        if (proxy != null)
+            builder.append(proxy.toUrl());
+
+        Task task = sendCommand(builder.toString());
+        try {
+            return task.get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            return null;
+        }
     }
 }

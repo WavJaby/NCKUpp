@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 
 @SuppressWarnings("ALL")
 public class IP implements EndpointModule {
-    private static final String TAG = "[IP] ";
+    private static final String TAG = "[IP]";
 
 
     @Override

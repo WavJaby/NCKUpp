@@ -31,7 +31,8 @@ import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class CourseSchedule implements EndpointModule {
-    private static final String TAG = "[Schedule] ";
+    private static final String TAG = "[Schedule]";
+    private static final Logger logger = new Logger(TAG);
     private static final HashMap<String, Integer> DayTextToInt = new HashMap<String, Integer>() {{
         put("時間未定", -1);
         put("Undecided", -1);
@@ -99,7 +100,7 @@ public class CourseSchedule implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Get schedule " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get schedule " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

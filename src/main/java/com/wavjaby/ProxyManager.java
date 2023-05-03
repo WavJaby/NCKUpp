@@ -9,8 +9,9 @@ import java.net.Proxy;
 import java.nio.file.Files;
 
 public class ProxyManager {
-    private static final String TAG = "[ProxyManager] ";
-    private final Proxy proxy;
+    private static final String TAG = "[ProxyManager]";
+    private static final Logger logger = new Logger(TAG);
+    private final ProxyData proxy;
 
     public static class ProxyData {
         public final String ip;
@@ -44,7 +45,7 @@ public class ProxyManager {
             this.ping = -1;
         }
 
-        public String getUrl() {
+        public String toUrl() {
             return protocol + "://" + ip + ':' + port;
         }
 
@@ -81,9 +82,7 @@ public class ProxyManager {
 
         @Override
         public String toString() {
-            return "ping: " + ping + '\n' +
-                    "url: " + getUrl() + '\n' +
-                    "providerUrl: " + providerUrl;
+            return "ping: " + ping + ",\turl: " + toUrl() + ",\tproviderUrl: " + providerUrl;
         }
 
     }
@@ -108,14 +107,20 @@ public class ProxyManager {
             proxyData = null;
 
         if (proxyData != null) {
-            Logger.log(TAG, "Using proxy: " + proxyData.getUrl());
-            proxy = proxyData.toProxy();
+            logger.log("Using proxy: " + proxyData.toUrl());
+            proxy = proxyData;
         } else
             proxy = null;
     }
 
     public Proxy getProxy() {
+        return proxy.toProxy();
+//        return null;
+    }
+
+    public ProxyData getProxyData() {
         return proxy;
+//        return null;
     }
 
 }

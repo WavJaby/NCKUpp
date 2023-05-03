@@ -8,7 +8,8 @@ import com.wavjaby.websocket.httpServer.SocketServerClient;
 import com.wavjaby.websocket.httpServer.SocketServerEvent;
 
 public class WebSocket implements EndpointModule, SocketServerEvent {
-    private static final String TAG = "[WebSocket] ";
+    private static final String TAG = "[WebSocket]";
+    private static final Logger logger = new Logger(TAG);
     private HttpSocketServer server;
 
     @Override
@@ -29,7 +30,7 @@ public class WebSocket implements EndpointModule, SocketServerEvent {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
         server.addClient(req);
-        Logger.log(TAG, "Web socket " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Web socket " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -39,11 +40,13 @@ public class WebSocket implements EndpointModule, SocketServerEvent {
 
     @Override
     public void ReceiveData(SocketServerClient client, String message) {
+        if (message == null)
+            return;
         client.sendText(message);
     }
 
     @Override
     public void ConnectionCountChange(int count) {
-        Logger.log(TAG, count + " clients connected");
+        logger.log(count + " clients connected");
     }
 }

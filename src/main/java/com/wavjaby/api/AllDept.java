@@ -18,7 +18,8 @@ import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class AllDept implements EndpointModule {
-    private static final String TAG = "[AllDept] ";
+    private static final String TAG = "[AllDept]";
+    private static final Logger logger = new Logger(TAG);
     private final Search search;
     private String deptGroup;
 
@@ -30,7 +31,7 @@ public class AllDept implements EndpointModule {
     public void start() {
         Search.AllDeptGroupData allDept = search.getAllDeptGroupData(new CookieManager().getCookieStore());
         deptGroup = allDept.toString();
-        Logger.log(TAG, "Get " + allDept.getDeptCount() + " dept");
+        logger.log("Get " + allDept.getDeptCount() + " dept");
     }
 
     @Override
@@ -71,7 +72,7 @@ public class AllDept implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Get all dept " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get all dept " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

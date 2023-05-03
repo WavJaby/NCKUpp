@@ -23,7 +23,8 @@ import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class ExtractUrl implements EndpointModule {
-    private static final String TAG = "[Extract] ";
+    private static final String TAG = "[Extract]";
+    private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
     public ExtractUrl(ProxyManager proxyManager) {
@@ -79,7 +80,7 @@ public class ExtractUrl implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Extract url " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Extract url " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

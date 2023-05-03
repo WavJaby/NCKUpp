@@ -35,7 +35,7 @@ const {
     debug: doomDebug, footer
 } = require('./res/domHelper');
 const apiEndPoint = location.hostname === 'localhost'
-    ? 'http://localhost:8080/api'
+    ? 'https://localhost/api'
     : 'https://api.simon.chummydns.com/api';
 const mobileWidth = 700;
 window.messageAlert = MessageAlert();

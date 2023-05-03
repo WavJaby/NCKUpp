@@ -14,26 +14,54 @@ public class Logger {
     private static final ProgressBar.OnProgress onProgress = () -> System.out.print('\r' + renderProgressBar());
 
     private static final DecimalFormat format = new DecimalFormat("#.##");
+    private final String tag;
 
-    public static <T> void log(String tag, T message) {
-        if (progressBars.size() > 0)
-            System.out.print('\r' + getTimeStamp() + tag + message + '\n' + renderProgressBar() + '>');
-        else
-            System.out.print('\r' + getTimeStamp() + tag + message + '\n' + '>');
+    public Logger(String tag) {
+        this.tag = tag;
     }
 
-    public static <T> void warn(String tag, T message) {
+    public <T> void log(T message) {
         if (progressBars.size() > 0)
-            System.out.print('\r' + getTimeStamp() + tag + message + '\n' + renderProgressBar() + '>');
+            System.out.print('\r' + getTimeStamp() + tag + ' ' + message + '\n' + renderProgressBar() + '>');
         else
-            System.out.print('\r' + getTimeStamp() + tag + message + '\n' + '>');
+            System.out.print('\r' + getTimeStamp() + tag + ' ' + message + "\n>");
     }
 
-    public static <T> void err(String tag, T message) {
+    public <T> void warn(T message) {
         if (progressBars.size() > 0)
-            System.err.print('\r' + getTimeStamp() + tag + message + '\n' + renderProgressBar() + '>');
+            System.out.print('\r' + getTimeStamp() + tag + ' ' + message + '\n' + renderProgressBar() + '>');
         else
-            System.err.print('\r' + getTimeStamp() + tag + message + '\n' + '>');
+            System.out.print('\r' + getTimeStamp() + tag + ' ' + message + "\n>");
+    }
+
+    public <T> void err(T message) {
+        if (progressBars.size() > 0)
+            System.err.print('\r' + getTimeStamp() + tag + ' ' + message + '\n' + renderProgressBar() + '>');
+        else
+            System.err.print('\r' + getTimeStamp() + tag + ' ' + message + "\n>");
+    }
+
+    public void errTrace(Throwable e) {
+        StringBuilder builder = new StringBuilder();
+        builder.append('\r').append(getTimeStamp()).append(tag);
+
+        builder.append(e.getClass().getName());
+        String msg = e.getLocalizedMessage();
+        if (msg != null)
+            builder.append(": ").append(msg);
+        builder.append('\n');
+
+        StackTraceElement[] trace = e.getStackTrace();
+        for (StackTraceElement traceElement : trace) {
+            if (traceElement.getClassName().startsWith("com.wavjaby"))
+                builder.append("\tat ").append(traceElement).append('\n');
+        }
+
+        if (progressBars.size() > 0)
+            builder.append(renderProgressBar()).append('>');
+        else
+            builder.append('>');
+        System.err.print(builder);
     }
 
     private static String renderProgressBar() {

@@ -1,5 +1,6 @@
 package com.wavjaby;
 
+import com.sun.istack.internal.NotNull;
 import com.wavjaby.api.DeptWatchDog;
 import com.wavjaby.api.Search;
 import com.wavjaby.json.JsonArray;
@@ -15,7 +16,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GetCourseDataUpdate implements Runnable {
-    private static final String TAG = "[CourseListener] ";
+    private static final String TAG = "[CourseListener]";
+    private static final Logger logger = new Logger(TAG);
     private static final String apiUrl = "https://discord.com/api/v10";
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
@@ -67,33 +69,22 @@ public class GetCourseDataUpdate implements Runnable {
         this.search = search;
         this.watchDog = watchDog;
         botToken = serverSettings.getProperty("botToken");
-//        Search.SearchQuery searchQuery = new Search.SearchQuery("F7");
-//        Search.SaveQueryToken saveQueryToken = search.getSaveQueryToken(searchQuery, cookieManager.getCookieStore(), null);
-//        List<Search.CourseData> courseDataList = new ArrayList<>();
-//
-//        for (int i = 0; i < 10; i++) {
-//            long start = System.currentTimeMillis();
-//            search.getQueryCourseData(searchQuery, saveQueryToken, courseDataList);
-//            Logger.log(TAG, new JsonArray(courseDataList.toString()).toStringBeauty());
-//            Logger.log(TAG, (System.currentTimeMillis() - start) + "ms");
-//            courseDataList.clear();
-//        }
 
-//        Search.AllDeptData allDeptData = search.getAllDeptData(cookieManager.getCookieStore());
-//        Search.DeptToken deptToken = search.getDeptToken("F7", allDeptData);
-//        Logger.log(TAG, (System.currentTimeMillis() - start) + "ms");
         baseCookieStore = search.createCookieStore();
-        watchDog.getAllCourse().forEach(this::addListenDept);
+        addListenDept("A9");
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
     }
 
 
     private void getWatchDogUpdate() {
-        watchDog.getNewDept().forEach(this::addListenDept);
+        String[] newDept = watchDog.getNewDept();
+        if (newDept != null)
+            for (String dept : newDept)
+                addListenDept(dept);
     }
 
     private void addListenDept(String deptID) {
-        Logger.log(TAG, "Add watch: " + deptID);
+        logger.log("Add watch: " + deptID);
         listenDept.put(deptID, search.createCookieStore());
     }
 
@@ -102,7 +93,7 @@ public class GetCourseDataUpdate implements Runnable {
         String dmChannelID = userDmChannelCache.get(userID);
         if (dmChannelID != null) return dmChannelID;
         try {
-//            Logger.log(TAG, jsonObject.toString());
+//            logger.log(jsonObject.toString());
             String result = HttpConnection.connect(apiUrl + "/users/@me/channels")
                     .header("Connection", "keep-alive")
                     .header("Authorization", "Bot " + botToken)
@@ -123,7 +114,7 @@ public class GetCourseDataUpdate implements Runnable {
 
     private void postToChannel(String channelID, JsonObject jsonObject) {
         try {
-//            Logger.log(TAG, jsonObject.toString());
+//            logger.log(jsonObject.toString());
             String result = HttpConnection.connect(apiUrl + "/channels/" + channelID + "/messages")
                     .header("Connection", "keep-alive")
                     .header("Authorization", "Bot " + botToken)
@@ -134,7 +125,7 @@ public class GetCourseDataUpdate implements Runnable {
                     .ignoreContentType(true)
                     .ignoreHttpErrors(true)
                     .execute().body();
-//            Logger.log(TAG, new JsonObject(result).toStringBeauty());
+//            logger.log(new JsonObject(result).toStringBeauty());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -147,81 +138,85 @@ public class GetCourseDataUpdate implements Runnable {
         lastScheduleStart = start;
         // Skip if last task take too long
         if (taskSkipped > 0 && start - lastUpdateStart > updateInterval) {
-            Logger.log(TAG, "Skipped " + taskSkipped + ", " + (start - taskSkippedStartTime));
+            logger.log("Skipped " + taskSkipped + ", " + (start - taskSkippedStartTime));
             taskSkipped = 0;
         } else if (lastInterval < updateInterval - 50) {
             if (taskSkipped++ == 0)
                 taskSkippedStartTime = lastScheduleStart;
             return;
         }
-        Logger.log(TAG, "Interval " + (start - lastUpdateStart) + "ms");
+        logger.log("Interval " + (start - lastUpdateStart) + "ms");
         lastUpdateStart = start;
 
         getWatchDogUpdate();
-        try {
-            CountDownLatch taskLeft = new CountDownLatch(listenDept.size());
-            AtomicBoolean allSuccess = new AtomicBoolean(true);
-            List<Search.CourseData> newCourseDataList = new ArrayList<>();
 
-            if (count >= 3000) {
-                for (String dept : listenDept.keySet())
-                    deptTokenMap.put(dept, null);
-                count = 0;
-            }
+        // Start fetch course update
+        CountDownLatch taskLeft = new CountDownLatch(listenDept.size());
+        AtomicBoolean allSuccess = new AtomicBoolean(true);
+        AtomicBoolean done = new AtomicBoolean(false);
+        List<Search.CourseData> newCourseDataList = new ArrayList<>();
 
-            for (Map.Entry<String, CookieStore> i : listenDept.entrySet()) {
-                String dept = i.getKey();
-                CookieStore cookieStore = i.getValue();
-                pool.submit(() -> {
-                    try {
-                        Search.DeptToken deptToken = deptTokenMap.get(dept);
-                        if (deptToken == null)
-                            deptTokenMap.put(dept, (deptToken = renewDeptToken(dept, cookieStore)));
-                        if (deptToken == null)
-                            return;
-                        // Get dept course data
-                        List<Search.CourseData> thisCourseDataList = new ArrayList<>();
-                        if (!search.getDeptCourseData(deptToken, thisCourseDataList, false)) {
-                            deptTokenMap.put(dept, null);
-                            return;
-                        }
-                        if (thisCourseDataList.size() == 0) {
-                            deptTokenMap.put(dept, null);
-                            return;
-                        }
-                        newCourseDataList.addAll(thisCourseDataList);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        allSuccess.set(false);
-                        deptTokenMap.put(dept, null);
-                    }
-                    taskLeft.countDown();
-                });
-            }
-            if (!taskLeft.await(10, TimeUnit.SECONDS)) {
-                for (String dept : listenDept.keySet())
-                    deptTokenMap.put(dept, null);
-                count = 0;
-                return;
-            }
-
-            if (!allSuccess.get())
-                return;
-
-            // Get different
-            List<CourseDataDifference> diff = getDifferent(courseDataList, newCourseDataList);
-            courseDataList = newCourseDataList;
-
-            // Build notification
-            if (diff != null && diff.size() > 0)
-                pool.submit(() -> buildAndSendNotification(diff));
-        } catch (Exception e) {
-            e.printStackTrace();
+        // Force renew cookie
+        if (count >= 1000) {
+            for (String dept : listenDept.keySet())
+                deptTokenMap.put(dept, null);
+            count = 0;
         }
 
-        Logger.log(TAG, count++ + ", " +
-                courseDataList.size() + ", " +
-                (System.currentTimeMillis() - start) + "ms");
+        // Fetch dept data
+        for (Map.Entry<String, CookieStore> i : listenDept.entrySet()) {
+            final String dept = i.getKey();
+            final CookieStore cookieStore = i.getValue();
+            pool.submit(() -> {
+                Search.DeptToken deptToken = deptTokenMap.get(dept);
+                if (deptToken == null) {
+                    deptToken = renewDeptToken(dept, cookieStore);
+                    if (!done.get())
+                        deptTokenMap.put(dept, deptToken);
+                }
+                // Have dept token
+                if (deptToken != null) {
+                    // Get dept course data
+                    logger.log("Get dept " + dept);
+                    List<Search.CourseData> thisCourseDataList = new ArrayList<>();
+                    if (!search.getDeptCourseData(deptToken, thisCourseDataList, false) ||
+                            thisCourseDataList.size() == 0) {
+                        if (!done.get()) {
+                            logger.log("Remove dept " + dept);
+                            deptTokenMap.put(dept, null);
+                            allSuccess.set(false);
+                        }
+                    } else
+                        newCourseDataList.addAll(thisCourseDataList);
+                } else
+                    allSuccess.set(false);
+                taskLeft.countDown();
+            });
+        }
+        try {
+            if (!taskLeft.await(20, TimeUnit.SECONDS))
+                allSuccess.set(false);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        done.set(true);
+
+        if (allSuccess.get()) {
+            if (courseDataList != null) {
+                // Get different
+                List<CourseDataDifference> diff = getDifferent(courseDataList, newCourseDataList);
+                // Build notification
+                if (diff.size() > 0)
+                    pool.submit(() -> buildAndSendNotification(diff));
+            }
+            courseDataList = newCourseDataList;
+
+            logger.log(count++ + ", " +
+                    courseDataList.size() + ", " +
+                    (System.currentTimeMillis() - start) + "ms");
+        } else
+            logger.log("Failed, retry..." +
+                    (System.currentTimeMillis() - start) + "ms");
     }
 
     private void buildAndSendNotification(List<CourseDataDifference> diff) {
@@ -237,11 +232,11 @@ public class GetCourseDataUpdate implements Runnable {
         for (CourseDataDifference i : diff) {
             switch (i.type) {
                 case CREATE:
-                    Logger.log(TAG, "CREATE: " + i.courseData.getCourseName());
+                    logger.log("CREATE: " + i.courseData.getCourseName());
                     break;
                 case UPDATE:
                     Search.CourseData cosData = i.courseData;
-                    Logger.log(TAG, "UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() + "\n" +
+                    logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() + "\n" +
                             "available: " + i.availableDiff + ", select: " + i.selectDiff);
 
                     Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
@@ -309,9 +304,7 @@ public class GetCourseDataUpdate implements Runnable {
         return integer > 0 ? "+" + integer : String.valueOf(integer);
     }
 
-    private List<CourseDataDifference> getDifferent(List<Search.CourseData> last, List<Search.CourseData> now) {
-        if (last == null) return null;
-
+    private List<CourseDataDifference> getDifferent(@NotNull List<Search.CourseData> last, @NotNull List<Search.CourseData> now) {
         HashMap<String, Search.CourseData> lastCourseDataMap = new HashMap<>();
         for (Search.CourseData i : last)
             if (i.getSerialNumber() != null)
@@ -343,19 +336,21 @@ public class GetCourseDataUpdate implements Runnable {
                 : newInt - oldInt;
     }
 
-    private Search.DeptToken renewDeptToken(String deptNo, CookieStore cookieStore) throws IOException {
-        Logger.log(TAG, "Renew dept token");
+    private Search.DeptToken renewDeptToken(String deptNo, CookieStore cookieStore) {
+        logger.log("Renew dept token " + deptNo);
         Search.AllDeptData allDeptData = search.getAllDeptData(cookieStore);
         if (allDeptData == null) {
-            Logger.err(TAG, "Can not get crypt");
+            logger.err("Can not get allDeptData");
             return null;
         }
         Search.DeptToken deptToken = search.createDeptToken(deptNo, allDeptData);
+        if (deptToken == null)
+            return null;
         if (deptToken.getError() != null) {
-            Logger.err(TAG, deptToken.getError());
+            logger.err(deptToken.getError());
             return null;
         }
-        Logger.log(TAG, deptToken.getID());
+        logger.log(deptToken.getID());
         return deptToken;
     }
 }

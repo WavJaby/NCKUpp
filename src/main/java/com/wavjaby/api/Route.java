@@ -8,13 +8,10 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-
-import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
 @SuppressWarnings("ALL")
 public class Route implements EndpointModule {
-    private static final String TAG = "[Route] ";
+    private static final String TAG = "[Route]";
 
 
     @Override
@@ -32,14 +29,20 @@ public class Route implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         String method = req.getRequestMethod();
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getQuery());
-        String path = query.get("path");
+        String path = req.getRequestURI().getPath().substring(11);
+        path = path.replace('$', '%');
+        if (path.startsWith("https:"))
+            path = "https:/" + path.substring(6);
+        else
+            path = null;
         try {
             if (path == null) {
                 req.sendResponseHeaders(404, 0);
                 req.close();
             } else {
                 if (method.equalsIgnoreCase("GET")) {
+//                    if (path.endsWith("textbookSlug-a5f5fecc70c9f113.js"))
+//                        path = path.substring(0, path.length() - 32) + "[textbookSlug]-a5f5fecc70c9f113.js";
                     // Get request
                     HttpURLConnection conn = (HttpURLConnection) new URL(path).openConnection();
                     conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36");
@@ -62,13 +65,13 @@ public class Route implements EndpointModule {
                     byte[] dataByte;
                     if (responseContrentType.startsWith("application/javascript"))
                         dataByte = out.toString("UTF-8")
-                                .replace("\"/_next/", "\"/api/route?path=https://quizlet.com/_next/")
+                                .replace("\"/_next/", "\"/api/route/https:/quizlet.com/_next/")
                                 .replace("el.qzlt.io", "/api/route/")
                                 .replace("el.quizlet.com", "/api/route/")
                                 .getBytes(StandardCharsets.UTF_8);
                     else if (responseContrentType.startsWith("text/css"))
                         dataByte = out.toString("UTF-8")
-                                .replace("url(/_next/", "url(/api/route?path=https://quizlet.com/_next/")
+                                .replace("url(/_next/", "url(/api/route/https:/quizlet.com/_next/")
                                 .getBytes(StandardCharsets.UTF_8);
                     else
                         dataByte = out.toByteArray();

@@ -23,7 +23,10 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.*;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,7 +40,9 @@ import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
 public class Search implements EndpointModule {
-    private static final String TAG = "[Search] ";
+    private static final String TAG = "[Search]";
+    private static final Logger logger = new Logger(TAG);
+
     private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(4);
     private final Semaphore cosPreCheckPoolLock = new Semaphore(4);
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
@@ -70,12 +75,12 @@ public class Search implements EndpointModule {
         cosPreCheckPool.shutdown();
         try {
             if (!cosPreCheckPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                Logger.warn(TAG, "CosPreCheck pool close timeout");
+                logger.warn("CosPreCheck pool close timeout");
                 cosPreCheckPool.shutdownNow();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
-            Logger.warn(TAG, "CosPreCheck pool close error");
+            logger.warn("CosPreCheck pool close error");
             cosPreCheckPool.shutdownNow();
         }
     }
@@ -130,7 +135,7 @@ public class Search implements EndpointModule {
             e.printStackTrace();
             req.close();
         }
-        Logger.log(TAG, "Search " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -521,8 +526,6 @@ public class Search implements EndpointModule {
         private final String id;
         private final CookieStore cookieStore;
 
-        CountDownLatch cosPreCheckLock;
-
         private DeptToken(String error, String id, CookieStore cookieStore) {
             this.error = error;
             this.id = id;
@@ -537,21 +540,8 @@ public class Search implements EndpointModule {
             return error;
         }
 
-        void lockCosPreCheck() {
-            cosPreCheckLock = new CountDownLatch(1);
-        }
-
-        void unlockCosPreCheckLock() {
-            cosPreCheckLock.countDown();
-        }
-
-        public void awaitCosPreCheck() {
-            if (cosPreCheckLock != null)
-                try {
-                    cosPreCheckLock.await();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+        public CookieStore getCookieStore() {
+            return cookieStore;
         }
     }
 
@@ -598,7 +588,7 @@ public class Search implements EndpointModule {
                                 long start = System.currentTimeMillis();
                                 if (allSuccess.get() && !getDeptCourseData(dept, fragment, false, response, courseDataList))
                                     allSuccess.set(false);
-                                Logger.log(TAG, Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
+                                logger.log(Thread.currentThread().getName() + " Get dept " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -611,7 +601,7 @@ public class Search implements EndpointModule {
                     fetchPool.shutdown();
                     if (!fetchPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
                         fetchPool.shutdownNow();
-                        Logger.warn(TAG, "FetchPool shutdown timeout");
+                        logger.warn("FetchPool shutdown timeout");
                     }
                     progressBar.setProgress(100f);
                     Logger.removeProgressBar(progressBar);
@@ -644,22 +634,22 @@ public class Search implements EndpointModule {
     public CookieStore createCookieStore() {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
-        try {
-            HttpConnection.connect(courseNckuOrg + "/index.php")
-                    .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .proxy(proxyManager.getProxy())
-                    .execute();
-            for (HttpCookie cookie : cookieStore.getCookies())
-                if (cookie.getName().equals("PHPSESSID")) {
-//                    Logger.log(TAG, cookie.toString());
-                    break;
-                }
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (int i = 0; i < 3; i++) {
+            try {
+                HttpConnection.connect(courseNckuOrg + "/index.php")
+                        .header("Connection", "keep-alive")
+//                    .header("Referer", "https://course.ncku.edu.tw/index.php")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .proxy(proxyManager.getProxy())
+                        .execute();
+                break;
+            } catch (IOException e) {
+                logger.errTrace(e);
+            }
         }
 
+        logger.log(cookieStore.getCookies().toString());
         return cookieStore;
     }
 
@@ -729,26 +719,30 @@ public class Search implements EndpointModule {
         return new AllDeptGroupData(groups, total);
     }
 
-    public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData) throws IOException {
-        Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
-                .header("Connection", "keep-alive")
-                .cookieStore(allDeptData.cookieStore)
-                .ignoreContentType(true)
-                .proxy(proxyManager.getProxy())
-                .method(Connection.Method.POST)
-                .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(allDeptData.crypt, "UTF-8"))
-                .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                .header("X-Requested-With", "XMLHttpRequest")
-                .execute();
-        JsonObject idData = new JsonObject(id.body());
-        String error = idData.getString("err");
-        return new DeptToken(error.length() > 0 ? error : null, idData.getString("id"), allDeptData.cookieStore);
+    public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData) {
+        try {
+            Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
+                    .header("Connection", "keep-alive")
+                    .cookieStore(allDeptData.cookieStore)
+                    .ignoreContentType(true)
+                    .proxy(proxyManager.getProxy())
+                    .method(Connection.Method.POST)
+                    .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(allDeptData.crypt, "UTF-8"))
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .execute();
+            JsonObject idData = new JsonObject(id.body());
+            String error = idData.getString("err");
+            return new DeptToken(error.length() > 0 ? error : null, idData.getString("id"), allDeptData.cookieStore);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
-    public boolean getDeptCourseData(DeptToken deptToken, List<CourseData> courseDataList, boolean addUrSchoolCache) throws IOException {
+    public boolean getDeptCourseData(DeptToken deptToken, List<CourseData> courseDataList, boolean addUrSchoolCache) {
         String searchResultBody = getDeptNCKU(deptToken);
         if (searchResultBody == null)
-            return true;
+            return false;
 
         Element table = findCourseTable(searchResultBody, null, null);
         if (table == null)
@@ -763,7 +757,7 @@ public class Search implements EndpointModule {
         return true;
     }
 
-    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache, ApiResponse response, List<CourseData> courseDataList) throws IOException {
+    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache, ApiResponse response, List<CourseData> courseDataList) {
         DeptToken deptToken = createDeptToken(deptNo, allDeptData);
         if (deptToken == null) {
             response.addError(TAG + "Network error");
@@ -803,12 +797,16 @@ public class Search implements EndpointModule {
         }
 
         Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" + deptTokenId)
-                .header("Connection", "keep-alive")
+//                .header("Connection", "keep-alive")
+                .header("Referer", "https://course.ncku.edu.tw/index.php?c=qry_all")
                 .cookieStore(deptToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
+                .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
         String body = checkRobot(request, deptToken.cookieStore);
+        if (body == null)
+            return null;
         try {
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
@@ -884,7 +882,7 @@ public class Search implements EndpointModule {
                 host = courseNckuOrg;
                 // Get searchID if it's null
                 if (searchQuery.searchID == null) {
-                    Logger.log(TAG, "Renew search id");
+                    logger.log("Renew search id");
 
                     Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
                             .header("Connection", "keep-alive")
@@ -910,7 +908,7 @@ public class Search implements EndpointModule {
                 if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
             }
 
-//            Logger.log(TAG, TAG + "Post search query");
+//            logger.log(TAG + "Post search query");
             Connection request = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
@@ -944,12 +942,13 @@ public class Search implements EndpointModule {
     }
 
     private String getCourseNCKU(SaveQueryToken saveQueryToken) {
-//            Logger.log(TAG, TAG + "Get search result");
+//            logger.log(TAG + "Get search result");
         Connection request = HttpConnection.connect(saveQueryToken.host + "/index.php?c=qry11215" + saveQueryToken.search)
                 .header("Connection", "keep-alive")
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
+                .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
         String body = checkRobot(request, saveQueryToken.cookieStore);
         if (body == null)
@@ -985,7 +984,7 @@ public class Search implements EndpointModule {
         }
 
         // parse table
-//            Logger.log(TAG, TAG + "Parse course table");
+//            logger.log(TAG + "Parse course table");
         String resultBody = html.substring(resultTableBodyStart, resultTableBodyEnd + 8);
         return (Element) Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
     }
@@ -1053,7 +1052,7 @@ public class Search implements EndpointModule {
                 else
                     courseData.courseAttributeCode = courseAttributeCode;
             } else
-                Logger.log(TAG, "AttributeCode not found");
+                logger.log("AttributeCode not found");
 
             // Get course name
             courseData.courseName = section.get(4).getElementsByClass("course_name").get(0).text();
@@ -1110,7 +1109,7 @@ public class Search implements EndpointModule {
                             }
                         tagColor = String.valueOf(tagColormap.get(tagType));
                         if (tagColor == null) {
-                            Logger.log(TAG, "Unknown tag color: " + tagType);
+                            logger.log("Unknown tag color: " + tagType);
                             tagColor = "0";
                         }
                     }
@@ -1338,7 +1337,7 @@ public class Search implements EndpointModule {
             try {
                 response = request.execute().body();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.errTrace(e);
                 return null;
             }
 
@@ -1350,10 +1349,10 @@ public class Search implements EndpointModule {
             ) return response;
 
             // Crack robot
-            Logger.warn(TAG, "Crack check robot");
+            logger.warn("Crack check robot");
             String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);
             String code = robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
-            Logger.warn(TAG, "Crack check code: " + code);
+            logger.warn("Crack check code: " + code);
             try {
                 HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=robot")
                         .header("Connection", "keep-alive")
@@ -1369,7 +1368,7 @@ public class Search implements EndpointModule {
                         .execute();
 //            System.out.println(new JsonObject(allDeptRes.body()).toStringBeauty());
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.errTrace(e);
             }
         }
         return null;

@@ -22,7 +22,8 @@ import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class PreferenceAdjust implements EndpointModule {
-    private static final String TAG = "[PreferenceAdjust] ";
+    private static final String TAG = "[PreferenceAdjust]";
+    private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
     public PreferenceAdjust(ProxyManager proxyManager) {
@@ -71,7 +72,7 @@ public class PreferenceAdjust implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Preference adjust " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Preference adjust " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void preferenceAdjust(ApiResponse apiResponse, CookieStore cookieStore) {

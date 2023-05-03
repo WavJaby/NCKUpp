@@ -34,7 +34,8 @@ import static com.wavjaby.lib.Lib.*;
 
 
 public class Login implements EndpointModule {
-    private static final String TAG = "[Login] ";
+    private static final String TAG = "[Login]";
+    private static final Logger logger = new Logger(TAG);
     private static final String loginCheckString = "/index.php?c=auth&m=logout";
 
     private final SQLite sqLite;
@@ -107,10 +108,10 @@ public class Login implements EndpointModule {
                             studentID = result.substring(start, end);
                         }
 
-                        Logger.log(TAG, studentID + " is login");
+                        logger.log(studentID + " is login");
                     } else {
                         String PHPSESSID = getCookie("PHPSESSID", courseNckuOrg, entry.getValue());
-                        Logger.log(TAG, PHPSESSID + " is logout");
+                        logger.log(PHPSESSID + " is logout");
                         loginUserCookie.remove(entry.getKey());
                     }
                 }
@@ -126,12 +127,12 @@ public class Login implements EndpointModule {
         keepLoginUpdater.shutdown();
         try {
             if (!keepLoginUpdater.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                Logger.warn(TAG, "KeepLoginUpdater pool close timeout");
+                logger.warn("KeepLoginUpdater pool close timeout");
                 keepLoginUpdater.shutdownNow();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
-            Logger.warn(TAG, "KeepLoginUpdater pool close error");
+            logger.warn("KeepLoginUpdater pool close error");
             keepLoginUpdater.shutdownNow();
         }
     }
@@ -152,7 +153,7 @@ public class Login implements EndpointModule {
 
             // Value not exist
             if (returnValue == 0) {
-                Logger.log(TAG, "New user login: " + studentID);
+                logger.log("New user login: " + studentID);
                 loginDataAdd(studentID, studentName, deptGradeInfo, PHPSESSID);
             }
             loginDataEditPre.clearParameters();
@@ -197,7 +198,7 @@ public class Login implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Login " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Login " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void login(HttpExchange req, ApiResponse apiResponse) {

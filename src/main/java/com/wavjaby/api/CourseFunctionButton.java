@@ -24,7 +24,8 @@ import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
 public class CourseFunctionButton implements EndpointModule {
-    private static final String TAG = "[CourseFunctionButton] ";
+    private static final String TAG = "[CourseFunctionButton]";
+    private static final Logger logger = new Logger(TAG);
     private final RobotCode robotCode;
 
     public CourseFunctionButton(RobotCode robotCode) {
@@ -73,7 +74,7 @@ public class CourseFunctionButton implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Send cosdata " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Send cosdata " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

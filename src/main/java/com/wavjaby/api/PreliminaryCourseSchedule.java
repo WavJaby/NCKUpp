@@ -18,7 +18,8 @@ import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class PreliminaryCourseSchedule implements EndpointModule {
-    private static final String TAG = "[PreliminaryCourseSchedule] ";
+    private static final String TAG = "[PreliminaryCourseSchedule]";
+    private static final Logger logger = new Logger(TAG);
 
 
     @Override
@@ -64,7 +65,7 @@ public class PreliminaryCourseSchedule implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

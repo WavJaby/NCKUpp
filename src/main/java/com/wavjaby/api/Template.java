@@ -19,7 +19,8 @@ import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 @SuppressWarnings("ALL")
 public class Template implements EndpointModule {
-    private static final String TAG = "[Template] ";
+    private static final String TAG = "[Template]";
+    private static final Logger logger = new Logger(TAG);
 
 
     @Override
@@ -62,7 +63,7 @@ public class Template implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        Logger.log(TAG, "Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
