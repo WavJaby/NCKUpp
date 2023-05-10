@@ -57,6 +57,8 @@ public class Lib {
                     .execute();
         } catch (IOException e) {
             logger.errTrace(e);
+            if (response != null)
+                response.addWarn(TAG + "Network error");
         }
     }
 

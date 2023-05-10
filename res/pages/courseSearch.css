@@ -233,9 +233,11 @@
     Body
 */
 .courseSearch > .result > .loading {
-    width: 100%;
     text-align: center;
     position: absolute;
+    left: 0;
+    right: 0;
+    margin: 0;
 }
 
 .courseSearch > .result > thead .expandDownArrow {

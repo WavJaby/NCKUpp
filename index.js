@@ -246,11 +246,11 @@ function MessageAlert() {
             div('closeButton', {onclick})
         );
         messageBoxRoot.appendChild(messageBox);
-        height += messageBox.offsetHeight + 10;
+        // height += messageBox.offsetHeight + 10;
         if (removeTimeout !== undefined)
             setTimeout(() => removeMessageBox(messageBox), removeTimeout);
         if (!updateTop)
-            updateTop = setTimeout(updateMessageBoxTop, 50);
+            updateTop = setTimeout(updateMessageBoxTop, 0);
     }
 
     function removeMessageBox(messageBox) {
@@ -264,8 +264,8 @@ function MessageAlert() {
     function updateMessageBoxTop() {
         height = 0;
         for (let node of messageBoxRoot.childNodes) {
-            node.style.top = height + 'px';
-            height += node.offsetHeight + 10;
+            height -= node.offsetHeight + 10;
+            node.style.bottom = height + 'px';
         }
         updateTop = null;
     }

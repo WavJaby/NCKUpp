@@ -14,10 +14,7 @@ import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.HttpCookie;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -301,7 +298,7 @@ public class Login implements EndpointModule {
             }
 
             // Check if login success
-            Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response);
+            Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response, proxyManager.getProxy());
             if (loginCheck == null) {
                 response.setData("{\"login\":false}");
                 return;
@@ -392,7 +389,7 @@ public class Login implements EndpointModule {
             }
 
             // Check if login success
-            Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response);
+            Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response, null);
             if (loginCheck == null) {
                 response.setData("{\"login\":false}");
                 return;
@@ -408,7 +405,7 @@ public class Login implements EndpointModule {
         }
     }
 
-    private Connection.Response checkPortalLogin(Connection.Response portalPage, CookieStore cookieStore, ApiResponse response) {
+    private Connection.Response checkPortalLogin(Connection.Response portalPage, CookieStore cookieStore, ApiResponse response, Proxy proxy) {
         // check if portal login error
         if (portalPage.url().getHost().equals(portalNcku)) {
             String loginPage = portalPage.body();
@@ -442,7 +439,7 @@ public class Login implements EndpointModule {
                             .header("Connection", "keep-alive")
                             .cookieStore(cookieStore)
                             .ignoreContentType(true)
-                            .proxy(proxyManager.getProxy())
+                            .proxy(proxy)
                             .execute();
                 } catch (IOException e) {
                     e.printStackTrace();

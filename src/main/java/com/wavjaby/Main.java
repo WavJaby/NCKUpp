@@ -1,6 +1,7 @@
 package com.wavjaby;
 
 import com.wavjaby.api.*;
+import com.wavjaby.lib.HttpServer;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
@@ -8,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,22 +26,17 @@ public class Main {
     public static final String portalNckuOrg = "https://" + portalNcku;
     public static final String stuIdSysNcku = "qrys.ncku.edu.tw";
     public static final String stuIdSysNckuOrg = "https://" + stuIdSysNcku;
+    public static final String courseQueryNckuOrg = "https://course-query.acad.ncku.edu.tw";
 
     public static final URI courseNckuOrgUri;
     public static final URI portalNckuOrgUri;
     public static final URI stuIdSysNckuOrgUri;
 
     static {
-        try {
-            courseNckuOrgUri = new URI(courseNckuOrg);
-            portalNckuOrgUri = new URI(portalNckuOrg);
-            stuIdSysNckuOrgUri = new URI(stuIdSysNckuOrg);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
+        courseNckuOrgUri = URI.create(courseNckuOrg);
+        portalNckuOrgUri = URI.create(portalNckuOrg);
+        stuIdSysNckuOrgUri = URI.create(stuIdSysNckuOrg);
     }
-
-    public static final String courseQueryNckuOrg = "https://course-query.acad.ncku.edu.tw";
 
     public static final String[] accessControlAllowOrigin = {
             "https://api.simon.chummydns.com",
@@ -51,6 +46,7 @@ public class Main {
     private HttpServer server;
     private final Map<String, Module> modules = new LinkedHashMap<>();
     private boolean running = false;
+    public static final File cacheFolder = new File("cache");
 
 
     Main() {
@@ -79,6 +75,9 @@ public class Main {
 
         server = new HttpServer(serverSettings);
         if (!server.opened) return;
+        if(!cacheFolder.exists())
+            if(!cacheFolder.mkdir())
+                logger.err("Cache folder can not create");
         Runtime.getRuntime().addShutdownHook(new Thread(this::stopAll));
 
         SQLite sqLite = new SQLite();

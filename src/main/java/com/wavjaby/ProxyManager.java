@@ -49,6 +49,10 @@ public class ProxyManager {
             return protocol + "://" + ip + ':' + port;
         }
 
+        public String toIp() {
+            return ip + ':' + port;
+        }
+
         public Proxy.Type getProxyType() {
             return protocol.startsWith("socks")
                     ? Proxy.Type.SOCKS

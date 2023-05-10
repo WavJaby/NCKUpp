@@ -20,7 +20,8 @@ public class GetCourseDataUpdate implements Runnable {
     private static final Logger logger = new Logger(TAG);
     private static final String apiUrl = "https://discord.com/api/v10";
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    private final ExecutorService fetchCoursePool = Executors.newFixedThreadPool(4);
+    private final ExecutorService messageSendPool = Executors.newFixedThreadPool(4);
     private final Search search;
     private final DeptWatchDog watchDog;
     private final CookieStore baseCookieStore;
@@ -34,7 +35,7 @@ public class GetCourseDataUpdate implements Runnable {
 
     private final Map<String, CookieStore> listenDept = new HashMap<>();
     private final Map<String, Search.DeptToken> deptTokenMap = new HashMap<>();
-    private List<Search.CourseData> courseDataList = null;
+    private final Map<String, List<Search.CourseData>> deptCourseDataList = new HashMap<>();
     private final String botToken;
     private final HashMap<String, String> userDmChannelCache = new HashMap<>();
 
@@ -152,9 +153,8 @@ public class GetCourseDataUpdate implements Runnable {
 
         // Start fetch course update
         CountDownLatch taskLeft = new CountDownLatch(listenDept.size());
-        AtomicBoolean allSuccess = new AtomicBoolean(true);
         AtomicBoolean done = new AtomicBoolean(false);
-        List<Search.CourseData> newCourseDataList = new ArrayList<>();
+        List<CourseDataDifference> diff = new ArrayList<>();
 
         // Force renew cookie
         if (count >= 1000) {
@@ -163,11 +163,12 @@ public class GetCourseDataUpdate implements Runnable {
             count = 0;
         }
 
+        int[] total = new int[1];
         // Fetch dept data
         for (Map.Entry<String, CookieStore> i : listenDept.entrySet()) {
             final String dept = i.getKey();
             final CookieStore cookieStore = i.getValue();
-            pool.submit(() -> {
+            fetchCoursePool.submit(() -> {
                 Search.DeptToken deptToken = deptTokenMap.get(dept);
                 if (deptToken == null) {
                     deptToken = renewDeptToken(dept, cookieStore);
@@ -175,48 +176,44 @@ public class GetCourseDataUpdate implements Runnable {
                         deptTokenMap.put(dept, deptToken);
                 }
                 // Have dept token
-                if (deptToken != null) {
+                if (!done.get() && deptToken != null) {
                     // Get dept course data
-                    logger.log("Get dept " + dept);
-                    List<Search.CourseData> thisCourseDataList = new ArrayList<>();
-                    if (!search.getDeptCourseData(deptToken, thisCourseDataList, false) ||
-                            thisCourseDataList.size() == 0) {
+                    List<Search.CourseData> newCourseDataList = new ArrayList<>();
+                    if (!search.getDeptCourseData(deptToken, newCourseDataList, false) ||
+                            newCourseDataList.size() == 0) {
                         if (!done.get()) {
-                            logger.log("Remove dept " + dept);
+                            logger.log("Dept " + dept + " failed");
                             deptTokenMap.put(dept, null);
-                            allSuccess.set(false);
                         }
-                    } else
-                        newCourseDataList.addAll(thisCourseDataList);
-                } else
-                    allSuccess.set(false);
+                    } else if (!done.get()) {
+                        List<Search.CourseData> lastCourseDataList = deptCourseDataList.get(dept);
+                        total[0] += newCourseDataList.size();
+                        if (lastCourseDataList != null)
+                            diff.addAll(getDifferent(lastCourseDataList, newCourseDataList));
+                        deptCourseDataList.put(dept, newCourseDataList);
+                        logger.log("Dept " + dept + " done");
+                    }
+                }
                 taskLeft.countDown();
             });
         }
+        boolean timeout;
         try {
-            if (!taskLeft.await(20, TimeUnit.SECONDS))
-                allSuccess.set(false);
+            timeout = !taskLeft.await(20, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
+            return;
         }
         done.set(true);
 
-        if (allSuccess.get()) {
-            if (courseDataList != null) {
-                // Get different
-                List<CourseDataDifference> diff = getDifferent(courseDataList, newCourseDataList);
-                // Build notification
-                if (diff.size() > 0)
-                    pool.submit(() -> buildAndSendNotification(diff));
-            }
-            courseDataList = newCourseDataList;
-
-            logger.log(count++ + ", " +
-                    courseDataList.size() + ", " +
-                    (System.currentTimeMillis() - start) + "ms");
-        } else
-            logger.log("Failed, retry..." +
-                    (System.currentTimeMillis() - start) + "ms");
+        // Build notification
+        if (diff.size() > 0)
+            messageSendPool.submit(() -> buildAndSendNotification(diff));
+        if (timeout) {
+            logger.log(count + ", Time out, " + (System.currentTimeMillis() - start) + "ms");
+        } else {
+            logger.log(++count + ", " + total[0] + ", " + (System.currentTimeMillis() - start) + "ms");
+        }
     }
 
     private void buildAndSendNotification(List<CourseDataDifference> diff) {
@@ -241,6 +238,9 @@ public class GetCourseDataUpdate implements Runnable {
 
                     Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
                     Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, baseCookieStore, null);
+                    String url = null;
+                    if(token != null)
+                        url = token.getUrl();
                     JsonObject deptEmbed = new JsonObject()
                             .put("type", "rich")
                             .put("color", i.availableDiff > 0
@@ -250,7 +250,7 @@ public class GetCourseDataUpdate implements Runnable {
                                     : 0xFF0000)
                             .put("title", cosData.getSerialNumber() + " " + cosData.getCourseName())
                             .put("description", cosData.getGroup())
-                            .put("url", token.getUrl())
+                            .put("url", url)
                             .put("fields", new JsonArray()
                                     .add(new JsonObject()
                                             .put("name", "餘額 " + intToString(i.availableDiff))
@@ -281,23 +281,23 @@ public class GetCourseDataUpdate implements Runnable {
                     mainChannelNotificationEmbeds.add(deptEmbed);
 
                     // Build user notification embed
-                    if (i.courseData.getSerialNumber() == null)
-                        break;
-                    for (String discordID : watchDog.getWatchedUserDiscordID(i.courseData.getSerialNumber())) {
-                        JsonArray userEmbeds = userNotificationEmbeds.get(discordID);
-                        if (userEmbeds == null) {
-                            userNotificationEmbeds.put(discordID, userEmbeds = new JsonArray());
-                            userNotifications.put(discordID, new JsonObject().put("embeds", userEmbeds));
-                        }
-                        userEmbeds.add(deptEmbed);
-                    }
+//                    if (i.courseData.getSerialNumber() == null)
+//                        break;
+//                    for (String discordID : watchDog.getWatchedUserDiscordID(i.courseData.getSerialNumber())) {
+//                        JsonArray userEmbeds = userNotificationEmbeds.get(discordID);
+//                        if (userEmbeds == null) {
+//                            userNotificationEmbeds.put(discordID, userEmbeds = new JsonArray());
+//                            userNotifications.put(discordID, new JsonObject().put("embeds", userEmbeds));
+//                        }
+//                        userEmbeds.add(deptEmbed);
+//                    }
                     break;
             }
         }
-        for (Map.Entry<String, JsonObject> userNotificationData : userNotifications.entrySet())
-            pool.submit(() -> postToChannel(getDmChannel(userNotificationData.getKey()), userNotificationData.getValue()));
+//        for (Map.Entry<String, JsonObject> userNotificationData : userNotifications.entrySet())
+//            messageSendPool.submit(() -> postToChannel(getDmChannel(userNotificationData.getKey()), userNotificationData.getValue()));
         if (mainChannelNotificationEmbeds.length > 0)
-            pool.submit(() -> postToChannel("1018382309197623366", mainChannelNotification));
+            messageSendPool.submit(() -> postToChannel("1018382309197623366", mainChannelNotification));
     }
 
     private String intToString(int integer) {

@@ -2,13 +2,15 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.ResponseData;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
-import com.wavjaby.SimpleThreadFactory;
 import com.wavjaby.json.JsonArrayStringBuilder;
+import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
@@ -23,10 +25,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -34,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.wavjaby.ResponseData.*;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.courseQueryNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
@@ -43,6 +43,7 @@ public class Search implements EndpointModule {
     private static final String TAG = "[Search]";
     private static final Logger logger = new Logger(TAG);
 
+    private static final int MAX_ROBOT_CHECK_TRY = 5;
     private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(4);
     private final Semaphore cosPreCheckPoolLock = new Semaphore(4);
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
@@ -144,7 +145,7 @@ public class Search implements EndpointModule {
     }
 
     public static class SearchQuery {
-        String searchID, timeSearchID;
+        String searchID, histroySearchID;
 
         String courseName;      // 課程名稱
         String instructor;      // 教師姓名
@@ -193,7 +194,7 @@ public class Search implements EndpointModule {
                         searchID = searchIDs;
                     else {
                         searchID = searchIDs.substring(0, split);
-                        timeSearchID = searchIDs.substring(split + 1);
+                        histroySearchID = searchIDs.substring(split + 1);
                     }
                     break;
                 }
@@ -552,6 +553,9 @@ public class Search implements EndpointModule {
             boolean success = true;
             // get all course
             if (searchQuery.getAll) {
+                ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
+                Logger.addProgressBar(progressBar);
+                progressBar.setProgress(0f);
                 AllDeptData allDeptData = getAllDeptData(cookieStore);
                 if (allDeptData == null) {
                     response.addError(TAG + "Can not get crypt");
@@ -561,16 +565,13 @@ public class Search implements EndpointModule {
                 else {
                     CountDownLatch countDownLatch = new CountDownLatch(allDeptData.deptCount);
                     final int poolSize = 6;
-                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(poolSize, new SimpleThreadFactory("Fetch-Thread-"));
+                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(poolSize, new ThreadFactory("Fetch-Thread-"));
                     AllDeptData[] fragments = new AllDeptData[poolSize];
                     for (int i = 0; i < poolSize; i++)
                         fragments[i] = getAllDeptData(createCookieStore());
                     int i = 0;
                     Semaphore fetchPoolLock = new Semaphore(poolSize);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
-                    ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
-                    Logger.addProgressBar(progressBar);
-                    progressBar.setProgress(0f);
                     for (String dept : allDeptData.allDept) {
                         fetchPoolLock.acquire();
                         // If one failed, stop all
@@ -603,10 +604,10 @@ public class Search implements EndpointModule {
                         fetchPool.shutdownNow();
                         logger.warn("FetchPool shutdown timeout");
                     }
-                    progressBar.setProgress(100f);
-                    Logger.removeProgressBar(progressBar);
                     success = allSuccess.get();
                 }
+                progressBar.setProgress(100f);
+                Logger.removeProgressBar(progressBar);
             }
             // get listed serial
             else if (searchQuery.getSerial) {
@@ -626,8 +627,8 @@ public class Search implements EndpointModule {
             if (success && !searchQuery.getSerial)
                 response.setData(courseDataList.toString());
         } catch (Exception e) {
-            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
+            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
     }
 
@@ -649,18 +650,18 @@ public class Search implements EndpointModule {
             }
         }
 
-        logger.log(cookieStore.getCookies().toString());
+//        logger.log(cookieStore.getCookies().toString());
         return cookieStore;
     }
 
     public static String setSearchIdCookie(SearchQuery searchQuery) {
-        if (searchQuery.searchID == null && searchQuery.timeSearchID == null)
+        if (searchQuery.searchID == null && searchQuery.histroySearchID == null)
             return "searchID=|";
         if (searchQuery.searchID == null)
-            return "searchID=|" + searchQuery.timeSearchID;
-        if (searchQuery.timeSearchID == null)
+            return "searchID=|" + searchQuery.histroySearchID;
+        if (searchQuery.histroySearchID == null)
             return "searchID=" + searchQuery.searchID + '|';
-        return "searchID=" + searchQuery.searchID + '|' + searchQuery.timeSearchID;
+        return "searchID=" + searchQuery.searchID + '|' + searchQuery.histroySearchID;
     }
 
     public AllDeptData getAllDeptData(CookieStore cookieStore) {
@@ -669,9 +670,11 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
-        String body = checkRobot(request, cookieStore);
-        if (body == null)
+        ResponseData responseData = new ResponseData();
+        ResponseState state = checkRobot(request, cookieStore, responseData);
+        if (state != ResponseState.SUCCESS)
             return null;
+        String body = responseData.data;
 
         cosPreCheck(body, cookieStore, null, proxyManager);
 
@@ -694,9 +697,11 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
-        String body = checkRobot(request, cookieStore);
-        if (body == null)
+        ResponseData responseData = new ResponseData();
+        ResponseState state = checkRobot(request, cookieStore, responseData);
+        if (state != ResponseState.SUCCESS)
             return null;
+        String body = responseData.data;
 
         cosPreCheck(body, cookieStore, null, proxyManager);
 
@@ -804,8 +809,9 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
-        String body = checkRobot(request, deptToken.cookieStore);
-        if (body == null)
+        ResponseData responseData = new ResponseData();
+        ResponseState state = checkRobot(request, deptToken.cookieStore, responseData);
+        if (state != ResponseState.SUCCESS)
             return null;
         try {
             cosPreCheckPoolLock.acquire();
@@ -814,10 +820,10 @@ public class Search implements EndpointModule {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(body, deptToken.cookieStore, null, proxyManager);
+            cosPreCheck(responseData.data, deptToken.cookieStore, null, proxyManager);
             cosPreCheckPoolLock.release();
         });
-        return body;
+        return responseData.data;
     }
 
     private boolean getQueryCourseData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
@@ -851,7 +857,7 @@ public class Search implements EndpointModule {
         return true;
     }
 
-    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList, boolean addUrSchoolCache) throws IOException {
+    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList, boolean addUrSchoolCache) {
         String searchResultBody = getCourseNCKU(saveQueryToken);
 
         if (searchResultBody == null || (searchQuery.searchID = getSearchID(searchResultBody, null)) == null)
@@ -872,12 +878,13 @@ public class Search implements EndpointModule {
     }
 
     public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, ApiResponse response) {
+        StringBuilder postData = new StringBuilder();
+        String host;
+        // Build query
         try {
-            StringBuilder postData = new StringBuilder();
-            String host;
             if (searchQuery.getTime) {
                 host = courseQueryNckuOrg;
-                postData.append("id=").append(URLEncoder.encode(searchQuery.timeSearchID, "UTF-8"));
+                postData.append("id=").append(URLEncoder.encode(searchQuery.histroySearchID, "UTF-8"));
             } else {
                 host = courseNckuOrg;
                 // Get searchID if it's null
@@ -889,12 +896,13 @@ public class Search implements EndpointModule {
                             .cookieStore(cookieStore)
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy());
-                    String body = checkRobot(request, cookieStore);
-                    if (body == null)
+                    ResponseData responseData = new ResponseData();
+                    ResponseState state = checkRobot(request, cookieStore, responseData);
+                    if (state != ResponseState.SUCCESS)
                         return null;
 
-                    cosPreCheck(body, cookieStore, response, proxyManager);
-                    if ((searchQuery.searchID = getSearchID(body, response)) == null)
+                    cosPreCheck(responseData.data, cookieStore, response, proxyManager);
+                    if ((searchQuery.searchID = getSearchID(responseData.data, response)) == null)
                         return null;
                 }
                 postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
@@ -907,38 +915,44 @@ public class Search implements EndpointModule {
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
                 if (searchQuery.cl != null) postData.append("&cl=").append(searchQuery.cl);
             }
-
-//            logger.log(TAG + "Post search query");
-            Connection request = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
-                    .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .proxy(proxyManager.getProxy())
-                    .method(Connection.Method.POST)
-                    .requestBody(postData.toString())
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest");
-            String body = checkRobot(request, cookieStore);
-            if (body == null)
-                return null;
-
-            if (body.equals("0")) {
-                if (response != null)
-                    response.addError(TAG + "Condition not set");
-                return null;
-            }
-            if (body.equals("1")) {
-                if (response != null)
-                    response.addError(TAG + "Wrong condition format");
-                return null;
-            }
-            return new SaveQueryToken(host, body, cookieStore);
-        } catch (UnsupportedEncodingException encodingException) {
-            encodingException.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            logger.errTrace(e);
             if (response != null)
                 response.addError(TAG + "Unsupported encoding");
+            return null;
         }
-        return null;
+
+        // Post save query
+        Connection request = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
+                .header("Connection", "keep-alive")
+                .cookieStore(cookieStore)
+                .ignoreContentType(true)
+                .proxy(proxyManager.getProxy())
+                .method(Connection.Method.POST)
+                .requestBody(postData.toString())
+                .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .header("X-Requested-With", "XMLHttpRequest");
+        String body;
+        try {
+            body = request.execute().body();
+        } catch (IOException e) {
+            logger.errTrace(e);
+            if (response != null)
+                response.addError(TAG + "Network error");
+            return null;
+        }
+
+        if (body.equals("0")) {
+            if (response != null)
+                response.addError(TAG + "Condition not set");
+            return null;
+        }
+        if (body.equals("1")) {
+            if (response != null)
+                response.addError(TAG + "Wrong condition format");
+            return null;
+        }
+        return new SaveQueryToken(host, body, cookieStore);
     }
 
     private String getCourseNCKU(SaveQueryToken saveQueryToken) {
@@ -950,8 +964,9 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
-        String body = checkRobot(request, saveQueryToken.cookieStore);
-        if (body == null)
+        ResponseData responseData = new ResponseData();
+        ResponseState state = checkRobot(request, saveQueryToken.cookieStore, responseData);
+        if (state != ResponseState.SUCCESS)
             return null;
         try {
             cosPreCheckPoolLock.acquire();
@@ -960,10 +975,10 @@ public class Search implements EndpointModule {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(body, saveQueryToken.cookieStore, null, proxyManager);
+            cosPreCheck(responseData.data, saveQueryToken.cookieStore, null, proxyManager);
             cosPreCheckPoolLock.release();
         });
-        return body;
+        return responseData.data;
     }
 
     private Element findCourseTable(String html, String errorMessage, ApiResponse response) {
@@ -1331,14 +1346,14 @@ public class Search implements EndpointModule {
         return body.substring(idStart + 1, idEnd);
     }
 
-    public String checkRobot(Connection request, CookieStore cookieStore) {
-        for (int i = 0; i < 5; i++) {
+    public ResponseState checkRobot(Connection request, CookieStore cookieStore, ResponseData responseData) {
+        for (int i = 0; i < MAX_ROBOT_CHECK_TRY; i++) {
             String response;
             try {
                 response = request.execute().body();
             } catch (IOException e) {
                 logger.errTrace(e);
-                return null;
+                return ResponseState.NETWORK_ERROR;
             }
 
             // Check if no robot
@@ -1346,31 +1361,38 @@ public class Search implements EndpointModule {
             if ((codeTicketStart = response.indexOf("index.php?c=portal&m=robot")) == -1 ||
                     (codeTicketStart = response.indexOf("code_ticket=", codeTicketStart)) == -1 ||
                     (codeTicketEnd = response.indexOf("&", codeTicketStart)) == -1
-            ) return response;
+            ) {
+                responseData.data = response;
+                return ResponseState.SUCCESS;
+            }
+            String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);
 
             // Crack robot
-            logger.warn("Crack check robot");
-            String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);
-            String code = robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
-            logger.warn("Crack check code: " + code);
-            try {
-                HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=robot")
-                        .header("Connection", "keep-alive")
-                        .cookieStore(cookieStore)
-                        .ignoreContentType(true)
-                        .proxy(proxyManager.getProxy())
-                        .method(Connection.Method.POST)
-                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                        .header("X-Requested-With", "XMLHttpRequest")
-                        .requestBody("time=" + (System.currentTimeMillis() / 1000) +
-                                "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
-                                "&code=" + code)
-                        .execute();
+            logger.warn("Crack robot code");
+            for (; i < MAX_ROBOT_CHECK_TRY; i++) {
+                String code = robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
+                logger.warn("Crack code: " + code);
+                try {
+                    String result = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=robot")
+                            .header("Connection", "keep-alive")
+                            .cookieStore(cookieStore)
+                            .ignoreContentType(true)
+                            .proxy(proxyManager.getProxy())
+                            .method(Connection.Method.POST)
+                            .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                            .header("X-Requested-With", "XMLHttpRequest")
+                            .requestBody("time=" + (System.currentTimeMillis() / 1000) +
+                                    "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
+                                    "&code=" + code)
+                            .execute().body();
+                    if (new JsonObject(result).getBoolean("status"))
+                        break;
 //            System.out.println(new JsonObject(allDeptRes.body()).toStringBeauty());
-            } catch (IOException e) {
-                logger.errTrace(e);
+                } catch (IOException | JsonException e) {
+                    logger.errTrace(e);
+                }
             }
         }
-        return null;
+        return ResponseState.ROBOT_CODE_CRACK_ERROR;
     }
 }

@@ -22,15 +22,15 @@
 .messageBox > div {
     min-height: 120px;
     width: 600px;
-    top: -130px;
+    bottom: 0;
     left: 0;
     right: 0;
     margin: auto;
     position: absolute;
-    transition: 500ms top, 200ms opacity;
-    -moz-transition: 500ms top, 200ms opacity;
-    -o-transition: 500ms top, 200ms opacity;
-    -webkit-transition: 500ms top, 200ms opacity;
+    transition: 500ms bottom, 200ms opacity;
+    -moz-transition: 500ms bottom, 200ms opacity;
+    -o-transition: 500ms bottom, 200ms opacity;
+    -webkit-transition: 500ms bottom, 200ms opacity;
 }
 
 .messageBox > div > .title {

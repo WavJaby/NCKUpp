@@ -1,10 +1,11 @@
-package com.wavjaby;
+package com.wavjaby.lib;
 
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 import com.wavjaby.logger.Logger;
+import org.omg.CORBA.PUBLIC_MEMBER;
 
 import javax.net.ssl.*;
 import java.io.File;
@@ -28,27 +29,27 @@ public class HttpServer {
     public int port;
     public String hostname;
 
-    HttpServer(Properties serverSettings) {
+    public HttpServer(Properties serverSettings) {
         try {
             String portStr = serverSettings.getProperty("port");
             if (portStr == null) {
                 port = 443;
-                logger.warn("Port not found, using default: " + port);
+                logger.warn("Property \"port\" not found, using default: " + port);
             } else
                 port = Integer.parseInt(portStr);
-        } catch (ClassCastException | NumberFormatException e) {
+        } catch (NumberFormatException e) {
             port = defaultPort;
-            logger.warn("Wrong port format: \"" + serverSettings.get("port") + "\", Using Default " + port);
+            logger.warn("Property \"port\": \"" + serverSettings.get("port") + "\" have wrong format, using default: " + port);
         }
         String protocolName = serverSettings.getProperty("protocol");
         hostname = serverSettings.getProperty("hostname");
         if (protocolName == null) {
             protocolName = "https";
-            logger.warn("Protocol name not found, using default: " + protocolName);
+            logger.warn("Property \"protocol\" not found, using default: " + protocolName);
         }
         if (hostname == null) {
             hostname = "localhost";
-            logger.warn("Host name not found, using default: " + hostname);
+            logger.warn("Property \"hostname\" not found, using default: " + hostname);
         }
 
         if (protocolName.equals("https"))
