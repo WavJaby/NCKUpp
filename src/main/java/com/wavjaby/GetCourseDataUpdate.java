@@ -20,7 +20,7 @@ public class GetCourseDataUpdate implements Runnable {
     private static final Logger logger = new Logger(TAG);
     private static final String apiUrl = "https://discord.com/api/v10";
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private final ExecutorService fetchCoursePool = Executors.newFixedThreadPool(4);
+    private final ExecutorService fetchCoursePool = Executors.newFixedThreadPool(8);
     private final ExecutorService messageSendPool = Executors.newFixedThreadPool(4);
     private final Search search;
     private final DeptWatchDog watchDog;
@@ -72,7 +72,15 @@ public class GetCourseDataUpdate implements Runnable {
         botToken = serverSettings.getProperty("botToken");
 
         baseCookieStore = search.createCookieStore();
+        addListenDept("A1");
+        addListenDept("A2");
+        addListenDept("A6");
+        addListenDept("A7");
         addListenDept("A9");
+        addListenDept("AF");
+        addListenDept("F7");
+        addListenDept("J0");
+        addListenDept("M0");
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
     }
 
@@ -85,6 +93,7 @@ public class GetCourseDataUpdate implements Runnable {
     }
 
     private void addListenDept(String deptID) {
+        if (listenDept.containsKey(deptID)) return;
         logger.log("Add watch: " + deptID);
         listenDept.put(deptID, search.createCookieStore());
     }
@@ -126,7 +135,7 @@ public class GetCourseDataUpdate implements Runnable {
                     .ignoreContentType(true)
                     .ignoreHttpErrors(true)
                     .execute().body();
-//            logger.log(new JsonObject(result).toStringBeauty());
+            logger.log(new JsonObject(result).toStringBeauty());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -236,18 +245,24 @@ public class GetCourseDataUpdate implements Runnable {
                     logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() + "\n" +
                             "available: " + i.availableDiff + ", select: " + i.selectDiff);
 
-                    Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
-                    Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, baseCookieStore, null);
                     String url = null;
-                    if(token != null)
-                        url = token.getUrl();
+                    try {
+                        Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
+                        Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, baseCookieStore, null);
+                        if (token != null)
+                            url = token.getUrl();
+                    } catch (Exception e) {
+                        logger.errTrace(e);
+                    }
+
+                    int courseAvailable = cosData.getAvailable() != null ? -1 : cosData.getAvailable();
+                    int embedColor = i.availableDiff > 0
+                            ? (courseAvailable == 1 ? 0x00FF00 : 0x00FFFF)
+                            : courseAvailable > 0 ? 0xFFFF00 : 0xFF0000;
+
                     JsonObject deptEmbed = new JsonObject()
                             .put("type", "rich")
-                            .put("color", i.availableDiff > 0
-                                    ? (cosData.getAvailable() == 1 ? 0x00FF00 : 0x00FFFF)
-                                    : cosData.getAvailable() > 0
-                                    ? 0xFFFF00
-                                    : 0xFF0000)
+                            .put("color", embedColor)
                             .put("title", cosData.getSerialNumber() + " " + cosData.getCourseName())
                             .put("description", cosData.getGroup())
                             .put("url", url)
@@ -269,12 +284,12 @@ public class GetCourseDataUpdate implements Runnable {
                                     )
                                     .add(new JsonObject()
                                             .put("name", "時間")
-                                            .put("value", cosData.getTimeString())
+                                            .put("value", String.valueOf(cosData.getTimeString()))
                                             .put("inline", true)
                                     )
                                     .add(new JsonObject()
                                             .put("name", "組別")
-                                            .put("value", cosData.getForClass())
+                                            .put("value", String.valueOf(cosData.getForClass()))
                                             .put("inline", true)
                                     )
                             );
@@ -296,8 +311,10 @@ public class GetCourseDataUpdate implements Runnable {
         }
 //        for (Map.Entry<String, JsonObject> userNotificationData : userNotifications.entrySet())
 //            messageSendPool.submit(() -> postToChannel(getDmChannel(userNotificationData.getKey()), userNotificationData.getValue()));
-        if (mainChannelNotificationEmbeds.length > 0)
+        if (mainChannelNotificationEmbeds.length > 0) {
+            logger.log("Post to channel");
             messageSendPool.submit(() -> postToChannel("1018382309197623366", mainChannelNotification));
+        }
     }
 
     private String intToString(int integer) {

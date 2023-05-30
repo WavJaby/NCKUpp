@@ -206,6 +206,7 @@ module.exports = function (loginState) {
     console.log('Course search Init');
     let styles = async_require('./courseSearch.css');
     const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
+    const loadingElement = div('loading', window.loadingElement.cloneNode(true));
 
     const searchResultSignal = new Signal({loading: false, courseResult: null, nckuhubResult: null});
     const alldeptDataSignal = new Signal();
@@ -233,8 +234,8 @@ module.exports = function (loginState) {
         alldeptDataSignal.set((await fetchApi('/alldept')).data);
     }
 
-    function onCourseSearchCreate() {
-        const rawQuery = window.hashData.get('searchRawQuery');
+    function onLoad() {
+        const rawQuery = window.urlHashData.get('searchRawQuery');
         if (rawQuery && rawQuery.length > 0) {
             for (const rawQueryElement of rawQuery) {
                 for (const /**@type HTMLElement*/ node of courseSearchForm.getElementsByTagName('input')) {
@@ -281,7 +282,7 @@ module.exports = function (loginState) {
         // }
         lastQueryString = queryString;
         if (saveQuery === undefined || saveQuery === true)
-            window.hashData.set('searchRawQuery', queryData);
+            window.urlHashData.set('searchRawQuery', queryData);
 
         console.log('Search:', queryString);
         searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
@@ -517,7 +518,7 @@ module.exports = function (loginState) {
     function renderSearchResult(state) {
         if (state.loading) {
             courseRenderResult.length = 0;
-            return div('loading', window.loadingElement.cloneNode(true));
+            return window.loadingElement.cloneNode(true);
         }
         if (!state.courseResult) return div();
 
@@ -791,7 +792,7 @@ module.exports = function (loginState) {
     }
 
     courseSearch = div('courseSearch',
-        {onRender, onDestroy},
+        {onRender, onDestroy, onLoad},
         courseSearchForm = div('form',
             // input(null, 'Serial number', 'serial', {onkeyup}),
             input(null, 'Course name', 'courseName', {onkeyup}),
@@ -857,9 +858,8 @@ module.exports = function (loginState) {
         instructorInfoBubble,
         instructorDetailWindow,
         nckuhubDetailWindow,
-        ShowIf(instructorInfoLoadSignal, window.loadingElement.cloneNode(true)),
+        ShowIf(instructorInfoLoadSignal, loadingElement),
     );
-    onCourseSearchCreate();
     return courseSearch;
 };
 

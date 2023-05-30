@@ -113,7 +113,7 @@ public class Main {
         startModules();
         logger.log("Ready");
 
-        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
+//        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
 
 //        long start = System.currentTimeMillis();
 //        Thread t1 = new Thread(() ->

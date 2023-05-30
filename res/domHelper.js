@@ -180,6 +180,26 @@ function parseClassInput(className, element) {
         element.className = className;
 }
 
+window.urlHashData = {
+    data: {},
+    update: function () {
+        return this.data = (
+            window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {}
+        );
+    },
+    get: function (key) {
+        return this.data[key];
+    },
+    set: function (key, value) {
+        this.data[key] = value;
+        window.location.hash = btoa(encodeURIComponent(JSON.stringify(this.data)));
+    },
+    contains: function (key) {
+        return this.data[key] !== undefined;
+    }
+}
+window.urlHashData.update();
+
 /**
  * @param {string} defaultPage
  * @param {Object<string, function()|HTMLElement>} routs
@@ -188,34 +208,51 @@ function parseClassInput(className, element) {
 function HashRouter(defaultPage, routs, footer) {
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
-    let lastState, lastPage = null;
-    routerRoot.openPage = function (newPage) {
+    let lastPage, lastPageId = null;
+
+    window.addEventListener('popstate', function () {
+        const state = window.urlHashData.update();
+        window.urlHashData.data = state;
+        if (lastPageId === state.page) {
+
+        } else
+            routerRoot.openPage(state.page);
+    });
+
+    routerRoot.openPage = function (pageId) {
         // if same page
-        if (lastPage === newPage) return;
-        lastPage = newPage;
+        if (lastPageId === pageId) return;
+        lastPageId = pageId;
 
-        window.hashData.set('page', newPage);
-        // open page
-        window.history.pushState(null, document.title, window.location.href)
-        let state = routs[newPage];
-        if (!state) return;
+        window.urlHashData.set('page', pageId);
 
-        // lazy
-        if (state instanceof Function)
-            routs[newPage] = state = state();
-        // switch page element
-        if (lastState) {
-            if (lastState.onDestroy) lastState.onDestroy();
-            routerRoot.replaceChild(state, lastState);
-            if (state.onRender) state.onRender();
+
+        // Get page
+        const page = getPage(pageId);
+
+        // Switch page element
+        if (lastPage) {
+            if (lastPage.onDestroy) lastPage.onDestroy();
+            routerRoot.replaceChild(page, lastPage);
+            if (page.onRender) page.onRender();
         }
         // append page element on first open
         else {
-            if (footer) routerRoot.insertBefore(state, footer);
-            else routerRoot.appendChild(state);
-            if (state.onRender) state.onRender();
+            if (footer) routerRoot.insertBefore(page, footer);
+            else routerRoot.appendChild(page);
+            if (page.onRender) page.onRender();
         }
-        lastState = state;
+        lastPage = page;
+    }
+
+    function getPage(pageId) {
+        const page = routs[pageId];
+        if (!page) return null;
+
+        // lazy
+        if (page instanceof Function)
+            return routs[pageId] = page();
+        return page;
     }
 
     routerRoot.getRoutesName = function () {
@@ -243,7 +280,7 @@ function HashRouter(defaultPage, routs, footer) {
         routerRoot.appendChild(footer);
     }
     // open default page
-    routerRoot.openPage(window.hashData.get('page') || defaultPage);
+    routerRoot.openPage(window.urlHashData.get('page') || defaultPage);
     return routerRoot;
 }
 

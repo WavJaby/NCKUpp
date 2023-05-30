@@ -71,19 +71,6 @@ window.fetchApi = function (endpoint, option) {
         );
 };
 
-window.hashData = {
-    hashMap: window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {},
-    get(key) {
-        return this.hashMap[key];
-    },
-    set(key, value) {
-        this.hashMap[key] = value;
-        window.location.hash = btoa(encodeURIComponent(JSON.stringify(this.hashMap)));
-    },
-    contains(key) {
-        return this.hashMap[key] !== undefined;
-    }
-};
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
 
@@ -103,7 +90,6 @@ window.navMenu = new ClassList('links');
         console.log('Debug enabled');
         doomDebug();
 
-        console.log(window.hashData.hashMap);
         const memoryUpdate = new Signal(window.performance.memory);
         setInterval(() => memoryUpdate.set(window.performance.memory), 1000);
         debugWindow = span(

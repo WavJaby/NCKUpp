@@ -54,6 +54,7 @@ public class Lib {
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
                     .requestBody(postData)
+                    .timeout(3000)
                     .execute();
         } catch (IOException e) {
             logger.errTrace(e);
@@ -123,7 +124,7 @@ public class Lib {
                 responseHeader.set("Access-Control-Allow-Credentials", "true");
                 return;
             }
-        if (originUrl.startsWith("http://localhost"))
+        if (originUrl.startsWith("http://localhost") || originUrl.startsWith("https://localhost"))
             responseHeader.set("Access-Control-Allow-Origin", originUrl);
         else
             responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);

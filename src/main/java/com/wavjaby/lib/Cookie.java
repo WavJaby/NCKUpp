@@ -160,7 +160,7 @@ public class Cookie {
     }
 
     public static String setCookieDomain(String originUrl) {
-        if (originUrl == null || originUrl.startsWith("http://localhost"))
+        if (originUrl == null || originUrl.startsWith("http://localhost") || originUrl.startsWith("https://localhost"))
             return "";
         return "; SameSite=None; Secure; Domain=" + cookieDomain;
     }

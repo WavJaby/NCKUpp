@@ -2,9 +2,9 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.ResponseData;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.ResponseData;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
@@ -25,7 +25,10 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.*;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -33,9 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.wavjaby.ResponseData.*;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.courseQueryNckuOrg;
+import static com.wavjaby.ResponseData.ResponseState;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
@@ -44,8 +47,8 @@ public class Search implements EndpointModule {
     private static final Logger logger = new Logger(TAG);
 
     private static final int MAX_ROBOT_CHECK_TRY = 5;
-    private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(4);
-    private final Semaphore cosPreCheckPoolLock = new Semaphore(4);
+    private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(5);
+    private final Semaphore cosPreCheckPoolLock = new Semaphore(5);
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
 
     private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
@@ -405,6 +408,9 @@ public class Search implements EndpointModule {
         }
 
         public String getTimeString() {
+            if (timeList == null)
+                return null;
+
             StringBuilder builder = new StringBuilder();
             for (TimeData i : timeList) {
                 if (i.extraTimeDataKey != null) continue;
@@ -813,6 +819,9 @@ public class Search implements EndpointModule {
         ResponseState state = checkRobot(request, deptToken.cookieStore, responseData);
         if (state != ResponseState.SUCCESS)
             return null;
+
+        if (cosPreCheckPoolLock.availablePermits() == 0)
+            logger.log("CosPreCheck waiting");
         try {
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {

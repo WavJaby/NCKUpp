@@ -63,8 +63,8 @@ module.exports = function (loginState) {
         console.log('Course schedule Render');
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
-        loginState.addListener(onLoginState);
         (styles = await styles).add();
+        loginState.addListener(onLoginState);
     }
 
     function onDestroy() {

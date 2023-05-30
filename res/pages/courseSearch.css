@@ -23,6 +23,7 @@
     top: 0;
     left: 0;
     position: fixed;
+    z-index: 999;
 }
 
 .courseSearch > .loading > .loaderCircle {
@@ -232,12 +233,11 @@
 /* Course search result
     Body
 */
-.courseSearch > .result > .loading {
-    text-align: center;
+.courseSearch > .result > .loaderCircle {
     position: absolute;
     left: 0;
     right: 0;
-    margin: 0;
+    margin: auto;
 }
 
 .courseSearch > .result > thead .expandDownArrow {
