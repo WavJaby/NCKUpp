@@ -16,6 +16,7 @@ public class ProxyManager {
     public static class ProxyData {
         public final String ip;
         public final int port;
+        private final Proxy proxy;
         public final String protocol;
 
         public final String providerUrl;
@@ -28,6 +29,8 @@ public class ProxyManager {
             this.protocol = protocol;
             this.providerUrl = providerUrl;
             this.ping = -1;
+
+            this.proxy = new Proxy(getProxyType(), new InetSocketAddress(ip, port));
         }
 
         public ProxyData(String url, String providerUrl) {
@@ -43,6 +46,8 @@ public class ProxyManager {
 
             this.providerUrl = providerUrl;
             this.ping = -1;
+
+            this.proxy = new Proxy(getProxyType(), new InetSocketAddress(ip, port));
         }
 
         public String toUrl() {
@@ -62,7 +67,7 @@ public class ProxyManager {
         }
 
         public Proxy toProxy() {
-            return new Proxy(getProxyType(), new InetSocketAddress(ip, port));
+            return this.proxy;
         }
 
         @Override

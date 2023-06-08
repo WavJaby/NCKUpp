@@ -1,0 +1,678 @@
+@import '../variables';
+
+:root {
+    --fade-time: 0.2s;
+    --popupWindow-bg-color: rgba(0, 0, 0);
+    --comment-bg-color: gray;
+    --ratebox-bg-color: gray;
+    --course-filter-bg-color: dimgray;
+    --course-result-header-bg-color: dimgray;
+    --course-result-item-spacing: 10px;
+    --course-info-title-font-size: 20px;
+}
+
+.courseSearch {
+}
+
+/*
+    Loading
+*/
+.courseSearch > .loading {
+    background: rgba(0, 0, 0, 0.6);
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: fixed;
+    z-index: 999;
+}
+
+.courseSearch > .loading > .loaderCircle {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    position: absolute;
+}
+
+/*
+    Course search form
+*/
+.courseSearch > .form {
+    padding: 5px;
+}
+
+.courseSearch > .form > input,
+.courseSearch > .form > .selectMenu {
+    width: 350px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.courseSearch > .form > button {
+    margin-bottom: 5px;
+}
+
+.courseSearch > .form > .selectMenu > input {
+    width: 100%;
+}
+
+.courseSearch > .form > .selectMenu > ul {
+    background: #2F3136;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: auto;
+}
+
+.courseSearch > .form > .selectMenu > ul.opened {
+    max-height: 300px;
+    position: relative;
+}
+
+.courseSearch > .form > .selectMenu > ul > .groupTitle.opened::before {
+    transform: rotate(0);
+    -ms-transform: rotate(0);
+    -moz-transform: rotate(0);
+    -webkit-transform: rotate(0);
+}
+
+.courseSearch > .form > .selectMenu > ul > .groupTitle::before {
+    background: url('./res/assets/down_triangle_icon.svg') no-repeat 0 0 / 20px;
+    width: 20px;
+    height: 20px;
+    vertical-align: -2px;
+    display: inline-block;
+    content: '';
+    transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -webkit-transform: rotate(-90deg);
+}
+
+.courseSearch > .form > .selectMenu > ul > .groupTitle {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.courseSearch > .form > .selectMenu > ul li {
+    line-height: 1.5em;
+    display: block;
+    cursor: pointer;
+}
+
+.courseSearch > .form > .selectMenu > ul li:hover {
+    background: $button-hover-color;
+}
+
+
+.courseSearch > .form > .selectMenu > ul > .group {
+    padding-left: 1em;
+    overflow: hidden;
+}
+
+/*
+    Course search result filter
+*/
+.courseSearch > .result > thead .filterSection {
+    height: 4em;
+    text-align: left;
+}
+
+.courseSearch > .result > thead .filterSection > div {
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+}
+
+.courseSearch > .result > thead .filterSection .options {
+    background: var(--course-result-header-bg-color);
+    overflow: hidden;
+}
+
+.courseSearch > .result > thead .filterSection .options > img {
+    float: left;
+}
+
+.courseSearch > .result > thead .filterSection .options > .filter {
+    height: 2em;
+    display: block;
+    overflow: hidden;
+}
+
+.courseSearch > .result > thead .filterSection .options > .filter > input {
+    width: 100%;
+    background: none;
+    box-shadow: none;
+}
+
+.courseSearch > .result > thead .filterSection .options > .resultCount {
+    height: 2em;
+    padding-left: 5px;
+}
+
+/*
+    Course search result
+*/
+.courseSearch > .result {
+    width: 100%;
+    border-spacing: 0;
+    font-size: 18px;
+    padding: 0 20px;
+    white-space: nowrap;
+    margin: auto;
+}
+
+@media only screen and (max-width: 700px) {
+    .courseSearch > .result {
+        padding: 0;
+    }
+}
+
+/* Course search result
+    Header
+*/
+.courseSearch > .result > thead {
+    background: var(--course-result-header-bg-color);
+    position: sticky;
+    top: 0;
+}
+
+.courseSearch > .result > thead > tr > th > .sortArrow {
+    position: absolute;
+    bottom: 1em;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    height: 0.8em;
+    pointer-events: none;
+    transition: 0.1s transform;
+    -webkit-transition: 0.1s transform;
+    -moz-transition: 0.1s transform;
+    -ms-transition: 0.1s transform;
+    -o-transition: 0.1s transform;
+}
+
+.courseSearch > .result > thead > tr > th > .sortArrow.reverse {
+    transform: rotate(180deg);
+    -ms-transform: rotate(180deg);
+    -moz-transform: rotate(180deg);
+    -webkit-transform: rotate(180deg);
+}
+
+.courseSearch > .result > thead > tr > th {
+    line-height: 1.4em;
+    vertical-align: bottom;
+}
+
+.courseSearch > .result > thead > tr > th:not(:first-child):not(:last-child) {
+    cursor: pointer;
+    position: relative;
+    padding: 0 1px;
+}
+
+.courseSearch > .result > thead > tr > th:not(:first-child) {
+    border-left: lightgrey solid 1px;
+}
+
+.courseSearch > .result > thead > tr > th:not(:first-child):not(:last-child):hover {
+    background: $button-hover-color;
+}
+
+.courseSearch > .result > thead > tr > th:first-child {
+    width: 0;
+    border-bottom-left-radius: 10px;
+}
+
+.courseSearch > .result > thead > tr > th:last-child {
+    border-bottom-right-radius: 10px;
+    padding-right: 10px;
+}
+
+/* Course search result
+    Body
+*/
+.courseSearch > .result > .loaderCircle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+
+.courseSearch > .result > thead .expandDownArrow {
+    height: 1.7em;
+}
+
+.courseSearch > .result .expandDownArrow > img {
+    width: 1em;
+    margin: 0 0.2em;
+    vertical-align: middle;
+    transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -webkit-transform: rotate(-90deg);
+    transition: 0.2s transform;
+    -webkit-transition: 0.2s transform;
+    -moz-transition: 0.2s transform;
+    -ms-transition: 0.2s transform;
+    -o-transition: 0.2s transform;
+}
+
+.courseSearch > .result tr .expandDownArrow.expand > img {
+    transform: rotate(0);
+    -ms-transform: rotate(0);
+    -moz-transform: rotate(0);
+    -webkit-transform: rotate(0);
+}
+
+.courseSearch > .result > tbody > tr {
+    background: #0D1117;
+}
+
+.courseSearch > .result > tbody > tr > td {
+    vertical-align: top;
+}
+
+.courseSearch > .result > tbody > tr:nth-child(3n+1) {
+    height: var(--course-result-item-spacing);
+}
+
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > td:last-child {
+    border-radius: 0 10px 10px 0;
+    padding-right: 5px;
+}
+
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > td {
+    padding: 5px 0;
+}
+
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > td:first-child {
+    border-radius: 10px 0 0 0;
+}
+
+
+.courseSearch > .result > tbody > tr:nth-child(3n+3) > td:first-child {
+    border-radius: 0 0 0 10px;
+}
+
+/*Option button*/
+.courseSearch > .result > tbody .options > button {
+    padding: 2px;
+    font-size: 18px;
+}
+
+.courseSearch > .result .nckuhub {
+    width: 4em;
+    text-align: center;
+    cursor: pointer;
+}
+
+.courseSearch > .result .nckuhub:hover {
+    background: #181a1b;
+}
+
+.courseSearch > .result .nckuhub > span {
+    width: 4em;
+    display: inline-block;
+    padding-left: 2px;
+    padding-right: 1px;
+}
+
+/* Course search result
+    Course info
+*/
+.courseSearch > .result > tbody > .courseDetail > td > .expandable {
+    overflow: hidden;
+    transition: 0.2s height;
+    -webkit-transition: 0.2s height;
+    -moz-transition: 0.2s height;
+    -ms-transition: 0.2s height;
+    -o-transition: 0.2s height;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info {
+    white-space: pre-wrap;
+    padding: 0 0 5px 5px;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .splitLine {
+    width: 100%;
+    border-top: 1px gray solid;
+    margin-bottom: 2px;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .tags {
+    display: inline-block;
+    margin-right: 10px;
+    border-radius: 8px;
+    padding: 1px 3px;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > a.tags:after {
+    content: '';
+    background: url('./res/assets/down_triangle_icon.svg') no-repeat 0 0 / 1em;
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > a.tags {
+    color: inherit;
+    text-decoration: inherit;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .note,
+.courseSearch > .result > tbody > .courseDetail .info > .limit {
+    display: block;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .note::before {
+    background: url('./res/assets/info_icon.svg') no-repeat 0 0 / 1em;
+    width: 1em;
+    height: 1em;
+    content: '';
+    display: inline-block;
+    vertical-align: text-top;
+    margin-top: 0.15em;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .limit::before {
+    background: url('./res/assets/warn_icon.svg') no-repeat 0 0 / 1em;
+    width: 1em;
+    height: 1em;
+    content: '';
+    display: inline-block;
+    vertical-align: text-top;
+    margin-top: 0.15em;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .instructor {
+    font-size: 16px;
+}
+
+.courseSearch > .result > tbody > .courseDetail .info > .instructorBtn {
+    margin: 0 5px 0 0;
+    font-size: 16px;
+    padding: 2px 5px;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/*
+    Popup window
+*/
+.courseSearch > .popupWindow {
+    background: rgba(0, 0, 0, 0.6);
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: fixed;
+    visibility: hidden;
+    z-index: 999;
+}
+
+.courseSearch > .popupWindow.open {
+    visibility: visible;
+}
+
+@media only screen and (min-width: 700px) {
+    .courseSearch > .popupWindow > div {
+        top: 100px;
+        bottom: 100px;
+        left: 100px;
+        right: 100px;
+        position: absolute;
+        margin: auto;
+    }
+}
+
+@media only screen and (max-width: 700px) {
+    .courseSearch > .popupWindow > div {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+/*
+    Popup window
+*/
+.courseSearch > .popupWindow > div {
+    background: var(--popupWindow-bg-color);
+    overflow: auto;
+}
+
+.courseSearch > .popupWindow .closeButton {
+    top: 0;
+    position: sticky;
+    padding: 5px;
+}
+
+.courseSearch > .popupWindow .closeButton > .icon {
+    content: url('./res/assets/close_icon.svg');
+    width: 1.2em;
+    height: 1.2em;
+}
+
+@media only screen and (max-width: 700px) {
+    .courseSearch > .popupWindow .closeButton > .icon {
+        content: url('./res/assets/down_arrow_icon.svg');
+        transform: rotate(90deg);
+        -ms-transform: rotate(90deg);
+        -moz-transform: rotate(90deg);
+        -webkit-transform: rotate(90deg);
+    }
+}
+
+/*
+    Course detail window
+*/
+.courseSearch .nckuhubDetailWindow > .rates {
+    width: 100%;
+    display: table;
+    table-layout: fixed;
+    text-align: center;
+}
+
+.courseSearch .nckuhubDetailWindow > .rates > div {
+    display: table-cell;
+}
+
+.courseSearch .nckuhubDetailWindow > .rates > div > .rateBox {
+    background: var(--ratebox-bg-color);
+    max-width: 7em;
+    margin: auto;
+    border-radius: 10px;
+}
+
+.courseSearch .nckuhubDetailWindow > .rates .rateBox > span {
+    display: block;
+}
+
+.courseSearch .nckuhubDetailWindow > .comments > .commentBlock {
+    background: var(--comment-bg-color);
+    margin: 0 10px 10px 10px;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.courseSearch .nckuhubDetailWindow > .comments > .commentBlock > span {
+    display: block;
+}
+
+/*
+    Instructor info bubble
+*/
+@media only screen and (min-width: 700px) {
+    .courseSearch > .instructorInfoOffset > .instructorInfo {
+        max-width: 500px;
+        padding: 5px;
+    }
+}
+
+@media only screen and (max-width: 700px) {
+    .courseSearch > .instructorInfoOffset > .instructorInfo {
+        display: none;
+    }
+}
+
+.courseSearch > .instructorInfoOffset > .instructorInfo {
+    background: rgba(0, 0, 0, 0.9);
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    word-break: break-word;
+    position: absolute;
+    bottom: 0;
+}
+
+.courseSearch > .instructorInfoOffset {
+    position: absolute;
+    right: 0;
+    margin: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -webkit-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -moz-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -ms-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+    -o-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+}
+
+.courseSearch > .instructorInfoOffset.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.courseSearch .instructorInfo > span {
+    display: block;
+}
+
+.courseSearch .instructorInfo > .rate {
+    overflow: auto;
+}
+
+.courseSearch .instructorInfo > .rate > table {
+    width: 100%;
+}
+
+.courseSearch .instructorInfo > .rate > table td {
+    text-align: center;
+}
+
+.courseSearch .instructorInfo > .rate > table td:after {
+    content: '★';
+}
+
+.courseSearch .instructorInfo > .info > table {
+    text-align: left;
+}
+
+.courseSearch .instructorInfo .blue {
+    color: #33A2F4;
+}
+
+.courseSearch .instructorInfo .yellow {
+    color: #FFC71E;
+}
+
+.courseSearch .instructorInfo .red {
+    color: #FF311E;
+}
+
+/*
+    Instructor detail window
+*/
+.courseSearch .instructorDetailWindow > .title {
+    margin: 0 10px;
+}
+
+.courseSearch .instructorDetailWindow > .title span {
+    margin-right: 0.5em;
+}
+
+.courseSearch .instructorDetailWindow > .title > .name {
+    display: inline-block;
+}
+
+.courseSearch .instructorDetailWindow > .tags {
+    margin: 0 10px;
+}
+
+.courseSearch .instructorDetailWindow > .tags > span {
+    background: $button-bg-color;
+    padding: 5px;
+    margin-right: 5px;
+    margin-top: 5px;
+    display: inline-block;
+}
+
+.courseSearch .instructorDetailWindow > .reviewerCount {
+    margin: 0 10px;
+}
+
+.courseSearch .instructorDetailWindow > .reviewerCount > span:first-child {
+    font-weight: bold;
+    margin-right: 0.5em;
+}
+
+.courseSearch .instructorDetailWindow > .comments {
+    margin: 0 10px;
+}
+
+.courseSearch .instructorDetailWindow > .comments > .item {
+    background: var(--comment-bg-color);
+    margin-bottom: 5px;
+    margin-top: 5px;
+    border-radius: 10px;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.courseSearch .instructorDetailWindow > .comments > .item > .profile {
+    height: 2.5em;
+    display: block;
+    float: left;
+    border-radius: 2.5em;
+}
+
+.courseSearch .instructorDetailWindow > .comments > .item > .body {
+    padding-left: 3em;
+}
+
+.courseSearch .instructorDetailWindow > .comments > .item > .body > span {
+    display: block;
+    white-space: pre-wrap;
+}
+
+.courseSearch .instructorDetailWindow > .comments > .item > .body > span {
+    display: block;
+}
+
+.courseSearch .instructorDetailWindow > .instructorInfo {
+    margin: 0 10px;
+}
+
+@media only screen and (max-width: 700px) {
+    .courseSearch .instructorDetailWindow > .title {
+        margin: 0;
+    }
+
+    .courseSearch .instructorDetailWindow > .tags {
+        margin: 0;
+    }
+
+    .courseSearch .instructorDetailWindow > .reviewerCount {
+        margin: 0;
+    }
+
+    .courseSearch .instructorDetailWindow > .comments {
+        margin: 0;
+    }
+
+    .courseSearch .instructorDetailWindow > .instructorInfo {
+        margin: 0;
+    }
+}

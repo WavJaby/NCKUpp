@@ -404,7 +404,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 float height = (float) yAxisHeight * studentCount[i] / totalStudentCount * highestPercent;
                 svg.appendChild(
                         new SvgRect(x, svgHeight - graphPaddingY - height, xAxisPadding, height)
-                                .setFill("#3376BD")
+                                .setBackgroundColor("#3376BD")
                                 .setStrokeColor("#3390FF")
                                 .setStrokeWidth(2)
                 );

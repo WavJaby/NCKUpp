@@ -1,0 +1,24 @@
+$font-size: 20px;
+$font-color: #e8e6e3;
+
+$button-bg-color: #5b5b5b;
+$button-hover-color: #505050;
+$button-active-color: #404040;
+
+$scrollbar-bg-color: #00000019;
+
+@mixin transform($transform) {
+    transform: $transform;
+    -o-transform: $transform;
+    -ms-transform: $transform;
+    -moz-transform: $transform;
+    -webkit-transform: $transform;
+}
+
+@mixin transition($transition) {
+    transition: $transition;
+    -o-transition: $transition;
+    -ms-transition: $transition;
+    -moz-transition: $transition;
+    -webkit-transition: $transition;
+}

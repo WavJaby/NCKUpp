@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
+@import 'variables';
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    position: absolute;
+    background: #181a1b;
+    color: $font-color;
+    font-family: 'JetBrains Mono', monospace;
+    -webkit-tap-highlight-color: transparent;
+}
+
+::placeholder {
+    color: darkgray;
+}
+
+// Button
+button {
+    background-color: $button-bg-color;
+    color: $font-color;
+    border: none;
+    padding: 5px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    font-size: $font-size;
+
+    &:hover {
+        background-color: $button-hover-color;
+    }
+
+    &:active {
+        background-color: $button-active-color;
+    }
+}
+
+// Input color
+textarea:focus, select:focus, input:focus, button:focus {
+    outline: none;
+    box-shadow: 0 0 3px 1px white;
+}
+
+input {
+    background-color: $button-bg-color;
+    color: $font-color;
+    border: none;
+    padding: 5px;
+    box-sizing: border-box;
+    text-decoration: none;
+    font-size: $font-size;
+
+    // Input auto fill color
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 100px $button-bg-color inset !important;
+    }
+    &:-webkit-autofill {
+        -webkit-text-fill-color: $font-color !important;
+        caret-color: $font-color !important;
+    }
+}
+
+// Paragraph Element
+p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+// Scroll bar
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: $scrollbar-bg-color;
+}
+
+::-webkit-scrollbar-thumb {
+    background: $button-bg-color;
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: $button-hover-color;
+}
+
+::-webkit-scrollbar-corner {
+    background: none;
+    width: 0;
+    height: 0;
+    border-left: 10px solid $button-bg-color;
+    border-top: 10px solid $button-bg-color;
+    border-bottom: 10px solid transparent;
+    border-right: 10px solid transparent;
+}
+
+.noSelect {
+    -webkit-touch-callout: none; //  iOS Safari 
+    -webkit-user-select: none; //  Safari 
+    -khtml-user-select: none; //  Konqueror HTML 
+    -moz-user-select: none; //  Old versions of Firefox 
+    -ms-user-select: none; //  Internet Explorer/Edge 
+    user-select: none; //  Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox 
+}
+
+.noDrag {
+    -webkit-user-drag: none;
+}

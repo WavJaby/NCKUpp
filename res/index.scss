@@ -1,0 +1,217 @@
+@import 'variables';
+
+$navbar-bg-color: #2F3136;
+$navbar-height: 40px;
+$footer-height: 200px;
+
+.root {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    > .loading {
+        background: #000000A0;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        z-index: 1;
+    }
+
+    > .loading > .loaderCircle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+    }
+}
+
+// Navbar
+.navbar {
+    background: $navbar-bg-color;
+    width: 100%;
+    height: $navbar-height;
+    position: absolute;
+    top: 0;
+
+    > .hamburgerMenu {
+        height: $navbar-height;
+        padding: 5px;
+        box-sizing: border-box;
+        display: none;
+
+        > img {
+            height: 100%;
+        }
+    }
+
+    ul {
+        padding-inline-start: 0;
+        list-style-type: none;
+        margin: 0;
+    }
+
+    // Select list
+    .list {
+        height: $navbar-height;
+        line-height: $navbar-height;
+        overflow: hidden;
+        position: relative;
+        float: left;
+        @include transition(height 0.15s ease-in);
+
+        // List title
+        > li {
+            background: $navbar-bg-color;
+            padding: 0 10px;
+            z-index: 1;
+            display: block;
+            position: relative;
+        }
+
+        // List title with arrow
+        &.arrow > li::before {
+            background: url('./assets/down_triangle_icon.svg') 0 0 / 1em;
+            width: 1em;
+            height: 1em;
+            display: inline-block;
+            vertical-align: middle;
+            content: '';
+        }
+
+        // List items
+        > ul {
+            background: $navbar-bg-color;
+            min-width: 100%;
+            display: block;
+            position: absolute;
+            bottom: 0;
+
+            > li {
+                padding: 0 10px;
+            }
+        }
+    }
+
+    > .links > li {
+        line-height: $navbar-height;
+        cursor: pointer;
+        padding: 0 10px;
+        float: left;
+        margin: 0;
+    }
+
+    li:hover {
+        background: $button-hover-color;
+    }
+
+    > .links > li:active,
+    > .list > ul > li:active,
+    > .loginBtn:active {
+        background: $button-active-color;
+    }
+
+    // Login button
+    > .loginBtn {
+        float: right;
+
+        > li {
+            height: $navbar-height;
+            box-sizing: border-box;
+
+            > img {
+                height: 80%;
+                vertical-align: middle;
+            }
+
+            > span {
+                vertical-align: top;
+                padding-left: 5px;
+                display: inline-block;
+            }
+        }
+    }
+
+    // Mobile css
+    @media only screen and (max-width: 700px) {
+        > .hamburgerMenu {
+            display: inline-block;
+        }
+
+        > .links {
+            background: $navbar-bg-color;
+            max-width: 15em;
+            height: 100vh;
+            display: block;
+            @include transform(translateX(-100%));
+            @include transition(transform 0.15s);
+        }
+
+        > .links.open {
+            @include transform(translateX(0));
+        }
+
+        > .links > ul,
+        > .links > li {
+            float: none;
+        }
+    }
+}
+
+// Login Window
+.loginWindow {
+    background: rgba(30, 30, 30, 0.8);
+    position: absolute;
+    top: $navbar-height;
+    right: 0;
+
+    > .loginField {
+        display: block;
+        margin: 5px;
+    }
+
+    > button.loginField {
+        float: right;
+    }
+
+    @media only screen and (max-width: 700px) {
+        width: 100%;
+    }
+}
+
+
+// Footer
+footer {
+    background: black;
+    width: 100%;
+    height: $footer-height;
+    position: absolute;
+    left: 0;
+}
+
+// Router
+.router {
+    width: 100%;
+    height: 100%;
+    padding-top: $navbar-height;
+    box-sizing: border-box;
+    position: relative;
+    overflow: auto;
+}
+
+.router > div {
+    width: 100%;
+    min-height: 100%;
+    overflow-x: auto;
+}
+
+.expandable {
+    transition: height 0.2s;
+    -webkit-transition: height 0.2s;
+    -moz-transition: height 0.2s;
+    -ms-transition: height 0.2s;
+    -o-transition: height 0.2s;
+    overflow: hidden;
+}

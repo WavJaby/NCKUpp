@@ -1,235 +1,196 @@
-:root {
-    --navbar-bg-color: #2F3136;
-    --table-border: #383D3F;
-    --nav-bar-height: 40px;
-    --footer-height: 200px;
-}
-
 .root {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
-
 .root > .loading {
-    background: #000000A0;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    z-index: 1;
+  background: rgba(0, 0, 0, 0.6274509804);
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
 }
-
 .root > .loading > .loaderCircle {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin: auto;
-}
-
-/*Navbar*/
-.navbar > .hamburgerMenu {
-    height: var(--nav-bar-height);
-    padding: 5px;
-    box-sizing: border-box;
-    display: none;
-}
-
-.navbar > .hamburgerMenu > img {
-    height: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
 }
 
 .navbar {
-    background: var(--navbar-bg-color);
-    width: 100%;
-    height: var(--nav-bar-height);
-    position: absolute;
-    top: 0;
+  background: #2F3136;
+  width: 100%;
+  height: 40px;
+  position: absolute;
+  top: 0;
 }
-
+.navbar > .hamburgerMenu {
+  height: 40px;
+  padding: 5px;
+  box-sizing: border-box;
+  display: none;
+}
+.navbar > .hamburgerMenu > img {
+  height: 100%;
+}
 .navbar ul {
-    padding-inline-start: 0;
-    list-style-type: none;
-    /*vertical-align: top;*/
+  padding-inline-start: 0;
+  list-style-type: none;
+  margin: 0;
 }
-
-.navbar > ul {
-    margin: 0;
-}
-
-.navbar > .links > li {
-    line-height: var(--nav-bar-height);
-    cursor: pointer;
-    padding: 0 10px;
-    float: left;
-}
-
 .navbar .list {
-    height: var(--nav-bar-height);
-    line-height: var(--nav-bar-height);
-    overflow: hidden;
-    position: relative;
-    float: left;
-    transition: height 0.15s ease-in;
-    -webkit-transition: height 0.15s ease-in;
-    -moz-transition: height 0.15s ease-in;
-    -ms-transition: height 0.15s ease-in;
-    -o-transition: height 0.15s ease-in;
+  height: 40px;
+  line-height: 40px;
+  overflow: hidden;
+  position: relative;
+  float: left;
+  transition: height 0.15s ease-in;
+  -o-transition: height 0.15s ease-in;
+  -ms-transition: height 0.15s ease-in;
+  -moz-transition: height 0.15s ease-in;
+  -webkit-transition: height 0.15s ease-in;
 }
-
 .navbar .list > li {
-    background: var(--navbar-bg-color);
-    padding: 0 10px;
-    z-index: 1;
-    display: block;
-    position: relative;
+  background: #2F3136;
+  padding: 0 10px;
+  z-index: 1;
+  display: block;
+  position: relative;
 }
-
 .navbar .list.arrow > li::before {
-    background: url('./assets/down_triangle_icon.svg') 0 0 / 1em;
-    width: 1em;
-    height: 1em;
-    display: inline-block;
-    vertical-align: middle;
-    content: '';
+  background: url("./assets/down_triangle_icon.svg") 0 0/1em;
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: middle;
+  content: "";
 }
-
 .navbar .list > ul {
-    background: var(--navbar-bg-color);
-    min-width: 100%;
-    display: block;
-    position: absolute;
-    bottom: 0;
+  background: #2F3136;
+  min-width: 100%;
+  display: block;
+  position: absolute;
+  bottom: 0;
 }
-
 .navbar .list > ul > li {
-    padding: 0 10px;
+  padding: 0 10px;
 }
-
+.navbar > .links > li {
+  line-height: 40px;
+  cursor: pointer;
+  padding: 0 10px;
+  float: left;
+  margin: 0;
+}
 .navbar li:hover {
-    background-color: var(--button-hover-color);
+  background: #505050;
 }
-
-.navbar > .links > li:active, .navbar .list > ul > li:active, .navbar > .loginBtn:active {
-    background-color: var(--button-active-color);
+.navbar > .links > li:active,
+.navbar > .list > ul > li:active,
+.navbar > .loginBtn:active {
+  background: #404040;
 }
-
-.navbar .list:hover {
-    background: none;
-}
-
-/*Login button*/
 .navbar > .loginBtn {
-    float: right;
+  float: right;
 }
-
 .navbar > .loginBtn > li {
-    height: var(--nav-bar-height);
-    box-sizing: border-box;
+  height: 40px;
+  box-sizing: border-box;
 }
-
 .navbar > .loginBtn > li > img {
-    height: 80%;
-    vertical-align: middle;
+  height: 80%;
+  vertical-align: middle;
 }
-
 .navbar > .loginBtn > li > span {
-    vertical-align: top;
-    padding-left: 5px;
-    display: inline-block;
+  vertical-align: top;
+  padding-left: 5px;
+  display: inline-block;
 }
-
-@media only screen and (min-width: 700px) {
-}
-
 @media only screen and (max-width: 700px) {
-    .navbar > .hamburgerMenu {
-        display: inline-block;
-    }
-
-    .navbar > .links {
-        background: var(--navbar-bg-color);
-        max-width: 15em;
-        height: 100vh;
-        display: block;
-        transform: translateX(-100%);
-        -ms-transform: translateX(-100%);
-        -moz-transform: translateX(-100%);
-        -webkit-transform: translateX(-100%);
-        transition: transform 0.15s;
-        -webkit-transition: transform 0.15s;
-        -moz-transition: transform 0.15s;
-        -ms-transition: transform 0.15s;
-        -o-transition: transform 0.15s;
-    }
-
-    .navbar > .links.open {
-        transform: translateX(0);
-        -ms-transform: translateX(0);
-        -moz-transform: translateX(0);
-        -webkit-transform: translateX(0);
-    }
-
-    .navbar > .links > ul,
-    .navbar > .links > li {
-        float: none;
-    }
-}
-
-/*Login Window*/
-.loginWindow .loginField {
-    margin: 5px;
-}
-
-.loginWindow button.loginField {
-    float: right;
+  .navbar > .hamburgerMenu {
+    display: inline-block;
+  }
+  .navbar > .links {
+    background: #2F3136;
+    max-width: 15em;
+    height: 100vh;
+    display: block;
+    transform: translateX(-100%);
+    -o-transform: translateX(-100%);
+    -ms-transform: translateX(-100%);
+    -moz-transform: translateX(-100%);
+    -webkit-transform: translateX(-100%);
+    transition: transform 0.15s;
+    -o-transition: transform 0.15s;
+    -ms-transition: transform 0.15s;
+    -moz-transition: transform 0.15s;
+    -webkit-transition: transform 0.15s;
+  }
+  .navbar > .links.open {
+    transform: translateX(0);
+    -o-transform: translateX(0);
+    -ms-transform: translateX(0);
+    -moz-transform: translateX(0);
+    -webkit-transform: translateX(0);
+  }
+  .navbar > .links > ul,
+  .navbar > .links > li {
+    float: none;
+  }
 }
 
 .loginWindow {
-    position: absolute;
-    top: var(--nav-bar-height);
-    right: 0;
+  background: rgba(30, 30, 30, 0.8);
+  position: absolute;
+  top: 40px;
+  right: 0;
+}
+.loginWindow > .loginField {
+  display: block;
+  margin: 5px;
+}
+.loginWindow > button.loginField {
+  float: right;
+}
+@media only screen and (max-width: 700px) {
+  .loginWindow {
+    width: 100%;
+  }
 }
 
-/*Footer*/
 footer {
-    background: black;
-    width: 100%;
-    height: var(--footer-height);
-    position: absolute;
-    left: 0;
+  background: black;
+  width: 100%;
+  height: 200px;
+  position: absolute;
+  left: 0;
 }
 
-/*Router*/
 .router {
-    width: 100%;
-    top: var(--nav-bar-height);
-    bottom: 0;
-    position: absolute;
-    overflow-y: auto;
-    overflow-x: auto;
+  width: 100%;
+  height: 100%;
+  padding-top: 40px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: auto;
 }
 
 .router > div {
-    width: 100%;
-    min-height: 100%;
-    display: inline-block;
-    position: relative;
-    /*margin-bottom: var(--footer-height);*/
-    /*padding-bottom: var(--footer-height);*/
+  width: 100%;
+  min-height: 100%;
+  overflow-x: auto;
 }
 
 .expandable {
-    transition: height 0.2s;
-    -webkit-transition: height 0.2s;
-    -moz-transition: height 0.2s;
-    -ms-transition: height 0.2s;
-    -o-transition: height 0.2s;
-    overflow: hidden;
+  transition: height 0.2s;
+  -webkit-transition: height 0.2s;
+  -moz-transition: height 0.2s;
+  -ms-transition: height 0.2s;
+  -o-transition: height 0.2s;
+  overflow: hidden;
 }
 
-.red {
-    color: #dd3333;
-}
+/*# sourceMappingURL=index.css.map */

@@ -102,7 +102,7 @@ window.navMenu = new ClassList('links');
     const userLoginData = new Signal();
     const pageLoading = new Signal(false);
     const showLoginWindow = new Signal(false);
-    const hashRouter = HashRouter('schedule',
+    const hashRouter = HashRouter('search',
         {
             search: () => require('./res/pages/courseSearch')(userLoginData),
             schedule: () => require('./res/pages/courseSchedule')(userLoginData),

@@ -1,127 +1,104 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
-
-:root {
-    --font-size: 20px;
-    --font-color: #e8e6e3;
-
-    --button-bg-color: #5b5b5b;
-    --button-hover-color: #505050;
-    --button-active-color: #404040;
-
-    --scrollbar-bg-color: #555555;
-    --scrollbar-hover-color: #666666;
-}
-
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap");
 html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
+  margin: 0;
+  width: 100%;
+  height: 100%;
 }
 
 body {
-    position: absolute;
-    background: #181a1b;
-    color: var(--font-color);
-    font-family: 'JetBrains Mono', monospace;
-    -webkit-tap-highlight-color: transparent;
+  position: absolute;
+  background: #181a1b;
+  color: #e8e6e3;
+  font-family: "JetBrains Mono", monospace;
+  -webkit-tap-highlight-color: transparent;
 }
 
 ::placeholder {
-    color: darkgray;
+  color: darkgray;
 }
 
-/*Button*/
 button {
-    background-color: var(--button-bg-color);
-    color: var(--font-color);
-    border: none;
-    padding: 5px 10px;
-    text-align: center;
-    text-decoration: none;
-    display: block;
-    font-size: var(--font-size);
+  background-color: #5b5b5b;
+  color: #e8e6e3;
+  border: none;
+  padding: 5px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  font-size: 20px;
 }
-
 button:hover {
-    background-color: var(--button-hover-color);
+  background-color: #505050;
 }
-
 button:active {
-    background-color: var(--button-active-color);
+  background-color: #404040;
 }
 
-/*Input color*/
 textarea:focus, select:focus, input:focus, button:focus {
-    outline: none;
-    box-shadow: 0 0 3px 1px white;
+  outline: none;
+  box-shadow: 0 0 3px 1px white;
 }
 
 input {
-    background-color: var(--button-bg-color);
-    color: var(--font-color);
-    border: none;
-    padding: 5px;
-    box-sizing: border-box;
-    text-decoration: none;
-    font-size: var(--font-size);
+  background-color: #5b5b5b;
+  color: #e8e6e3;
+  border: none;
+  padding: 5px;
+  box-sizing: border-box;
+  text-decoration: none;
+  font-size: 20px;
 }
-
-/*Input auto fill color*/
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 100px var(--button-bg-color) inset !important;
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 100px #5b5b5b inset !important;
 }
-
 input:-webkit-autofill {
-    -webkit-text-fill-color: var(--font-color) !important;
-    caret-color: var(--font-color) !important;
+  -webkit-text-fill-color: #e8e6e3 !important;
+  caret-color: #e8e6e3 !important;
 }
 
-/*Paragraph Element*/
 p {
-    margin: 0;
-    white-space: pre-wrap;
+  margin: 0;
+  white-space: pre-wrap;
 }
 
-/*Scroll bar*/
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.0980392157);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--button-bg-color);
+  background: #5b5b5b;
 }
 
 ::-webkit-scrollbar-thumb:active {
-    background: var(--button-hover-color);
+  background: #505050;
 }
 
 ::-webkit-scrollbar-corner {
-    background: none;
-    width: 0;
-    height: 0;
-    border-left: 10px solid var(--button-bg-color);
-    border-top: 10px solid var(--button-bg-color);
-    border-bottom: 10px solid transparent;
-    border-right: 10px solid transparent;
+  background: none;
+  width: 0;
+  height: 0;
+  border-left: 10px solid #5b5b5b;
+  border-top: 10px solid #5b5b5b;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid transparent;
 }
 
 .noSelect {
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-    -khtml-user-select: none; /* Konqueror HTML */
-    -moz-user-select: none; /* Old versions of Firefox */
-    -ms-user-select: none; /* Internet Explorer/Edge */
-    user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .noDrag {
-    -webkit-user-drag: none;
+  -webkit-user-drag: none;
 }
+
+/*# sourceMappingURL=static.css.map */

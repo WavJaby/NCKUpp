@@ -21,6 +21,7 @@
 
 .messageBox > div {
     min-height: 120px;
+    max-width: 100%;
     width: 600px;
     bottom: 0;
     left: 0;

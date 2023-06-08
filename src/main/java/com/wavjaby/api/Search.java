@@ -154,8 +154,8 @@ public class Search implements EndpointModule {
         String instructor;      // 教師姓名
         String dayOfWeek;       // 星期 1 ~ 7
         String deptNo;          // 系所 A...
-        String grade;           // 年級 1 ~ 7
-        String cl;              // 節次 1 ~ 16 []
+        String grade;           // 年級 1 ~ 4
+        String cl;              // 節次 [1 ~ 16]
 
         boolean getAll;
 
@@ -228,8 +228,8 @@ public class Search implements EndpointModule {
                     instructor = query.get("instructor");   // 教師姓名
                     dayOfWeek = query.get("dayOfWeek");     // 星期 1 ~ 7
                     deptNo = query.get("dept");             // 系所 A...
-                    grade = query.get("grade");             // 年級 1 ~ 7
-                    cl = query.get("section");              // 節次 1 ~ 16 []
+                    grade = query.get("grade");             // 年級 1 ~ 4
+                    cl = query.get("section");              // 節次 [1 ~ 16]
                 }
             }
         }
@@ -918,7 +918,7 @@ public class Search implements EndpointModule {
                 if (searchQuery.courseName != null)
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
                 if (searchQuery.instructor != null)
-                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+                        postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
                 if (searchQuery.dayOfWeek != null) postData.append("&wk=").append(searchQuery.dayOfWeek);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
@@ -966,7 +966,7 @@ public class Search implements EndpointModule {
 
     private String getCourseNCKU(SaveQueryToken saveQueryToken) {
 //            logger.log(TAG + "Get search result");
-        Connection request = HttpConnection.connect(saveQueryToken.host + "/index.php?c=qry11215" + saveQueryToken.search)
+        Connection request = HttpConnection.connect(saveQueryToken.getUrl())
                 .header("Connection", "keep-alive")
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
