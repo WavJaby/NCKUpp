@@ -1,0 +1,133 @@
+@import 'variables';
+
+.selectMenu {
+    font-size: 18px;
+    position: relative;
+
+    .selectBtn {
+        background: $button-bg-color;
+        padding: 0 10px;
+        border-radius: 5px;
+        position: relative;
+
+        .selectItemName {
+            padding: 5px 0;
+            display: block;
+
+            &.empty {
+                color: gray;
+            }
+        }
+
+        &::after {
+            content: '';
+            background: url('./assets/down_arrow_icon.svg') no-repeat 0 0/1em;
+            width: 1em;
+            height: 1em;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 10px;
+            margin: auto;
+        }
+    }
+
+    .content {
+        background: #505050;
+        width: 100%;
+        margin-top: 5px;
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 1;
+        display: none;
+        position: absolute;
+        box-sizing: border-box;
+        box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.4);
+
+        &.open {
+            display: block;
+        }
+
+        > .searchBar {
+            position: relative;
+
+            // Search icon
+            &::before {
+                content: '';
+                background: url('./assets/search.svg') 0 0/1em no-repeat;
+                position: absolute;
+                width: 1em;
+                height: 1em;
+                top: 0;
+                bottom: 0;
+                left: 10px;
+                margin: auto;
+                pointer-events: none;
+            }
+
+            > input {
+                width: 100%;
+                background: none;
+                border-radius: 5px;
+                border: 1px solid #B3B3B3;
+                padding-left: 35px;
+            }
+        }
+
+        > .options {
+            max-height: 200px;
+            list-style-type: none;
+            margin: 5px 0 0 0;
+            padding: 0 5px 0 0;
+            overflow: auto;
+
+            .groupTitle {
+                width: 100%;
+                line-height: 1.5em;
+                display: block;
+                border-radius: 5px;
+                cursor: pointer;
+
+                &::before {
+                    content: '';
+                    background: url('./assets/down_triangle_icon.svg') no-repeat 0 0/1em;
+                    width: 1em;
+                    height: 1em;
+                    display: inline-block;
+                    vertical-align: middle;
+                    @include transform(rotate(-90deg));
+                    @include transition(transform 0.1s);
+                }
+
+                &.open::before {
+                    @include transform(rotate(0));
+                }
+            }
+
+            .group {
+                list-style-type: none;
+                padding: 0 0 0 10px;
+                display: none;
+
+                &.open {
+                    display: block;
+                }
+            }
+
+            .option {
+                line-height: 2em;
+                border-radius: 5px;
+                padding: 0 13px;
+                cursor: pointer;
+            }
+
+            .option.hide, .groupTitle.hide {
+                display: none;
+            }
+
+            .option:hover, .groupTitle:hover {
+                background: #676767;
+            }
+        }
+    }
+}

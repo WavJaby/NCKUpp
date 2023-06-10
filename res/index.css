@@ -171,11 +171,11 @@ footer {
 
 .router {
   width: 100%;
-  height: 100%;
-  padding-top: 40px;
-  box-sizing: border-box;
-  position: relative;
+  top: 40px;
+  bottom: 0;
+  position: absolute;
   overflow: auto;
+  margin: auto;
 }
 
 .router > div {

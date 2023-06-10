@@ -28,33 +28,33 @@
  * @property {string} ar - addRequest
  */
 /**
- * @typedef {Object} CourseData
+ * @typedef CourseData
  * @property {string} departmentName
  * @property {string} serialNumber
  * @property {string} attributeCode
  * @property {string} systemNumber
  * @property {string} courseName
- * @property {string} [courseNote]
- * @property {string} [courseLimit]
+ * @property {string|null} courseNote
+ * @property {string|null} courseLimit
  * @property {string} courseType
  * @property {int} courseGrade
  * @property {string} classInfo
  * @property {string} classGroup
- * @property {(UrSchoolInstructorSimple|string)[]} [instructors] - Only name or full data
- * @property {CourseDataTag[]} [tags]
+ * @property {(UrSchoolInstructorSimple|string)[]|null} instructors - Only name or full data
+ * @property {CourseDataTag[]|null} tags
  * @property {float} credits
  * @property {boolean} required
  * @property {int} selected
  * @property {int} available
- * @property {CourseDataTime[]} [time]
- * @property {string} [timeString]
+ * @property {CourseDataTime[]|null} time
+ * @property {string} timeString
  * @property {string} moodle
  * @property {string} outline
  * @property {string} preferenceEnter
  * @property {string} addCourse
  * @property {string} preRegister
  * @property {string} addRequest
- * @property {NckuHub} [nckuhub]
+ * @property {NckuHub|null} nckuhub
  */
 /**
  * @typedef {Object} CourseDataTag
@@ -182,14 +182,11 @@ const {
     thead,
     tbody,
     colgroup,
-    TextState,
-    ShowIf,
     col,
-    ul,
-    li,
     text,
     a
 } = require('../domHelper');
+const SelectMenu = require('../selectMenu');
 /*ExcludeEnd*/
 
 // [default, success, info, primary, warning, danger]
@@ -206,11 +203,8 @@ module.exports = function (loginState) {
     console.log('Course search Init');
     let styles = async_require('./courseSearch.css');
     const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
-    const loadingElement = div('loading', window.loadingElement.cloneNode(true));
 
     const searchResultSignal = new Signal({loading: false, courseResult: null, nckuhubResult: null});
-    const alldeptDataSignal = new Signal();
-    const instructorInfoLoadSignal = new Signal(false);
     const instructorInfoBubble = InstructorInfoBubble();
     const instructorDetailWindow = InstructorDetailWindow();
     const nckuhubDetailWindow = NckuhubDetailWindow();
@@ -228,31 +222,55 @@ module.exports = function (loginState) {
 
     async function onRender() {
         console.log('Course search Render');
+        window.pageLoading.set(true);
+        styles = await styles;
+        styles.add();
+        window.pageLoading.set(false);
+    }
+
+    function onPageOpen() {
+        console.log('Course search Open');
+        if (styles instanceof HTMLStyleElement)
+            styles.add();
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
-        (styles = await styles).add();
-        alldeptDataSignal.set((await fetchApi('/alldept')).data);
+        fetchApi('/alldept').then(i => {
+            deptNameSelectMenu.setOptions(i.data.deptGroup.map(i => [i.name, i.dept]));
+            loadLastSearch();
+        });
     }
 
-    function onLoad() {
-        const rawQuery = window.urlHashData.get('searchRawQuery');
-        if (rawQuery && rawQuery.length > 0) {
-            for (const rawQueryElement of rawQuery) {
-                for (const /**@type HTMLElement*/ node of courseSearchForm.getElementsByTagName('input')) {
-                    if (!(node instanceof HTMLInputElement)) continue;
-                    if (node.id === rawQueryElement[0])
-                        node.value = rawQueryElement[1];
-                }
-            }
-            search(rawQuery);
-        }
-    }
-
-    function onDestroy() {
-        console.log('Course search Destroy');
+    function onPageClose() {
+        console.log('Course search Close');
         styles.remove();
     }
 
+    function loadLastSearch() {
+        const rawQuery = window.urlHashData.get('searchRawQuery');
+        if (!rawQuery || rawQuery.length === 0)
+            return;
+
+        for (const rawQueryElement of rawQuery) {
+            for (const node of courseSearchForm.children) {
+                if (node instanceof HTMLInputElement) {
+                    if (node.id === rawQueryElement[0])
+                        node.value = rawQueryElement[1];
+                }
+                // Self define input
+                else if (node instanceof HTMLDivElement && node.id !== undefined && node.value !== undefined) {
+                    if (node.id === rawQueryElement[0])
+                        node.setValue(rawQueryElement[1]);
+                }
+            }
+        }
+        search(rawQuery, false);
+    }
+
+    /**
+     * @param {string[][]} [rawQuery] [key, value][]
+     * @param {boolean} [saveQuery] Will save query string if not provide or true
+     * @return {void}
+     */
     async function search(rawQuery, saveQuery) {
         if (searching) return;
         searching = true;
@@ -266,31 +284,34 @@ module.exports = function (loginState) {
 
         let queryData = rawQuery instanceof Event ? null : rawQuery;
         if (!queryData) {
-            // generate query string
+            // Generate query from form
             queryData = [];
-            for (let /**@type HTMLElement*/ node of courseSearchForm.getElementsByTagName('input')) {
-                if (!(node instanceof HTMLInputElement)) continue;
-                const value = node.value.trim();
-                if (value.length > 0)
-                    queryData.push([node.id, value]);
+            for (const node of courseSearchForm.children) {
+                if (node instanceof HTMLInputElement ||
+                    node instanceof HTMLDivElement && node.id !== undefined && node.value !== undefined) {
+                    const value = node.value.trim();
+                    if (value.length > 0)
+                        queryData.push([node.id, value]);
+                }
             }
         }
+        // To query string
         const queryString = queryData.map(i => i[0] + '=' + encodeURIComponent(i[1])).join('&');
-        // if (queryString === lastQueryString) {
-        //     searching = false;
-        //     return;
-        // }
-        lastQueryString = queryString;
-        if (saveQuery === undefined || saveQuery === true)
+
+        // Save query string and create history
+        if ((saveQuery === undefined || saveQuery === true) && lastQueryString !== queryString)
             window.urlHashData.set('searchRawQuery', queryData);
+
+        // Update queryString
+        lastQueryString = queryString;
 
         console.log('Search:', queryString);
         searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 
         // fetch data
-        const result = (await fetchApi('/search?' + queryString));
+        const result = (await fetchApi('/search?' + queryString, {timeout: 4000}));
 
-        if (!result.success) {
+        if (!result || !result.success || !result.data) {
             searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null});
             searching = false;
             return;
@@ -306,8 +327,7 @@ module.exports = function (loginState) {
             result.data = arr;
         }
         for (/**@type CourseDataRaw*/const data of result.data) {
-            /**@type CourseData*/
-            const courseData = {
+            const courseData = /**@type CourseData*/ {
                 departmentName: data.dn,
                 serialNumber: data.sn,
                 attributeCode: data.ca,
@@ -417,12 +437,12 @@ module.exports = function (loginState) {
             const chunk = [];
             for (let j = i; j < i + chunkSize && j < nckuHubDataArr.length; j++)
                 chunk.push(nckuHubDataArr[j].nckuHubID);
-            fetchApi('/nckuhub?id=' + chunk.join(',')).then(({data}) => {
+            fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
                 for (let j = 0; j < chunk.length; j++) {
                     const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubDataArr[i + j];
                     /**@type NckuHubRaw*/
-                    const nckuhub = data[j];
-                    courseData.nckuhub = {
+                    const nckuhub = response.data[j];
+                    courseData.nckuhub = /**@type NckuHub*/ {
                         noData: nckuhub.rate_count === 0 && nckuhub.comment.length === 0,
                         got: parseFloat(nckuhub.got),
                         sweet: parseFloat(nckuhub.sweet),
@@ -431,9 +451,9 @@ module.exports = function (loginState) {
                         comments: nckuhub.comment,
                         parsedRates: nckuhub.rates.reduce((a, v) => {
                             // nckuhub why
-                            if (!v.recommend && v.recommand) {
-                                v.recommend = v.recommand;
-                                delete v.recommand;
+                            if (!v.recommend && v['recommand']) {
+                                v.recommend = v['recommand'];
+                                delete v['recommand'];
                             }
                             a[v.post_id] = v;
                             return a;
@@ -450,24 +470,25 @@ module.exports = function (loginState) {
     }
 
     function openInstructorDetailWindow(info) {
-        instructorInfoLoadSignal.set(true);
+        window.pageLoading.set(true);
         fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
-            // TODO: handle error
             /**@type UrSchoolInstructor*/
             const instructor = response.data;
             instructor.info = info;
             instructorDetailWindow.set(instructor);
-            instructorInfoLoadSignal.set(false);
+            window.pageLoading.set(false);
         });
     }
 
     // Watched list
     let watchList = null;
 
+    /**
+     * @this {{courseData: CourseData}}
+     */
     function watchedCourseAddRemove() {
         if (!loginState.state || !watchList) return;
 
-        /**@type{CourseData}*/
         const courseData = this.courseData;
         let serialIndex, result;
         if ((serialIndex = watchList.indexOf(courseData.serialNumber)) === -1) {
@@ -503,6 +524,9 @@ module.exports = function (loginState) {
         })
     }
 
+    /**
+     * @this {{cosdata: string}}
+     */
     function sendCosData() {
         fetchApi(`/courseFuncBtn?cosdata=${this.cosdata}`).then(i => {
             if (i.success)
@@ -754,59 +778,20 @@ module.exports = function (loginState) {
         return false;
     }
 
-    // Select menu
-    let selectMenuInput, selectMenuItem, lastSelectMenuGroup;
-    let selectMenuClass = new ClassList();
-
-    // selectMenuInput.addEventListener('focusout', () => selectMenuClass.remove('opened'));
-
-    function selectMenuGroupOnclick() {
-        const col = this.nextElementSibling;
-        if (col.style.height) {
-            col.style.height = null;
-            this.classList.add('opened');
-        } else {
-            col.style.height = '0';
-            this.classList.remove('opened');
-        }
-
-        // Close last group
-        if (lastSelectMenuGroup) {
-            lastSelectMenuGroup.classList.remove('opened');
-            lastSelectMenuGroup.nextElementSibling.style.height = '0';
-        }
-        lastSelectMenuGroup = this;
-
-        // Move group to top
-        if (selectMenuItem)
-            selectMenuItem.scrollTop = this.offsetTop - this.offsetHeight;
-    }
-
-    function selectMenuItemOnclick() {
-        selectMenuInput.value = this.deptID;
-        selectMenuClass.remove('opened');
-    }
 
     function onkeyup(e) {
         if (e.key === 'Enter') search();
     }
 
+    // Select menu
+    const deptNameSelectMenu = new SelectMenu('dept', 'Dept Name');
+
     courseSearch = div('courseSearch',
-        {onRender, onDestroy, onLoad},
+        {onRender, onPageClose, onPageOpen},
         courseSearchForm = div('form',
             // input(null, 'Serial number', 'serial', {onkeyup}),
             input(null, 'Course name', 'courseName', {onkeyup}),
-            div('selectMenu',
-                selectMenuInput = input(null, 'Dept ID', 'dept', {onclick: () => selectMenuClass.toggle('opened'), onkeyup}),
-                State(alldeptDataSignal, /**@param{AllDeptData}data*/data => {
-                    if (!data) return div();
-                    return selectMenuItem = ul(selectMenuClass, data.deptGroup.map(data => [
-                        li('groupTitle', text(data.name), {onclick: selectMenuGroupOnclick}),
-                        ul('group', {style: 'height:0'},
-                            data.dept.map(dept => li(null, text(dept[1]), {onclick: selectMenuItemOnclick, deptID: dept[0]})))
-                    ]))
-                }),
-            ),
+            deptNameSelectMenu,
             input(null, 'Instructor', 'instructor', {onkeyup}),
             input(null, 'DayOfWeak', 'dayOfWeek', {onkeyup}),
             input(null, 'Grade', 'grade', {onkeyup}),
@@ -858,7 +843,6 @@ module.exports = function (loginState) {
         instructorInfoBubble,
         instructorDetailWindow,
         nckuhubDetailWindow,
-        ShowIf(instructorInfoLoadSignal, loadingElement),
     );
     return courseSearch;
 };

@@ -44,6 +44,7 @@ input {
   color: #e8e6e3;
   border: none;
   padding: 5px;
+  border-radius: 5px;
   box-sizing: border-box;
   text-decoration: none;
   font-size: 20px;
@@ -71,11 +72,11 @@ p {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #5b5b5b;
+  background: rgba(255, 255, 255, 0.5019607843);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: #505050;
+  background: rgba(255, 255, 255, 0.6274509804);
 }
 
 ::-webkit-scrollbar-corner {
@@ -86,6 +87,14 @@ p {
   border-top: 10px solid #5b5b5b;
   border-bottom: 10px solid transparent;
   border-right: 10px solid transparent;
+}
+
+::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  background: url("./assets/close_icon.svg") no-repeat 0 0/1em;
+  width: 1em;
+  height: 1em;
+  cursor: pointer;
 }
 
 .noSelect {

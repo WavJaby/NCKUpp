@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, table, Signal, text, span, ShowIf, input, checkbox, th, label} = require('../domHelper');
+const {div, button, table, Signal, text, span, ShowIf, checkbox, label} = require('../domHelper');
 /*ExcludeEnd*/
 
 // static
@@ -61,13 +61,23 @@ module.exports = function (loginState) {
 
     async function onRender() {
         console.log('Course schedule Render');
+        window.pageLoading.set(true);
+        styles = await styles;
+        styles.add();
+        window.pageLoading.set(false);
+    }
+
+    function onPageOpen() {
+        console.log('Course schedule Open');
+        if (styles instanceof HTMLStyleElement)
+            styles.add();
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
-        (styles = await styles).add();
         loginState.addListener(onLoginState);
     }
 
-    function onDestroy() {
+
+    function onPageClose() {
         console.log('Course schedule Destroy');
         styles.remove();
         loginState.removeListener(onLoginState);
@@ -84,7 +94,7 @@ module.exports = function (loginState) {
     }
 
     return div('courseSchedule',
-        {onRender, onDestroy},
+        {onRender, onPageOpen, onDestroy: onPageClose},
         div('scheduleTab'),
         div(null, label(null, 'Show classroom', showClassroomCheckBox), showClassroomCheckBox),
         scheduleTable.table,

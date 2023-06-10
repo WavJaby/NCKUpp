@@ -1,0 +1,126 @@
+.selectMenu {
+  font-size: 18px;
+  position: relative;
+}
+.selectMenu .selectBtn {
+  background: #5b5b5b;
+  padding: 0 10px;
+  border-radius: 5px;
+  position: relative;
+}
+.selectMenu .selectBtn .selectItemName {
+  padding: 5px 0;
+  display: block;
+}
+.selectMenu .selectBtn .selectItemName.empty {
+  color: gray;
+}
+.selectMenu .selectBtn::after {
+  content: "";
+  background: url("./assets/down_arrow_icon.svg") no-repeat 0 0/1em;
+  width: 1em;
+  height: 1em;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 10px;
+  margin: auto;
+}
+.selectMenu .content {
+  background: #505050;
+  width: 100%;
+  margin-top: 5px;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 1;
+  display: none;
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.4);
+}
+.selectMenu .content.open {
+  display: block;
+}
+.selectMenu .content > .searchBar {
+  position: relative;
+}
+.selectMenu .content > .searchBar::before {
+  content: "";
+  background: url("./assets/search.svg") 0 0/1em no-repeat;
+  position: absolute;
+  width: 1em;
+  height: 1em;
+  top: 0;
+  bottom: 0;
+  left: 10px;
+  margin: auto;
+  pointer-events: none;
+}
+.selectMenu .content > .searchBar > input {
+  width: 100%;
+  background: none;
+  border-radius: 5px;
+  border: 1px solid #B3B3B3;
+  padding-left: 35px;
+}
+.selectMenu .content > .options {
+  max-height: 200px;
+  list-style-type: none;
+  margin: 5px 0 0 0;
+  padding: 0 5px 0 0;
+  overflow: auto;
+}
+.selectMenu .content > .options .groupTitle {
+  width: 100%;
+  line-height: 1.5em;
+  display: block;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.selectMenu .content > .options .groupTitle::before {
+  content: "";
+  background: url("./assets/down_triangle_icon.svg") no-repeat 0 0/1em;
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: middle;
+  transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -webkit-transform: rotate(-90deg);
+  transition: transform 0.1s;
+  -o-transition: transform 0.1s;
+  -ms-transition: transform 0.1s;
+  -moz-transition: transform 0.1s;
+  -webkit-transition: transform 0.1s;
+}
+.selectMenu .content > .options .groupTitle.open::before {
+  transform: rotate(0);
+  -o-transform: rotate(0);
+  -ms-transform: rotate(0);
+  -moz-transform: rotate(0);
+  -webkit-transform: rotate(0);
+}
+.selectMenu .content > .options .group {
+  list-style-type: none;
+  padding: 0 0 0 10px;
+  display: none;
+}
+.selectMenu .content > .options .group.open {
+  display: block;
+}
+.selectMenu .content > .options .option {
+  line-height: 2em;
+  border-radius: 5px;
+  padding: 0 13px;
+  cursor: pointer;
+}
+.selectMenu .content > .options .option.hide, .selectMenu .content > .options .groupTitle.hide {
+  display: none;
+}
+.selectMenu .content > .options .option:hover, .selectMenu .content > .options .groupTitle:hover {
+  background: #676767;
+}
+
+/*# sourceMappingURL=selectMenu.css.map */

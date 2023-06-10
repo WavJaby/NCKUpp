@@ -194,11 +194,11 @@ footer {
 // Router
 .router {
     width: 100%;
-    height: 100%;
-    padding-top: $navbar-height;
-    box-sizing: border-box;
-    position: relative;
+    top: $navbar-height;
+    bottom: 0;
+    position: absolute;
     overflow: auto;
+    margin: auto;
 }
 
 .router > div {

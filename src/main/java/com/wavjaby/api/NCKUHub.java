@@ -6,7 +6,7 @@ import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
-import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -51,31 +51,27 @@ public class NCKUHub implements EndpointModule {
         getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
         try {
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
+            ApiResponse apiResponse = new ApiResponse();
 
             String queryString = req.getRequestURI().getRawQuery();
-            boolean success = true;
             if (queryString == null) {
                 // get courseID
                 if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
-                    success = updateNckuHubCourseID();
-                if (success)
-                    data.appendRaw("data", nckuHubCourseIdJson);
-                else
-                    data.append("err", TAG + "Update course id failed");
+                    if(!updateNckuHubCourseID())
+                        apiResponse.addError(TAG + "Update NCKU-HUB course id failed");
+                apiResponse.setData(nckuHubCourseIdJson);
             } else {
                 // get course info
-                success = getNckuHubCourseInfo(queryString, data);
+                getNckuHubCourseInfo(queryString, apiResponse);
             }
-            data.append("success", success);
 
             Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -91,11 +87,11 @@ public class NCKUHub implements EndpointModule {
         return httpHandler;
     }
 
-    private boolean getNckuHubCourseInfo(String queryString, JsonObjectStringBuilder outData) {
+    private boolean getNckuHubCourseInfo(String queryString, ApiResponse outData) {
         Map<String, String> query = parseUrlEncodedForm(queryString);
         String nckuID = query.get("id");
         if (nckuID == null) {
-            outData.append("err", TAG + "Query id not found");
+            outData.addError(TAG + "Query id not found");
             return false;
         }
         String[] nckuIDs = nckuID.split(",");
@@ -108,9 +104,9 @@ public class NCKUHub implements EndpointModule {
                         .execute();
                 courses.appendRaw(nckuhubCourse.body());
             }
-            outData.append("data", courses);
+            outData.setData(courses.toString());
         } catch (IOException e) {
-            outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            outData.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             return false;
         }
 

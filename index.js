@@ -1,4 +1,5 @@
 'use strict';
+// noinspection JSUnusedLocalSymbols
 const {
     Signal,
     ShowIf,
@@ -34,6 +35,9 @@ const {
     any,
     debug: doomDebug, footer
 } = require('./res/domHelper');
+// noinspection JSUnusedLocalSymbols
+const SelectMenu = require('./res/selectMenu');
+
 const apiEndPoint = location.hostname === 'localhost'
     ? 'https://localhost/api'
     : 'https://api.simon.chummydns.com/api';
@@ -48,32 +52,50 @@ window.messageAlert = MessageAlert();
  * @property {any} data
  */
 /**
- * @param endpoint {string}
- * @param [option] {RequestInit}
+ * @param {string} endpoint
+ * @param {RequestInit} [option]
  * @return Promise<ApiResponse>
  */
 window.fetchApi = function (endpoint, option) {
     if (option) option.credentials = 'include';
     else option = {credentials: 'include'};
+    let abortTimeout;
+    if (window.AbortController && option.timeout) {
+        const controller = new AbortController();
+        option.signal = controller.signal;
+        abortTimeout = setTimeout(() => controller.abort(), option.timeout);
+    }
     return fetch(apiEndPoint + endpoint, option)
-        .catch(i => messageAlert.addError(
-            'Api error',
-            i instanceof Error ? i.stack || i || 'Unknown error!' : i, 10000)
-        )
         .then(i => i.json())
+        // Handle self defined error
         .then(i => {
-                if (!i.success)
-                    messageAlert.addError(
-                        'Api request error',
-                        i.err.join('\n'), 10000);
-                return i;
+            if (abortTimeout)
+                clearTimeout(abortTimeout);
+            if (!i.success)
+                messageAlert.addError(
+                    'Api response error',
+                    i.err.join('\n'), 1000);
+            return i;
+        })
+        .catch(e => {
+            // Timeout error
+            if (e.name === 'AbortError') {
+                messageAlert.addError(
+                    'Request timeout',
+                    'Try again later', 3000);
             }
-        );
+            // Other error
+            else {
+                messageAlert.addError(
+                    'Api error',
+                    e instanceof Error ? e.stack || e || 'Unknown error!' : e, 1000);
+            }
+        });
 };
 
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
-
+window.pageLoading = new Signal(false);
 /**
  * @typedef {Object} LoginData
  * @property {boolean} login
@@ -100,7 +122,6 @@ window.navMenu = new ClassList('links');
 
     // main code
     const userLoginData = new Signal();
-    const pageLoading = new Signal(false);
     const showLoginWindow = new Signal(false);
     const hashRouter = HashRouter('search',
         {
@@ -144,12 +165,15 @@ window.navMenu = new ClassList('links');
                 ),
             )
         ),
-        ShowIf(showLoginWindow, LoginWindow(onLoginStateChange, pageLoading)),
-        ShowIf(pageLoading, div('loading', window.loadingElement.cloneNode(true))),
+        ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
+        ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
         messageAlert,
         debugWindow,
     );
-    window.onload = () => document.body.append(root);
+    window.onload = () => {
+        document.body.append(root)
+        hashRouter.init();
+    };
 
     // functions
     function onLoginStateChange(response) {
@@ -160,7 +184,7 @@ window.navMenu = new ClassList('links');
             showLoginWindow.set(false);
         } else {
             if (response.msg)
-                messageAlert.addError('Login error', response.msg, 10000);
+                messageAlert.addError('Login error', response.msg, 5000);
             userLoginData.set(null);
         }
     }
@@ -259,7 +283,7 @@ function MessageAlert() {
     return messageBoxRoot;
 }
 
-function LoginWindow(onLoginStateChange, pageLoading) {
+function LoginWindow(onLoginStateChange) {
     const username = input('loginField', 'Account', null, {onkeyup, type: 'text'});
     const password = input('loginField', 'Password', null, {onkeyup, type: 'password'});
     let loading = false;
@@ -271,14 +295,14 @@ function LoginWindow(onLoginStateChange, pageLoading) {
     function login() {
         if (!loading) {
             loading = true;
-            pageLoading.set(true);
+            window.pageLoading.set(true);
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
             fetchApi('/login', {
                 method: 'POST',
                 body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
             }).then(i => {
                 loading = false;
-                pageLoading.set(false);
+                window.pageLoading.set(false);
                 onLoginStateChange(i);
             });
         }

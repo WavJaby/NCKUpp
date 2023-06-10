@@ -7,6 +7,13 @@ $button-active-color: #404040;
 
 $scrollbar-bg-color: #00000019;
 
+$icon-info: url('./res/assets/info_icon.svg');
+$icon-warn: url('./res/assets/warn_icon.svg');
+$icon-down-triangle: url('./res/assets/down_triangle_icon.svg');
+$icon-down-arrow: url('./res/assets/down_arrow_icon.svg');
+$icon-close: url('./res/assets/close_icon.svg');
+$icon-search: url('./res/assets/search.svg');
+
 @mixin transform($transform) {
     transform: $transform;
     -o-transform: $transform;

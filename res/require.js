@@ -125,6 +125,7 @@ function require(url) {
         }
         return style;
     } else if (contentType.startsWith('application/javascript')) {
+        // noinspection JSUnusedLocalSymbols
         return eval('(function(){var module={};' + parseScript(result.body, url, pathEnd) + 'return module.exports;})')();
     } else
         console.error(contentType);
@@ -174,9 +175,9 @@ function async_require(url) {
             });
         } else if (contentType.startsWith('application/javascript')) {
             return i.text().then(function (i) {
-                    return eval('(function(){var module={};' + parseScript(i, url, pathEnd) + 'return module.exports;})')();
-                }
-            );
+                // noinspection JSUnusedLocalSymbols
+                return eval('(function(){var module={};' + parseScript(i, url, pathEnd) + 'return module.exports;})')();
+            });
         } else
             console.error(contentType);
     });
@@ -211,14 +212,12 @@ function parseScript(script, url, pathEnd) {
         }
 
         // const, let
-        if (ieVersion < 11)
-            script = script.replace(/const/g, 'var').replace(/let/g, 'var');
+        script = script.replace(/const/g, 'var').replace(/let/g, 'var');
 
         // function ...
         var funcRegx = /\.\.\.(\w+)\) ?\{/g;
         var result;
         while ((result = funcRegx.exec(script)) !== null) {
-            // This is necessary to avoid infinite loops with zero-width matches
             if (result.index === funcRegx.lastIndex) {
                 funcRegx.lastIndex++;
             }
@@ -228,9 +227,9 @@ function parseScript(script, url, pathEnd) {
             script = script.substring(0, result.index) + parameters + script.substring(result.index + result[0].length);
         }
 
-        // object
+        // object auto key
         end = -1;
-        while ((start = script.indexOf('= {', end)) !== -1) {
+        while ((start = script.indexOf('= {', end + 1)) !== -1) {
             var objs = [];
             var valStart = -1;
             var isWord;
@@ -272,6 +271,22 @@ function parseScript(script, url, pathEnd) {
             newScript = script.substring(0, start) + '={' + objs.join(',') + '}' + script.substring(end);
             end -= newScript.length - script.length;
             script = newScript;
+        }
+
+        var objRegx = /\{(([\w:]+[, ]*)+)}/g;
+        var result;
+        while ((result = objRegx.exec(script)) !== null) {
+            if (result.index === funcRegx.lastIndex) {
+                funcRegx.lastIndex++;
+            }
+            var args = result[1].split(/, ?/g);
+            for (let i = 0; i < args.length; i++) {
+                if (args[i].indexOf(':') === -1)
+                    args[i] = args[i] + ':' + args[i];
+            }
+
+            // console.log(args.join(','));
+            script = script.substring(0, result.index + 1) + args.join(',') + script.substring(result.index + result[1].length + 1);
         }
 
 
@@ -341,6 +356,12 @@ function parseScript(script, url, pathEnd) {
             if (start === 0)
                 break;
         }
+
+        // comma at end of function argument
+        script = script.replace(/,[ \r\n]*\)/g, ')');
+
+        // document.body.innerText = script;
+
         return script;
     }
 }

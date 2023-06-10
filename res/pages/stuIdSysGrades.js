@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, table, Signal, text, span, ShowIf, input, checkbox, th, State, svg, img} = require('../domHelper');
+const {div, button, Signal, span, State, img} = require('../domHelper');
 /*ExcludeEnd*/
 
 module.exports = function (loginState) {
@@ -16,15 +16,25 @@ module.exports = function (loginState) {
     onLoginState(loginState.state);
 
     async function onRender() {
-        console.log('StuIdSys Grades Render');
+        console.log('StuIdSys grades Render');
+        window.pageLoading.set(true);
+        styles = await styles;
+        styles.add();
+        window.pageLoading.set(false);
+    }
+
+    function onPageOpen() {
+        console.log('StuIdSys grades Open');
+        if (styles instanceof HTMLStyleElement)
+            styles.add();
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
         loginState.addListener(onLoginState);
-        (styles = await styles).add();
     }
 
-    function onDestroy() {
-        console.log('StuIdSys Grades Destroy');
+
+    function onPageClose() {
+        console.log('StuIdSys grades Close');
         styles.remove();
         loginState.removeListener(onLoginState);
     }
@@ -52,7 +62,7 @@ module.exports = function (loginState) {
     }
 
     return div('stuIdSysGrades',
-        {onRender, onDestroy},
+        {onRender, onPageOpen, onPageClose},
         State(normalDestImg, i => !i ? div() : img('data:image/svg+xml;base64,' + btoa(i[0]))),
 
         State(semestersInfo, i => !i ? div() : div('semestersInfo', i.map(j =>

@@ -15,6 +15,7 @@
         var SystemStartTime = (window.ieVersion !== null && window.ieVersion < 10 ? Date.now() : performance.now());
         if (window.ieVersion === null)
             try {
+                // noinspection JSUnusedLocalSymbols
                 eval('const __ignore=1;');
             } catch (e) {
                 window.ieVersion = 10;
@@ -29,11 +30,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <script src="./res/require.js"></script>
-    <script src="./index.js"></script>
-    <link href="./res/loading.css" rel="stylesheet">
-    <link href="./res/index.css" rel="stylesheet">
-    <link href="./res/messageBox.css" rel="stylesheet">
+    <script async src="./index.js"></script>
     <link href="./res/static.css" rel="stylesheet">
+    <link href="./res/index.css" rel="stylesheet">
+    <link href="./res/selectMenu.css" rel="stylesheet">
+    <link href="./res/loading.css" rel="stylesheet">
+    <link href="./res/messageBox.css" rel="stylesheet">
 </head>
 <body>
 <noscript><h1>請啟用JavaScript來使用NCKU++.<br>Please enable JavaScript to use NCKU++</h1></noscript>

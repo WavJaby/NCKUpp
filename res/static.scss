@@ -50,6 +50,7 @@ input {
     color: $font-color;
     border: none;
     padding: 5px;
+    border-radius: 5px;
     box-sizing: border-box;
     text-decoration: none;
     font-size: $font-size;
@@ -61,6 +62,7 @@ input {
     &:-webkit-autofill:active {
         -webkit-box-shadow: 0 0 0 100px $button-bg-color inset !important;
     }
+
     &:-webkit-autofill {
         -webkit-text-fill-color: $font-color !important;
         caret-color: $font-color !important;
@@ -84,11 +86,11 @@ p {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: $button-bg-color;
+    background: #FFFFFF80;
 }
 
 ::-webkit-scrollbar-thumb:active {
-    background: $button-hover-color;
+    background: #FFFFFFA0;
 }
 
 ::-webkit-scrollbar-corner {
@@ -99,6 +101,14 @@ p {
     border-top: 10px solid $button-bg-color;
     border-bottom: 10px solid transparent;
     border-right: 10px solid transparent;
+}
+
+::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    background: url('./assets/close_icon.svg') no-repeat 0 0/1em;
+    width: 1em;
+    height: 1em;
+    cursor: pointer;
 }
 
 .noSelect {

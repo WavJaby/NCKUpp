@@ -20,7 +20,7 @@ function addOption(element, options) {
 }
 
 /**
- * @param {string | boolean | number | object} [initState] Init data
+ * @param {string | boolean | number | object} [initState] Init state data
  * */
 function Signal(initState) {
     const thisListener = [];
@@ -54,13 +54,18 @@ function Signal(initState) {
 
 /**
  * @param {Signal} signal
- * @param {function(state: any)} renderState
+ * @param {function(state: any): Element} [renderState]
  * */
 function State(signal, renderState) {
     if (signal === null || signal === undefined) throw new TypeError('State signal not given');
     return new StateChanger(signal, renderState);
 }
 
+/**
+ * @constructor
+ * @param {Signal} signal
+ * @param {function(state: any): Element} [renderState]
+ * */
 function StateChanger(signal, renderState) {
     let lastElement;
     let thisParent;
@@ -80,13 +85,18 @@ function StateChanger(signal, renderState) {
 
 /**
  * @param {Signal} signal
- * @param {function(state: any)} [toString]
+ * @param {function(state: any): string} [toString]
  * */
 function TextState(signal, toString) {
     if (signal === null || signal === undefined) throw new TypeError('State signal not given');
     return new TextStateChanger(signal, toString);
 }
 
+/**
+ * @constructor
+ * @param {Signal} signal
+ * @param {function(state: any): string} [toString]
+ * */
 function TextStateChanger(signal, toString) {
     let element = null;
     signal.addListener(updateText);
@@ -101,6 +111,10 @@ function TextStateChanger(signal, toString) {
     }
 }
 
+/**
+ * @param {string | Signal | TextStateChanger} text
+ * @param element
+ */
 function parseTextInput(text, element) {
     if (text instanceof Signal)
         element.textContent = new TextStateChanger(text).init(element);
@@ -192,7 +206,10 @@ window.urlHashData = {
     },
     set: function (key, value) {
         this.data[key] = value;
-        window.location.hash = btoa(encodeURIComponent(JSON.stringify(this.data)));
+
+        const newUrl = new URL(window.location);
+        newUrl.hash = btoa(encodeURIComponent(JSON.stringify(this.data)));
+        history.pushState({}, document.title, newUrl);
     },
     contains: function (key) {
         return this.data[key] !== undefined;
@@ -208,91 +225,110 @@ window.urlHashData.update();
 function HashRouter(defaultPage, routs, footer) {
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
+    const loadPageCache = {};
     let lastPage, lastPageId = null;
 
     window.addEventListener('popstate', function () {
         const state = window.urlHashData.update();
         window.urlHashData.data = state;
-        if (lastPageId === state.page) {
-
-        } else
-            routerRoot.openPage(state.page);
+        routerRoot.openPage(state.page);
     });
 
     routerRoot.openPage = function (pageId) {
         // if same page
-        if (lastPageId === pageId) return;
+        if (lastPageId === pageId) {
+            // Get page
+            const page = getPage(pageId);
+            if (page.onPageOpen) page.onPageOpen();
+            return;
+        }
         lastPageId = pageId;
-
         window.urlHashData.set('page', pageId);
-
 
         // Get page
         const page = getPage(pageId);
 
         // Switch page element
         if (lastPage) {
-            if (lastPage.onDestroy) lastPage.onDestroy();
+            if (lastPage.onPageClose) lastPage.onPageClose();
             routerRoot.replaceChild(page, lastPage);
-            if (page.onRender) page.onRender();
         }
         // append page element on first open
         else {
-            if (footer) routerRoot.insertBefore(page, footer);
-            else routerRoot.appendChild(page);
-            if (page.onRender) page.onRender();
+            routerRoot.appendChild(page);
+            if (footer)
+                routerRoot.appendChild(footer);
         }
+        // Render page if not render yet
+        if (!page.render) {
+            page.render = true;
+            page.onRender();
+        }
+        if (page.onPageOpen) page.onPageOpen();
         lastPage = page;
     }
 
     function getPage(pageId) {
+        const loadedPage = loadPageCache[pageId];
+        if (loadedPage)
+            return loadedPage;
+
+        // Load page
         const page = routs[pageId];
         if (!page) return null;
 
         // lazy
         if (page instanceof Function)
-            return routs[pageId] = page();
-        return page;
+            return loadPageCache[pageId] = page();
+        return loadPageCache[pageId] = page;
     }
 
     routerRoot.getRoutesName = function () {
         return Object.keys(routs);
     };
 
-    // append footer
-    if (footer) {
-        // routerRoot.addEventListener('scroll', function () {
-        //     const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
-        //     console.log(position)
-        //
-        //     if (position > 0) {
-        //         // footer.style.marginTop = (lastState.offsetHeight + footer.offsetHeight) + 'px';
-        //         lastState.style.bottom = footer.offsetHeight + 'px';
-        //         // lastState.style.position = 'absolute';
-        //         // lastState.style.bottom = -position + 'px';
-        //     }else {
-        //         // footer.style.marginTop = null;
-        //         lastState.style.bottom = null;
-        //         // lastState.style.position = null;
-        //         // lastState.style.bottom = null;
-        //     }
-        // });
-        routerRoot.appendChild(footer);
-    }
     // open default page
-    routerRoot.openPage(window.urlHashData.get('page') || defaultPage);
+    routerRoot.init = function () {
+        routerRoot.openPage(window.urlHashData.get('page') || defaultPage);
+    }
+
+    // // append footer
+    // if (footer) {
+    //     routerRoot.addEventListener('scroll', function () {
+    //         const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
+    //         console.log(position)
+    //
+    //         if (position > 0) {
+    //             // footer.style.marginTop = (lastState.offsetHeight + footer.offsetHeight) + 'px';
+    //             lastState.style.bottom = footer.offsetHeight + 'px';
+    //             // lastState.style.position = 'absolute';
+    //             // lastState.style.bottom = -position + 'px';
+    //         }else {
+    //             // footer.style.marginTop = null;
+    //             lastState.style.bottom = null;
+    //             // lastState.style.position = null;
+    //             // lastState.style.bottom = null;
+    //         }
+    //     });
+    //     routerRoot.appendChild(footer);
+    // }
     return routerRoot;
 }
 
 /**
  * @param {Signal} signal
- * @param {HTMLElement | function} element
+ * @param {HTMLElement} element
  * */
 function ShowIf(signal, element) {
     if (signal === null || signal === undefined) throw new TypeError('State signal not given');
     return new ShowIfStateChanger(signal, element);
 }
 
+/**
+ * @constructor
+ * @param {Signal} signal
+ * @param {HTMLElement} element
+ * */
 function ShowIfStateChanger(signal, element) {
     const emptyDiv = document.createElement('div');
     let showState = signal.state;
@@ -301,8 +337,6 @@ function ShowIfStateChanger(signal, element) {
         if (showState !== show) {
             showState = show;
             if (show) {
-                if (element instanceof Function)
-                    element = element();
                 parent.replaceChild(element, emptyDiv);
                 if (element.onRender)
                     element.onRender();
@@ -316,8 +350,6 @@ function ShowIfStateChanger(signal, element) {
     this.init = function (parentElement) {
         parent = parentElement;
         if (showState) {
-            if (element instanceof Function)
-                element = element();
             if (element.onRender)
                 element.onRender();
         }
@@ -415,7 +447,7 @@ module.exports = {
 
     /**
      * @param {string | ClassList} [classN] Class Name
-     * @param {string | Signal | TextState | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} text
      * @param {HTMLInputElement} inputElement
      * @param [options] Options for element
      * @return {HTMLLabelElement}
@@ -435,7 +467,7 @@ module.exports = {
 
     /**
      * @param {string | ClassList} [classN] Class Name
-     * @param {string | Signal | TextState | TextStateChanger} [text]
+     * @param {string | Signal | TextStateChanger} [text]
      * @param {function(MouseEvent)} [onClick]
      * @param [options] Options for element
      * @return {HTMLButtonElement}
@@ -547,7 +579,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextState | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} text
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLParagraphElement}
@@ -561,7 +593,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextState | TextStateChanger} [text]
+     * @param {string | Signal | TextStateChanger} [text]
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLSpanElement}
@@ -575,7 +607,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextState | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} text
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLHeadingElement}
@@ -589,7 +621,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextState | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} text
      * @param {string} [href]
      * @param {string | ClassList} [classN] Class Name
      * @param {function(MouseEvent)} [onClick]
@@ -607,7 +639,7 @@ module.exports = {
     },
 
     /**
-     * @param {String} text
+     * @param {any} text
      * @return {Text}
      */
     text(text) {
