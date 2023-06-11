@@ -21,7 +21,7 @@
 
         &::after {
             content: '';
-            background: url('./assets/down_arrow_icon.svg') no-repeat 0 0/1em;
+            background: $icon-down-arrow no-repeat 0 0/1em;
             width: 1em;
             height: 1em;
             position: absolute;
@@ -54,7 +54,7 @@
             // Search icon
             &::before {
                 content: '';
-                background: url('./assets/search.svg') 0 0/1em no-repeat;
+                background: $icon-search no-repeat 0 0/1em;
                 position: absolute;
                 width: 1em;
                 height: 1em;
@@ -90,7 +90,7 @@
 
                 &::before {
                     content: '';
-                    background: url('./assets/down_triangle_icon.svg') no-repeat 0 0/1em;
+                    background: $icon-down-triangle no-repeat 0 0/1em;
                     width: 1em;
                     height: 1em;
                     display: inline-block;

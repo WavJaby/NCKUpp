@@ -172,7 +172,6 @@ const {
     Signal,
     State,
     ClassList,
-    br,
     table,
     tr,
     th,
@@ -184,7 +183,8 @@ const {
     colgroup,
     col,
     text,
-    a
+    a,
+    linkStylesheet
 } = require('../domHelper');
 const SelectMenu = require('../selectMenu');
 /*ExcludeEnd*/
@@ -201,7 +201,7 @@ const courseDataTagColor = [
 
 module.exports = function (loginState) {
     console.log('Course search Init');
-    let styles = async_require('./courseSearch.css');
+    const styles = linkStylesheet('./res/pages/courseSearch.css');
     const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
 
     const searchResultSignal = new Signal({loading: false, courseResult: null, nckuhubResult: null});
@@ -222,27 +222,24 @@ module.exports = function (loginState) {
 
     async function onRender() {
         console.log('Course search Render');
-        window.pageLoading.set(true);
-        styles = await styles;
-        styles.add();
-        window.pageLoading.set(false);
-    }
-
-    function onPageOpen() {
-        console.log('Course search Open');
-        if (styles instanceof HTMLStyleElement)
-            styles.add();
-        // close navLinks when using mobile devices
-        window.navMenu.remove('open');
+        styles.mount();
         fetchApi('/alldept').then(i => {
             deptNameSelectMenu.setOptions(i.data.deptGroup.map(i => [i.name, i.dept]));
             loadLastSearch();
         });
     }
 
+    function onPageOpen() {
+        console.log('Course search Open');
+        // close navLinks when using mobile devices
+        window.navMenu.remove('open');
+        styles.enable();
+        loadLastSearch();
+    }
+
     function onPageClose() {
         console.log('Course search Close');
-        styles.remove();
+        styles.disable();
     }
 
     function loadLastSearch() {
@@ -309,7 +306,7 @@ module.exports = function (loginState) {
         searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 
         // fetch data
-        const result = (await fetchApi('/search?' + queryString, {timeout: 4000}));
+        const result = (await fetchApi('/search?' + queryString, {timeout: 5000}));
 
         if (!result || !result.success || !result.data) {
             searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null});
@@ -431,7 +428,7 @@ module.exports = function (loginState) {
         }
 
         // Get nckuhub data
-        const chunkSize = 20;
+        const chunkSize = 10;
         const nckuHubDataArr = Object.values(nckuhubResult);
         for (let i = 0; i < nckuHubDataArr.length; i += chunkSize) {
             const chunk = [];
@@ -541,6 +538,7 @@ module.exports = function (loginState) {
 
     function renderSearchResult(state) {
         if (state.loading) {
+            resetSortArrow();
             courseRenderResult.length = 0;
             return window.loadingElement.cloneNode(true);
         }
@@ -562,10 +560,12 @@ module.exports = function (loginState) {
                 const courseDetail = td(null, null, {colSpan: 12},
                     expandableElement = div('expandable', expandableHeightReference = div('info',
                         div('splitLine'),
-                        // Tags
-                        data.tags === null ? null : data.tags.map(i => i.link
-                            ? a(i.name, i.link, 'tags', null, {style: 'background-color:' + i.color, target: '_blank'})
-                            : div('tags', text(i.name), {style: 'background-color:' + i.color})
+                        // Course tags
+                        data.tags === null ? null : div('tags',
+                            data.tags.map(i => i.link
+                                ? a(i.name, i.link, null, null, {style: 'background-color:' + i.color, target: '_blank'})
+                                : div(null, text(i.name), {style: 'background-color:' + i.color})
+                            )
                         ),
 
                         // Note, limit
@@ -674,6 +674,13 @@ module.exports = function (loginState) {
     sortArrowClass.init(sortArrow);
     let sortKey = null;
     let sortLastIndex = null;
+
+    function resetSortArrow() {
+        sortKey = null;
+        if (sortArrow.parentElement)
+            sortArrow.parentElement.removeChild(sortArrow);
+        sortArrowClass.remove('reverse');
+    }
 
     function sortResultItem(key, element, method) {
         /**@type{[CourseData, HTMLElement][]}*/
@@ -966,11 +973,7 @@ function NckuhubDetailWindow() {
                     p(comment.comment, 'comment'),
                 )),
             ),
-            br(),
-            br(),
-            br(),
-            br(),
-            span(JSON.stringify(nckuhub, null, 2)),
+            // span(JSON.stringify(nckuhub, null, 2)),
         );
     });
 }

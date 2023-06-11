@@ -1,37 +1,17 @@
 @import '../variables';
 
+$search-result-header-bg-color: #1D2329;
+
 :root {
     --fade-time: 0.2s;
     --popupWindow-bg-color: rgba(0, 0, 0);
     --comment-bg-color: gray;
     --ratebox-bg-color: gray;
-    --course-filter-bg-color: dimgray;
-    --course-result-header-bg-color: dimgray;
     --course-result-item-spacing: 10px;
     --course-info-title-font-size: 20px;
 }
 
 .courseSearch {
-    // Search loading
-    > .loading {
-        background: rgba(0, 0, 0, 0.6);
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-        position: fixed;
-        z-index: 999;
-    }
-
-    > .loading > .loaderCircle {
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        margin: auto;
-        position: absolute;
-    }
-
     // Search form
     > .form {
         padding: 5px;
@@ -44,101 +24,12 @@
         }
 
         > button {
+            border-radius: 20px;
             margin-bottom: 5px;
         }
-
-        > .selectMenu > input {
-            width: 100%;
-        }
-
-        > .selectMenu > ul {
-            background: #2F3136;
-            margin: 0;
-            padding: 0;
-            max-height: 0;
-            overflow: auto;
-        }
-
-        > .selectMenu > ul.opened {
-            max-height: 300px;
-            position: relative;
-        }
-
-        > .selectMenu > ul > .groupTitle.opened::before {
-            @include transform(rotate(0));
-        }
-
-        > .selectMenu > ul > .groupTitle::before {
-            background: $icon-down-triangle no-repeat 0 0 / 20px;
-            width: 20px;
-            height: 20px;
-            vertical-align: -2px;
-            display: inline-block;
-            content: '';
-            @include transform(rotate(-90deg));
-        }
-
-        > .selectMenu > ul > .groupTitle {
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        > .selectMenu > ul li {
-            line-height: 1.5em;
-            display: block;
-            cursor: pointer;
-        }
-
-        > .selectMenu > ul li:hover {
-            background: $button-hover-color;
-        }
-
-
-        > .selectMenu > ul > .group {
-            padding-left: 1em;
-            overflow: hidden;
-        }
     }
 
-    // Course search result filter
-    > .result > thead .filterSection {
-        height: 4em;
-        text-align: left;
-    }
-
-    > .result > thead .filterSection > div {
-        position: absolute;
-        width: 100%;
-        z-index: 1;
-    }
-
-    > .result > thead .filterSection .options {
-        background: var(--course-result-header-bg-color);
-        overflow: hidden;
-    }
-
-    > .result > thead .filterSection .options > img {
-        float: left;
-    }
-
-    > .result > thead .filterSection .options > .filter {
-        height: 2em;
-        display: block;
-        overflow: hidden;
-    }
-
-    > .result > thead .filterSection .options > .filter > input {
-        width: 100%;
-        background: none;
-        box-shadow: none;
-    }
-
-    > .result > thead .filterSection .options > .resultCount {
-        height: 2em;
-        padding-left: 5px;
-    }
-
-    // Course search result
+    // Search result table
     > .result {
         width: 100%;
         border-spacing: 0;
@@ -146,222 +37,260 @@
         padding: 0 20px;
         white-space: nowrap;
         margin: auto;
-    }
 
-    @media only screen and (max-width: 700px) {
-        > .result {
+        @media only screen and (max-width: 700px) {
             padding: 0;
         }
-    }
 
-    // Course search result
-    //  Header
-    > .result > thead {
-        background: var(--course-result-header-bg-color);
-        position: sticky;
-        top: 0;
-    }
+        > .loaderCircle {
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
 
-    > .result > thead > tr > th > .sortArrow {
-        position: absolute;
-        bottom: 1em;
-        left: 0;
-        right: 0;
-        margin: 0 auto;
-        height: 0.8em;
-        pointer-events: none;
-        @include transition(0.1s transform);
-    }
+        .expandDownArrow > img {
+            width: 1em;
+            margin: 0 0.2em;
+            vertical-align: middle;
+            @include transform(rotate(-90deg));
+            @include transition(0.2s transform);
+        }
 
-    > .result > thead > tr > th > .sortArrow.reverse {
-        @include transform(rotate(180deg));
-    }
+        .expandDownArrow.expand > img {
+            @include transform(rotate(0));
+        }
 
-    > .result > thead > tr > th {
-        line-height: 1.4em;
-        vertical-align: bottom;
-    }
+        .nckuhub {
+            width: 4em;
+            text-align: center;
+            cursor: pointer;
 
-    > .result > thead > tr > th:not(:first-child):not(:last-child) {
-        cursor: pointer;
-        position: relative;
-        padding: 0 1px;
-    }
+            &:hover {
+                background: #21262d;
+            }
 
-    > .result > thead > tr > th:not(:first-child) {
-        border-left: lightgrey solid 1px;
-    }
+            > span {
+                width: 4em;
+                display: inline-block;
+                padding-left: 2px;
+                padding-right: 1px;
+            }
+        }
 
-    > .result > thead > tr > th:not(:first-child):not(:last-child):hover {
-        background: $button-hover-color;
-    }
+        // Header
+        > thead {
+            background: $search-result-header-bg-color;
+            position: sticky;
+            top: 0;
 
-    > .result > thead > tr > th:first-child {
-        width: 0;
-        border-bottom-left-radius: 10px;
-    }
+            .expandDownArrow {
+                height: 1.7em;
+            }
 
-    > .result > thead > tr > th:last-child {
-        border-bottom-right-radius: 10px;
-        padding-right: 10px;
-    }
+            // Course search result filter
+            .filterSection {
+                height: 4em;
+                text-align: left;
+            }
 
-    // Course search result
-    //  Body
-    > .result > .loaderCircle {
-        position: absolute;
-        left: 0;
-        right: 0;
-        margin: auto;
-    }
+            .filterSection > div {
+                position: absolute;
+                width: 100%;
+                z-index: 1;
+            }
 
-    > .result > thead .expandDownArrow {
-        height: 1.7em;
-    }
+            .filterSection .options {
+                background: $search-result-header-bg-color;
+                overflow: hidden;
+            }
 
-    > .result .expandDownArrow > img {
-        width: 1em;
-        margin: 0 0.2em;
-        vertical-align: middle;
-        @include transform(rotate(-90deg));
-        @include transition(0.2s transform);
-    }
+            .filterSection .options > img {
+                float: left;
+            }
 
-    > .result tr .expandDownArrow.expand > img {
-        @include transform(rotate(0));
-    }
+            .filterSection .options > .filter {
+                height: 2em;
+                display: block;
+                overflow: hidden;
+            }
 
-    > .result > tbody > tr {
-        background: #0D1117;
-    }
+            .filterSection .options > .filter > input {
+                width: 100%;
+                background: none;
+                box-shadow: none;
+            }
 
-    > .result > tbody > tr > td {
-        vertical-align: top;
-    }
+            .filterSection .options > .resultCount {
+                height: 2em;
+                padding-left: 5px;
+            }
 
-    > .result > tbody > tr:nth-child(3n+1) {
-        height: var(--course-result-item-spacing);
-    }
+            > tr > th > .sortArrow {
+                position: absolute;
+                bottom: 1em;
+                left: 0;
+                right: 0;
+                margin: 0 auto;
+                height: 0.8em;
+                pointer-events: none;
+                @include transition(0.1s transform);
+            }
 
-    > .result > tbody > tr:nth-child(3n+2) > td:last-child {
-        border-radius: 0 10px 10px 0;
-        padding-right: 5px;
-    }
+            > tr > th > .sortArrow.reverse {
+                @include transform(rotate(180deg));
+            }
 
-    > .result > tbody > tr:nth-child(3n+2) > td {
-        padding: 5px 0;
-    }
+            > tr > th {
+                line-height: 1.4em;
+                vertical-align: bottom;
+            }
 
-    > .result > tbody > tr:nth-child(3n+2) > td:first-child {
-        border-radius: 10px 0 0 0;
-    }
+            > tr > th:not(:first-child):not(:last-child) {
+                cursor: pointer;
+                position: relative;
+                padding: 0 1px;
+            }
 
+            > tr > th:not(:first-child) {
+                border-left: lightgrey solid 1px;
+            }
 
-    > .result > tbody > tr:nth-child(3n+3) > td:first-child {
-        border-radius: 0 0 0 10px;
-    }
+            > tr > th:not(:first-child):not(:last-child):hover {
+                background: $button-hover-color;
+            }
 
-    // Option button
-    > .result > tbody .options > button {
-        padding: 2px;
-        font-size: 18px;
-    }
+            > tr > th:first-child {
+                width: 0;
+                border-bottom-left-radius: 10px;
+            }
 
-    > .result .nckuhub {
-        width: 4em;
-        text-align: center;
-        cursor: pointer;
-    }
+            > tr > th:last-child {
+                border-bottom-right-radius: 10px;
+                padding-right: 10px;
+            }
+        }
 
-    > .result .nckuhub:hover {
-        background: #181a1b;
-    }
+        > tbody {
+            // Block background
+            > tr {
+                background: #252b33;
+            }
 
-    > .result .nckuhub > span {
-        width: 4em;
-        display: inline-block;
-        padding-left: 2px;
-        padding-right: 1px;
-    }
+            // Block spacing
+            > tr:nth-child(3n+1) {
+                height: var(--course-result-item-spacing);
+            }
 
-    // Course search result
-    //  Course info
-    > .result > tbody > .courseDetail > td > .expandable {
-        overflow: hidden;
-        transition: 0.2s height;
-        -webkit-transition: 0.2s height;
-        -moz-transition: 0.2s height;
-        -ms-transition: 0.2s height;
-        -o-transition: 0.2s height;
-    }
+            // Block
+            > tr:nth-child(3n+2) {
+                > td {
+                    padding: 5px 0;
+                }
 
-    > .result > tbody > .courseDetail .info {
-        white-space: pre-wrap;
-        padding: 0 0 5px 5px;
-    }
+                > td:last-child {
+                    border-radius: 0 10px 10px 0;
+                    padding-right: 5px;
+                }
 
-    > .result > tbody > .courseDetail .info > .splitLine {
-        width: 100%;
-        border-top: 1px gray solid;
-        margin-bottom: 2px;
-    }
+                > td:first-child {
+                    border-radius: 10px 0 0 0;
+                }
 
-    > .result > tbody > .courseDetail .info > .tags {
-        display: inline-block;
-        margin-right: 10px;
-        border-radius: 8px;
-        padding: 1px 3px;
-    }
+                // Option button
+                > .options > button {
+                    padding: 2px;
+                    font-size: 18px;
+                }
+            }
 
-    > .result > tbody > .courseDetail .info > a.tags:after {
-        content: '';
-        background: $icon-down-triangle no-repeat 0 0 / 1em;
-        width: 1em;
-        height: 1em;
-        display: inline-block;
-        vertical-align: middle;
-    }
+            // Block detail
+            > .courseDetail {
+                > td {
+                    border-radius: 0 0 0 10px;
+                }
 
-    > .result > tbody > .courseDetail .info > a.tags {
-        color: inherit;
-        text-decoration: inherit;
-    }
+                // Course info
+                > td > .expandable {
+                    overflow: hidden;
+                    transition: 0.2s height;
+                    -webkit-transition: 0.2s height;
+                    -moz-transition: 0.2s height;
+                    -ms-transition: 0.2s height;
+                    -o-transition: 0.2s height;
+                }
 
-    > .result > tbody > .courseDetail .info > .note,
-    > .result > tbody > .courseDetail .info > .limit {
-        display: block;
-    }
+                .info {
+                    white-space: pre-wrap;
+                    padding: 0 0 5px 5px;
+                }
 
-    > .result > tbody > .courseDetail .info > .note::before {
-        background: $icon-info no-repeat 0 0 / 1em;
-        width: 1em;
-        height: 1em;
-        content: '';
-        display: inline-block;
-        vertical-align: text-top;
-        margin-top: 0.15em;
-    }
+                .info > .splitLine {
+                    width: 100%;
+                    border-top: 1px gray solid;
+                    margin-bottom: 2px;
+                }
 
-    > .result > tbody > .courseDetail .info > .limit::before {
-        background: $icon-warn no-repeat 0 0 / 1em;
-        width: 1em;
-        height: 1em;
-        content: '';
-        display: inline-block;
-        vertical-align: text-top;
-        margin-top: 0.15em;
-    }
+                // Course tags
+                .info > .tags {
+                    padding: 5px 0;
 
-    > .result > tbody > .courseDetail .info > .instructor {
-        font-size: 16px;
-    }
+                    > div, > a {
+                        margin-right: 10px;
+                        border-radius: 8px;
+                        padding: 1px 3px;
+                        display: inline-block;
+                    }
 
-    > .result > tbody > .courseDetail .info > .instructorBtn {
-        margin: 0 5px 0 0;
-        font-size: 16px;
-        padding: 2px 5px;
-        vertical-align: middle;
-        display: inline-block;
+                    a:after {
+                        content: '';
+                        background: $icon-down-triangle no-repeat 0 0 / 1em;
+                        width: 1em;
+                        height: 1em;
+                        display: inline-block;
+                        vertical-align: middle;
+                    }
+                }
+
+                .info > .note,
+                .info > .limit {
+                    display: block;
+                }
+
+                .info > .note::before {
+                    background: $icon-info no-repeat 0 0 / 1em;
+                    width: 1em;
+                    height: 1em;
+                    content: '';
+                    display: inline-block;
+                    vertical-align: text-top;
+                    margin-top: 0.15em;
+                }
+
+                .info > .limit::before {
+                    background: $icon-warn no-repeat 0 0 / 1em;
+                    width: 1em;
+                    height: 1em;
+                    content: '';
+                    display: inline-block;
+                    vertical-align: text-top;
+                    margin-top: 0.15em;
+                }
+
+                .info > .instructor {
+                    font-size: 16px;
+                }
+
+                .info > .instructorBtn {
+                    margin: 0 5px 0 0;
+                    font-size: 16px;
+                    padding: 2px 5px;
+                    border-radius: 5px;
+                    vertical-align: middle;
+                    display: inline-block;
+                }
+            }
+        }
     }
 
     // Popup window
@@ -485,11 +414,7 @@
         margin: auto;
         opacity: 0;
         visibility: hidden;
-        transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-        -webkit-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-        -moz-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-        -ms-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-        -o-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+        @include transition((visibility var(--fade-time), opacity var(--fade-time) ease-in));
     }
 
     > .instructorInfoOffset.show {

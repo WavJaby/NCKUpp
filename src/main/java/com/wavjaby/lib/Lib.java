@@ -54,7 +54,7 @@ public class Lib {
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .header("X-Requested-With", "XMLHttpRequest")
                     .requestBody(postData)
-                    .timeout(3000)
+                    .timeout(5000)
                     .execute();
         } catch (IOException e) {
             logger.errTrace(e);

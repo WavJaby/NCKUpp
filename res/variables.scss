@@ -1,18 +1,21 @@
 $font-size: 20px;
 $font-color: #e8e6e3;
 
+$background-color: #0d1117;
+
 $button-bg-color: #5b5b5b;
 $button-hover-color: #505050;
 $button-active-color: #404040;
 
 $scrollbar-bg-color: #00000019;
 
-$icon-info: url('./res/assets/info_icon.svg');
-$icon-warn: url('./res/assets/warn_icon.svg');
-$icon-down-triangle: url('./res/assets/down_triangle_icon.svg');
-$icon-down-arrow: url('./res/assets/down_arrow_icon.svg');
-$icon-close: url('./res/assets/close_icon.svg');
-$icon-search: url('./res/assets/search.svg');
+$source-root: '/NCKUpp/res/assets/';
+$icon-info: url($source-root + 'info_icon.svg');
+$icon-warn: url($source-root + 'warn_icon.svg');
+$icon-down-triangle: url($source-root + 'down_triangle_icon.svg');
+$icon-down-arrow: url($source-root + 'down_arrow_icon.svg');
+$icon-close: url($source-root + 'close_icon.svg');
+$icon-search: url($source-root + 'search_icon.svg');
 
 @mixin transform($transform) {
     transform: $transform;

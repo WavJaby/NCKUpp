@@ -1,8 +1,7 @@
 @import 'variables';
 
-$navbar-bg-color: #2F3136;
+$navbar-bg-color: #161b22;
 $navbar-height: 40px;
-$footer-height: 200px;
 
 .root {
     position: relative;
@@ -40,6 +39,7 @@ $footer-height: 200px;
         height: $navbar-height;
         padding: 5px;
         box-sizing: border-box;
+        vertical-align: top;
         display: none;
 
         > img {
@@ -47,10 +47,22 @@ $footer-height: 200px;
         }
     }
 
+    > .homePage {
+        line-height: $navbar-height;
+        font-size: 1.5em;
+        vertical-align: top;
+        float: left;
+
+        > li {
+            padding: 0 10px;
+        }
+    }
+
     ul {
         padding-inline-start: 0;
         list-style-type: none;
         margin: 0;
+        overflow: hidden;
     }
 
     // Select list
@@ -140,6 +152,11 @@ $footer-height: 200px;
             display: inline-block;
         }
 
+        > .homePage {
+            display: inline-block;
+            float: none;
+        }
+
         > .links {
             background: $navbar-bg-color;
             max-width: 15em;
@@ -184,11 +201,42 @@ $footer-height: 200px;
 
 // Footer
 footer {
-    background: black;
     width: 100%;
-    height: $footer-height;
-    position: absolute;
+    position: sticky;
     left: 0;
+    margin-top: 10px;
+    padding: 0 40px;
+    box-sizing: border-box;
+    text-align: center;
+
+    > .borderLine {
+        width: 100%;
+        margin-bottom: 10px;
+        border-top: gray 1px solid;
+    }
+
+    > .author {
+        display: block;
+        line-height: 2em;
+    }
+
+    > .openRepo {
+        height: 2em;
+        display: inline-block;
+        padding: 5px;
+        margin: auto;
+
+        > .githubIcon {
+            height: 2em;
+            float: left;
+        }
+
+        > span {
+            line-height: 2em;
+            float: left;
+            padding-left: 5px;
+        }
+    }
 }
 
 // Router
@@ -204,7 +252,6 @@ footer {
 .router > div {
     width: 100%;
     min-height: 100%;
-    overflow-x: auto;
 }
 
 .expandable {

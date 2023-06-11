@@ -241,6 +241,7 @@ public class Login implements EndpointModule {
 
     private void loginCourseNcku(boolean get, String postData, ApiResponse response, CookieStore cookieStore) {
         try {
+            logger.log("Check login state");
             Connection.Response checkLoginPage;
             if (get) {
                 // GET
@@ -273,6 +274,7 @@ public class Login implements EndpointModule {
                 return;
             }
 
+            logger.log("Login use portal");
             // Use portal
             Connection.Response portalPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
                     .header("Connection", "keep-alive")
@@ -289,6 +291,7 @@ public class Login implements EndpointModule {
                 } else {
                     // POST
                     // Portal login
+                    logger.log("POST portal login data");
                     portalPage = portalLogin(postData, portalPage.body(), cookieStore, response);
                     if (portalPage == null) {
                         response.setData("{\"login\":false}");
@@ -298,6 +301,7 @@ public class Login implements EndpointModule {
             }
 
             // Check if login success
+            logger.log("Check if login success");
             Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response, proxyManager.getProxy());
             if (loginCheck == null) {
                 response.setData("{\"login\":false}");
@@ -307,6 +311,7 @@ public class Login implements EndpointModule {
 
             // check if force login
             if (result.contains("/index.php?c=auth&m=force_login")) {
+                logger.log("Force login");
                 response.addWarn(TAG + "Force login");
                 result = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=force_login")
                         .header("Connection", "keep-alive")
@@ -317,13 +322,15 @@ public class Login implements EndpointModule {
             }
 
             // check login state
+            logger.log("Check login state");
             if ((loginState = result.indexOf(loginCheckString)) == -1 ||
                     (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) == -1) {
                 response.setData("{\"login\":false}");
                 return;
             }
-
             packUserLoginResponse(result, loginState + loginCheckString.length(), cookieStore, response);
+
+            logger.log("cosPreCheck");
             cosPreCheck(result, cookieStore, response, proxyManager);
         } catch (Exception e) {
             response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
@@ -448,7 +455,8 @@ public class Login implements EndpointModule {
                 }
             }
         }
-        return portalPage;
+        response.addError(TAG + "Portal login redirect url not found");
+        return null;
     }
 
     private Connection.Response portalLogin(String postData, String portalBody, CookieStore cookieStore, ApiResponse response) {

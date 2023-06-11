@@ -684,6 +684,30 @@ module.exports = {
     },
 
     /**
+     * @typedef {Object} StylesheetMethods
+     * @property {function()} mount Add style to header
+     * @property {function()} unmount Remove style from header
+     * @property {function()} enable Enable style
+     * @property {function()} disable Disable style
+     *
+     * @typedef {HTMLLinkElement & StylesheetMethods} LinkStylesheet
+     */
+    /**
+     * @param {string} url stylesheet url
+     * @return {LinkStylesheet}
+     * */
+    linkStylesheet(url) {
+        const element = document.createElement('link');
+        element.rel = 'stylesheet';
+        element.href = url;
+        element.mount = function () {document.head.appendChild(element);};
+        element.unmount = function () {document.head.removeChild(element);};
+        element.enable = function () {element.disabled = false;};
+        element.disable = function () {element.disabled = true;};
+        return /**@type{LinkStylesheet}*/element;
+    },
+
+    /**
      * @param [options] Options for element
      * @return {HTMLElement}
      * */

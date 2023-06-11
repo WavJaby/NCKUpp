@@ -1,6 +1,7 @@
 'use strict';
 // noinspection JSUnusedLocalSymbols
 const {
+    debug: doomDebug,
     Signal,
     ShowIf,
     HashRouter,
@@ -33,7 +34,8 @@ const {
     State,
     ClassList,
     any,
-    debug: doomDebug, footer
+    footer,
+    linkStylesheet
 } = require('./res/domHelper');
 // noinspection JSUnusedLocalSymbols
 const SelectMenu = require('./res/selectMenu');
@@ -52,8 +54,14 @@ window.messageAlert = MessageAlert();
  * @property {any} data
  */
 /**
+ * @typedef {Object} CustomApiFetch
+ * @property {int} [timeout] Fetch timeout time millisecond
+ *
+ * @typedef {RequestInit & CustomApiFetch} ApiFetch
+ */
+/**
  * @param {string} endpoint
- * @param {RequestInit} [option]
+ * @param {ApiFetch} [option]
  * @return Promise<ApiResponse>
  */
 window.fetchApi = function (endpoint, option) {
@@ -129,7 +137,15 @@ window.pageLoading = new Signal(false);
             schedule: () => require('./res/pages/courseSchedule')(userLoginData),
             grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
         },
-        Footer()
+        footer(
+            div('borderLine'),
+            span('Author: WavJaby', 'author'),
+            a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null,
+                {target: '_blank'},
+                img('./res/assets/github_icon.svg', 'githubIcon noDrag'),
+                span('GitRepo'),
+            ),
+        )
     );
     const navPageButtonName = {
         search: 'Search',
@@ -145,24 +161,36 @@ window.pageLoading = new Signal(false);
         hashRouter,
         // Navbar
         nav('navbar noSelect',
-            NavSelectList('loginBtn', [
-                img('./res/assets/github_icon.svg'),
-                span(TextState(userLoginData, response => response ? response.studentID : 'Login')),
-            ], [
-                li(null, text('Profile')),
-                li(null, text('Logout'), {onclick: () => fetchApi('/logout').then(onLoginStateChange)})
-            ], false, () => !userLoginData.state && (showLoginWindow.set(!showLoginWindow.state) || true)),
+            NavSelectList('loginBtn',
+                [
+                    span(TextState(userLoginData, res => res ? res.studentID : 'Login')),
+                ],
+                [
+                    ['Profile', null],
+                    ['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
+                ],
+                false,
+                () => {
+                    // Is login
+                    if (userLoginData.state)
+                        return true;
+                    // Not login, open login window
+                    showLoginWindow.set(!showLoginWindow.state);
+                    return false;
+                }
+            ),
             ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => window.navMenu.toggle('open')})),
+            ul('homePage', li(null, text('NCKU++'))),
             ul(window.navMenu,
-                NavSelectList('arrow', text('List'), [
-                    li(null, text('0w0')),
-                    li(null, text('awa'))
-                ]),
                 hashRouter.getRoutesName().map(i =>
                     li(null, text(navPageButtonName[i]), {
                         onclick: () => hashRouter.openPage(i)
                     })
                 ),
+                // NavSelectList('arrow', text('List'), [
+                //     ['0w0', null],
+                //     ['awa', null],
+                // ]),
             )
         ),
         ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
@@ -177,6 +205,11 @@ window.pageLoading = new Signal(false);
 
     // functions
     function onLoginStateChange(response) {
+        // Request timeout or cancel
+        if (!response) {
+            userLoginData.set(null);
+            return;
+        }
         /**@type LoginData*/
         const loginData = response.data;
         if (loginData && loginData.login) {
@@ -190,34 +223,47 @@ window.pageLoading = new Signal(false);
     }
 })();
 
+/**
+ * @param {string} classname
+ * @param {Text|Element|Element[]} title
+ * @param {[string, function()][]} items
+ * @param {boolean} [enableHover]
+ * @param {function(): boolean} [onOpen]
+ * @return {HTMLUListElement}
+ */
 function NavSelectList(classname, title, items, enableHover, onOpen) {
-    const list = ul(classname ? 'list ' + classname : 'list', enableHover ? {onmouseleave, onmouseenter} : null,
-        li(null, title, {onclick}),
-        ul(null, items)
+    const itemsElement = ul(null);
+    const list = ul(
+        classname ? 'list ' + classname : 'list',
+        enableHover ? {onmouseleave: closeSelectList, onmouseenter: openSelectList} : null,
+        // Element
+        li(null, title, {onclick: toggleSelectList}),
+        itemsElement,
     );
 
     for (const item of items) {
-        const itemOnclick = item.onclick;
-        if (itemOnclick)
-            item.onclick = () => {
-                itemOnclick();
-                onmouseleave();
-            };
-        else
-            item.onclick = onmouseleave;
+        const itemOnclick = item[1];
+        itemsElement.appendChild(
+            li(null, text(item[0]), {
+                onclick: itemOnclick ? () => {
+                    itemOnclick();
+                    closeSelectList();
+                } : closeSelectList
+            })
+        );
     }
 
-    function onmouseenter() {
+    function openSelectList() {
         if (window.innerWidth > mobileWidth)
             list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
     }
 
-    function onmouseleave() {
+    function closeSelectList() {
         list.style.height = null;
     }
 
-    function onclick() {
-        if (onOpen && onOpen() && !list.style.height) return;
+    function toggleSelectList() {
+        if (onOpen && !onOpen() && !list.style.height) return;
 
         if (list.style.height)
             list.style.height = null;
@@ -299,7 +345,8 @@ function LoginWindow(onLoginStateChange) {
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
             fetchApi('/login', {
                 method: 'POST',
-                body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`
+                body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
+                timeout: 6000,
             }).then(i => {
                 loading = false;
                 window.pageLoading.set(false);
@@ -313,11 +360,5 @@ function LoginWindow(onLoginStateChange) {
         username,
         password,
         button('loginField', 'Login', login, {type: 'submit'}),
-    );
-}
-
-function Footer() {
-    return footer(
-
     );
 }

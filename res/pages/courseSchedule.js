@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, table, Signal, text, span, ShowIf, checkbox, label} = require('../domHelper');
+const {div, button, table, Signal, text, span, ShowIf, checkbox, label, linkStylesheet} = require('../domHelper');
 /*ExcludeEnd*/
 
 // static
@@ -51,7 +51,7 @@ function CourseInfoWindow(showCourseInfoWindow) {
 module.exports = function (loginState) {
     console.log('Course schedule Init');
     // static element
-    let styles = async_require('./courseSchedule.css');
+    const styles = linkStylesheet('./res/pages/courseSchedule.css');
     const showCourseInfoWindow = new Signal(false);
     const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
     const showClassroomCheckBox = checkbox();
@@ -61,25 +61,21 @@ module.exports = function (loginState) {
 
     async function onRender() {
         console.log('Course schedule Render');
-        window.pageLoading.set(true);
-        styles = await styles;
-        styles.add();
-        window.pageLoading.set(false);
+        styles.mount();
     }
 
     function onPageOpen() {
         console.log('Course schedule Open');
-        if (styles instanceof HTMLStyleElement)
-            styles.add();
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
+        styles.enable();
         loginState.addListener(onLoginState);
     }
 
 
     function onPageClose() {
-        console.log('Course schedule Destroy');
-        styles.remove();
+        console.log('Course schedule Close');
+        styles.disable();
         loginState.removeListener(onLoginState);
     }
 
@@ -94,7 +90,7 @@ module.exports = function (loginState) {
     }
 
     return div('courseSchedule',
-        {onRender, onPageOpen, onDestroy: onPageClose},
+        {onRender, onPageOpen, onPageClose},
         div('scheduleTab'),
         div(null, label(null, 'Show classroom', showClassroomCheckBox), showClassroomCheckBox),
         scheduleTable.table,

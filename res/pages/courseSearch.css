@@ -4,29 +4,10 @@
   --popupWindow-bg-color: rgba(0, 0, 0);
   --comment-bg-color: gray;
   --ratebox-bg-color: gray;
-  --course-filter-bg-color: dimgray;
-  --course-result-header-bg-color: dimgray;
   --course-result-item-spacing: 10px;
   --course-info-title-font-size: 20px;
 }
 
-.courseSearch > .loading {
-  background: rgba(0, 0, 0, 0.6);
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  position: fixed;
-  z-index: 999;
-}
-.courseSearch > .loading > .loaderCircle {
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  margin: auto;
-  position: absolute;
-}
 .courseSearch > .form {
   padding: 5px;
 }
@@ -37,57 +18,71 @@
   display: block;
 }
 .courseSearch > .form > button {
+  border-radius: 20px;
   margin-bottom: 5px;
 }
-.courseSearch > .form > .selectMenu > input {
+.courseSearch > .result {
   width: 100%;
+  border-spacing: 0;
+  font-size: 18px;
+  padding: 0 20px;
+  white-space: nowrap;
+  margin: auto;
 }
-.courseSearch > .form > .selectMenu > ul {
-  background: #2F3136;
-  margin: 0;
-  padding: 0;
-  max-height: 0;
-  overflow: auto;
+@media only screen and (max-width: 700px) {
+  .courseSearch > .result {
+    padding: 0;
+  }
 }
-.courseSearch > .form > .selectMenu > ul.opened {
-  max-height: 300px;
-  position: relative;
+.courseSearch > .result > .loaderCircle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: auto;
 }
-.courseSearch > .form > .selectMenu > ul > .groupTitle.opened::before {
+.courseSearch > .result .expandDownArrow > img {
+  width: 1em;
+  margin: 0 0.2em;
+  vertical-align: middle;
+  transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -webkit-transform: rotate(-90deg);
+  transition: 0.2s transform;
+  -o-transition: 0.2s transform;
+  -ms-transition: 0.2s transform;
+  -moz-transition: 0.2s transform;
+  -webkit-transition: 0.2s transform;
+}
+.courseSearch > .result .expandDownArrow.expand > img {
   transform: rotate(0);
   -o-transform: rotate(0);
   -ms-transform: rotate(0);
   -moz-transform: rotate(0);
   -webkit-transform: rotate(0);
 }
-.courseSearch > .form > .selectMenu > ul > .groupTitle::before {
-  background: url("./res/assets/down_triangle_icon.svg") no-repeat 0 0/20px;
-  width: 20px;
-  height: 20px;
-  vertical-align: -2px;
-  display: inline-block;
-  content: "";
-  transform: rotate(-90deg);
-  -o-transform: rotate(-90deg);
-  -ms-transform: rotate(-90deg);
-  -moz-transform: rotate(-90deg);
-  -webkit-transform: rotate(-90deg);
-}
-.courseSearch > .form > .selectMenu > ul > .groupTitle {
-  font-weight: bold;
-  font-size: 18px;
-}
-.courseSearch > .form > .selectMenu > ul li {
-  line-height: 1.5em;
-  display: block;
+.courseSearch > .result .nckuhub {
+  width: 4em;
+  text-align: center;
   cursor: pointer;
 }
-.courseSearch > .form > .selectMenu > ul li:hover {
-  background: #505050;
+.courseSearch > .result .nckuhub:hover {
+  background: #21262d;
 }
-.courseSearch > .form > .selectMenu > ul > .group {
-  padding-left: 1em;
-  overflow: hidden;
+.courseSearch > .result .nckuhub > span {
+  width: 4em;
+  display: inline-block;
+  padding-left: 2px;
+  padding-right: 1px;
+}
+.courseSearch > .result > thead {
+  background: #1D2329;
+  position: sticky;
+  top: 0;
+}
+.courseSearch > .result > thead .expandDownArrow {
+  height: 1.7em;
 }
 .courseSearch > .result > thead .filterSection {
   height: 4em;
@@ -99,7 +94,7 @@
   z-index: 1;
 }
 .courseSearch > .result > thead .filterSection .options {
-  background: var(--course-result-header-bg-color);
+  background: #1D2329;
   overflow: hidden;
 }
 .courseSearch > .result > thead .filterSection .options > img {
@@ -118,24 +113,6 @@
 .courseSearch > .result > thead .filterSection .options > .resultCount {
   height: 2em;
   padding-left: 5px;
-}
-.courseSearch > .result {
-  width: 100%;
-  border-spacing: 0;
-  font-size: 18px;
-  padding: 0 20px;
-  white-space: nowrap;
-  margin: auto;
-}
-@media only screen and (max-width: 700px) {
-  .courseSearch > .result {
-    padding: 0;
-  }
-}
-.courseSearch > .result > thead {
-  background: var(--course-result-header-bg-color);
-  position: sticky;
-  top: 0;
 }
 .courseSearch > .result > thead > tr > th > .sortArrow {
   position: absolute;
@@ -181,76 +158,28 @@
   border-bottom-right-radius: 10px;
   padding-right: 10px;
 }
-.courseSearch > .result > .loaderCircle {
-  position: absolute;
-  left: 0;
-  right: 0;
-  margin: auto;
-}
-.courseSearch > .result > thead .expandDownArrow {
-  height: 1.7em;
-}
-.courseSearch > .result .expandDownArrow > img {
-  width: 1em;
-  margin: 0 0.2em;
-  vertical-align: middle;
-  transform: rotate(-90deg);
-  -o-transform: rotate(-90deg);
-  -ms-transform: rotate(-90deg);
-  -moz-transform: rotate(-90deg);
-  -webkit-transform: rotate(-90deg);
-  transition: 0.2s transform;
-  -o-transition: 0.2s transform;
-  -ms-transition: 0.2s transform;
-  -moz-transition: 0.2s transform;
-  -webkit-transition: 0.2s transform;
-}
-.courseSearch > .result tr .expandDownArrow.expand > img {
-  transform: rotate(0);
-  -o-transform: rotate(0);
-  -ms-transform: rotate(0);
-  -moz-transform: rotate(0);
-  -webkit-transform: rotate(0);
-}
 .courseSearch > .result > tbody > tr {
-  background: #0D1117;
-}
-.courseSearch > .result > tbody > tr > td {
-  vertical-align: top;
+  background: #252b33;
 }
 .courseSearch > .result > tbody > tr:nth-child(3n+1) {
   height: var(--course-result-item-spacing);
+}
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > td {
+  padding: 5px 0;
 }
 .courseSearch > .result > tbody > tr:nth-child(3n+2) > td:last-child {
   border-radius: 0 10px 10px 0;
   padding-right: 5px;
 }
-.courseSearch > .result > tbody > tr:nth-child(3n+2) > td {
-  padding: 5px 0;
-}
 .courseSearch > .result > tbody > tr:nth-child(3n+2) > td:first-child {
   border-radius: 10px 0 0 0;
 }
-.courseSearch > .result > tbody > tr:nth-child(3n+3) > td:first-child {
-  border-radius: 0 0 0 10px;
-}
-.courseSearch > .result > tbody .options > button {
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > .options > button {
   padding: 2px;
   font-size: 18px;
 }
-.courseSearch > .result .nckuhub {
-  width: 4em;
-  text-align: center;
-  cursor: pointer;
-}
-.courseSearch > .result .nckuhub:hover {
-  background: #181a1b;
-}
-.courseSearch > .result .nckuhub > span {
-  width: 4em;
-  display: inline-block;
-  padding-left: 2px;
-  padding-right: 1px;
+.courseSearch > .result > tbody > .courseDetail > td {
+  border-radius: 0 0 0 10px;
 }
 .courseSearch > .result > tbody > .courseDetail > td > .expandable {
   overflow: hidden;
@@ -270,29 +199,28 @@
   margin-bottom: 2px;
 }
 .courseSearch > .result > tbody > .courseDetail .info > .tags {
-  display: inline-block;
+  padding: 5px 0;
+}
+.courseSearch > .result > tbody > .courseDetail .info > .tags > div, .courseSearch > .result > tbody > .courseDetail .info > .tags > a {
   margin-right: 10px;
   border-radius: 8px;
   padding: 1px 3px;
+  display: inline-block;
 }
-.courseSearch > .result > tbody > .courseDetail .info > a.tags:after {
+.courseSearch > .result > tbody > .courseDetail .info > .tags a:after {
   content: "";
-  background: url("./res/assets/down_triangle_icon.svg") no-repeat 0 0/1em;
+  background: url("/NCKUpp/res/assets/down_triangle_icon.svg") no-repeat 0 0/1em;
   width: 1em;
   height: 1em;
   display: inline-block;
   vertical-align: middle;
-}
-.courseSearch > .result > tbody > .courseDetail .info > a.tags {
-  color: inherit;
-  text-decoration: inherit;
 }
 .courseSearch > .result > tbody > .courseDetail .info > .note,
 .courseSearch > .result > tbody > .courseDetail .info > .limit {
   display: block;
 }
 .courseSearch > .result > tbody > .courseDetail .info > .note::before {
-  background: url("./res/assets/info_icon.svg") no-repeat 0 0/1em;
+  background: url("/NCKUpp/res/assets/info_icon.svg") no-repeat 0 0/1em;
   width: 1em;
   height: 1em;
   content: "";
@@ -301,7 +229,7 @@
   margin-top: 0.15em;
 }
 .courseSearch > .result > tbody > .courseDetail .info > .limit::before {
-  background: url("./res/assets/warn_icon.svg") no-repeat 0 0/1em;
+  background: url("/NCKUpp/res/assets/warn_icon.svg") no-repeat 0 0/1em;
   width: 1em;
   height: 1em;
   content: "";
@@ -316,6 +244,7 @@
   margin: 0 5px 0 0;
   font-size: 16px;
   padding: 2px 5px;
+  border-radius: 5px;
   vertical-align: middle;
   display: inline-block;
 }
@@ -357,13 +286,13 @@
   padding: 5px;
 }
 .courseSearch > .popupWindow .closeButton > .icon {
-  content: url("./res/assets/close_icon.svg");
+  content: url("/NCKUpp/res/assets/close_icon.svg");
   width: 1.2em;
   height: 1.2em;
 }
 @media only screen and (max-width: 700px) {
   .courseSearch > .popupWindow .closeButton > .icon {
-    content: url("./res/assets/down_arrow_icon.svg");
+    content: url("/NCKUpp/res/assets/down_arrow_icon.svg");
     transform: rotate(90deg);
     -o-transform: rotate(90deg);
     -ms-transform: rotate(90deg);
@@ -424,10 +353,10 @@
   opacity: 0;
   visibility: hidden;
   transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-  -webkit-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-  -moz-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
-  -ms-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
   -o-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+  -ms-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+  -moz-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
+  -webkit-transition: visibility var(--fade-time), opacity var(--fade-time) ease-in;
 }
 .courseSearch > .instructorInfoOffset.show {
   opacity: 1;

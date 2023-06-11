@@ -17,7 +17,7 @@
 }
 .selectMenu .selectBtn::after {
   content: "";
-  background: url("./assets/down_arrow_icon.svg") no-repeat 0 0/1em;
+  background: url("/NCKUpp/res/assets/down_arrow_icon.svg") no-repeat 0 0/1em;
   width: 1em;
   height: 1em;
   position: absolute;
@@ -46,7 +46,7 @@
 }
 .selectMenu .content > .searchBar::before {
   content: "";
-  background: url("./assets/search.svg") 0 0/1em no-repeat;
+  background: url("/NCKUpp/res/assets/search_icon.svg") no-repeat 0 0/1em;
   position: absolute;
   width: 1em;
   height: 1em;
@@ -79,7 +79,7 @@
 }
 .selectMenu .content > .options .groupTitle::before {
   content: "";
-  background: url("./assets/down_triangle_icon.svg") no-repeat 0 0/1em;
+  background: url("/NCKUpp/res/assets/down_triangle_icon.svg") no-repeat 0 0/1em;
   width: 1em;
   height: 1em;
   display: inline-block;

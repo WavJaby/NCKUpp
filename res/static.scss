@@ -9,7 +9,7 @@ html, body {
 
 body {
     position: absolute;
-    background: #181a1b;
+    background: $background-color;
     color: $font-color;
     font-family: 'JetBrains Mono', monospace;
     -webkit-tap-highlight-color: transparent;
@@ -110,6 +110,13 @@ p {
     height: 1em;
     cursor: pointer;
 }
+
+// A link
+a, a:visited, a:hover, a:active {
+    color: inherit;
+    text-decoration: none;
+}
+
 
 .noSelect {
     -webkit-touch-callout: none; //  iOS Safari 

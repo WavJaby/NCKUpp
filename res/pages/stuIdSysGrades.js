@@ -2,13 +2,13 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, Signal, span, State, img} = require('../domHelper');
+const {div, button, Signal, span, State, img, linkStylesheet} = require('../domHelper');
 /*ExcludeEnd*/
 
 module.exports = function (loginState) {
     console.log('StuIdSys Grades Init');
     // static element
-    let styles = async_require('./stuIdSysGrades.css');
+    const styles = linkStylesheet('./res/pages/stuIdSysGrades.css');
     const semestersInfo = new Signal();
     const semesterGrades = new Signal();
     const normalDestImg = new Signal();
@@ -17,25 +17,21 @@ module.exports = function (loginState) {
 
     async function onRender() {
         console.log('StuIdSys grades Render');
-        window.pageLoading.set(true);
-        styles = await styles;
-        styles.add();
-        window.pageLoading.set(false);
+        styles.mount();
     }
 
     function onPageOpen() {
         console.log('StuIdSys grades Open');
-        if (styles instanceof HTMLStyleElement)
-            styles.add();
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
+        styles.enable();
         loginState.addListener(onLoginState);
     }
 
 
     function onPageClose() {
         console.log('StuIdSys grades Close');
-        styles.remove();
+        styles.disable();
         loginState.removeListener(onLoginState);
     }
 

@@ -21,7 +21,7 @@
 }
 
 .navbar {
-  background: #2F3136;
+  background: #161b22;
   width: 100%;
   height: 40px;
   position: absolute;
@@ -31,15 +31,26 @@
   height: 40px;
   padding: 5px;
   box-sizing: border-box;
+  vertical-align: top;
   display: none;
 }
 .navbar > .hamburgerMenu > img {
   height: 100%;
 }
+.navbar > .homePage {
+  line-height: 40px;
+  font-size: 1.5em;
+  vertical-align: top;
+  float: left;
+}
+.navbar > .homePage > li {
+  padding: 0 10px;
+}
 .navbar ul {
   padding-inline-start: 0;
   list-style-type: none;
   margin: 0;
+  overflow: hidden;
 }
 .navbar .list {
   height: 40px;
@@ -54,7 +65,7 @@
   -webkit-transition: height 0.15s ease-in;
 }
 .navbar .list > li {
-  background: #2F3136;
+  background: #161b22;
   padding: 0 10px;
   z-index: 1;
   display: block;
@@ -69,7 +80,7 @@
   content: "";
 }
 .navbar .list > ul {
-  background: #2F3136;
+  background: #161b22;
   min-width: 100%;
   display: block;
   position: absolute;
@@ -113,8 +124,12 @@
   .navbar > .hamburgerMenu {
     display: inline-block;
   }
+  .navbar > .homePage {
+    display: inline-block;
+    float: none;
+  }
   .navbar > .links {
-    background: #2F3136;
+    background: #161b22;
     max-width: 15em;
     height: 100vh;
     display: block;
@@ -162,11 +177,37 @@
 }
 
 footer {
-  background: black;
   width: 100%;
-  height: 200px;
-  position: absolute;
+  position: sticky;
   left: 0;
+  margin-top: 10px;
+  padding: 0 40px;
+  box-sizing: border-box;
+  text-align: center;
+}
+footer > .borderLine {
+  width: 100%;
+  margin-bottom: 10px;
+  border-top: gray 1px solid;
+}
+footer > .author {
+  display: block;
+  line-height: 2em;
+}
+footer > .openRepo {
+  height: 2em;
+  display: inline-block;
+  padding: 5px;
+  margin: auto;
+}
+footer > .openRepo > .githubIcon {
+  height: 2em;
+  float: left;
+}
+footer > .openRepo > span {
+  line-height: 2em;
+  float: left;
+  padding-left: 5px;
 }
 
 .router {
@@ -181,7 +222,6 @@ footer {
 .router > div {
   width: 100%;
   min-height: 100%;
-  overflow-x: auto;
 }
 
 .expandable {

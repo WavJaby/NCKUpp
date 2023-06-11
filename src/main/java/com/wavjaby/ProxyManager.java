@@ -123,6 +123,8 @@ public class ProxyManager {
     }
 
     public Proxy getProxy() {
+        if (proxy == null)
+            return null;
         return proxy.toProxy();
 //        return null;
     }
