@@ -266,31 +266,36 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
         }
 
         // Add day undecided
-        const row = tbody.insertRow();
-        row.className = 'undecided';
-        // Time info
-        const empty = div();
-        empty.style.display = 'none';
-        row.appendChild(empty);
-        const cell = row.insertCell();
-        cell.colSpan = 2;
-        cell.className = 'noSelect';
-        // cell.textContent = 'Undecided';
-        cell.textContent = '時間未定';
-        const daysUndecidedCell = row.insertCell();
-        daysUndecidedCell.colSpan = tableWidth;
-        for (let i = 0; i < daysUndecided.length; i++) {
-            // Build cell
-            const course = daysUndecided[i];
-            const info = course[0];
-            const cell = div(null,
-                span(info.name),
-            );
-            cell.serialID = info.deptID + '-' + info.sn;
-            cell.onclick = cellClick;
-            daysUndecidedCell.appendChild(cell);
+        if (daysUndecided.length > 0) {
+            const row = tbody.insertRow();
+            row.className = 'undecided';
+            // Time info
+            const empty = div();
+            empty.style.display = 'none';
+            row.appendChild(empty);
+            const cell = row.insertCell();
+            cell.colSpan = 2;
+            cell.className = 'noSelect';
+            // cell.textContent = 'Undecided';
+            cell.textContent = '時間未定';
+            const daysUndecidedCell = row.insertCell();
+            daysUndecidedCell.colSpan = tableWidth;
+            for (let i = 0; i < daysUndecided.length; i++) {
+                // Build cell
+                const course = daysUndecided[i];
+                const info = course[0];
+                const cell = div(null,
+                    span(info.name),
+                );
+                cell.serialID = info.deptID + '-' + info.sn;
+                cell.onclick = cellClick;
+                daysUndecidedCell.appendChild(cell);
+            }
+            // Background
+            row.appendChild(div('splitLine'));
         }
 
+        // Row background
         for (let i = 0; i < tableHeight; i++) {
             rows[i].appendChild(div('splitLine'));
         }
@@ -334,22 +339,15 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
         cell.onclick = cellClick;
         courseInfo[cell.serialID] = null;
 
-        const rooms = [];
+        cell.appendChild(span(info.name));
         for (let k = 1; k < course.length; k++) {
             const roomNameElement = span(course[k].room);
             // Show roomName or not
             if (!showClassroomCheckBox.checked)
                 roomNameElement.style.display = 'none';
-            rooms.push(roomNameElement);
+            cell.appendChild(roomNameElement);
             roomNameElements.push(roomNameElement);
         }
-
-        cell.appendChild(
-            div(null,
-                span(info.name),
-                rooms,
-            )
-        );
         return cell;
     }
 

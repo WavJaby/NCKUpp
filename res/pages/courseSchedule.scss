@@ -1,3 +1,6 @@
+$course-block-bg-color: #5985ef;
+$schedule-head-bg-color: #282B2C;
+
 .courseSchedule {
 
     > .courseScheduleTable {
@@ -17,7 +20,7 @@
             }
 
             > tr > .background {
-                background-color: #282B2C;
+                background-color: $schedule-head-bg-color;
                 width: 100%;
                 height: 100%;
                 top: 0;
@@ -28,41 +31,70 @@
         }
 
         > tbody {
+            // Schedule section row
             > tr {
                 position: relative;
+
+                > td {
+                    padding: 5px;
+                    border: none;
+                    text-align: center;
+
+                    // Time split line
+                    &:nth-child(2) {
+                        border-right: white 1px solid;
+                        width: 0;
+                    }
+
+                    // Course data
+                    &.activateCell {
+                        background: $course-block-bg-color;
+                        min-width: 8em;
+                        border-radius: 10px;
+                        vertical-align: top;
+                        cursor: pointer;
+
+                        > span {
+                            display: block;
+                        }
+                    }
+                }
+
+                > .splitLine {
+                    background-color: #1C1E1F;
+                    width: 100%;
+                    height: 100%;
+                    top: 0;
+                    left: 0;
+                    z-index: -1;
+                    position: absolute;
+                }
             }
 
-            > tr > td:nth-child(2) {
-                border-right: white 1px solid;
-                width: 0;
-            }
+            // Undecided time row
+            > tr.undecided {
+                > td {
+                    text-align: left;
+                    padding: 0;
 
-            > tr > td {
-                padding: 0.4em;
-                text-align: center;
-                border: none;
-            }
+                    &:nth-child(2) {
+                        line-height: 3em;
+                        text-align: center;
+                    }
 
-            > tr > td > div > span {
-                display: block;
-            }
-
-            > tr > td.activateCell {
-                background: #5985ef;
-                min-width: 8em;
-                border-radius: 10px;
-                vertical-align: top;
-                cursor: pointer;
-            }
-
-            > tr > .splitLine {
-                background-color: #1C1E1F;
-                width: 100%;
-                height: 100%;
-                top: 0;
-                left: 0;
-                z-index: -1;
-                position: absolute;
+                    div {
+                        background: $course-block-bg-color;
+                        height: 3em;
+                        min-width: 6em;
+                        display: inline-block;
+                        border-radius: 10px;
+                        box-sizing: border-box;
+                        padding: 5px;
+                        margin-right: 5px;
+                        text-align: center;
+                        cursor: pointer;
+                    }
+                }
             }
         }
     }
