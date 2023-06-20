@@ -1,5 +1,6 @@
 @import 'variables';
 
+$login-window-bg-color: rgba(30, 30, 30, 0.8);
 $navbar-bg-color: #161b22;
 $navbar-height: 40px;
 
@@ -179,7 +180,7 @@ $navbar-height: 40px;
 
 // Login Window
 .loginWindow {
-    background: rgba(30, 30, 30, 0.8);
+    background: $login-window-bg-color;
     position: absolute;
     top: $navbar-height;
     right: 0;

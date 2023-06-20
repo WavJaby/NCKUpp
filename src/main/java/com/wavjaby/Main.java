@@ -2,6 +2,7 @@ package com.wavjaby;
 
 import com.wavjaby.api.*;
 import com.wavjaby.lib.HttpServer;
+import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
@@ -52,26 +53,7 @@ public class Main {
     Main() {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
 
-        Properties serverSettings = new Properties();
-        try {
-            File file = new File("./server.properties");
-            if (!file.exists()) {
-                logger.log("Server properties not found, create default");
-                InputStream stream = Main.class.getResourceAsStream("/server.properties");
-                if (stream == null) {
-                    logger.log("Default server properties not found");
-                    return;
-                }
-                Files.copy(stream, file.toPath());
-                stream.close();
-            }
-            InputStream in = Files.newInputStream(file.toPath());
-            serverSettings.load(in);
-            in.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
+        PropertiesReader serverSettings = new PropertiesReader("./server.properties");
 
         server = new HttpServer(serverSettings);
         if (!server.opened) return;
@@ -79,11 +61,11 @@ public class Main {
             if(!cacheFolder.mkdir())
                 logger.err("Cache folder can not create");
         Runtime.getRuntime().addShutdownHook(new Thread(this::stopAll));
+        ProxyManager proxyManager = new ProxyManager(serverSettings);
 
         SQLite sqLite = new SQLite();
         registerModule(sqLite);
         registerModule(new FileHost(serverSettings), "/NCKUpp/");
-        ProxyManager proxyManager = new ProxyManager();
         registerModule(new IP(), "/api/ip");
         registerModule(new Route(), "/api/route");
         registerModule(new WebSocket(), "/api/v0/socket");

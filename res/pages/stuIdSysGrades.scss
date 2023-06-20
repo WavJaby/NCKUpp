@@ -1,0 +1,76 @@
+@import '../variables';
+
+#infoText {
+    display: block;
+    padding: 2px 0;
+
+    // Label
+    > span {
+        background: #2e3242;
+        display: inline-block;
+        padding: 1px 2px;
+        border-radius: 5px;
+    }
+}
+
+.stuIdSysGrades {
+    > .semesters {
+        padding: 5px;
+
+        > .semesterInfo {
+            background: #1a1d28;
+            cursor: pointer;
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+
+            &:hover {
+                background: #161a25;
+            }
+
+            // Title
+            > h1 {
+                font-size: 24px;
+                margin: 5px;
+                text-align: center;
+            }
+
+            // Info
+            > span {
+                @extend #infoText;
+            }
+        }
+    }
+
+    > .semesterGrades {
+        padding: 5px;
+        text-align: center;
+
+        > div {
+            background: #1a1d28;
+            cursor: pointer;
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 5px;
+
+            // Course name
+            > h1 {
+                font-size: 24px;
+                margin: 5px;
+                text-align: center;
+            }
+
+            // Info
+            > span {
+                @extend #infoText;
+            }
+        }
+    }
+
+    img {
+        top: 0;
+        float: right;
+        position: sticky;
+    }
+}

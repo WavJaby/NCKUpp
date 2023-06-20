@@ -231,15 +231,15 @@ function HashRouter(defaultPage, routs, footer) {
     window.addEventListener('popstate', function () {
         const state = window.urlHashData.update();
         window.urlHashData.data = state;
-        routerRoot.openPage(state.page);
+        routerRoot.openPage(state.page, true);
     });
 
-    routerRoot.openPage = function (pageId) {
+    routerRoot.openPage = function (pageId, isHistory) {
         // if same page
         if (lastPageId === pageId) {
             // Get page
             const page = getPage(pageId);
-            if (page.onPageOpen) page.onPageOpen();
+            if (page.onPageOpen) page.onPageOpen(!!isHistory);
             return;
         }
         lastPageId = pageId;
@@ -264,7 +264,7 @@ function HashRouter(defaultPage, routs, footer) {
             page.render = true;
             page.onRender();
         }
-        if (page.onPageOpen) page.onPageOpen();
+        if (page.onPageOpen) page.onPageOpen(!!isHistory);
         lastPage = page;
     }
 

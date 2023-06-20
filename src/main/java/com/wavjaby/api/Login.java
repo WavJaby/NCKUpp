@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.Main.*;
@@ -42,6 +43,7 @@ public class Login implements EndpointModule {
 
     private final Map<String, CookieStore> loginUserCookie = new HashMap<>();
     private final ScheduledExecutorService keepLoginUpdater = Executors.newSingleThreadScheduledExecutor();
+    private final ThreadPoolExecutor loginCosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
 
     public Login(Search search, SQLite sqLite, ProxyManager proxyManager) {
         this.search = search;
@@ -131,6 +133,18 @@ public class Login implements EndpointModule {
             e.printStackTrace();
             logger.warn("KeepLoginUpdater pool close error");
             keepLoginUpdater.shutdownNow();
+        }
+
+        loginCosPreCheckPool.shutdown();
+        try {
+            if (!loginCosPreCheckPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+                logger.warn("loginCosPreCheckPool pool close timeout");
+                loginCosPreCheckPool.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            logger.warn("loginCosPreCheckPool pool close error");
+            loginCosPreCheckPool.shutdownNow();
         }
     }
 
@@ -330,8 +344,10 @@ public class Login implements EndpointModule {
             }
             packUserLoginResponse(result, loginState + loginCheckString.length(), cookieStore, response);
 
-            logger.log("cosPreCheck");
-            cosPreCheck(result, cookieStore, response, proxyManager);
+            String finalResult = result;
+            loginCosPreCheckPool.execute(() ->
+                    cosPreCheck(finalResult, cookieStore, response, proxyManager)
+            );
         } catch (Exception e) {
             response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
             e.printStackTrace();
@@ -455,8 +471,7 @@ public class Login implements EndpointModule {
                 }
             }
         }
-        response.addError(TAG + "Portal login redirect url not found");
-        return null;
+        return portalPage;
     }
 
     private Connection.Response portalLogin(String postData, String portalBody, CookieStore cookieStore, ApiResponse response) {
@@ -490,13 +505,33 @@ public class Login implements EndpointModule {
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
+                    .followRedirects(false)
                     .method(Connection.Method.POST)
                     .header("Referer", loginUrl)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .requestBody("UserName=" + URLEncoder.encode(username, "UTF-8") +
                             "&Password=" + URLEncoder.encode(password, "UTF-8") +
                             "&AuthMethod=FormsAuthentication");
-            return postLogin.execute();
+            Connection.Response portalResponse = postLogin.execute();
+
+            // Redirect
+            while (portalResponse.statusCode() == 302) {
+                String location = portalResponse.header("Location");
+                if (location == null) {
+                    response.addError(TAG + "Redirect location not found");
+                    return null;
+                }
+                Connection redirect = HttpConnection.connect(location)
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .followRedirects(false)
+                        .proxy(location.startsWith(courseNckuOrg) ? proxyManager.getProxy() : null)
+                        .header("Referer", loginUrl);
+                portalResponse = redirect.execute();
+            }
+
+            return portalResponse;
         } catch (IOException e) {
             e.printStackTrace();
             response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));

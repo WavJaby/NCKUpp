@@ -15,6 +15,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
+import org.w3c.dom.html.HTMLDivElement;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -243,25 +244,34 @@ public class CourseSchedule implements EndpointModule {
             info.put("type", type);
 
             // parse time
-            String time = rowElements.get(7).text();
-            int dayEnd = time.indexOf(' ');
-            String day = dayEnd == -1 ? time : time.substring(0, dayEnd);
-            Integer date = DayTextToInt.get(day);
-            if (date == null) {
-                response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
-                continue;
-            }
+            Element timeElement = rowElements.get(7);
+            // Time in link
             StringBuilder builder = new StringBuilder();
-            if (dayEnd != -1) {
-                builder.append(date).append(',');
-                int timeSplit = time.indexOf('~');
-                if (timeSplit == -1)
-                    builder.append(time, dayEnd + 1, time.length());
-                else
-                    builder.append(time, dayEnd + 1, timeSplit).append(',')
-                            .append(time, timeSplit + 1, time.length());
-            } else
-                builder.append(date);
+            Element timeElementChild = timeElement.firstElementChild();
+            if (timeElementChild != null && timeElementChild.tagName().equals("div")) {
+                builder.append("-1");
+            }
+            // Parse time text
+            else {
+                String time = timeElement.text();
+                int dayEnd = time.indexOf(' ');
+                String day = dayEnd == -1 ? time : time.substring(0, dayEnd);
+                Integer date = DayTextToInt.get(day);
+                if (date == null) {
+                    response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
+                    continue;
+                }
+                if (dayEnd != -1) {
+                    builder.append(date).append(',');
+                    int timeSplit = time.indexOf('~');
+                    if (timeSplit == -1)
+                        builder.append(time, dayEnd + 1, time.length());
+                    else
+                        builder.append(time, dayEnd + 1, timeSplit).append(',')
+                                .append(time, timeSplit + 1, time.length());
+                } else
+                    builder.append(date);
+            }
             info.put("time", builder.toString());
             String room = rowElements.get(8).text();
             int roomIdEnd = room.indexOf(' ');
@@ -277,7 +287,6 @@ public class CourseSchedule implements EndpointModule {
 
             info.put("roomID", roomID);
             info.put("room", room);
-            info.put("time", builder.toString());
 
             courseInfo.add(info);
         }

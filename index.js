@@ -148,9 +148,12 @@ window.pageLoading = new Signal(false);
         )
     );
     const navPageButtonName = {
-        search: 'Search',
-        schedule: 'Schedule',
-        grades: 'Grades',
+        // search: 'Search',
+        // schedule: 'Schedule',
+        // grades: 'Grades',
+        search: '課程查詢',
+        schedule: '課表',
+        grades: '成績查詢',
     };
 
     // check login
@@ -346,7 +349,7 @@ function LoginWindow(onLoginStateChange) {
             fetchApi('/login', {
                 method: 'POST',
                 body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
-                timeout: 6000,
+                timeout: 10000,
             }).then(i => {
                 loading = false;
                 window.pageLoading.set(false);

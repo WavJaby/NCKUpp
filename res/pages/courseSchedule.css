@@ -1,81 +1,68 @@
-.courseScheduleTable {
-    margin: 10px;
-    border-spacing: 5px;
+.courseSchedule > .courseScheduleTable {
+  margin: 10px;
+  border-spacing: 5px;
+}
+.courseSchedule > .courseScheduleTable > caption {
+  text-align: left;
+}
+.courseSchedule > .courseScheduleTable > thead {
+  position: relative;
+}
+.courseSchedule > .courseScheduleTable > thead > tr {
+  height: 2em;
+  text-align: center;
+}
+.courseSchedule > .courseScheduleTable > thead > tr > .background {
+  background-color: #282B2C;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  position: absolute;
+}
+.courseSchedule > .courseScheduleTable > tbody > tr {
+  position: relative;
+}
+.courseSchedule > .courseScheduleTable > tbody > tr > td:nth-child(2) {
+  border-right: white 1px solid;
+  width: 0;
+}
+.courseSchedule > .courseScheduleTable > tbody > tr > td {
+  padding: 0.4em;
+  text-align: center;
+  border: none;
+}
+.courseSchedule > .courseScheduleTable > tbody > tr > td > div > span {
+  display: block;
+}
+.courseSchedule > .courseScheduleTable > tbody > tr > td.activateCell {
+  background: #5985ef;
+  min-width: 8em;
+  border-radius: 10px;
+  vertical-align: top;
+  cursor: pointer;
+}
+.courseSchedule > .courseScheduleTable > tbody > tr > .splitLine {
+  background-color: #1C1E1F;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  position: absolute;
+}
+.courseSchedule .courseInfoWindow {
+  background: rgba(0, 0, 0, 0.9);
+  width: 70%;
+  height: 70%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  white-space: pre-wrap;
 }
 
-.courseScheduleTable > caption {
-    text-align: left;
-}
-
-.courseScheduleTable tr:first-child {
-    white-space: pre;
-}
-
-.courseScheduleTable > thead {
-    position: relative;
-}
-
-.courseScheduleTable > thead > tr {
-    height: 2em;
-    text-align: center;
-}
-
-.courseScheduleTable > thead > tr > .background {
-    background-color: #282B2C;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    z-index: -1;
-    position: absolute;
-}
-
-.courseScheduleTable > tbody > tr {
-    position: relative;
-}
-
-.courseScheduleTable > tbody > tr > td:nth-child(2) {
-    border-right: white 1px solid;
-    width: 0;
-}
-
-.courseScheduleTable > tbody > tr > td {
-    padding: 0.4em;
-    text-align: center;
-    border: none;
-}
-
-.courseScheduleTable > tbody > tr > td > div > span {
-    display: block;
-}
-
-.courseScheduleTable > tbody > tr > td.activateCell {
-    background: #5985ef;
-    min-width: 8em;
-    border-radius: 10px;
-    vertical-align: top;
-    cursor: pointer;
-}
-
-.courseScheduleTable > tbody > tr > .splitLine {
-    background-color: #1C1E1F;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    z-index: -1;
-    position: absolute;
-}
-
-.courseInfoWindow {
-    background: rgba(0, 0, 0, 0.9);
-    width: 70%;
-    height: 70%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    margin: auto;
-    white-space: pre-wrap;
-}
+/*# sourceMappingURL=courseSchedule.css.map */

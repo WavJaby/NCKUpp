@@ -1,5 +1,6 @@
 package com.wavjaby;
 
+import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
@@ -11,7 +12,7 @@ import java.nio.file.Files;
 public class ProxyManager {
     private static final String TAG = "[ProxyManager]";
     private static final Logger logger = new Logger(TAG);
-    private final ProxyData proxy;
+    private ProxyData proxy;
 
     public static class ProxyData {
         public final String ip;
@@ -96,7 +97,10 @@ public class ProxyManager {
 
     }
 
-    ProxyManager() {
+    ProxyManager(PropertiesReader properties) {
+        if(!properties.getPropertyBoolean("useProxy", true))
+            return;
+
         String proxiesString = null;
         try {
             File proxyTxtFile = new File("proxy.txt");

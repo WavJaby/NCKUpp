@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.logger.Logger;
 
 import java.io.*;
@@ -46,31 +47,13 @@ public class RobotCode implements EndpointModule {
         ALPHA
     }
 
-    public RobotCode(Properties serverSettings, ProxyManager proxyManager) {
+    public RobotCode(PropertiesReader serverSettings, ProxyManager proxyManager) {
         this.proxyManager = proxyManager;
-        String workDirProp = serverSettings.getProperty("ocrWorkDir");
-        String workDir;
-        if (workDirProp == null) {
-            workDir = "./";
-            logger.warn("OCR work dir not found, using current dir");
-        } else
-            workDir = workDirProp;
+        String workDir = serverSettings.getProperty("ocrWorkDir", "./");
 
-        String venvPathProp = serverSettings.getProperty("ocrVenvPath");
-        String venvPath;
-        if (venvPathProp == null) {
-            venvPath = "./venv/bin/activate";
-            logger.warn("OCR venv path not found, using default path");
-        } else
-            venvPath = venvPathProp;
+        String venvPath = serverSettings.getProperty("ocrVenvPath", "./venv/bin/activate");
 
-        String mainPyPathProp = serverSettings.getProperty("ocrMainPyPath");
-        String mainPyPath;
-        if (mainPyPathProp == null) {
-            mainPyPath = "./main.py";
-            logger.warn("OCR main python file not found, using default path");
-        } else
-            mainPyPath = mainPyPathProp;
+        String mainPyPath = serverSettings.getProperty("ocrMainPyPath", "./main.py");
 
         // Create process
         processBuilder = new ProcessBuilder(venvPath, mainPyPath);

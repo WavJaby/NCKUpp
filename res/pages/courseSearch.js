@@ -229,12 +229,13 @@ module.exports = function (loginState) {
         });
     }
 
-    function onPageOpen() {
+    function onPageOpen(isHistory) {
         console.log('Course search Open');
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
         styles.enable();
-        loadLastSearch();
+        if (isHistory)
+            loadLastSearch();
     }
 
     function onPageClose() {

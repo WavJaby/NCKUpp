@@ -1,25 +1,53 @@
-.stuIdSysGrades {
-
+#infoText, .stuIdSysGrades > .semesterGrades > div > span, .stuIdSysGrades > .semesters > .semesterInfo > span {
+  display: block;
+  padding: 2px 0;
+}
+#infoText > span, .stuIdSysGrades > .semesterGrades > div > span > span, .stuIdSysGrades > .semesters > .semesterInfo > span > span {
+  background: #2e3242;
+  display: inline-block;
+  padding: 1px 2px;
+  border-radius: 5px;
 }
 
-.stuIdSysGrades > .semestersInfo {
-    padding: 5px;
+.stuIdSysGrades > .semesters {
+  padding: 5px;
 }
-
+.stuIdSysGrades > .semesters > .semesterInfo {
+  background: #1a1d28;
+  cursor: pointer;
+  display: inline-block;
+  padding: 10px;
+  border-radius: 10px;
+}
+.stuIdSysGrades > .semesters > .semesterInfo:hover {
+  background: #161a25;
+}
+.stuIdSysGrades > .semesters > .semesterInfo > h1 {
+  font-size: 24px;
+  margin: 5px;
+  text-align: center;
+}
 .stuIdSysGrades > .semesterGrades {
-    padding: 5px;
+  padding: 5px;
+  text-align: center;
 }
-
 .stuIdSysGrades > .semesterGrades > div {
-    margin-top: 5px;
+  background: #1a1d28;
+  cursor: pointer;
+  display: inline-block;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 5px;
 }
-
-.stuIdSysGrades span {
-    display: block;
+.stuIdSysGrades > .semesterGrades > div > h1 {
+  font-size: 24px;
+  margin: 5px;
+  text-align: center;
 }
-
 .stuIdSysGrades img {
-    top: 0;
-    float: right;
-    position: sticky;
+  top: 0;
+  float: right;
+  position: sticky;
 }
+
+/*# sourceMappingURL=stuIdSysGrades.css.map */

@@ -2,6 +2,7 @@ package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
+import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
@@ -31,12 +32,8 @@ public class FileHost implements EndpointModule {
         return TAG;
     }
 
-    public FileHost(Properties serverSettings) {
-        String frontendFilePath = serverSettings.getProperty("frontendFilePath");
-        if (frontendFilePath == null) {
-            frontendFilePath = "./";
-            logger.warn("Frontend file path not found, using current path");
-        }
+    public FileHost(PropertiesReader serverSettings) {
+        String frontendFilePath = serverSettings.getProperty("frontendFilePath", "./");
         fileRoot = new File(frontendFilePath);
         if (!fileRoot.exists())
             logger.err("Frontend file path not found");

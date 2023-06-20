@@ -266,23 +266,29 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
         }
 
         // Add day undecided
+        const row = tbody.insertRow();
+        row.className = 'undecided';
+        // Time info
+        const empty = div();
+        empty.style.display = 'none';
+        row.appendChild(empty);
+        const cell = row.insertCell();
+        cell.colSpan = 2;
+        cell.className = 'noSelect';
+        // cell.textContent = 'Undecided';
+        cell.textContent = '時間未定';
+        const daysUndecidedCell = row.insertCell();
+        daysUndecidedCell.colSpan = tableWidth;
         for (let i = 0; i < daysUndecided.length; i++) {
-            const row = tbody.insertRow();
-            // Time info
-            if (i === 0) {
-                const empty = div();
-                empty.style.display = 'none';
-                row.appendChild(empty);
-                const cell = row.insertCell();
-                cell.colSpan = 2;
-                cell.className = 'noSelect';
-                cell.textContent = 'Undecided'
-            }
-
             // Build cell
             const course = daysUndecided[i];
-            const cell = createCourseCell(row, course);
-            cell.colSpan = tableWidth;
+            const info = course[0];
+            const cell = div(null,
+                span(info.name),
+            );
+            cell.serialID = info.deptID + '-' + info.sn;
+            cell.onclick = cellClick;
+            daysUndecidedCell.appendChild(cell);
         }
 
         for (let i = 0; i < tableHeight; i++) {
