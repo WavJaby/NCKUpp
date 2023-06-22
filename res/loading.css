@@ -1,69 +1,54 @@
-:root {
-    --green: #008744;
-    --blue: #0057e7;
-    --red: #d62d20;
-    --yellow: #ffa700;
-    --white: #eee;
-
-    --loadingSize: 100px;
-    --extrusionTime: 1.5s;
-    --ritationTime: 1.25s;
-}
-
 .loaderCircle > .path {
-    stroke-dasharray: 1, 200;
-    stroke-dashoffset: 0;
-    transform-origin: center center;
-    -ms-transform-origin: center center;
-    -moz-transform-origin: center center;
-    -webkit-transform-origin: center center;
-    animation: var(--extrusionTime) ease-in-out infinite dash,
-    calc(var(--extrusionTime) * 4) ease-in-out infinite color,
-    var(--ritationTime) linear infinite rotate;
+  stroke-dasharray: 1, 200;
+  stroke-dashoffset: 0;
+  transform-origin: center center;
+  -ms-transform-origin: center center;
+  -moz-transform-origin: center center;
+  -webkit-transform-origin: center center;
+  animation: 1.5s ease-in-out infinite dash, 6s ease-in-out infinite color, 1.25s linear infinite rotate;
 }
 
 .loaderCircle {
-    width: var(--loadingSize);
-    height: var(--loadingSize);
+  width: 100px;
+  height: 100px;
 }
 
 @keyframes rotate {
-    100% {
-        transform: rotate(360deg);
-        -ms-transform: rotate(360deg);
-        -moz-transform: rotate(360deg);
-        -webkit-transform: rotate(360deg);
-    }
+  100% {
+    transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+  }
 }
-
 @keyframes dash {
-    0% {
-        stroke-dasharray: 1, 200;
-        stroke-dashoffset: 0;
-    }
-    50% {
-        stroke-dasharray: 89, 200;
-        stroke-dashoffset: -35px;
-    }
-    100% {
-        stroke-dasharray: 89, 200;
-        stroke-dashoffset: -124px;
-    }
+  0% {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -35px;
+  }
+  100% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -124px;
+  }
+}
+@keyframes color {
+  100%, 0% {
+    stroke: #d62d20;
+  }
+  40% {
+    stroke: #0057e7;
+  }
+  66% {
+    stroke: #008744;
+  }
+  80%, 90% {
+    stroke: #ffa700;
+  }
 }
 
-@keyframes color {
-    100%,
-    0% {
-        stroke: var(--red);
-    }
-    40% {
-        stroke: var(--blue);
-    }
-    66% {
-        stroke: var(--green);
-    }
-    80%,
-    90% {
-        stroke: var(--yellow);
-    }
-}
+/*# sourceMappingURL=loading.css.map */

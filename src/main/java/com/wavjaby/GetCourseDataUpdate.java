@@ -19,7 +19,7 @@ public class GetCourseDataUpdate implements Runnable {
     private static final String TAG = "[CourseListener]";
     private static final Logger logger = new Logger(TAG);
     private static final String apiUrl = "https://discord.com/api/v10";
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final ExecutorService fetchCoursePool = Executors.newFixedThreadPool(8);
     private final ExecutorService messageSendPool = Executors.newFixedThreadPool(4);
     private final Search search;

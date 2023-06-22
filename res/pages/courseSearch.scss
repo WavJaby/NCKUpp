@@ -38,7 +38,7 @@ $search-result-header-bg-color: #1D2329;
         white-space: nowrap;
         margin: auto;
 
-        @media only screen and (max-width: 700px) {
+        @media only screen and ($small-screen) {
             padding: 0;
         }
 
@@ -295,7 +295,7 @@ $search-result-header-bg-color: #1D2329;
 
     // Popup window
     > .popupWindow {
-        background: rgba(0, 0, 0, 0.6);
+        background: $overlay-transparent-bg-color;
         width: 100%;
         height: 100%;
         top: 0;
@@ -318,33 +318,40 @@ $search-result-header-bg-color: #1D2329;
         margin: auto;
     }
 
-    @media only screen and (max-width: 700px) {
-        > .popupWindow > div {
-            width: 100%;
-            height: 100%;
-            position: static;
-        }
-    }
-
     // Popup window
     > .popupWindow > div {
         background: var(--popupWindow-bg-color);
         overflow: auto;
+        border-radius: 10px;
+    }
+
+    @media only screen and ($small-screen) {
+        > .popupWindow > div {
+            width: 100%;
+            height: 100%;
+            position: static;
+            border-radius: 0;
+        }
     }
 
     > .popupWindow .closeButton {
+        background: none;
+        padding: 5px;
         top: 0;
         position: sticky;
-        padding: 5px;
+        cursor: pointer;
+
+        &:focus {
+            box-shadow: none;
+        }
     }
 
     > .popupWindow .closeButton > .icon {
         content: $icon-close;
-        width: 1.2em;
-        height: 1.2em;
+        width: 24px;
     }
 
-    @media only screen and (max-width: 700px) {
+    @media only screen and ($small-screen) {
         > .popupWindow .closeButton > .icon {
             content: $icon-down-arrow;
             @include transform(rotate(90deg));
@@ -385,27 +392,22 @@ $search-result-header-bg-color: #1D2329;
         display: block;
     }
 
-    // Instructor info bubble
-    @media only screen and (min-width: 700px) {
-        > .instructorInfoOffset > .instructorInfo {
-            max-width: 500px;
-            padding: 5px;
-        }
-    }
-
-    @media only screen and (max-width: 700px) {
+    @media only screen and ($small-screen) {
         > .instructorInfoOffset > .instructorInfo {
             display: none;
         }
     }
 
     > .instructorInfoOffset > .instructorInfo {
-        background: rgba(0, 0, 0, 0.9);
+        background: rgba(0, 0, 0, 0.8);
+        max-width: 500px;
+        padding: 5px;
+        border-radius: 10px;
         box-sizing: border-box;
         white-space: pre-wrap;
         word-break: break-word;
-        position: absolute;
         bottom: 0;
+        position: absolute;
     }
 
     > .instructorInfoOffset {
@@ -529,7 +531,7 @@ $search-result-header-bg-color: #1D2329;
         margin: 0 10px;
     }
 
-    @media only screen and (max-width: 700px) {
+    @media only screen and ($small-screen) {
         .instructorDetailWindow > .title {
             margin: 0;
         }

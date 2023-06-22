@@ -16,7 +16,12 @@ import java.io.OutputStream;
 import java.net.CookieManager;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
@@ -29,14 +34,74 @@ public class NCKUHub implements EndpointModule {
     private String nckuHubCourseIdJson;
     private final long courseIDUpdateInterval = 10 * 60 * 1000;
     private long lastCourseIDUpdateTime;
+    private static final int maxCacheSize = 20 * 1000 * 1000;
+    private static final int maxCacheTime = 60 * 1000;
+    private static final int cacheCleanerInterval = 30 * 1000;
+    private int lastCacheSize = 0;
+    private int cacheSize = 0;
+    private final Map<Integer, NckuHubCourseData> courseInfoCache = new HashMap<>();
+
+    private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor();
+
+    private static class NckuHubCourseData {
+        int id;
+        int size;
+        long lastUpdate;
+        String data;
+
+        NckuHubCourseData(String data, int id) {
+            this.data = data;
+            this.id = id;
+            size = data.getBytes(StandardCharsets.UTF_8).length;
+            lastUpdate = System.currentTimeMillis();
+        }
+
+        void updateData(String data) {
+            this.data = data;
+            size = data.getBytes(StandardCharsets.UTF_8).length;
+            lastUpdate = System.currentTimeMillis();
+        }
+
+        static int compare(NckuHubCourseData a, NckuHubCourseData b) {
+            return (int) (a.lastUpdate - b.lastUpdate);
+        }
+    }
 
     @Override
     public void start() {
         updateNckuHubCourseID();
+
+        cacheCleaner.scheduleWithFixedDelay(() -> {
+            if (cacheSize > maxCacheSize) {
+                LinkedList<NckuHubCourseData> sorted = new LinkedList<>(courseInfoCache.values());
+                sorted.sort(NckuHubCourseData::compare);
+
+                // Remove cache
+                while (cacheSize > maxCacheSize && sorted.size() > 0) {
+                    NckuHubCourseData i = sorted.removeFirst();
+                    cacheSize -= i.size;
+                    courseInfoCache.remove(i.id);
+                }
+            }
+            if (lastCacheSize != cacheSize)
+                logger.log("Cache size: " + cacheSize / 1000 + "KB");
+            lastCacheSize = cacheSize;
+        }, cacheCleanerInterval, cacheCleanerInterval, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void stop() {
+        cacheCleaner.shutdown();
+        try {
+            if (!cacheCleaner.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+                logger.warn("CacheCleaner close timeout");
+                cacheCleaner.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            logger.warn("CacheCleaner close error");
+            cacheCleaner.shutdownNow();
+        }
     }
 
     @Override
@@ -57,8 +122,8 @@ public class NCKUHub implements EndpointModule {
             if (queryString == null) {
                 // get courseID
                 if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
-                    if(!updateNckuHubCourseID())
-                        apiResponse.addError(TAG + "Update NCKU-HUB course id failed");
+                    if (!updateNckuHubCourseID())
+                        apiResponse.addWarn(TAG + "Update NCKU-HUB course id failed");
                 apiResponse.setData(nckuHubCourseIdJson);
             } else {
                 // get course info
@@ -87,30 +152,47 @@ public class NCKUHub implements EndpointModule {
         return httpHandler;
     }
 
-    private boolean getNckuHubCourseInfo(String queryString, ApiResponse outData) {
+    private void getNckuHubCourseInfo(String queryString, ApiResponse outData) {
         Map<String, String> query = parseUrlEncodedForm(queryString);
         String nckuID = query.get("id");
         if (nckuID == null) {
             outData.addError(TAG + "Query id not found");
-            return false;
+            return;
         }
         String[] nckuIDs = nckuID.split(",");
 
         try {
             JsonArrayStringBuilder courses = new JsonArrayStringBuilder();
-            for (String id : nckuIDs) {
-                Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + id)
+            long now = System.currentTimeMillis();
+            for (String idStr : nckuIDs) {
+                int id = Integer.parseInt(idStr);
+                // Get cached data
+                NckuHubCourseData cached = courseInfoCache.get(id);
+                if (cached != null && now - cached.lastUpdate < maxCacheTime) {
+                    courses.appendRaw(cached.data);
+                    continue;
+                }
+
+                // Fetch data
+                Connection.Response nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + idStr)
                         .ignoreContentType(true)
                         .execute();
-                courses.appendRaw(nckuhubCourse.body());
+                String data = nckuhubCourse.body();
+                courses.appendRaw(data);
+
+                // Update cache
+                if (cached != null) {
+                    cacheSize -= cached.size;
+                    cached.updateData(data);
+                } else
+                    courseInfoCache.put(id, cached = new NckuHubCourseData(data, id));
+                cacheSize += cached.size;
             }
             outData.setData(courses.toString());
         } catch (IOException e) {
             outData.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            return false;
+            return;
         }
-
-        return true;
     }
 
     private boolean updateNckuHubCourseID() {

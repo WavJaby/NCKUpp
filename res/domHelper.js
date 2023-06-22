@@ -194,56 +194,65 @@ function parseClassInput(className, element) {
         element.className = className;
 }
 
-window.urlHashData = {
-    data: {},
-    update: function () {
-        return this.data = (
-            window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {}
-        );
-    },
-    get: function (key) {
-        return this.data[key];
-    },
-    set: function (key, value) {
-        this.data[key] = value;
-
-        const newUrl = new URL(window.location);
-        newUrl.hash = btoa(encodeURIComponent(JSON.stringify(this.data)));
-        history.pushState({}, document.title, newUrl);
-    },
-    contains: function (key) {
-        return this.data[key] !== undefined;
+window.urlHashData = (function () {
+    let data = window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {};
+    return {
+        update: function () {
+            data = window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {};
+        },
+        get: function (key) {
+            return data[key];
+        },
+        set: function (key, value) {
+            data[key] = value;
+        },
+        pushHistory: function () {
+            const newUrl = new URL(window.location);
+            newUrl.hash = btoa(encodeURIComponent(JSON.stringify(data)));
+            console.log('Append history', JSON.stringify(data));
+            window.history.pushState({}, document.title, newUrl);
+        },
+        contains: function (key) {
+            return data[key] !== undefined;
+        }
     }
-}
-window.urlHashData.update();
+})();
 
 /**
- * @param {string} defaultPage
+ * @param {string} titlePrefix
+ * @param {string} defaultSuffix
+ * @param {string} defaultPageId
  * @param {Object<string, function()|HTMLElement>} routs
  * @param {HTMLElement} [footer]
  * */
-function HashRouter(defaultPage, routs, footer) {
+function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
+                    routs, footer) {
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
     const loadPageCache = {};
     let lastPage, lastPageId = null;
 
     window.addEventListener('popstate', function () {
-        const state = window.urlHashData.update();
-        window.urlHashData.data = state;
-        routerRoot.openPage(state.page, true);
+        window.urlHashData.update();
+        routerRoot.openPage(window.urlHashData.get('page'), window.urlHashData.get('titleSuffix'), true);
     });
 
-    routerRoot.openPage = function (pageId, isHistory) {
-        // if same page
+    routerRoot.openPage = function (pageId, titleSuffix, isHistory) {
+        // If same page
         if (lastPageId === pageId) {
-            // Get page
-            const page = getPage(pageId);
-            if (page.onPageOpen) page.onPageOpen(!!isHistory);
+            // If from history
+            if (isHistory) {
+                const page = getPage(pageId);
+                if (page.onPageOpen) page.onPageOpen(!!isHistory);
+                if (routerRoot.onPageOpen) routerRoot.onPageOpen(lastPageId, pageId, page);
+            }
             return;
         }
-        lastPageId = pageId;
+        document.title = titlePrefix + ' ' + titleSuffix;
+        window.urlHashData.set('titleSuffix', titleSuffix);
         window.urlHashData.set('page', pageId);
+        if (!isHistory)
+            window.urlHashData.pushHistory();
 
         // Get page
         const page = getPage(pageId);
@@ -265,6 +274,9 @@ function HashRouter(defaultPage, routs, footer) {
             page.onRender();
         }
         if (page.onPageOpen) page.onPageOpen(!!isHistory);
+        if (routerRoot.onPageOpen) routerRoot.onPageOpen(lastPageId, pageId, page);
+
+        lastPageId = pageId;
         lastPage = page;
     }
 
@@ -283,35 +295,25 @@ function HashRouter(defaultPage, routs, footer) {
         return loadPageCache[pageId] = page;
     }
 
-    routerRoot.getRoutesName = function () {
+    routerRoot.getPageIds = function () {
         return Object.keys(routs);
     };
 
     // open default page
     routerRoot.init = function () {
-        routerRoot.openPage(window.urlHashData.get('page') || defaultPage);
+        if (!window.urlHashData.contains('page'))
+            routerRoot.openPage(defaultPageId, defaultSuffix);
+        else
+            routerRoot.openPage(window.urlHashData.get('page') || defaultPageId, window.urlHashData.get('titleSuffix'));
     }
 
-    // // append footer
-    // if (footer) {
-    //     routerRoot.addEventListener('scroll', function () {
-    //         const position = (routerRoot.scrollTop - (footer.offsetTop - routerRoot.offsetHeight));
-    //         console.log(position)
-    //
-    //         if (position > 0) {
-    //             // footer.style.marginTop = (lastState.offsetHeight + footer.offsetHeight) + 'px';
-    //             lastState.style.bottom = footer.offsetHeight + 'px';
-    //             // lastState.style.position = 'absolute';
-    //             // lastState.style.bottom = -position + 'px';
-    //         }else {
-    //             // footer.style.marginTop = null;
-    //             lastState.style.bottom = null;
-    //             // lastState.style.position = null;
-    //             // lastState.style.bottom = null;
-    //         }
-    //     });
-    //     routerRoot.appendChild(footer);
-    // }
+    /**
+     * @param pageId
+     * @param lastPageId
+     * @param page
+     */
+    routerRoot.onPageOpen = null;
+
     return routerRoot;
 }
 

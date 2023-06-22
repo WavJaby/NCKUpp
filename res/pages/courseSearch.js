@@ -223,7 +223,7 @@ module.exports = function (loginState) {
     async function onRender() {
         console.log('Course search Render');
         styles.mount();
-        fetchApi('/alldept').then(i => {
+        window.fetchApi('/alldept').then(i => {
             deptNameSelectMenu.setOptions(i.data.deptGroup.map(i => [i.name, i.dept]));
             loadLastSearch();
         });
@@ -274,11 +274,11 @@ module.exports = function (loginState) {
         searching = true;
         // get all course ID
         if (nckuHubCourseID === null)
-            nckuHubCourseID = (await fetchApi('/nckuhub')).data;
+            nckuHubCourseID = (await window.fetchApi('/nckuhub')).data;
 
         // get urSchool data
         if (urSchoolData === null)
-            urSchoolData = (await fetchApi('/urschool')).data;
+            urSchoolData = (await window.fetchApi('/urschool')).data;
 
         let queryData = rawQuery instanceof Event ? null : rawQuery;
         if (!queryData) {
@@ -298,7 +298,7 @@ module.exports = function (loginState) {
 
         // Save query string and create history
         if ((saveQuery === undefined || saveQuery === true) && lastQueryString !== queryString)
-            window.urlHashData.set('searchRawQuery', queryData);
+            window.urlHashData.setAndPushHistory('searchRawQuery', queryData);
 
         // Update queryString
         lastQueryString = queryString;
@@ -307,7 +307,7 @@ module.exports = function (loginState) {
         searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 
         // fetch data
-        const result = (await fetchApi('/search?' + queryString, {timeout: 5000}));
+        const result = (await window.fetchApi('/search?' + queryString, {timeout: 5000}));
 
         if (!result || !result.success || !result.data) {
             searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null});
@@ -435,7 +435,7 @@ module.exports = function (loginState) {
             const chunk = [];
             for (let j = i; j < i + chunkSize && j < nckuHubDataArr.length; j++)
                 chunk.push(nckuHubDataArr[j].nckuHubID);
-            fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
+            window.fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
                 for (let j = 0; j < chunk.length; j++) {
                     const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubDataArr[i + j];
                     /**@type NckuHubRaw*/
@@ -469,7 +469,7 @@ module.exports = function (loginState) {
 
     function openInstructorDetailWindow(info) {
         window.pageLoading.set(true);
-        fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
+        window.fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
             /**@type UrSchoolInstructor*/
             const instructor = response.data;
             instructor.info = info;
@@ -491,7 +491,7 @@ module.exports = function (loginState) {
         let serialIndex, result;
         if ((serialIndex = watchList.indexOf(courseData.serialNumber)) === -1) {
             console.log('add watch');
-            result = fetchApi('/watchdog', {
+            result = window.fetchApi('/watchdog', {
                 method: 'POST',
                 body: `studentID=${loginState.state.studentID}&courseSerial=${courseData.serialNumber}`
             });
@@ -499,7 +499,7 @@ module.exports = function (loginState) {
             watchList.push(courseData.serialNumber);
         } else {
             console.log('remove watch');
-            result = fetchApi('/watchdog', {
+            result = window.fetchApi('/watchdog', {
                 method: 'POST',
                 body: `studentID=${loginState.state.studentID}&removeCourseSerial=${courseData.serialNumber}`
             });
@@ -513,7 +513,7 @@ module.exports = function (loginState) {
 
     function getWatchCourse() {
         if (!loginState.state) return;
-        fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
+        window.fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
             const eql = encodeURIComponent('&');
             watchList = [];
             Object.entries(i.data).forEach(i => i[1].forEach(j => watchList.push(i[0] + '-' + j)));
@@ -526,7 +526,7 @@ module.exports = function (loginState) {
      * @this {{cosdata: string}}
      */
     function sendCosData() {
-        fetchApi(`/courseFuncBtn?cosdata=${this.cosdata}`).then(i => {
+        window.fetchApi(`/courseFuncBtn?cosdata=${this.cosdata}`).then(i => {
             if (i.success)
                 window.messageAlert.addSuccess('Message', i.msg, 5000);
         });

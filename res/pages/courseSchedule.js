@@ -57,8 +57,6 @@ module.exports = function (loginState) {
     const showClassroomCheckBox = checkbox();
     const scheduleTable = new ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomCheckBox);
 
-    onLoginState(loginState.state);
-
     async function onRender() {
         console.log('Course schedule Render');
         styles.mount();
@@ -70,6 +68,7 @@ module.exports = function (loginState) {
         window.navMenu.remove('open');
         styles.enable();
         loginState.addListener(onLoginState);
+        onLoginState(loginState.state);
     }
 
 
@@ -79,14 +78,18 @@ module.exports = function (loginState) {
         loginState.removeListener(onLoginState);
     }
 
+
     /**
      * @param {LoginData} state
      */
     function onLoginState(state) {
         if (state && state.login)
-            fetchApi('/courseSchedule').then(scheduleTable.init);
-        else
+            window.fetchApi('/courseSchedule').then(scheduleTable.init);
+        else {
+            if (state)
+                window.askForLoginAlert();
             scheduleTable.clear();
+        }
     }
 
     return div('courseSchedule',
@@ -135,7 +138,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
             courseInfoWindow.add(
                 button(null, 'moodle',
                     () => {
-                        fetchApi('/extract?m=' + info.m).then(i => {
+                        window.fetchApi('/extract?m=' + info.m).then(i => {
                             if (i.data && i.data.status)
                                 window.open(i.data.url, '_blank');
                         });
@@ -147,7 +150,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
                 courseInfoWindow.add(
                     button(null, time[0] + ' ' + time[1] + ' ' + time[4],
                         () => {
-                            fetchApi('/extract?l=' + time[2] + ',' + time[3]).then(i => {
+                            window.fetchApi('/extract?l=' + time[2] + ',' + time[3]).then(i => {
                                 if (i.data && i.data.status)
                                     window.open(i.data.url, '_blank');
                             });
@@ -316,7 +319,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
         const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
 
         // fetch data
-        fetchApi('/search?serial=' + courseFetchData).then(i => {
+        window.fetchApi('/search?serial=' + courseFetchData).then(i => {
             for (const entry of Object.entries(i.data))
                 for (const course of entry[1])
                     courseInfo[course.sn] = course;

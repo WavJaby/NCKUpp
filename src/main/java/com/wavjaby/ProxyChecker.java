@@ -145,13 +145,12 @@ public class ProxyChecker {
             }
         });
 
-        // https://spys.one/en/free-proxy-list/
+        // https://spys.one/asia-proxy/
         /*
-const type = document.getElementById('xf5'); type.onchange = null, type.value = 2;
-const showCount = document.getElementById('xpp'); showCount.value = 5, showCount.onchange();
+[['xf5',2],['xf1',1],['xpp',5,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
 
 let list = document.querySelectorAll('body > table:nth-child(4) > tbody > tr:nth-child(4) > td > table > tbody > tr');
-console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].innerText.toLowerCase()+'://'+i[0].innerText).join('\n'));
+console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].innerText.toLowerCase()+'://'+i[0].innerText).join('\n'));
 
          */
         try {
@@ -162,7 +161,11 @@ console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                 Set<ProxyManager.ProxyData> newData = new HashSet<>();
                 for (String s : freeProxyStr.split("\n?\n")) {
                     if (s.length() == 0) break;
-                    newData.add(new ProxyManager.ProxyData(s, url));
+                    try {
+                        newData.add(new ProxyManager.ProxyData(s, url));
+                    } catch (Exception e) {
+                        System.out.println(s);
+                    }
                 }
                 proxyDataList.addAll(newData);
 
@@ -183,14 +186,15 @@ console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].inne
 
         pool.shutdown();
         try {
-            pool.awaitTermination(20000, TimeUnit.MILLISECONDS);
+            if (!pool.awaitTermination(20000, TimeUnit.MILLISECONDS))
+                pool.shutdownNow();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
         long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
-        testProxy(proxyDataList, 40, 1500, 3, -1, true);
+        testProxy(proxyDataList, 50, 1500, 2, -1, true);
 //        proxyDataList.removeIf(i -> i.ping == -1);
 //        testProxy(proxyDataList, 20, 2000);
         System.out.println("Done");
@@ -198,7 +202,7 @@ console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         System.out.println(proxyDataList.size());
 
         System.out.println("Ping...");
-        testProxy(proxyDataList, 2, 1500, -1, 5, false);
+        testProxy(proxyDataList, 1, 2000, -1, 3, false);
         proxyDataList.removeIf(i -> i.ping == -1);
         System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
 
@@ -219,6 +223,8 @@ console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         Semaphore fetchPoolLock = new Semaphore(threadCount);
         ThreadPoolExecutor checkConnectionPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
+        boolean conforming = conformTry != -1;
+
         for (ProxyManager.ProxyData data : proxyDataList) {
             String ip = data.ip;
             int port = data.port;
@@ -241,7 +247,11 @@ console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                         long start = System.currentTimeMillis();
                         try {
                             Proxy proxy = data.toProxy();
-                            URL url = new URL("https://api.simon.chummydns.com/api/ip");
+                            URL url;
+                            if (conforming)
+                                url = new URL("https://course.ncku.edu.tw/index.php");
+                            else
+                                url = new URL("https://api.simon.chummydns.com/api/ip");
 //                            URL url = new URL("https://ifconfig.me/ip");
                             URLConnection conn = url.openConnection(proxy);
                             conn.setUseCaches(false);
@@ -271,12 +281,13 @@ console.log([...list].slice(2, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                     } catch (TimeoutException e) {
                         future.cancel(true);
                         timeout = true;
-                        if (conformTry != -1) break;
                     }
                     error = finalError[0];
                     message = finalMessage[0];
-                    if (!timeout && conformTry == -1) break;
-                    if (error != null && conformTry != -1) break;
+                    // Pass
+                    if (!timeout && !conforming) break;
+                    // Conform failed (error or time out)
+                    if ((error != null || timeout) && conforming) break;
                 }
 
                 String left = String.valueOf(taskLeft.getCount());

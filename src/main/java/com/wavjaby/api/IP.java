@@ -29,7 +29,6 @@ public class IP implements EndpointModule {
     }
 
     private final HttpHandler httpHandler = req -> {
-        long startTime = System.currentTimeMillis();
         String remoteIp;
         try {
             Headers headers = req.getRequestHeaders();
@@ -56,7 +55,7 @@ public class IP implements EndpointModule {
             e.printStackTrace();
             remoteIp = null;
         }
-        logger.log(remoteIp + " " + (System.currentTimeMillis() - startTime) + "ms");
+//        logger.log(remoteIp);
     };
 
     @Override

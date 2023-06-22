@@ -49,6 +49,7 @@ public class StudentIdentificationSystem implements EndpointModule {
     };
 
     public static class SemesterOverview {
+        final String semester;
         final String semID;
         final float requireCredits;
         final float electiveCredits;
@@ -64,6 +65,22 @@ public class StudentIdentificationSystem implements EndpointModule {
 
         public SemesterOverview(Elements row) {
             semID = row.get(1).getElementsByTag("input").attr("value");
+            int yearStart = -1, yearEnd = -1;
+            for (int i = 0; i < semID.length(); i++) {
+                char c = semID.charAt(i);
+                if (yearStart == -1) {
+                    if (c != '0')
+                        yearStart = i;
+                } else if (c < '0' || c > '9') {
+                    yearEnd = i;
+                    break;
+                }
+            }
+            if (yearStart == -1)
+                semester = null;
+            else
+                semester = semID.substring(yearStart, yearEnd) + ' ' +
+                        (semID.charAt(semID.length() - 1) == '上' ? 0 : 1);
             requireCredits = Float.parseFloat(row.get(2).text().trim());
             electiveCredits = Float.parseFloat(row.get(3).text().trim());
             summerCourses = Float.parseFloat(row.get(4).text().trim());
@@ -88,6 +105,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         public String toString() {
             return new JsonObjectStringBuilder()
                     .append("semID", semID)
+                    .append("semester", semester)
                     .append("requireC", requireCredits)
                     .append("electiveC", electiveCredits)
                     .append("summerC", summerCourses)
@@ -107,7 +125,7 @@ public class StudentIdentificationSystem implements EndpointModule {
 
     public static class CourseGrade {
         final String serialNumber;
-        final String courseNo;
+        final String systemNumber;
         final String courseName;
         final String remark;
         final float credits;
@@ -115,7 +133,6 @@ public class StudentIdentificationSystem implements EndpointModule {
         final float grade;
         final String gpa;
         final String normalDistImgQuery;
-
 
         public CourseGrade(Elements row) {
             String serialNumber_ = row.get(1).text().trim();
@@ -133,7 +150,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 } else serialNumber = null;
             } else serialNumber = null;
 
-            courseNo = row.get(2).text().trim();
+            systemNumber = row.get(2).text().trim();
             courseName = row.get(3).text().trim();
             // 課程別
             String remark_ = row.get(4).text().trim();
@@ -157,11 +174,34 @@ public class StudentIdentificationSystem implements EndpointModule {
             }
         }
 
+        public CourseGrade(Elements row, boolean current) {
+            String[] requireAndRemark = row.get(0).text().trim().split("/", 2);
+            require = requireAndRemark[0];
+            remark = requireAndRemark[1].equals("通") ? "通識" : requireAndRemark[1];
+
+            String dept = row.get(1).text().trim();
+            String num = row.get(2).text().trim();
+            serialNumber = dept + '-' + (num.length() == 1
+                    ? "00" + num
+                    : num.length() == 2
+                    ? "0" + num
+                    : num);
+
+            systemNumber = row.get(3).text().trim();
+            courseName = row.get(4).text().trim();
+            credits = Float.parseFloat(row.get(5).text().trim());
+            String grade_ = row.get(6).text().trim();
+            grade = grade_.equals("成績未到") ? -2 : Float.parseFloat(grade_);
+
+            gpa = null;
+            normalDistImgQuery = null;
+        }
+
         @Override
         public String toString() {
             return new JsonObjectStringBuilder()
                     .append("serialNumber", serialNumber)
-                    .append("courseNo", courseNo)
+                    .append("systemNumber", systemNumber)
                     .append("courseName", courseName)
                     .append("remark", remark)
                     .append("credits", credits)
@@ -207,7 +247,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             req.close();
         } catch (IOException e) {
             req.close();
-            e.printStackTrace();
+            logger.err(e);
         }
         logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };
@@ -236,6 +276,10 @@ public class StudentIdentificationSystem implements EndpointModule {
                 apiResponse.addError(TAG + "Cant get semesters table");
             else
                 apiResponse.setData(data.toString());
+        }
+        // Get current semesters info
+        else if (mode.equals("c")) {
+            getCurrentSemesterGradeTable(cookieStore, apiResponse);
         }
         // Get semester course grade
         else if (mode.equals("g")) {
@@ -293,7 +337,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 return null;
             tbody = tbodyElements.get(3);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.err(e);
         }
         if (tbody == null)
             return null;
@@ -301,15 +345,107 @@ public class StudentIdentificationSystem implements EndpointModule {
         Elements tableRows = tbody.children();
         if (tableRows.size() < 3)
             return null;
+        // Parse semester overview
         List<SemesterOverview> semesterOverviewList = new ArrayList<>(tableRows.size() - 3);
         for (int i = 2; i < tableRows.size() - 1; i++) {
             Element row = tableRows.get(i);
             if (row.childrenSize() < 13)
                 return null;
-            semesterOverviewList.add(new SemesterOverview(tableRows.get(i).children()));
+            semesterOverviewList.add(new SemesterOverview(row.children()));
         }
 
         return semesterOverviewList;
+    }
+
+    private void getCurrentSemesterGradeTable(CookieStore cookieStore, ApiResponse apiResponse) {
+        Element tbody = null;
+        try {
+            Connection.Response homePage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp")
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .execute();
+            Elements tbodyElements = homePage.parse().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4) {
+                apiResponse.addError(TAG + "Cant get IdSys homepage");
+                return;
+            }
+            tbody = tbodyElements.get(3);
+        } catch (IOException e) {
+            logger.err(e);
+        }
+        if (tbody == null) {
+            apiResponse.addError(TAG + "Cant get IdSys homepage tbody");
+            return;
+        }
+
+        // Find current semester data url
+        String url = null;
+        for (Element i : tbody.getElementsByAttribute("href")) {
+            String href = i.attr("href");
+            if (!href.startsWith("qrys03") &&
+                    !href.startsWith("qrys05") &&
+                    !href.startsWith("qrys08")) {
+                url = href;
+                break;
+            }
+        }
+        if (url == null) {
+            apiResponse.addError(TAG + "Cant find current semester data url");
+            return;
+        }
+
+        // Get current semester table
+        tbody = null;
+        try {
+            Connection.Response homePage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/" + url)
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .execute();
+            Elements tbodyElements = homePage.parse().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4) {
+                apiResponse.addError(TAG + "Cant get current semester page");
+                return;
+            }
+            tbody = tbodyElements.get(3);
+        } catch (IOException e) {
+            logger.err(e);
+        }
+        if (tbody == null) {
+            apiResponse.addError(TAG + "Cant get current semester grade tbody");
+            return;
+        }
+
+        Elements tableRows = tbody.children();
+        if (tableRows.size() < 4) {
+            apiResponse.addError(TAG + "Cant get current semester grade table");
+            return;
+        }
+
+        // Parse course grade
+        List<CourseGrade> courseGradeList = new ArrayList<>(tableRows.size() - 4);
+        for (int i = 3; i < tableRows.size() - 1; i++) {
+            courseGradeList.add(new CourseGrade(tableRows.get(i).children(), true));
+        }
+
+        // Parse semester
+        String semester = tableRows.get(0).text();
+        int firstIndex, secondIndex, thirdIndex, forthIndex;
+        int i = 0;
+        char c;
+        while ((c = semester.charAt(i)) < '0' || c > '9') i++;
+        firstIndex = i;
+        while ((c = semester.charAt(i)) >= '0' && c <= '9') i++;
+        secondIndex = i;
+        while ((c = semester.charAt(i)) < '0' || c > '9') i++;
+        thirdIndex = i;
+        while ((c = semester.charAt(i)) >= '0' && c <= '9') i++;
+        forthIndex = i;
+        semester = semester.substring(firstIndex, secondIndex) + ' ' + semester.substring(thirdIndex, forthIndex);
+
+        JsonObjectStringBuilder out = new JsonObjectStringBuilder();
+        out.append("semester", semester);
+        out.appendRaw("courseGrades", courseGradeList.toString());
+        apiResponse.setData(out.toString());
     }
 
     private List<CourseGrade> getSemesterGradeTable(String semesterID, CookieStore cookieStore) {
@@ -327,7 +463,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 return null;
             tbody = tbodyElements.get(3);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.err(e);
         }
         if (tbody == null)
             return null;
@@ -379,6 +515,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             int svgWidth = 600, svgHeight = 450;
             Svg svg = new Svg(svgWidth, svgHeight);
             svg.setBackgroundColor("#181A1B");
+            svg.setAttribute("font-family", "monospace");
             int graphPaddingX = 20;
             int graphPaddingY = 35;
             int graphPaddingTopY = 80;
@@ -442,27 +579,73 @@ public class StudentIdentificationSystem implements EndpointModule {
                     peakStudentCount += studentCount[i];
             }
 
+            // Create standard deviation curve
+            int totalPoints = 220;
+            int maxValue = 110;
+            double step = (double) maxValue / totalPoints;
+            float stdDevCurveDelta = (float) xAxisWidth / (totalPoints - 1);
+            float baseY = svgHeight - graphPaddingY - 2;
+            float[][] points = new float[totalPoints][2];
+            for (int i = 0; i < totalPoints; i++) {
+                float y = (float) (stdDevFunction(i * step, stdDev, avg) * yAxisHeight * peakStudentCount / totalStudentCount);
+                float x = graphPaddingX + i * stdDevCurveDelta;
+                points[i][0] = x;
+                points[i][1] = baseY - y;
+            }
+            // Build smooth curve
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < totalPoints; i++) {
+                if (i == 0)
+                    builder.append("M ").append(points[i][0]).append(',').append(points[i][1]);
+                else
+                // Create the bezier curve command
+                {
+                    // start control point
+                    float[] cps = controlPoint(points[i - 1], i < 2 ? null : points[i - 2], points[i], false);
+                    // end control point
+                    float[] cpe = controlPoint(points[i], points[i - 1], i >= points.length - 1 ? null : points[i + 1], true);
+                    builder.append("C ").append(cps[0]).append(',').append(cps[1]).append(' ')
+                            .append(cpe[0]).append(',').append(cpe[1]).append(' ')
+                            .append(points[i][0]).append(',').append(points[i][1]);
+                }
+            }
+            // Apply curve
             SvgPath stdDevLine = new SvgPath()
                     .setStrokeWidth(2)
                     .setStrokeColor("#85A894");
-            float stdDevLineDelta = xAxisWidth / 110f;
-            for (int i = 0; i <= 110; i++) {
-                float baseY = svgHeight - graphPaddingY - 2;
-                float y = (float) (stdDevFunction(i, stdDev, avg) * yAxisHeight * peakStudentCount / totalStudentCount);
-                float x = graphPaddingX + i * stdDevLineDelta;
-                if (i == 0)
-                    stdDevLine.addPoint("M " + x + ' ' + (baseY - y));
-                else
-                    stdDevLine.addPoint("L " + x + ' ' + (baseY - y));
-
-            }
+            stdDevLine.addPoint(builder.toString());
             svg.appendChild(stdDevLine);
 
             return svg.toString();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.err(e);
         }
         return null;
+    }
+
+    private float[] controlPoint(float[] current, float[] previous, float[] next, boolean reverse) {
+        // The smoothing ratio
+        float smoothing = 0.1f;
+        // When 'current' is the first or last point of the array
+        // 'previous' or 'next' don't exist.
+        // Replace with 'current'
+        float[] p = previous != null ? previous : current;
+        float[] n = next != null ? next : current;
+
+        // Properties of the opposed-line
+        float lengthX = n[0] - p[0];
+        float lengthY = n[1] - p[1];
+        double length = Math.sqrt(Math.pow(lengthX, 2) + Math.pow(lengthY, 2));
+        double angle = Math.atan2(lengthY, lengthX);
+
+        // If is end-control-point, add PI to the angle to go backward
+        angle = angle + (reverse ? Math.PI : 0);
+        length = length * smoothing;
+        // The control point position is relative to the current point
+        float x = (float) (current[0] + Math.cos(angle) * length);
+        float y = (float) (current[1] + Math.sin(angle) * length);
+
+        return new float[]{x, y};
     }
 
     private int[] parseImage(int[] imageRGB, int imageWidth, int imageHeight, boolean debug) {
@@ -630,9 +813,9 @@ public class StudentIdentificationSystem implements EndpointModule {
         return out;
     }
 
-//    private final double sqrt2pi = Math.sqrt(2 * Math.PI);
 
     private double stdDevFunction(double x, double stdDev, double avg) {
+//        final double sqrt2pi = Math.sqrt(2 * Math.PI);
         double a = x - avg;
 //        return Math.pow(Math.E, -(a * a) / (2 * stdDev * stdDev)) / (stdDev * sqrt2pi);
         return Math.pow(Math.E, -(a * a) / (2 * stdDev * stdDev));

@@ -9,7 +9,6 @@
   width: 100%;
   height: 100%;
   position: relative;
-  z-index: 1;
 }
 .root > .loading > .loaderCircle {
   position: absolute;
@@ -67,7 +66,6 @@
 .navbar .list > li {
   background: #161b22;
   padding: 0 10px;
-  z-index: 1;
   display: block;
   position: relative;
 }
@@ -96,7 +94,7 @@
   float: left;
   margin: 0;
 }
-.navbar li:hover {
+.navbar li:hover, .navbar li.opened {
   background: #505050;
 }
 .navbar > .links > li:active,
@@ -185,14 +183,14 @@ footer {
   box-sizing: border-box;
   text-align: center;
 }
+footer > span {
+  display: block;
+  line-height: 2em;
+}
 footer > .borderLine {
   width: 100%;
   margin-bottom: 10px;
   border-top: gray 1px solid;
-}
-footer > .author {
-  display: block;
-  line-height: 2em;
 }
 footer > .openRepo {
   height: 2em;

@@ -40,7 +40,7 @@ const {
 // noinspection JSUnusedLocalSymbols
 const SelectMenu = require('./res/selectMenu');
 
-const apiEndPoint = location.hostname === 'localhost'
+const apiEndPoint = window.location.hostname === 'localhost'
     ? 'https://localhost/api'
     : 'https://api.simon.chummydns.com/api';
 const mobileWidth = 700;
@@ -80,26 +80,28 @@ window.fetchApi = function (endpoint, option) {
             if (abortTimeout)
                 clearTimeout(abortTimeout);
             if (!i.success)
-                messageAlert.addError(
+                window.messageAlert.addError(
                     'Api response error',
-                    i.err.join('\n'), 1000);
+                    i.err.join('\n'), 2000);
             return i;
         })
         .catch(e => {
             // Timeout error
             if (e.name === 'AbortError') {
-                messageAlert.addError(
-                    'Request timeout',
+                window.messageAlert.addError(
+                    'Api response timeout',
                     'Try again later', 3000);
             }
             // Other error
             else {
-                messageAlert.addError(
-                    'Api error',
-                    e instanceof Error ? e.stack || e || 'Unknown error!' : e, 1000);
+                window.messageAlert.addError(
+                    'Network error',
+                    e instanceof Error ? e.stack || e || 'Unknown error!' : e, 2000);
             }
         });
 };
+window.askForLoginAlert = () =>
+    window.messageAlert.addInfo("Login to use this page", 'Click login button at top right corner to login in', 3000);
 
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
@@ -129,25 +131,7 @@ window.pageLoading = new Signal(false);
     }
 
     // main code
-    const userLoginData = new Signal();
-    const showLoginWindow = new Signal(false);
-    const hashRouter = HashRouter('search',
-        {
-            search: () => require('./res/pages/courseSearch')(userLoginData),
-            schedule: () => require('./res/pages/courseSchedule')(userLoginData),
-            grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
-        },
-        footer(
-            div('borderLine'),
-            span('Author: WavJaby', 'author'),
-            a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null,
-                {target: '_blank'},
-                img('./res/assets/github_icon.svg', 'githubIcon noDrag'),
-                span('GitRepo'),
-            ),
-        )
-    );
-    const navPageButtonName = {
+    const pageIdName = {
         // search: 'Search',
         // schedule: 'Schedule',
         // grades: 'Grades',
@@ -155,9 +139,40 @@ window.pageLoading = new Signal(false);
         schedule: '課表',
         grades: '成績查詢',
     };
+    const defaultPage = 'search';
+    const userLoginData = new Signal();
+    const showLoginWindow = new Signal(false);
+    const hashRouter = HashRouter('NCKU++', pageIdName[defaultPage], defaultPage,
+        {
+            search: () => require('./res/pages/courseSearch')(userLoginData),
+            schedule: () => require('./res/pages/courseSchedule')(userLoginData),
+            grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
+        },
+        footer(
+            div('borderLine'),
+            span('By WavJaby'),
+            span('Email: WavJaby@gmail.com'),
+            a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null,
+                {target: '_blank'},
+                img('./res/assets/github_icon.svg', 'githubIcon noDrag'),
+                span('GitRepo'),
+            ),
+        )
+    );
+    const pageButtons = {};
+    for (const pageId of hashRouter.getPageIds()) {
+        pageButtons[pageId] = li(null, text(pageIdName[pageId]), {
+            onclick: () => hashRouter.openPage(pageId, pageIdName[pageId])
+        });
+    }
+    hashRouter.onPageOpen = function (lastPageId, pageId) {
+        if (lastPageId)
+            pageButtons[lastPageId].classList.remove('opened');
+        pageButtons[pageId].classList.add('opened');
+    }
 
     // check login
-    fetchApi('/login').then(onLoginStateChange);
+    window.fetchApi('/login').then(onLoginStateChange);
 
     const root = div('root',
         // Pages
@@ -165,31 +180,27 @@ window.pageLoading = new Signal(false);
         // Navbar
         nav('navbar noSelect',
             NavSelectList('loginBtn',
-                [
-                    span(TextState(userLoginData, res => res ? res.studentID : 'Login')),
-                ],
+                span(TextState(userLoginData, /**@param{LoginData}state*/state =>
+                    state && state.login ? state.studentID : 'Login'
+                )),
                 [
                     ['Profile', null],
-                    ['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
+                    ['Logout', () => window.fetchApi('/logout').then(onLoginStateChange)],
                 ],
                 false,
                 () => {
                     // Is login
-                    if (userLoginData.state)
-                        return true;
+                    if (userLoginData.state && userLoginData.state.login)
+                        return true; // Open select list
                     // Not login, open login window
                     showLoginWindow.set(!showLoginWindow.state);
-                    return false;
+                    return false; // Not open select list
                 }
             ),
             ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => window.navMenu.toggle('open')})),
             ul('homePage', li(null, text('NCKU++'))),
             ul(window.navMenu,
-                hashRouter.getRoutesName().map(i =>
-                    li(null, text(navPageButtonName[i]), {
-                        onclick: () => hashRouter.openPage(i)
-                    })
-                ),
+                Object.values(pageButtons),
                 // NavSelectList('arrow', text('List'), [
                 //     ['0w0', null],
                 //     ['awa', null],
@@ -198,7 +209,7 @@ window.pageLoading = new Signal(false);
         ),
         ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
         ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
-        messageAlert,
+        window.messageAlert,
         debugWindow,
     );
     window.onload = () => {
@@ -213,14 +224,13 @@ window.pageLoading = new Signal(false);
             userLoginData.set(null);
             return;
         }
-        /**@type LoginData*/
-        const loginData = response.data;
-        if (loginData && loginData.login) {
+        const loginData = /**@type LoginData*/response.data;
+        if (loginData) {
             userLoginData.set(loginData);
             showLoginWindow.set(false);
         } else {
             if (response.msg)
-                messageAlert.addError('Login error', response.msg, 5000);
+                window.messageAlert.addError('Login failed', response.msg, 5000);
             userLoginData.set(null);
         }
     }
@@ -240,8 +250,8 @@ function NavSelectList(classname, title, items, enableHover, onOpen) {
         classname ? 'list ' + classname : 'list',
         enableHover ? {onmouseleave: closeSelectList, onmouseenter: openSelectList} : null,
         // Element
-        li(null, title, {onclick: toggleSelectList}),
         itemsElement,
+        li(null, title, {onclick: toggleSelectList}),
     );
 
     for (const item of items) {
@@ -346,7 +356,7 @@ function LoginWindow(onLoginStateChange) {
             loading = true;
             window.pageLoading.set(true);
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-            fetchApi('/login', {
+            window.fetchApi('/login', {
                 method: 'POST',
                 body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
                 timeout: 10000,

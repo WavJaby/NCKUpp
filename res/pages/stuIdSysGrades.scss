@@ -14,37 +14,39 @@
 }
 
 .stuIdSysGrades {
-    > .semesters {
-        padding: 5px;
+    > .semesterInfo {
+        float: left;
+    }
 
-        > .semesterInfo {
-            background: #1a1d28;
-            cursor: pointer;
-            display: inline-block;
-            padding: 10px;
-            border-radius: 10px;
+    .semesterInfo {
+        background: #1a1d28;
+        cursor: pointer;
+        display: inline-block;
+        padding: 10px;
+        border-radius: 10px;
+        margin: 5px 0 0 5px;
 
-            &:hover {
-                background: #161a25;
-            }
+        &:hover {
+            background: #161a25;
+        }
 
-            // Title
-            > h1 {
-                font-size: 24px;
-                margin: 5px;
-                text-align: center;
-            }
+        // Title
+        > h1 {
+            font-size: 24px;
+            margin: 5px;
+            text-align: center;
+        }
 
-            // Info
-            > span {
-                @extend #infoText;
-            }
+        // Info
+        > span {
+            @extend #infoText;
         }
     }
 
     > .semesterGrades {
         padding: 5px;
         text-align: center;
+        border-top: white 1px solid;
 
         > div {
             background: #1a1d28;
@@ -68,9 +70,98 @@
         }
     }
 
-    img {
+    > .graphBackground {
+        background: $overlay-transparent-bg-color;
+        position: fixed;
+        width: 100%;
+        height: 100%;
         top: 0;
-        float: right;
-        position: sticky;
+        left: 0;
+        z-index: 999;
+
+        > .graphVerticalCenter {
+            height: 50vw;
+            max-height: 70vh;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+            text-align: center;
+        }
+
+        // Graph block
+        > .graphVerticalCenter > .graph {
+            display: inline-block;
+            position: relative;
+            height: 100%;
+
+            > h1 {
+                width: 100%;
+                font-size: 30px;
+                position: absolute;
+                margin: 0;
+            }
+
+            > .closeButton {
+                background: none;
+                padding: 5px;
+                right: 0;
+                position: absolute;
+                cursor: pointer;
+
+                &:focus {
+                    box-shadow: none;
+                }
+
+                > .icon {
+                    content: $icon-close;
+                    width: 24px;
+                }
+            }
+
+            > img {
+                height: 100%;
+                border-radius: 10px;
+            }
+        }
+
+        @media only screen and ($small-screen) {
+            > .graphVerticalCenter {
+                height: 100%;
+                height: fit-content;
+
+                > .graph {
+                    width: 100%;
+
+                    > h1 {
+                        font-size: 20px;
+                    }
+
+                    > img {
+                        width: 100%;
+                    }
+                }
+            }
+        }
+    }
+
+    > .loading {
+        background: $overlay-transparent-bg-color;
+        position: fixed;
+        top: $navbar-height;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+
+        > .loaderCircle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
     }
 }
