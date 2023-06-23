@@ -202,7 +202,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         System.out.println(proxyDataList.size());
 
         System.out.println("Ping...");
-        testProxy(proxyDataList, 1, 2000, -1, 3, false);
+        testProxy(proxyDataList, 1, 2000, -1, 2, false);
         proxyDataList.removeIf(i -> i.ping == -1);
         System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
 
@@ -243,6 +243,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                 for (int tryCount = 0; tryCount < maxTryCount; tryCount++) {
                     String[] finalError = new String[1];
                     String[] finalMessage = new String[1];
+                    timeout = false;
                     Future<Long> future = checkConnectionPool.submit(() -> {
                         long start = System.currentTimeMillis();
                         try {
@@ -273,7 +274,6 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                         }
                         return System.currentTimeMillis() - start;
                     });
-                    timeout = false;
                     try {
                         latency = future.get(timeoutTime, TimeUnit.MILLISECONDS);
                     } catch (InterruptedException | ExecutionException e) {

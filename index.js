@@ -221,18 +221,23 @@ window.pageLoading = new Signal(false);
     function onLoginStateChange(response) {
         // Request timeout or cancel
         if (!response) {
-            userLoginData.set(null);
+            window.messageAlert.addError('Network error', 'Try again later', 3000);
             return;
         }
         const loginData = /**@type LoginData*/response.data;
-        if (loginData) {
-            userLoginData.set(loginData);
-            showLoginWindow.set(false);
-        } else {
-            if (response.msg)
-                window.messageAlert.addError('Login failed', response.msg, 5000);
-            userLoginData.set(null);
+        if (!loginData) {
+            window.messageAlert.addError('Unknown error', 'Try again later', 3000);
+            return;
         }
+        // Check if login error
+        if (!loginData.login && response.msg) {
+            window.messageAlert.addError('Login failed', response.msg, 5000);
+            return;
+        }
+
+        // Success, set login data
+        userLoginData.set(loginData);
+        showLoginWindow.set(false);
     }
 })();
 
