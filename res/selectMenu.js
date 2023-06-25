@@ -1,7 +1,7 @@
 'use strict';
 
 /*ExcludeStart*/
-const {div, input, ul, li, text, span, Signal} = require('./domHelper');
+const {div, input, ul, li, text, span, Signal, img} = require('./domHelper');
 const module = {};
 /*ExcludeEnd*/
 
@@ -12,8 +12,10 @@ const module = {};
  */
 
 module.exports = function (id, placeholder) {
-    const selectItemName = span(placeholder, 'empty selectItemName');
-    const selectMenuBox = div('selectBtn', selectItemName);
+    const selectItemName = span(null, 'empty selectItemName', {placeholder: placeholder});
+    const clearButton = img('./res/assets/close_icon.svg', 'clearBtn');
+    clearButton.style.display = 'none';
+    const selectMenuBox = div('selectBtn', selectItemName, clearButton);
 
     const optionsSignal = new Signal(div());
     const searchInput = input(null, 'Search', null, {type: 'search', oninput: onSearch});
@@ -28,13 +30,33 @@ module.exports = function (id, placeholder) {
         contentWindow,
     );
 
-    selectMenuBox.onclick = () => {
-        window.addEventListener('mouseup', checkClickOutsideSelectMenu);
-        contentWindow.classList.toggle('open');
-        searchInput.focus();
+    // Init select menu
+    setOptionSelect(null);
+
+    selectMenuBox.onclick = function (e) {
+        // If opened
+        if (contentWindow.classList.contains('open')) {
+            if (e.target !== clearButton)
+                closeSelectMenu();
+        }
+        // If not open
+        else {
+            // Open select menu
+            window.addEventListener('mouseup', checkClickOutsideSelectMenu);
+            // Have item selected
+            if (selectMenu.value)
+                clearButton.style.display = 'block';
+            searchInput.focus();
+            contentWindow.classList.add('open');
+        }
+    };
+
+    clearButton.onclick = function () {
+        setOptionSelect(null);
     };
 
     function closeSelectMenu() {
+        clearButton.style.display = 'none';
         contentWindow.classList.remove('open');
         window.removeEventListener('mouseup', checkClickOutsideSelectMenu);
     }
@@ -44,7 +66,7 @@ module.exports = function (id, placeholder) {
         // console.log(e);
         while (target !== document.body) {
             // return of find select menu, don't need to close
-            if (target === selectMenu)
+            if (target === selectMenu || target === clearButton)
                 return;
             target = target.parentElement;
         }
@@ -57,9 +79,15 @@ module.exports = function (id, placeholder) {
     }
 
     function setOptionSelect(optionElement) {
-        selectItemName.classList.remove('empty');
-        selectItemName.textContent = optionElement.textContent;
-        selectMenu.value = optionElement.optionValue;
+        if (optionElement) {
+            selectItemName.classList.remove('empty');
+            selectItemName.textContent = optionElement.textContent;
+            selectMenu.value = optionElement.optionValue;
+        } else {
+            selectItemName.classList.add('empty');
+            selectItemName.textContent = selectItemName.placeholder;
+            selectMenu.value = '';
+        }
     }
 
     function expandGroupToggle() {
@@ -163,7 +191,7 @@ module.exports = function (id, placeholder) {
 
     selectMenu.setValue = function (value) {
         for (const optionElement of optionsSignal.state.getElementsByTagName('li')) {
-            if(optionElement.optionValue === value) {
+            if (optionElement.optionValue === value) {
                 setOptionSelect(optionElement);
                 break;
             }

@@ -79,7 +79,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             if (yearStart == -1)
                 semester = null;
             else
-                semester = semID.substring(yearStart, yearEnd) + ' ' +
+                semester = semID.substring(yearStart, yearEnd) +
                         (semID.charAt(semID.length() - 1) == '上' ? 0 : 1);
             requireCredits = Float.parseFloat(row.get(2).text().trim());
             electiveCredits = Float.parseFloat(row.get(3).text().trim());
@@ -440,7 +440,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         thirdIndex = i;
         while ((c = semester.charAt(i)) >= '0' && c <= '9') i++;
         forthIndex = i;
-        semester = semester.substring(firstIndex, secondIndex) + ' ' + semester.substring(thirdIndex, forthIndex);
+        semester = semester.substring(firstIndex, secondIndex) + semester.substring(thirdIndex, forthIndex);
 
         JsonObjectStringBuilder out = new JsonObjectStringBuilder();
         out.append("semester", semester);
@@ -812,7 +812,6 @@ public class StudentIdentificationSystem implements EndpointModule {
 
         return out;
     }
-
 
     private double stdDevFunction(double x, double stdDev, double avg) {
 //        final double sqrt2pi = Math.sqrt(2 * Math.PI);

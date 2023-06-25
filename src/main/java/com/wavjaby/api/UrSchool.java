@@ -18,6 +18,7 @@ import org.jsoup.select.Elements;
 
 import java.io.*;
 import java.net.CookieManager;
+import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
@@ -32,6 +33,8 @@ public class UrSchool implements EndpointModule {
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private static final long updateInterval = 2 * 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 5 * 60 * 1000;
+
+    private final CookieStore urSchoolCookie = new CookieManager().getCookieStore();
 
     private String urSchoolDataJson;
     private JsonArray urSchoolData;
@@ -154,9 +157,9 @@ public class UrSchool implements EndpointModule {
                     result = HttpConnection.connect("https://urschool.org/ajax/modal/" + id + "?mode=" + mode)
                             .header("Connection", "keep-alive")
                             .ignoreContentType(true)
+                            .cookieStore(urSchoolCookie)
                             .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
-                            .header("X-Requested-With", "XMLHttpRequest")
-                            .timeout(10 * 1000)
+                            .timeout(20 * 1000)
                             .execute();
                     break;
                 } catch (IOException ignore) {
@@ -424,9 +427,9 @@ public class UrSchool implements EndpointModule {
             Connection pageFetch = HttpConnection.connect("https://urschool.org/ncku/list?page=" + page)
                     .header("Connection", "keep-alive")
                     .ignoreContentType(true)
+                    .cookieStore(urSchoolCookie)
                     .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .timeout(10 * 1000);
+                    .timeout(20 * 1000);
             String resultBody;
             while (true) {
                 try {

@@ -154,8 +154,8 @@ module.exports = function (loginState) {
     }
 
     function parseSemesterStr(semester) {
-        semester = semester.split(' ');
-        return semester[0] + (semester[1] === '0' ? '上學期' : '下學期');
+        return semester.substring(0, semester.length - 1) +
+            (semester.charAt(semester.length - 1) === '0' ? '上學期' : '下學期');
     }
 
     return div('stuIdSysGrades',

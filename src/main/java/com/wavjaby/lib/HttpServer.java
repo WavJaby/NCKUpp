@@ -5,7 +5,6 @@ import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 import com.wavjaby.logger.Logger;
-import org.omg.CORBA.PUBLIC_MEMBER;
 
 import javax.net.ssl.*;
 import java.io.File;

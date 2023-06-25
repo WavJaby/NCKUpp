@@ -19,6 +19,16 @@
             }
         }
 
+        .clearBtn {
+            height: 1em;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+            cursor: pointer;
+            right: 2em;
+        }
+
         &::after {
             content: '';
             background: $icon-down-arrow no-repeat 0 0/1em;
@@ -27,8 +37,9 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            right: 10px;
+            right: 0.5em;
             margin: auto;
+            cursor: pointer;
         }
     }
 

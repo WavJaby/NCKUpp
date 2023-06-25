@@ -5,7 +5,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
@@ -33,7 +36,7 @@ public class ProxyChecker {
             e.printStackTrace();
         }
 
-        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
 
 //        // https://geonode.com/free-proxy-list
 //        for (int i = 0; i < 1; i++) {
@@ -101,88 +104,105 @@ public class ProxyChecker {
 
         // https://proxyscrape.com/free-proxy-list-clean-tp
         pool.submit(() -> {
-            try {
-                String proxyScrapeSocks4Url = "https://api.proxyscrape.com/v2/?" +
-                        "request=displayproxies&" +
-                        "protocol=socks4&" +
-                        "timeout=1000&" +
-                        "country=all&" +
-                        "simplified=true";
-                String proxyScrapeSocks4 = HttpConnection.connect(proxyScrapeSocks4Url)
-                        .ignoreContentType(true)
-                        .execute().body();
-                Set<ProxyManager.ProxyData> newData = new HashSet<>();
-                for (String s : proxyScrapeSocks4.split("\r?\n")) {
-                    String[] data = s.split(":");
-                    newData.add(new ProxyManager.ProxyData(data[0], Integer.parseInt(data[1]), "socks4", proxyScrapeSocks4Url));
-                }
-                proxyDataList.addAll(newData);
-                System.out.println(newData.size() + "\t" + proxyScrapeSocks4Url);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            String proxyUrl = "https://api.proxyscrape.com/v2/?" +
+                    "request=displayproxies&" +
+                    "protocol=socks4&" +
+                    "timeout=600&" +
+                    "country=all&" +
+                    "simplified=true";
+            getTextTypeProxyList(proxyUrl, "socks4", proxyDataList);
         });
         pool.submit(() -> {
-            try {
-                String proxyScrapeSocks5Url = "https://api.proxyscrape.com/v2/?" +
-                        "request=displayproxies&" +
-                        "protocol=socks5&" +
-                        "timeout=1000&" +
-                        "country=all&" +
-                        "simplified=true";
-                String proxyScrapeSocks5 = HttpConnection.connect(proxyScrapeSocks5Url)
-                        .ignoreContentType(true)
-                        .execute().body();
-                Set<ProxyManager.ProxyData> newData = new HashSet<>();
-                for (String s : proxyScrapeSocks5.split("\r?\n")) {
-                    String[] data = s.split(":");
-                    newData.add(new ProxyManager.ProxyData(data[0], Integer.parseInt(data[1]), "socks5", proxyScrapeSocks5Url));
-                }
-                proxyDataList.addAll(newData);
-                System.out.println(newData.size() + "\t" + proxyScrapeSocks5Url);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            String proxyUrl = "https://api.proxyscrape.com/v2/?" +
+                    "request=displayproxies&" +
+                    "protocol=socks5&" +
+                    "timeout=600&" +
+                    "country=all&" +
+                    "simplified=true";
+            getTextTypeProxyList(proxyUrl, "socks5", proxyDataList);
+        });
+        pool.submit(() -> {
+            String proxyUrl = "https://api.proxyscrape.com/v2/?" +
+                    "request=displayproxies&" +
+                    "protocol=https&" +
+                    "timeout=600&" +
+                    "country=all&" +
+                    "simplified=true";
+            getTextTypeProxyList(proxyUrl, "https", proxyDataList);
+        });
+
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt";
+            getTextTypeProxyList(proxyUrl, "socks4", proxyDataList);
+        });
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt";
+            getTextTypeProxyList(proxyUrl, "socks5", proxyDataList);
+        });
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/https.txt";
+            getTextTypeProxyList(proxyUrl, "https", proxyDataList);
+        });
+
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/socks4.txt";
+            getTextTypeProxyList(proxyUrl, "socks4", proxyDataList);
+        });
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/socks5.txt";
+            getTextTypeProxyList(proxyUrl, "socks5", proxyDataList);
+        });
+
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt";
+            getTextTypeProxyList(proxyUrl, "socks4", proxyDataList);
+        });
+        pool.submit(() -> {
+            String proxyUrl = "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt";
+            getTextTypeProxyList(proxyUrl, "socks5", proxyDataList);
         });
 
         // https://spys.one/asia-proxy/
         /*
 [['xf5',2],['xf1',1],['xpp',5,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
 
+[['xpp',5],['xf1',1],['xf2',1],['xf5',1,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
+
+
 let list = document.querySelectorAll('body > table:nth-child(4) > tbody > tr:nth-child(4) > td > table > tbody > tr');
 console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].innerText.toLowerCase()+'://'+i[0].innerText).join('\n'));
 
          */
-        try {
-            String url = "https://spys.one/en/free-proxy-list/";
-            File proxyCheckListFile = new File("proxyCheck.txt");
-            if (proxyCheckListFile.exists() && proxyCheckListFile.isFile()) {
-                String freeProxyStr = new String(Files.readAllBytes(proxyCheckListFile.toPath()));
-                Set<ProxyManager.ProxyData> newData = new HashSet<>();
-                for (String s : freeProxyStr.split("\n?\n")) {
-                    if (s.length() == 0) break;
-                    try {
-                        newData.add(new ProxyManager.ProxyData(s, url));
-                    } catch (Exception e) {
-                        System.out.println(s);
-                    }
-                }
-                proxyDataList.addAll(newData);
-
-                FileOutputStream out = new FileOutputStream(proxyCheckListFile);
-                StringBuilder builder = new StringBuilder();
-                for (ProxyManager.ProxyData data : newData)
-                    builder.append(data.toUrl()).append('\n');
-                out.write(builder.toString().getBytes());
-                out.close();
-
-                System.out.println(newData.size() + "\t" + url);
-            } else
-                System.out.println("ProxyCheck file not found");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            String url = "https://spys.one/en/free-proxy-list/";
+//            File proxyCheckListFile = new File("proxyCheck.txt");
+//            if (proxyCheckListFile.exists() && proxyCheckListFile.isFile()) {
+//                String freeProxyStr = new String(Files.readAllBytes(proxyCheckListFile.toPath()));
+//                Set<ProxyManager.ProxyData> newData = new HashSet<>();
+//                for (String s : freeProxyStr.split("\n?\n")) {
+//                    if (s.length() == 0) break;
+//                    try {
+//                        newData.add(new ProxyManager.ProxyData(s, url));
+//                    } catch (Exception e) {
+//                        System.out.println(s);
+//                    }
+//                }
+//                proxyDataList.addAll(newData);
+//
+//                FileOutputStream out = new FileOutputStream(proxyCheckListFile);
+//                StringBuilder builder = new StringBuilder();
+//                for (ProxyManager.ProxyData data : newData)
+//                    builder.append(data.toUrl()).append('\n');
+//                out.write(builder.toString().getBytes());
+//                out.close();
+//
+//                System.out.println(newData.size() + "\t" + url);
+//            } else
+//                System.out.println("ProxyCheck file not found");
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         pool.shutdown();
         try {
@@ -194,17 +214,17 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
 
         long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
-        testProxy(proxyDataList, 50, 1500, 2, -1, true);
+        testProxy(proxyDataList, 50, 900, 2, -1, true);
 //        proxyDataList.removeIf(i -> i.ping == -1);
 //        testProxy(proxyDataList, 20, 2000);
-        System.out.println("Done");
         proxyDataList.removeIf(i -> i.ping == -1);
+        System.out.println("\nDone");
         System.out.println(proxyDataList.size());
 
         System.out.println("Ping...");
-        testProxy(proxyDataList, 1, 2000, -1, 2, false);
+        testProxy(proxyDataList, 2, 3000, -1, 2, false);
         proxyDataList.removeIf(i -> i.ping == -1);
-        System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
+        System.out.println("\nUsed: " + ((System.currentTimeMillis() - start) / 1000) + "s");
 
         try {
             FileWriter fileWriter = new FileWriter("proxy.txt");
@@ -250,7 +270,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                             Proxy proxy = data.toProxy();
                             URL url;
                             if (conforming)
-                                url = new URL("https://course.ncku.edu.tw/index.php");
+                                url = new URL("https://course.ncku.edu.tw/index.php?c=qry_all");
                             else
                                 url = new URL("https://api.simon.chummydns.com/api/ip");
 //                            URL url = new URL("https://ifconfig.me/ip");
@@ -268,7 +288,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
 
                             finalMessage[0] = buffer.toString("UTF-8");
                             buffer.close();
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             finalError[0] = e.getMessage();
 //                        e.printStackTrace();
                         }
@@ -290,30 +310,37 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                     if ((error != null || timeout) && conforming) break;
                 }
 
-                String left = String.valueOf(taskLeft.getCount());
-                left += String.join("", Collections.nCopies(5 - left.length(), " "));
-                String type = data.protocol + String.join("", Collections.nCopies(7 - data.protocol.length(), " "));
-                String ipStr = ip + String.join("", Collections.nCopies(16 - ip.length(), " "));
-                String portStr = String.valueOf(port);
-                portStr += String.join("", Collections.nCopies(8 - portStr.length(), " "));
-                if (error != null) {
-                    if (errorSameLine)
-                        System.out.print('\r' + left + type + ipStr + portStr + "Error");
-                    else
-                        System.out.println(left + type + ipStr + portStr + "Error: " + error);
-                    data.ping = -1;
-                } else if (timeout) {
-                    if (errorSameLine)
-                        System.out.print('\r' + left + type + ipStr + portStr + "Time out");
-                    else
-                        System.out.println(left + type + ipStr + portStr + "Time out");
-                    data.ping = -1;
-                } else {
-                    System.out.println('\r' + left + type + ipStr + portStr + latency + "ms " + data.providerUrl);
-                    data.ping = latency;
+                try {
+                    String left = strLenLimit(String.valueOf(taskLeft.getCount()), 6, 6);
+                    String type = strLenLimit(data.protocol, 7, 7);
+                    String ipStr = strLenLimit(ip, 16, 16);
+                    String portStr = strLenLimit(String.valueOf(port), 8, 8);
+                    String messageStr;
+                    if (error != null) {
+                        if (errorSameLine)
+                            messageStr = "Error";
+                        else
+                            messageStr = "Error: " + error;
+                        data.ping = -1;
+                    } else if (timeout) {
+                        messageStr = "Time out";
+                        data.ping = -1;
+                    } else {
+                        messageStr = latency + "ms " + data.providerUrl;
+                        data.ping = latency;
+                    }
+                    messageStr = strLenLimit(messageStr, 10, 75);
+                    if (errorSameLine) {
+                        if (error == null && !timeout)
+                            messageStr += '\n';
+                        System.out.print('\r' + left + type + ipStr + portStr + messageStr);
+                    } else
+                        System.out.println(left + type + ipStr + portStr + messageStr);
+                    taskLeft.countDown();
+                    fetchPoolLock.release();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                taskLeft.countDown();
-                fetchPoolLock.release();
             });
         }
 
@@ -334,6 +361,31 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private void getTextTypeProxyList(String url, String protocol, Set<ProxyManager.ProxyData> proxyDataList) {
+        try {
+            String proxyGet = HttpConnection.connect(url)
+                    .ignoreContentType(true)
+                    .execute().body();
+            Set<ProxyManager.ProxyData> newData = new HashSet<>();
+            for (String s : proxyGet.split("\r?\n")) {
+                String[] data = s.split(":");
+                newData.add(new ProxyManager.ProxyData(data[0], Integer.parseInt(data[1]), protocol, url));
+            }
+            proxyDataList.addAll(newData);
+            System.out.println(newData.size() + "\t" + url);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String strLenLimit(String str, int min, int max) {
+        if (str.length() < min)
+            return str + String.join("", Collections.nCopies(min - str.length(), " "));
+        else if (max > 3 && str.length() > max)
+            return str.substring(0, max - 3) + "...";
+        return str;
     }
 
     public static void main(String[] args) {

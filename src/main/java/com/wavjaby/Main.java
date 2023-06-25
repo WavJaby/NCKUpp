@@ -7,13 +7,9 @@ import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Scanner;
 
 
@@ -27,14 +23,17 @@ public class Main {
     public static final String portalNckuOrg = "https://" + portalNcku;
     public static final String stuIdSysNcku = "qrys.ncku.edu.tw";
     public static final String stuIdSysNckuOrg = "https://" + stuIdSysNcku;
-    public static final String courseQueryNckuOrg = "https://course-query.acad.ncku.edu.tw";
+    public static final String courseQueryNcku = "course-query.acad.ncku.edu.tw";
+    public static final String courseQueryNckuOrg = "https://" + courseQueryNcku;
 
     public static final URI courseNckuOrgUri;
+    public static final URI courseQueryNckuUri;
     public static final URI portalNckuOrgUri;
     public static final URI stuIdSysNckuOrgUri;
 
     static {
         courseNckuOrgUri = URI.create(courseNckuOrg);
+        courseQueryNckuUri = URI.create(courseQueryNckuOrg);
         portalNckuOrgUri = URI.create(portalNckuOrg);
         stuIdSysNckuOrgUri = URI.create(stuIdSysNckuOrg);
     }
@@ -44,7 +43,7 @@ public class Main {
             "https://wavjaby.github.io"
     };
     public static final String cookieDomain = "simon.chummydns.com";
-    private HttpServer server;
+    private final HttpServer server;
     private final Map<String, Module> modules = new LinkedHashMap<>();
     private boolean running = false;
     public static final File cacheFolder = new File("cache");
@@ -57,8 +56,8 @@ public class Main {
 
         server = new HttpServer(serverSettings);
         if (!server.opened) return;
-        if(!cacheFolder.exists())
-            if(!cacheFolder.mkdir())
+        if (!cacheFolder.exists())
+            if (!cacheFolder.mkdir())
                 logger.err("Cache folder can not create");
         Runtime.getRuntime().addShutdownHook(new Thread(this::stopAll));
         ProxyManager proxyManager = new ProxyManager(serverSettings);

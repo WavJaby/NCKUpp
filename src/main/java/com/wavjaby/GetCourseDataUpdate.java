@@ -188,7 +188,7 @@ public class GetCourseDataUpdate implements Runnable {
                 if (!done.get() && deptToken != null) {
                     // Get dept course data
                     List<Search.CourseData> newCourseDataList = new ArrayList<>();
-                    if (!search.getDeptCourseData(deptToken, newCourseDataList, false) ||
+                    if (!search.getDeptCourseData(deptToken, false, null, newCourseDataList) ||
                             newCourseDataList.size() == 0) {
                         if (!done.get()) {
                             logger.log("Dept " + dept + " failed");

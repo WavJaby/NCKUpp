@@ -2,26 +2,26 @@
 
 /**
  * @typedef {Object} CourseDataRaw
+ * @property {string} y - semester
  * @property {string} dn - departmentName
  * @property {string} sn - serialNumber
  * @property {string} ca - attributeCode
  * @property {string} cs - systemNumber
- * @property {string} cn - courseName
- * @property {string} ci - courseNote
- * @property {string} cl - courseLimit
- * @property {string} ct - courseType
  * @property {int} g - courseGrade 年級
  * @property {string} co - classInfo 班別
  * @property {string} cg - classGroup 組別
- * @property {string[]} i - instructors
+ * @property {string} ct - courseType
+ * @property {string} cn - courseName
+ * @property {string} ci - courseNote
+ * @property {string} cl - courseLimit
  * @property {string[]} tg - tags
  * @property {float} c - credits
  * @property {boolean} r - required
+ * @property {string[]} i - instructors
  * @property {int} s - selected
  * @property {int} a - available
  * @property {string[]} t - time
  * @property {string} m - moodle
- * @property {string} o - outline
  * @property {string} pe - preferenceEnter
  * @property {string} ac - addCourse
  * @property {string} pr - preRegister
@@ -29,27 +29,27 @@
  */
 /**
  * @typedef CourseData
+ * @property {string} semester
  * @property {string} departmentName
  * @property {string} serialNumber
  * @property {string} attributeCode
  * @property {string} systemNumber
- * @property {string} courseName
- * @property {string|null} courseNote
- * @property {string|null} courseLimit
- * @property {string} courseType
  * @property {int} courseGrade
  * @property {string} classInfo
  * @property {string} classGroup
- * @property {(UrSchoolInstructorSimple|string)[]|null} instructors - Only name or full data
+ * @property {string} courseType
+ * @property {string} courseName
+ * @property {string|null} courseNote
+ * @property {string|null} courseLimit
  * @property {CourseDataTag[]|null} tags
  * @property {float} credits
  * @property {boolean} required
+ * @property {(UrSchoolInstructorSimple|string)[]|null} instructors - Only name or full data
  * @property {int} selected
  * @property {int} available
  * @property {CourseDataTime[]|null} time
  * @property {string} timeString
  * @property {string} moodle
- * @property {string} outline
  * @property {string} preferenceEnter
  * @property {string} addCourse
  * @property {string} preRegister
@@ -297,8 +297,10 @@ module.exports = function (loginState) {
         const queryString = queryData.map(i => i[0] + '=' + encodeURIComponent(i[1])).join('&');
 
         // Save query string and create history
-        if ((saveQuery === undefined || saveQuery === true) && lastQueryString !== queryString)
-            window.urlHashData.setAndPushHistory('searchRawQuery', queryData);
+        if ((saveQuery === undefined || saveQuery === true) && lastQueryString !== queryString) {
+            window.urlHashData.set('searchRawQuery', queryData);
+            window.urlHashData.pushHistory();
+        }
 
         // Update queryString
         lastQueryString = queryString;
@@ -326,27 +328,27 @@ module.exports = function (loginState) {
         }
         for (/**@type CourseDataRaw*/const data of result.data) {
             const courseData = /**@type CourseData*/ {
+                semester: data.y,
                 departmentName: data.dn,
                 serialNumber: data.sn,
                 attributeCode: data.ca,
                 systemNumber: data.cs,
-                courseName: data.cn,
-                courseNote: data.ci,
-                courseLimit: data.cl,
-                courseType: data.ct,
                 courseGrade: data.g,
                 classInfo: data.co,
                 classGroup: data.cg,
-                instructors: null,
+                courseType: data.ct,
+                courseName: data.cn,
+                courseNote: data.ci,
+                courseLimit: data.cl,
                 tags: null,
                 credits: data.c,
                 required: data.r,
+                instructors: null,
                 selected: data.s,
                 available: data.a,
                 time: null,
                 timeString: null,
                 moodle: data.m,
-                outline: data.o,
                 preferenceEnter: data.pe,
                 addCourse: data.ac,
                 preRegister: data.pr,
@@ -801,7 +803,7 @@ module.exports = function (loginState) {
             input(null, 'Course name', 'courseName', {onkeyup}),
             deptNameSelectMenu,
             input(null, 'Instructor', 'instructor', {onkeyup}),
-            input(null, 'DayOfWeak', 'dayOfWeek', {onkeyup}),
+            input(null, 'DayOfWeek', 'dayOfWeek', {onkeyup}),
             input(null, 'Grade', 'grade', {onkeyup}),
             input(null, 'Section', 'section', {onkeyup}),
             button(null, 'search', search),

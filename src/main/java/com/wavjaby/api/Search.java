@@ -1,5 +1,6 @@
 package com.wavjaby.api;
 
+import com.sun.istack.internal.Nullable;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
@@ -25,10 +26,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -36,8 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.wavjaby.Main.courseNckuOrg;
-import static com.wavjaby.Main.courseQueryNckuOrg;
+import static com.wavjaby.Main.*;
 import static com.wavjaby.ResponseData.ResponseState;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
@@ -162,12 +159,8 @@ public class Search implements EndpointModule {
         boolean getSerial;
         Map<String, String> serialIdNumber;     // 系號=序號&系號2=序號
 
-        boolean getTime;
+        boolean historySearch;
         int yearBegin, semBegin, yearEnd, semEnd;
-
-        public SearchQuery(String dept) {
-            this.deptNo = dept;
-        }
 
         public SearchQuery(CourseData courseData) {
             this.courseName = courseData.courseName;
@@ -193,11 +186,15 @@ public class Search implements EndpointModule {
                 if (i.startsWith("searchID=")) {
                     String searchIDs = i.substring(9);
                     int split = searchIDs.indexOf('|');
-                    if (split == -1)
-                        searchID = searchIDs;
-                    else {
+                    if (split == -1) {
+                        searchID = searchIDs.length() == 0 ? null : searchIDs;
+                    } else {
                         searchID = searchIDs.substring(0, split);
+                        if (searchID.length() == 0)
+                            searchID = null;
                         histroySearchID = searchIDs.substring(split + 1);
+                        if (histroySearchID.length() == 0)
+                            histroySearchID = null;
                     }
                     break;
                 }
@@ -208,8 +205,8 @@ public class Search implements EndpointModule {
             String serialNum;
             getSerial = (serialNum = query.get("serial")) != null;
             String queryTime;
-            getTime = (queryTime = query.get("queryTime")) != null;
-            if (getTime) {
+            historySearch = (queryTime = query.get("queryTime")) != null;
+            if (historySearch) {
                 String[] cache = queryTime.split(",");
                 yearBegin = Integer.parseInt(cache[0]);
                 semBegin = Integer.parseInt(cache[1]);
@@ -244,35 +241,73 @@ public class Search implements EndpointModule {
     }
 
     public static class CourseData {
-        private String departmentName; // Can be null
-        private String serialNumber; // Can be null
-        private String courseAttributeCode;
-        private String courseSystemNumber;
-        private String courseName;
-        private String courseNote; // Can be null
-        private String courseLimit; // Can be null
-        private String courseType;
-        private Integer forGrade;  // Can be null
-        private String forClass; // Can be null
-        private String group;  // Can be null
-        private String[] instructors; // Can be null
-        private TagData[] tags; // Can be null
-        private Float credits; // Can be null
-        private Boolean required; // Can be null
-        private Integer selected; // Can be null
-        private Integer available; // Can be null
-        private TimeData[] timeList; // Can be null
-        private String moodle; // Can be null
-        private String outline; // Can be null
-        private String btnPreferenceEnter; // Can be null
-        private String btnAddCourse; // Can be null
-        private String btnPreRegister; // Can be null
-        private String btnAddRequest; // Can be null
+        private final String semester;
+        private final String departmentName; // Can be null
+        private final String serialNumber; // Can be null
+        private final String courseAttributeCode;
+        private final String courseSystemNumber;
+        private final Integer forGrade;  // Can be null
+        private final String forClass; // Can be null
+        private final String group;  // Can be null
+        private final String courseType;
+        private final String courseName;
+        private final String courseNote; // Can be null
+        private final String courseLimit; // Can be null
+        private final TagData[] tags; // Can be null
+        private final Float credits; // Can be null
+        private final Boolean required; // Can be null
+        private final String[] instructors; // Can be null
+        private final Integer selected; // Can be null
+        private final Integer available; // Can be null
+        private final TimeData[] timeList; // Can be null
+        private final String moodle; // Can be null
+        private final String btnPreferenceEnter; // Can be null
+        private final String btnAddCourse; // Can be null
+        private final String btnPreRegister; // Can be null
+        private final String btnAddRequest; // Can be null
+
+        public CourseData(String semester,
+                          String departmentName,
+                          String serialNumber, String courseAttributeCode, String courseSystemNumber,
+                          Integer forGrade, String forClass, String group,
+                          String courseType,
+                          String courseName, String courseNote, String courseLimit, TagData[] tags,
+                          Float credits, Boolean required,
+                          String[] instructors,
+                          Integer selected, Integer available,
+                          TimeData[] timeList,
+                          String moodle,
+                          String btnPreferenceEnter, String btnAddCourse, String btnPreRegister, String btnAddRequest) {
+            this.semester = semester;
+            this.departmentName = departmentName;
+            this.serialNumber = serialNumber;
+            this.courseAttributeCode = courseAttributeCode;
+            this.courseSystemNumber = courseSystemNumber;
+            this.forGrade = forGrade;
+            this.forClass = forClass;
+            this.group = group;
+            this.courseType = courseType;
+            this.courseName = courseName;
+            this.courseNote = courseNote;
+            this.courseLimit = courseLimit;
+            this.tags = tags;
+            this.credits = credits;
+            this.required = required;
+            this.instructors = instructors;
+            this.selected = selected;
+            this.available = available;
+            this.timeList = timeList;
+            this.moodle = moodle;
+            this.btnPreferenceEnter = btnPreferenceEnter;
+            this.btnAddCourse = btnAddCourse;
+            this.btnPreRegister = btnPreRegister;
+            this.btnAddRequest = btnAddRequest;
+        }
 
         private static class TagData {
-            String tag;
-            String url; // Can be null
-            String colorID;
+            final String tag;
+            final String url; // Can be null
+            final String colorID;
 
             public TagData(String tag, String colorID, String url) {
                 this.tag = tag;
@@ -289,33 +324,34 @@ public class Search implements EndpointModule {
         }
 
         private static class TimeData {
-            Integer dayOfWeek; // Can be null
-            Character section; // Can be null
-            Character sectionTo; // Can be null
-            String mapLocation; // Can be null
-            String mapRoomNo; // Can be null
-            String mapRoomName; // Can be null
+            final Short dayOfWeek; // Can be null
+            final Character section; // Can be null
+            final Character sectionTo; // Can be null
+            final String mapLocation; // Can be null
+            final String mapRoomNo; // Can be null
+            final String mapRoomName; // Can be null
             // Detailed time data
-            String extraTimeDataKey; // Can be null
+            final String detailedTimeData; // Can be null
 
-            public TimeData() {
-                dayOfWeek = null;
-                section = null;
-                sectionTo = null;
-                mapLocation = null;
-                mapRoomNo = null;
-                mapRoomName = null;
-                extraTimeDataKey = null;
+            public TimeData(Short dayOfWeek, Character section, Character sectionTo,
+                            String mapLocation, String mapRoomNo, String mapRoomName) {
+                this.dayOfWeek = dayOfWeek;
+                this.section = section;
+                this.sectionTo = sectionTo;
+                this.mapLocation = mapLocation;
+                this.mapRoomNo = mapRoomNo;
+                this.mapRoomName = mapRoomName;
+                this.detailedTimeData = null;
             }
 
-            public boolean isNotEmpty() {
-                return dayOfWeek != null ||
-                        section != null ||
-                        sectionTo != null ||
-                        mapLocation != null ||
-                        mapRoomNo != null ||
-                        mapRoomName != null ||
-                        extraTimeDataKey != null;
+            public TimeData(String detailedTimeData) {
+                this.dayOfWeek = null;
+                this.section = null;
+                this.sectionTo = null;
+                this.mapLocation = null;
+                this.mapRoomNo = null;
+                this.mapRoomName = null;
+                this.detailedTimeData = detailedTimeData;
             }
 
             public Integer getSectionAsInt() {
@@ -330,7 +366,9 @@ public class Search implements EndpointModule {
 
             @Override
             public String toString() {
-                if (extraTimeDataKey != null) return extraTimeDataKey;
+                if (detailedTimeData != null)
+                    return detailedTimeData;
+
                 StringBuilder builder = new StringBuilder();
                 if (dayOfWeek != null) builder.append(dayOfWeek);
                 builder.append(',');
@@ -359,31 +397,39 @@ public class Search implements EndpointModule {
         public String toString() {
             // output
             JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
+            jsonBuilder.append("y", semester);
             jsonBuilder.append("dn", departmentName);
+
             jsonBuilder.append("sn", serialNumber);
             jsonBuilder.append("ca", courseAttributeCode);
             jsonBuilder.append("cs", courseSystemNumber);
-            jsonBuilder.append("cn", courseName);
-            jsonBuilder.append("ci", courseNote);
-            jsonBuilder.append("cl", courseLimit);
-            jsonBuilder.append("ct", courseType);
+
             if (forGrade == null) jsonBuilder.append("g");
             else jsonBuilder.append("g", forGrade);
             jsonBuilder.append("co", forClass);
             jsonBuilder.append("cg", group);
-            jsonBuilder.append("i", toJsonArray(instructors));
+
+            jsonBuilder.append("ct", courseType);
+
+            jsonBuilder.append("cn", courseName);
+            jsonBuilder.append("ci", courseNote);
+            jsonBuilder.append("cl", courseLimit);
             jsonBuilder.append("tg", toJsonArray(tags));
+
             if (credits == null) jsonBuilder.append("c");
             else jsonBuilder.append("c", credits);
             if (required == null) jsonBuilder.append("r");
             else jsonBuilder.append("r", required);
+
+            jsonBuilder.append("i", toJsonArray(instructors));
+
             if (selected == null) jsonBuilder.append("s");
             else jsonBuilder.append("s", selected);
             if (available == null) jsonBuilder.append("a");
             else jsonBuilder.append("a", available);
+
             jsonBuilder.append("t", toJsonArray(timeList));
             jsonBuilder.append("m", moodle);
-            jsonBuilder.append("o", outline);
             jsonBuilder.append("pe", btnPreferenceEnter);
             jsonBuilder.append("ac", btnAddCourse);
             jsonBuilder.append("pr", btnPreRegister);
@@ -403,17 +449,13 @@ public class Search implements EndpointModule {
             return forClass;
         }
 
-        public TimeData[] getTimeList() {
-            return timeList;
-        }
-
         public String getTimeString() {
             if (timeList == null)
                 return null;
 
             StringBuilder builder = new StringBuilder();
             for (TimeData i : timeList) {
-                if (i.extraTimeDataKey != null) continue;
+                if (i.detailedTimeData != null) continue;
                 if (builder.length() > 0)
                     builder.append(',');
 
@@ -442,17 +484,17 @@ public class Search implements EndpointModule {
     }
 
     public static class SaveQueryToken {
-        private final String host, search;
+        private final String urlOrigin, search;
         private final CookieStore cookieStore;
 
-        public SaveQueryToken(String host, String search, CookieStore cookieStore) {
-            this.host = host;
+        public SaveQueryToken(String urlOrigin, String search, CookieStore cookieStore) {
+            this.urlOrigin = urlOrigin;
             this.search = search;
             this.cookieStore = cookieStore;
         }
 
         public String getUrl() {
-            return host + "/index.php?c=qry11215" + search;
+            return urlOrigin + "/index.php?c=qry11215" + search;
         }
     }
 
@@ -467,10 +509,6 @@ public class Search implements EndpointModule {
             this.allDept = allDept;
             this.deptCount = allDept.size();
             this.cookieStore = cookieStore;
-        }
-
-        public Set<String> getAllDept() {
-            return allDept;
         }
     }
 
@@ -530,17 +568,19 @@ public class Search implements EndpointModule {
 
     public static class DeptToken {
         private final String error;
-        private final String id;
+        private final String urlEncodedId;
         private final CookieStore cookieStore;
+        private final String deptNo;
 
-        private DeptToken(String error, String id, CookieStore cookieStore) {
+        private DeptToken(String error, String deptNo, String urlEncodedId, CookieStore cookieStore) {
             this.error = error;
-            this.id = id;
+            this.urlEncodedId = urlEncodedId;
             this.cookieStore = cookieStore;
+            this.deptNo = deptNo;
         }
 
         public String getID() {
-            return id;
+            return urlEncodedId;
         }
 
         public String getError() {
@@ -549,6 +589,10 @@ public class Search implements EndpointModule {
 
         public CookieStore getCookieStore() {
             return cookieStore;
+        }
+
+        public String getUrl() {
+            return courseNckuOrg + "/index.php?c=qry_all&m=result&i=" + urlEncodedId;
         }
     }
 
@@ -677,12 +721,12 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
         ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(request, cookieStore, responseData);
+        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, responseData);
         if (state != ResponseState.SUCCESS)
             return null;
         String body = responseData.data;
 
-        cosPreCheck(body, cookieStore, null, proxyManager);
+        cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
 
         Set<String> allDept = new HashSet<>();
         for (Element element : Jsoup.parse(body).getElementsByClass("pnl_dept"))
@@ -704,12 +748,12 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
         ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(request, cookieStore, responseData);
+        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, responseData);
         if (state != ResponseState.SUCCESS)
             return null;
         String body = responseData.data;
 
-        cosPreCheck(body, cookieStore, null, proxyManager);
+        cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
 
         int total = 0;
         List<AllDeptGroupData.Group> groups = new ArrayList<>();
@@ -730,6 +774,49 @@ public class Search implements EndpointModule {
         return new AllDeptGroupData(groups, total);
     }
 
+    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache,
+                                     ApiResponse response, List<CourseData> courseDataList) {
+        DeptToken deptToken = createDeptToken(deptNo, allDeptData);
+        if (deptToken == null) {
+            response.addError(TAG + "Can not create dept token");
+            return false;
+        }
+        if (deptToken.error != null) {
+            response.addError(TAG + "Can not create dept token: " + deptToken.error);
+            return false;
+        }
+
+        return getDeptCourseData(deptToken, addUrSchoolCache,
+                response, courseDataList);
+    }
+
+    public boolean getDeptCourseData(DeptToken deptToken, boolean addUrSchoolCache,
+                                     @Nullable ApiResponse response, List<CourseData> courseDataList) {
+        String searchResultBody = getDeptNCKU(deptToken);
+        if (searchResultBody == null) {
+            if (response != null)
+                response.addWarn(TAG + "Dept.No " + deptToken.deptNo + " not found");
+            return true;
+        }
+
+        Element table = findCourseTable(searchResultBody, "Dept.No " + deptToken.deptNo, response);
+        if (table == null) {
+            if (response != null)
+                response.addError(TAG + "Can not find course table");
+            return false;
+        }
+
+        parseCourseTable(
+                table,
+                searchResultBody,
+                null,
+                addUrSchoolCache,
+                false,
+                courseDataList
+        );
+        return true;
+    }
+
     public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData) {
         try {
             Connection.Response id = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
@@ -744,71 +831,20 @@ public class Search implements EndpointModule {
                     .execute();
             JsonObject idData = new JsonObject(id.body());
             String error = idData.getString("err");
-            return new DeptToken(error.length() > 0 ? error : null, idData.getString("id"), allDeptData.cookieStore);
+            return new DeptToken(
+                    error.length() > 0 ? error : null,
+                    deptNo,
+                    URLEncoder.encode(idData.getString("id"), "UTF-8"),
+                    allDeptData.cookieStore
+            );
         } catch (IOException e) {
             return null;
         }
     }
 
-    public boolean getDeptCourseData(DeptToken deptToken, List<CourseData> courseDataList, boolean addUrSchoolCache) {
-        String searchResultBody = getDeptNCKU(deptToken);
-        if (searchResultBody == null)
-            return false;
-
-        Element table = findCourseTable(searchResultBody, null, null);
-        if (table == null)
-            return false;
-
-        parseCourseTable(
-                table,
-                null,
-                searchResultBody,
-                courseDataList,
-                addUrSchoolCache);
-        return true;
-    }
-
-    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache, ApiResponse response, List<CourseData> courseDataList) {
-        DeptToken deptToken = createDeptToken(deptNo, allDeptData);
-        if (deptToken == null) {
-            response.addError(TAG + "Network error");
-            return false;
-        }
-        if (deptToken.error != null) {
-            response.addError(TAG + "Error from NCKU course: " + deptToken.error);
-            return false;
-        }
-
-        String searchResultBody = getDeptNCKU(deptToken);
-        if (searchResultBody == null) {
-            response.addWarn(TAG + "Dept.No " + deptNo + " not found");
-            return true;
-        }
-
-        Element table = findCourseTable(searchResultBody, "Dept.No " + deptNo, response);
-        if (table == null)
-            return false;
-
-        parseCourseTable(
-                table,
-                null,
-                searchResultBody,
-                courseDataList,
-                addUrSchoolCache);
-        return true;
-    }
-
     private String getDeptNCKU(DeptToken deptToken) {
-        String deptTokenId;
-        try {
-            deptTokenId = URLEncoder.encode(deptToken.id, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            return null;
-        }
-
-        Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result&i=" + deptTokenId)
-//                .header("Connection", "keep-alive")
+        Connection request = HttpConnection.connect(deptToken.getUrl())
+                .header("Connection", "keep-alive")
                 .header("Referer", "https://course.ncku.edu.tw/index.php?c=qry_all")
                 .cookieStore(deptToken.cookieStore)
                 .ignoreContentType(true)
@@ -816,7 +852,7 @@ public class Search implements EndpointModule {
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
         ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(request, deptToken.cookieStore, responseData);
+        ResponseState state = checkRobot(courseNckuOrg, request, deptToken.cookieStore, responseData);
         if (state != ResponseState.SUCCESS)
             return null;
 
@@ -829,7 +865,7 @@ public class Search implements EndpointModule {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(responseData.data, deptToken.cookieStore, null, proxyManager);
+            cosPreCheck(courseNckuOrg, responseData.data, deptToken.cookieStore, null, proxyManager);
             cosPreCheckPoolLock.release();
         });
         return responseData.data;
@@ -841,84 +877,209 @@ public class Search implements EndpointModule {
         if (getSerialNum != null)
             searchQuery.deptNo = getSerialNum.getKey();
 
+        // Create save query token
         SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, response);
         if (saveQueryToken == null) {
-            response.addError(TAG + "Failed to save query");
+            response.addError(TAG + "Can not create query token");
             return false;
         }
 
+        return getQueryCourseData(searchQuery, saveQueryToken, getSerialNum,
+                response, courseDataList);
+    }
+
+    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, Map.Entry<String, String> getSerialNum,
+                                      @Nullable ApiResponse response, List<CourseData> courseDataList) {
+        // Get search result
         String searchResultBody = getCourseNCKU(saveQueryToken);
-
-        if (searchResultBody == null || (searchQuery.searchID = getSearchID(searchResultBody, response)) == null)
+        if (searchResultBody == null) {
+            if (response != null)
+                response.addError(TAG + "Can not get result body");
             return false;
+        }
 
-        Element table = findCourseTable(searchResultBody, "Query " + searchQuery, response);
-        if (table == null)
+        // Get searchID
+        String searchID = getSearchID(searchResultBody, response);
+        if (searchID == null) {
+            if (response != null)
+                response.addError(TAG + "Search result body not found");
             return false;
+        }
+
+        // Renew searchID
+        if (searchQuery.historySearch) {
+            String PHPSESSID = getCourseQueryNckuCookiePHPSESSID(saveQueryToken.cookieStore);
+            if (PHPSESSID == null) {
+                if (response != null)
+                    response.addError(TAG + "Course query PHPSESSID cookie not found");
+                return false;
+            }
+            searchQuery.histroySearchID = searchID + ',' + PHPSESSID;
+        } else
+            searchQuery.searchID = searchID;
+
+        Element table = findCourseTable(searchResultBody, "Query", response);
+        if (table == null) {
+            if (response != null)
+                response.addError(TAG + "Can not find course table");
+            return false;
+        }
 
         parseCourseTable(
                 table,
-                getSerialNum == null ? null : new HashSet<>(Arrays.asList(getSerialNum.getValue().split(","))),
                 searchResultBody,
-                courseDataList,
-                true);
+                getSerialNum == null ? null : new HashSet<>(Arrays.asList(getSerialNum.getValue().split(","))),
+                true,
+                searchQuery.historySearch,
+                courseDataList
+        );
 
         return true;
     }
 
-    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, List<CourseData> courseDataList, boolean addUrSchoolCache) {
-        String searchResultBody = getCourseNCKU(saveQueryToken);
-
-        if (searchResultBody == null || (searchQuery.searchID = getSearchID(searchResultBody, null)) == null)
-            return false;
-
-        Element table = findCourseTable(searchResultBody, "Query " + searchQuery, null);
-        if (table == null)
-            return false;
-
-        parseCourseTable(
-                table,
-                null,
-                searchResultBody,
-                courseDataList,
-                addUrSchoolCache);
-
-        return true;
+    private String getCourseQueryNckuCookiePHPSESSID(CookieStore cookieStore) {
+        for (HttpCookie i : cookieStore.get(courseQueryNckuUri)) {
+            if (i.getName().equals("PHPSESSID")) {
+                return i.getValue();
+            }
+        }
+        return null;
     }
 
     public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, ApiResponse response) {
         StringBuilder postData = new StringBuilder();
-        String host;
+        String urlOrigin;
+        CookieStore postCookieStore;
         // Build query
         try {
-            if (searchQuery.getTime) {
-                host = courseQueryNckuOrg;
-                postData.append("id=").append(URLEncoder.encode(searchQuery.histroySearchID, "UTF-8"));
-            } else {
-                host = courseNckuOrg;
-                // Get searchID if it's null
-                if (searchQuery.searchID == null) {
-                    logger.log("Renew search id");
+            if (searchQuery.historySearch) {
+                urlOrigin = courseQueryNckuOrg;
+                postCookieStore = new CookieManager().getCookieStore();
 
-                    Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                if (searchQuery.histroySearchID == null) {
+                    logger.log("Renew search id");
+                    Connection request = HttpConnection.connect(courseQueryNckuOrg + "/index.php?c=qry11215&m=en_query")
                             .header("Connection", "keep-alive")
-                            .cookieStore(cookieStore)
+                            .cookieStore(postCookieStore)
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy());
                     ResponseData responseData = new ResponseData();
-                    ResponseState state = checkRobot(request, cookieStore, responseData);
+                    ResponseState state = checkRobot(courseQueryNckuOrg, request, postCookieStore, responseData);
                     if (state != ResponseState.SUCCESS)
                         return null;
 
-                    cosPreCheck(responseData.data, cookieStore, response, proxyManager);
-                    if ((searchQuery.searchID = getSearchID(responseData.data, response)) == null)
+                    cosPreCheck(courseQueryNckuOrg, responseData.data, postCookieStore, response, proxyManager);
+                    String searchID = getSearchID(responseData.data, response);
+                    if (searchID == null)
                         return null;
+
+                    // Get PHPSESSID cookie
+                    String PHPSESSID = getCourseQueryNckuCookiePHPSESSID(postCookieStore);
+                    if (PHPSESSID == null) {
+                        response.addError(TAG + "Course query PHPSESSID cookie not found");
+                        return null;
+                    }
+
+                    // Add searchID
+                    postData.append("id=").append(searchID);
+                    searchQuery.histroySearchID = searchID + ',' + PHPSESSID;
+                } else {
+                    // searchID: "searchID,PHPSESSID"
+                    int split = searchQuery.histroySearchID.indexOf(',');
+                    if (split == -1) {
+                        response.addError(TAG + "Search id format error");
+                        return null;
+                    }
+                    postData.append("id=").append(searchQuery.histroySearchID, 0, split);
+                    postCookieStore.add(courseQueryNckuUri, createHttpCookie("PHPSESSID", searchQuery.histroySearchID.substring(split + 1), courseQueryNcku));
                 }
-                postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+
+                // Write post data
+                postData.append("&syear_b=").append(searchQuery.yearBegin);
+                postData.append("&syear_e=").append(searchQuery.yearEnd);
+                postData.append("&sem_b=").append(searchQuery.semBegin);
+                postData.append("&sem_e=").append(searchQuery.semEnd);
                 if (searchQuery.courseName != null)
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
                 if (searchQuery.instructor != null)
-                        postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+                if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
+
+                // Required
+                Calendar now = Calendar.getInstance();
+                int month = now.get(Calendar.MONTH) + 1;
+                int day = now.get(Calendar.DAY_OF_MONTH);
+                String date = String.valueOf(now.get(Calendar.YEAR)) +
+                        (month < 10 ? "0" + month : month) +
+                        (day < 10 ? "0" + day : day);
+                String[] requests = new String[]{
+                        urlOrigin + "/js/bootstrap-select/css/bootstrap-select.min.css?" + date,
+                        urlOrigin + "/js/jquery-ui-1.11.4.custom/jquery-ui.min.css?" + date,
+                        urlOrigin + "/js/fontawesome/css/solid.min.css?" + date,
+                        urlOrigin + "/js/fontawesome/css/regular.min.css?" + date, // 20230624
+                        urlOrigin + "/js/fontawesome/css/fontawesome.min.css?" + date,
+                        urlOrigin + "/js/fontawesome/css/fontawesome.min.css?" + date,
+                        urlOrigin + "/js/epack/css/font-awesome.min.css?" + date,
+                        urlOrigin + "/js/epack/css/elements/list.css?" + date,
+                        urlOrigin + "/js/epack/css/elements/note.css?" + date,  // 20230625
+
+                        urlOrigin + "/js/modernizr-custom.js?" + date,
+                        urlOrigin + "/js/bootstrap-select/js/bootstrap-select.min.js?" + date,
+                        urlOrigin + "/js/jquery.cookie.js?" + date,
+                        urlOrigin + "/js/common.js?" + date,
+                        urlOrigin + "/js/mis_grid.js?" + date,
+                        urlOrigin + "/js/jquery-ui-1.11.4.custom/jquery-ui.min.js?" + date,
+                        urlOrigin + "/js/performance.now-polyfill.js?" + date,
+                        urlOrigin + "/js/mdb-sortable/js/addons/jquery-ui-touch-punch.min.js?" + date,
+                        urlOrigin + "/js/jquery.taphold.js?" + date, // 20230625
+                        urlOrigin + "/js/jquery.patch.js?" + date,
+                };
+                for (String url : requests) {
+                    logger.log("get require: " + url.substring(urlOrigin.length()));
+                    try {
+                        HttpConnection.connect(url)
+                                .header("Connection", "keep-alive")
+                                .cookieStore(postCookieStore)
+                                .ignoreContentType(true)
+                                .proxy(proxyManager.getProxy())
+                                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+                                .header("Referer", "https://course-query.acad.ncku.edu.tw/index.php?c=qry11215&m=en_query")
+                                .execute();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } else {
+                urlOrigin = courseNckuOrg;
+                postCookieStore = cookieStore;
+//                // Get searchID if it's null
+//                if (searchQuery.searchID == null) {
+//                    logger.log("Renew search id");
+//
+//                    Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+//                            .header("Connection", "keep-alive")
+//                            .cookieStore(cookieStore)
+//                            .ignoreContentType(true)
+//                            .proxy(proxyManager.getProxy());
+//                    ResponseData responseData = new ResponseData();
+//                    ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, responseData);
+//                    if (state != ResponseState.SUCCESS)
+//                        return null;
+//
+//                    cosPreCheck(courseNckuOrg, responseData.data, cookieStore, response, proxyManager);
+//                    if ((searchQuery.searchID = getSearchID(responseData.data, response)) == null)
+//                        return null;
+//                }
+//                postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+
+                // Write post data
+                postData.append("id=");
+                if (searchQuery.searchID != null) postData.append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+
+                if (searchQuery.courseName != null)
+                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+                if (searchQuery.instructor != null)
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
                 if (searchQuery.dayOfWeek != null) postData.append("&wk=").append(searchQuery.dayOfWeek);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
@@ -932,9 +1093,9 @@ public class Search implements EndpointModule {
         }
 
         // Post save query
-        Connection request = HttpConnection.connect(host + "/index.php?c=qry11215&m=save_qry")
+        Connection request = HttpConnection.connect(urlOrigin + "/index.php?c=qry11215&m=save_qry")
                 .header("Connection", "keep-alive")
-                .cookieStore(cookieStore)
+                .cookieStore(postCookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .method(Connection.Method.POST)
@@ -944,6 +1105,8 @@ public class Search implements EndpointModule {
         String body;
         try {
             body = request.execute().body();
+            logger.log(body);
+
         } catch (IOException e) {
             logger.errTrace(e);
             if (response != null)
@@ -961,7 +1124,12 @@ public class Search implements EndpointModule {
                 response.addError(TAG + "Wrong condition format");
             return null;
         }
-        return new SaveQueryToken(host, body, cookieStore);
+        if (body.equals("&m=en_query")) {
+            if (response != null)
+                response.addError(TAG + "Can not create save query");
+            return null;
+        }
+        return new SaveQueryToken(urlOrigin, body, postCookieStore);
     }
 
     private String getCourseNCKU(SaveQueryToken saveQueryToken) {
@@ -974,7 +1142,7 @@ public class Search implements EndpointModule {
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
         ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(request, saveQueryToken.cookieStore, responseData);
+        ResponseState state = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore, responseData);
         if (state != ResponseState.SUCCESS)
             return null;
         try {
@@ -984,13 +1152,13 @@ public class Search implements EndpointModule {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(responseData.data, saveQueryToken.cookieStore, null, proxyManager);
+            cosPreCheck(saveQueryToken.urlOrigin, responseData.data, saveQueryToken.cookieStore, null, proxyManager);
             cosPreCheckPoolLock.release();
         });
         return responseData.data;
     }
 
-    private Element findCourseTable(String html, String errorMessage, ApiResponse response) {
+    private Element findCourseTable(String html, String errorMessage, @Nullable ApiResponse response) {
         int resultTableStart;
         if ((resultTableStart = html.indexOf("<table")) == -1) {
             if (response != null)
@@ -1013,9 +1181,17 @@ public class Search implements EndpointModule {
         return (Element) Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
     }
 
-    private void parseCourseTable(Element tbody, Set<String> getSerialNumber, String searchResultBody, List<CourseData> courseDataList, boolean addUrSchoolCache) {
-        // find style
-        List<String> styleList = new ArrayList<>();
+    /**
+     * @param tbody            Input: Course data table
+     * @param searchResultBody Input: Full document for finding style
+     * @param getSerialNumber  Serial number filter
+     * @param addUrSchoolCache True for adding UrSchool cache
+     * @param historySearch    Have to add offset if search course history
+     * @param courseDataList   Output: To course data list
+     */
+    private void parseCourseTable(Element tbody, String searchResultBody, Set<String> getSerialNumber, boolean addUrSchoolCache, boolean historySearch, List<CourseData> courseDataList) {
+        List<Map.Entry<String, Boolean>> styles = new ArrayList<>();
+        // Find style section
         int styleStart, styleEnd = 0;
         while ((styleStart = searchResultBody.indexOf("<style", styleEnd)) != -1) {
             styleStart = searchResultBody.indexOf(">", styleStart + 6);
@@ -1023,29 +1199,59 @@ public class Search implements EndpointModule {
             styleStart += 1;
             styleEnd = searchResultBody.indexOf("</style>", styleStart);
             if (styleEnd == -1) continue;
-            styleList.add(searchResultBody.substring(styleStart, styleEnd));
+            // Get style section inner text
+            String style = searchResultBody.substring(styleStart, styleEnd);
             styleEnd += 8;
-        }
-        // style stuff
-        List<Map.Entry<String, Boolean>> styles = new ArrayList<>();
-        for (String style : styleList) {
+
+            // Parse style display state
             Matcher matcher = displayRegex.matcher(style);
             while (matcher.find()) {
                 if (matcher.groupCount() < 2) continue;
+                // Set selector display state
+                // key: selector, value: show or not
                 styles.add(new AbstractMap.SimpleEntry<>(matcher.group(1), !matcher.group(2).equals("none")));
             }
         }
 
-        List<String> urSchoolCache = null;
-        if (addUrSchoolCache) urSchoolCache = new ArrayList<>();
+        // Parse semester
+        String allSemester = null;
+        if (!historySearch) {
+            int start = searchResultBody.indexOf("cookie_name"), end;
+            if (start != -1 && (start = searchResultBody.indexOf('\'', start + 11)) != -1
+                    && (end = searchResultBody.indexOf('_', start)) != -1) {
+                // Skip 0
+                for (int i = start + 1; i < end; i++)
+                    if (searchResultBody.charAt(i) != '0') {
+                        start = i;
+                        break;
+                    }
+
+                char c = searchResultBody.charAt(end - 2);
+                allSemester = searchResultBody.substring(start + 1, end - 1) + ((c == 1) ? '0' : '1');
+            }
+        }
+
+        List<String> urSchoolCache = addUrSchoolCache ? new ArrayList<>() : null;
+        int sectionOffset = historySearch ? 1 : 0;
 
         // get course list
         Elements courseList = tbody.getElementsByTag("tr");
         for (Element element : courseList) {
             Elements section = element.getElementsByTag("td");
 
-            List<Node> section1 = section.get(1).childNodes();
+            // Parse semester if history search
+            String courseData_semester = null;
+            if (historySearch) {
+                String semester = section.get(0).text().trim();
+                int split = semester.indexOf('-');
+                if (split != -1)
+                    courseData_semester = semester.substring(0, split) +
+                            (semester.charAt(semester.length() - 1) == '1' ? '0' : '1');
+            } else
+                courseData_semester = allSemester;
+
             // get serial number
+            List<Node> section1 = section.get(sectionOffset + 1).childNodes();
             String serialNumber = ((Element) section1.get(0)).text().trim();
             if (getSerialNumber != null) {
                 String serialNumberStr = serialNumber.substring(serialNumber.indexOf('-') + 1);
@@ -1053,66 +1259,72 @@ public class Search implements EndpointModule {
                 if (!getSerialNumber.contains(serialNumberStr))
                     continue;
             }
-
-            CourseData courseData = new CourseData();
-
-            // Get department name
-            courseData.departmentName = section.get(0).ownText();
-            if (courseData.departmentName.length() == 0) courseData.departmentName = null;
-
             // Get serial number
-            courseData.serialNumber = serialNumber.length() == 0 ? null : serialNumber;
+            String courseData_serialNumber = serialNumber.length() == 0 ? null : serialNumber;
 
             // Get system number
-            courseData.courseSystemNumber = ((TextNode) section1.get(1)).text().trim();
+            String courseData_courseSystemNumber = ((TextNode) section1.get(1)).text().trim();
 
             // Get attribute code
+            String courseData_courseAttributeCode = null;
             String courseAttributeCode = ((TextNode) section1.get(3)).text().trim();
             if (courseAttributeCode.length() > 0) {
                 int courseAttributeCodeStart, courseAttributeCodeEnd;
                 if ((courseAttributeCodeStart = courseAttributeCode.indexOf('[')) != -1 &&
                         (courseAttributeCodeEnd = courseAttributeCode.lastIndexOf(']')) != -1)
-                    courseData.courseAttributeCode = courseAttributeCode.substring(courseAttributeCodeStart + 1, courseAttributeCodeEnd);
+                    courseData_courseAttributeCode = courseAttributeCode.substring(courseAttributeCodeStart + 1, courseAttributeCodeEnd);
                 else
-                    courseData.courseAttributeCode = courseAttributeCode;
+                    courseData_courseAttributeCode = courseAttributeCode;
             } else
-                logger.log("AttributeCode not found");
+                logger.log(serialNumber + "AttributeCode not found");
 
-            // Get course name
-            courseData.courseName = section.get(4).getElementsByClass("course_name").get(0).text();
-
-            // Get course note
-            courseData.courseNote = section.get(4).ownText().trim().replace("\"", "\\\"");
-            if (courseData.courseNote.length() == 0) courseData.courseNote = null;
-
-            // Get course limit
-            courseData.courseLimit = section.get(4).getElementsByClass("cond").text().trim().replace("\"", "\\\"");
-            if (courseData.courseLimit.length() == 0) courseData.courseLimit = null;
+            // Get department name
+            String courseData_departmentName = section.get(sectionOffset).ownText();
+            if (courseData_departmentName.length() == 0) courseData_departmentName = null;
 
             // Get course type
-            courseData.courseType = section.get(3).text();
+            String courseData_courseType = section.get(sectionOffset + 3).text();
 
-            // Get instructor name
-            String instructors = section.get(6).text();
-            if (instructors.length() > 0 && !instructors.equals("未定")) {
-                instructors = instructors.replace("*", "");
-                courseData.instructors = instructors.split(" ");
-                // Add urSchool cache
-                if (addUrSchoolCache && urSchool != null) {
-                    urSchoolCache.addAll(Arrays.asList(courseData.instructors));
-                    // Flush to add urSchool cache
-                    if (urSchoolCache.size() > 10) {
-                        urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
-                        urSchoolCache.clear();
-                    }
+            // Get forGrade & classInfo & group
+            Integer courseData_forGrade = null;
+            String courseData_forClass = null;
+            String courseData_group = null;
+            List<Node> section2 = section.get(sectionOffset + 2).childNodes();
+            int section2c = 0;
+            for (Node node : section2) {
+                if (!(node instanceof TextNode))
+                    // <br>
+                    section2c++;
+                else {
+                    // text
+                    String cache = ((TextNode) node).text().trim();
+                    if (cache.length() == 0) continue;
+                    if (section2c == 0)
+                        courseData_forGrade = Integer.parseInt(cache);
+                    else if (section2c == 1)
+                        courseData_forClass = cache;
+                    else
+                        courseData_group = cache;
                 }
-            } else courseData.instructors = null;
+            }
+
+            // Get course name
+            String courseData_courseName = section.get(sectionOffset + 4).getElementsByClass("course_name").get(0).text();
+
+            // Get course note
+            String courseData_courseNote = section.get(sectionOffset + 4).ownText().trim().replace("\"", "\\\"");
+            if (courseData_courseNote.length() == 0) courseData_courseNote = null;
+
+            // Get course limit
+            String courseData_courseLimit = section.get(sectionOffset + 4).getElementsByClass("cond").text().trim().replace("\"", "\\\"");
+            if (courseData_courseLimit.length() == 0) courseData_courseLimit = null;
 
             // Get course tags
-            Elements tagElements = section.get(4).getElementsByClass("label");
+            CourseData.TagData[] courseData_tags = null;
+            Elements tagElements = section.get(sectionOffset + 4).getElementsByClass("label");
             if (tagElements.size() > 0) {
-                CourseData.TagData[] tags = new CourseData.TagData[tagElements.size()];
-                for (int i = 0; i < tags.length; i++) {
+                courseData_tags = new CourseData.TagData[tagElements.size()];
+                for (int i = 0; i < courseData_tags.length; i++) {
                     Element tagElement = tagElements.get(i);
                     // Get tag Color
                     String tagColor;
@@ -1141,122 +1353,120 @@ public class Search implements EndpointModule {
                     Element j = tagElement.firstElementChild();
                     String link = j == null ? null : j.attr("href");
 
-                    tags[i] = new CourseData.TagData(tagElement.text(), tagColor, link);
-                }
-                courseData.tags = tags;
-            } else courseData.tags = null;
-
-            // Get forGrade & classInfo & group
-            courseData.forGrade = null;
-            courseData.forClass = null;
-            courseData.group = null;
-            List<Node> section2 = section.get(2).childNodes();
-            int section2c = 0;
-            for (Node node : section2) {
-                if (!(node instanceof TextNode))
-                    // <br>
-                    section2c++;
-                else {
-                    // text
-                    String cache = ((TextNode) node).text().trim();
-                    if (cache.length() == 0) continue;
-                    if (section2c == 0)
-                        courseData.forGrade = Integer.parseInt(cache);
-                    else if (section2c == 1)
-                        courseData.forClass = cache;
-                    else
-                        courseData.group = cache;
+                    courseData_tags[i] = new CourseData.TagData(tagElement.text(), tagColor, link);
                 }
             }
 
             // get credits & required
-            List<TextNode> section5 = section.get(5).textNodes();
+            Float courseData_credits = null;
+            Boolean courseData_required = null;
+            List<TextNode> section5 = section.get(sectionOffset + 5).textNodes();
             String section5Str;
             if (section5.size() > 0 && (section5Str = section5.get(0).text().trim()).length() > 0) {
-                courseData.credits = Float.parseFloat(section5Str);
+                courseData_credits = Float.parseFloat(section5Str);
                 String cache = section5.get(1).text().trim();
-                courseData.required = cache.equals("必修") || cache.equals("Required");
-            } else {
-                courseData.credits = null;
-                courseData.required = null;
+                courseData_required = cache.equals("必修") || cache.equals("Required");
+            }
+
+            // Get instructor name
+            String[] courseData_instructors = null;
+            String instructors = section.get(sectionOffset + 6).text();
+            if (instructors.length() > 0 && !instructors.equals("未定")) {
+                instructors = instructors.replace("*", "");
+                courseData_instructors = instructors.split(" ");
+                // Add urSchool cache
+                if (addUrSchoolCache && urSchool != null) {
+                    urSchoolCache.addAll(Arrays.asList(courseData_instructors));
+                    // Flush to add urSchool cache
+                    if (urSchoolCache.size() > 10) {
+                        urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
+                        urSchoolCache.clear();
+                    }
+                }
             }
 
             // Get time list
+            CourseData.TimeData[] courseData_timeList = null;
             List<CourseData.TimeData> timeDataList = new ArrayList<>();
-            CourseData.TimeData timeDataCache = new CourseData.TimeData();
+            Short timeCacheDayOfWeek = null;
+            Character timeCacheSection = null, timeCacheSectionTo = null;
+            String timeCacheMapLocation = null, timeCacheMapRoomNo = null, timeCacheMapRoomName = null;
             int timeParseState = 0;
-            for (Node node : section.get(8).childNodes()) {
-                // time
+            for (Node node : section.get(sectionOffset + 8).childNodes()) {
+                // Parse state 0, find day of week and section
                 if (timeParseState == 0) {
                     timeParseState++;
                     String text;
+                    // Check if data exist
                     if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
-                        // Get dayOfWeek
-                        int dayOfWeekEnd = text.indexOf(']', 1);
-                        if (dayOfWeekEnd != -1) {
-                            timeDataCache.dayOfWeek = Integer.parseInt(text.substring(1, dayOfWeekEnd));
+                        // Get dayOfWeek, format: [1]2~3
+                        if (text.length() > 2 && text.charAt(2) == ']') {
+                            timeCacheDayOfWeek = (short) (text.charAt(1) - '0');
                             // Get section
-                            if (text.length() > dayOfWeekEnd + 1) {
-                                timeDataCache.section = text.charAt(dayOfWeekEnd + 1);
+                            if (text.length() > 3) {
+                                timeCacheSection = text.charAt(3);
                                 // Get section end
-                                int split = text.indexOf('~', dayOfWeekEnd + 1);
-                                if (split != -1 && text.length() > split + 1) {
-                                    timeDataCache.sectionTo = text.charAt(split + 1);
+                                if (text.length() > 5 && text.charAt(4) == '~') {
+                                    timeCacheSectionTo = text.charAt(5);
                                 }
                             }
                             continue;
                         }
                     }
                 }
+                // Parse state 1, classroom data
                 if (timeParseState == 1) {
                     timeParseState++;
-                    // Location link
+                    // Location link, format: javascript:maps('12','789AB');
                     String attribute;
                     if ((attribute = node.attr("href")).length() > 0) {
-                        int locEnd = attribute.indexOf('\'', 17);
-                        if (locEnd != -1) {
-                            timeDataCache.mapLocation = attribute.substring(17, locEnd);
-                            int roomNoEnd = attribute.indexOf('\'', locEnd + 3);
-                            if (roomNoEnd != -1)
-                                timeDataCache.mapRoomNo = attribute.substring(locEnd + 3, roomNoEnd);
+                        // Get location
+                        int locStart, locEnd;
+                        if ((locStart = attribute.indexOf('\'')) != -1 &&
+                                (locEnd = attribute.indexOf('\'', locStart + 1)) != -1) {
+                            timeCacheMapLocation = attribute.substring(locStart + 1, locEnd);
+                            int roomNoStart, roomNoEnd;
+                            if ((roomNoStart = attribute.indexOf('\'', locEnd + 1)) != -1 &&
+                                    (roomNoEnd = attribute.indexOf('\'', roomNoStart + 1)) != -1)
+                                timeCacheMapRoomNo = attribute.substring(roomNoStart + 1, roomNoEnd);
                         }
                         if (node instanceof Element)
-                            timeDataCache.mapRoomName = ((Element) node).text().trim();
+                            timeCacheMapRoomName = ((Element) node).text().trim();
                         continue;
                     }
                 }
+                // Parse state 2, save time data and reset
                 if (timeParseState == 2 && node instanceof Element) {
                     String tagName = ((Element) node).tagName();
-                    if (tagName.equals("br")) {
-                        if (timeDataCache.isNotEmpty()) {
-                            timeDataList.add(timeDataCache);
-                            timeDataCache = new CourseData.TimeData();
-                        }
-                    } else if (((Element) node).tagName().equals("div")) {
-                        if (timeDataCache.isNotEmpty()) {
-                            timeDataList.add(timeDataCache);
-                            timeDataCache = new CourseData.TimeData();
-                        }
-                        // Detailed time data
-                        timeDataCache.extraTimeDataKey = node.attr("data-mkey");
-                        timeDataList.add(timeDataCache);
-                        timeDataCache = new CourseData.TimeData();
+                    // Save time data
+                    timeDataList.add(new CourseData.TimeData(timeCacheDayOfWeek, timeCacheSection, timeCacheSectionTo,
+                            timeCacheMapLocation, timeCacheMapRoomNo, timeCacheMapRoomName));
+                    // Add detailed time data
+                    if (tagName.equals("div")) {
+                        timeDataList.add(new CourseData.TimeData(node.attr("data-mkey")));
                     }
+                    // Reset state
+                    timeCacheDayOfWeek = null;
+                    timeCacheSection = null;
+                    timeCacheSectionTo = null;
+                    timeCacheMapLocation = null;
+                    timeCacheMapRoomNo = null;
+                    timeCacheMapRoomName = null;
                     timeParseState = 0;
                 }
             }
-            if (timeDataCache.isNotEmpty())
-                timeDataList.add(timeDataCache);
-
+            // Add last time data
+            if (timeCacheDayOfWeek != null || timeCacheSection != null || timeCacheSectionTo != null ||
+                    timeCacheMapLocation != null || timeCacheMapRoomNo != null || timeCacheMapRoomName != null)
+                timeDataList.add(new CourseData.TimeData(timeCacheDayOfWeek, timeCacheSection, timeCacheSectionTo,
+                        timeCacheMapLocation, timeCacheMapRoomNo, timeCacheMapRoomName));
             if (timeDataList.size() > 0)
-                courseData.timeList = timeDataList.toArray(new CourseData.TimeData[0]);
-            else
-                courseData.timeList = null;
+                courseData_timeList = timeDataList.toArray(new CourseData.TimeData[0]);
 
             // Get selected & available
             String[] count;
             StringBuilder countBuilder = new StringBuilder();
-            for (Node n : section.get(7).childNodes()) {
+            for (Node n : section.get(sectionOffset + 7).childNodes()) {
                 // Check style
                 if (n instanceof Element) {
                     String nc = ((Element) n).className();
@@ -1271,58 +1481,69 @@ public class Search implements EndpointModule {
                     countBuilder.append(((TextNode) n).text());
             }
             count = countBuilder.toString().split("/");
-            courseData.selected = count[0].length() == 0 ? null : Integer.parseInt(count[0]);
-            courseData.available = count.length < 2 ? null :
+            Integer courseData_selected = count[0].length() == 0 ? null : Integer.parseInt(count[0]);
+            Integer courseData_available = count.length < 2 ? null :
                     (count[1].equals("額滿") || count[1].equals("full")) ? 0 :
                             (count[1].equals("不限") || count[1].equals("unlimited")) ? -1 :
                                     (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -2 :
                                             Integer.parseInt(count[1]);
 
             // Get moodle, outline
-            courseData.moodle = null;
-            courseData.outline = null;
-            Elements linkEle = section.get(9).getElementsByAttribute("href");
+            String courseData_moodle = null;
+            Elements linkEle = section.get(sectionOffset + 9).getElementsByAttribute("href");
             if (linkEle.size() > 0) {
                 for (Element ele : linkEle) {
                     String href = ele.attr("href");
                     if (href.startsWith("javascript"))
                         // moodle link
-                        courseData.moodle = href.substring(19, href.length() - 3).replace("','", ",");
-                    else
-                        // outline link
-                        courseData.outline = href.substring(href.indexOf("?") + 1);
+                        courseData_moodle = href.substring(19, href.length() - 3).replace("','", ",");
+//                    else
+//                        // outline link
+//                        courseData_courseOutline = href.substring(href.indexOf("?") + 1);
                 }
             }
 
             // Get function buttons
-            courseData.btnPreferenceEnter = null;
-            courseData.btnAddCourse = null;
-            courseData.btnPreRegister = null;
-            courseData.btnAddRequest = null;
-            for (int i = 10; i < section.size(); i++) {
+            String courseData_btnPreferenceEnter = null;
+            String courseData_btnAddCourse = null;
+            String courseData_btnPreRegister = null;
+            String courseData_btnAddRequest = null;
+            for (int i = sectionOffset + 10; i < section.size(); i++) {
                 Element button = section.get(i).firstElementChild();
                 if (button == null) continue;
                 String buttonText = button.ownText().replace(" ", "");
                 switch (buttonText) {
                     case "PreferenceEnter":
                     case "志願登記":
-                        courseData.btnPreferenceEnter = button.attr("data-key");
+                        courseData_btnPreferenceEnter = button.attr("data-key");
                         break;
                     case "AddCourse":
                     case "單科加選":
-                        courseData.btnAddCourse = button.attr("data-key");
+                        courseData_btnAddCourse = button.attr("data-key");
                         break;
                     case "Pre-register":
                     case "加入預排":
-                        courseData.btnPreRegister = button.attr("data-prekey");
+                        courseData_btnPreRegister = button.attr("data-prekey");
                         break;
                     case "AddRequest":
                     case "加入徵詢":
-                        courseData.btnAddRequest = button.attr("data-prekey");
+                        courseData_btnAddRequest = button.attr("data-prekey");
                         break;
                 }
             }
 
+            CourseData courseData = new CourseData(courseData_semester,
+                    courseData_departmentName,
+                    courseData_serialNumber, courseData_courseAttributeCode, courseData_courseSystemNumber,
+                    courseData_forGrade, courseData_forClass, courseData_group,
+                    courseData_courseType,
+                    courseData_courseName, courseData_courseNote, courseData_courseLimit, courseData_tags,
+                    courseData_credits, courseData_required,
+                    courseData_instructors,
+                    courseData_selected, courseData_available,
+                    courseData_timeList,
+                    courseData_moodle,
+                    courseData_btnPreferenceEnter, courseData_btnAddCourse, courseData_btnPreRegister, courseData_btnAddRequest);
             courseDataList.add(courseData);
         }
 
@@ -1355,7 +1576,7 @@ public class Search implements EndpointModule {
         return body.substring(idStart + 1, idEnd);
     }
 
-    public ResponseState checkRobot(Connection request, CookieStore cookieStore, ResponseData responseData) {
+    public ResponseState checkRobot(String urlOrigin, Connection request, CookieStore cookieStore, ResponseData responseData) {
         for (int i = 0; i < MAX_ROBOT_CHECK_TRY; i++) {
             String response;
             try {
@@ -1379,10 +1600,10 @@ public class Search implements EndpointModule {
             // Crack robot
             logger.warn("Crack robot code");
             for (; i < MAX_ROBOT_CHECK_TRY; i++) {
-                String code = robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
+                String code = robotCode.getCode(urlOrigin + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
                 logger.warn("Crack code: " + code);
                 try {
-                    String result = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=robot")
+                    String result = HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=robot")
                             .header("Connection", "keep-alive")
                             .cookieStore(cookieStore)
                             .ignoreContentType(true)

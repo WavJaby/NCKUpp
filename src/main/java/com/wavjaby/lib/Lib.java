@@ -18,13 +18,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.wavjaby.Main.accessControlAllowOrigin;
-import static com.wavjaby.Main.courseNckuOrg;
 
 public class Lib {
     private static final String TAG = "[CosPreCheck]";
     private static final Logger logger = new Logger(TAG);
 
-    public static void cosPreCheck(String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
+    public static void cosPreCheck(String urlOrigin, String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
         String cosPreCheckKey = null;
         int cosPreCheckStart = body.indexOf("m=cosprecheck");
         if (cosPreCheckStart != -1) {
@@ -45,7 +44,7 @@ public class Lib {
         long now = System.currentTimeMillis() / 1000;
         try {
             String postData = cosPreCheckKey == null ? ("time=" + now) : ("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"));
-            HttpConnection.connect(courseNckuOrg + "/index.php?c=portal&m=cosprecheck&time=" + now)
+            HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)

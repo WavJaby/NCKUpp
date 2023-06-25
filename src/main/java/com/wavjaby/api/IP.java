@@ -55,7 +55,7 @@ public class IP implements EndpointModule {
             e.printStackTrace();
             remoteIp = null;
         }
-//        logger.log(remoteIp);
+        logger.log(remoteIp);
     };
 
     @Override

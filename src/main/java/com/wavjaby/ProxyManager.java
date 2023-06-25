@@ -92,13 +92,16 @@ public class ProxyManager {
 
         @Override
         public String toString() {
-            return "ping: " + ping + ",\turl: " + toUrl() + ",\tproviderUrl: " + providerUrl;
+            if (providerUrl.length() > 45)
+                return "ping: " + ping + ", url: " + toUrl() + ", providerUrl: " + providerUrl.substring(0, 45) + "...";
+            else
+                return "ping: " + ping + ", url: " + toUrl() + ", providerUrl: " + providerUrl;
         }
 
     }
 
     ProxyManager(PropertiesReader properties) {
-        if(!properties.getPropertyBoolean("useProxy", true))
+        if (!properties.getPropertyBoolean("useProxy", true))
             return;
 
         String proxiesString = null;
