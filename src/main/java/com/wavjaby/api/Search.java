@@ -5,7 +5,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
-import com.wavjaby.ResponseData;
+import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
@@ -35,7 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.wavjaby.Main.*;
-import static com.wavjaby.ResponseData.ResponseState;
+import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
@@ -44,8 +44,8 @@ public class Search implements EndpointModule {
     private static final Logger logger = new Logger(TAG);
 
     private static final int MAX_ROBOT_CHECK_TRY = 5;
-    private final ExecutorService cosPreCheckPool = Executors.newFixedThreadPool(5);
-    private final Semaphore cosPreCheckPoolLock = new Semaphore(5);
+    private final ThreadPoolExecutor cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(6);
+    private final Semaphore cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize());
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
 
     private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
@@ -720,11 +720,11 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
-        ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, responseData);
+        HttpResponseData httpResponseData = new HttpResponseData();
+        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, httpResponseData);
         if (state != ResponseState.SUCCESS)
             return null;
-        String body = responseData.data;
+        String body = httpResponseData.data;
 
         cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
 
@@ -747,11 +747,11 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
-        ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, responseData);
+        HttpResponseData httpResponseData = new HttpResponseData();
+        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, httpResponseData);
         if (state != ResponseState.SUCCESS)
             return null;
-        String body = responseData.data;
+        String body = httpResponseData.data;
 
         cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
 
@@ -851,8 +851,8 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
-        ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(courseNckuOrg, request, deptToken.cookieStore, responseData);
+        HttpResponseData httpResponseData = new HttpResponseData();
+        ResponseState state = checkRobot(courseNckuOrg, request, deptToken.cookieStore, httpResponseData);
         if (state != ResponseState.SUCCESS)
             return null;
 
@@ -865,10 +865,10 @@ public class Search implements EndpointModule {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(courseNckuOrg, responseData.data, deptToken.cookieStore, null, proxyManager);
+            cosPreCheck(courseNckuOrg, httpResponseData.data, deptToken.cookieStore, null, proxyManager);
             cosPreCheckPoolLock.release();
         });
-        return responseData.data;
+        return httpResponseData.data;
     }
 
     private boolean getQueryCourseData(SearchQuery searchQuery, Map.Entry<String, String> getSerialNum,
@@ -963,13 +963,13 @@ public class Search implements EndpointModule {
                             .cookieStore(postCookieStore)
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy());
-                    ResponseData responseData = new ResponseData();
-                    ResponseState state = checkRobot(courseQueryNckuOrg, request, postCookieStore, responseData);
+                    HttpResponseData httpResponseData = new HttpResponseData();
+                    ResponseState state = checkRobot(courseQueryNckuOrg, request, postCookieStore, httpResponseData);
                     if (state != ResponseState.SUCCESS)
                         return null;
 
-                    cosPreCheck(courseQueryNckuOrg, responseData.data, postCookieStore, response, proxyManager);
-                    String searchID = getSearchID(responseData.data, response);
+                    cosPreCheck(courseQueryNckuOrg, httpResponseData.data, postCookieStore, response, proxyManager);
+                    String searchID = getSearchID(httpResponseData.data, response);
                     if (searchID == null)
                         return null;
 
@@ -1141,10 +1141,12 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
-        ResponseData responseData = new ResponseData();
-        ResponseState state = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore, responseData);
+        HttpResponseData httpResponseData = new HttpResponseData();
+        ResponseState state = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore, httpResponseData);
         if (state != ResponseState.SUCCESS)
             return null;
+        if (cosPreCheckPoolLock.availablePermits() == 0)
+            logger.log("CosPreCheck waiting");
         try {
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
@@ -1152,10 +1154,10 @@ public class Search implements EndpointModule {
             return null;
         }
         cosPreCheckPool.submit(() -> {
-            cosPreCheck(saveQueryToken.urlOrigin, responseData.data, saveQueryToken.cookieStore, null, proxyManager);
+            cosPreCheck(saveQueryToken.urlOrigin, httpResponseData.data, saveQueryToken.cookieStore, null, proxyManager);
             cosPreCheckPoolLock.release();
         });
-        return responseData.data;
+        return httpResponseData.data;
     }
 
     private Element findCourseTable(String html, String errorMessage, @Nullable ApiResponse response) {
@@ -1576,7 +1578,7 @@ public class Search implements EndpointModule {
         return body.substring(idStart + 1, idEnd);
     }
 
-    public ResponseState checkRobot(String urlOrigin, Connection request, CookieStore cookieStore, ResponseData responseData) {
+    public ResponseState checkRobot(String urlOrigin, Connection request, CookieStore cookieStore, HttpResponseData httpResponseData) {
         for (int i = 0; i < MAX_ROBOT_CHECK_TRY; i++) {
             String response;
             try {
@@ -1592,7 +1594,7 @@ public class Search implements EndpointModule {
                     (codeTicketStart = response.indexOf("code_ticket=", codeTicketStart)) == -1 ||
                     (codeTicketEnd = response.indexOf("&", codeTicketStart)) == -1
             ) {
-                responseData.data = response;
+                httpResponseData.data = response;
                 return ResponseState.SUCCESS;
             }
             String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);

@@ -17,6 +17,10 @@ $schedule-head-bg-color: #282B2C;
             > tr {
                 height: 2em;
                 text-align: center;
+
+                > td:nth-child(n+2) {
+                    min-width: 8em;
+                }
             }
 
             > tr > .background {

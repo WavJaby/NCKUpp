@@ -1,0 +1,30 @@
+.stateBox {
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+
+    > div {
+        background: #1d1e1eE0;
+        height: 30px;
+        margin: 5px;
+        padding-right: 5px;
+        border-radius: 10px;
+        display: inline-block;
+
+        > .loaderCircle {
+            height: 100%;
+            width: auto;
+            padding: 5px;
+            box-sizing: border-box;
+            display: inline-block;
+        }
+
+        > h1 {
+            line-height: 30px;
+            font-size: 16px;
+            display: inline-block;
+            margin: 0;
+            vertical-align: top;
+        }
+    }
+}

@@ -55,8 +55,9 @@ public class CourseFunctionButton implements EndpointModule {
 
         try {
             ApiResponse apiResponse = new ApiResponse();
+            logger.log(req.getRequestURI().getRawQuery());
             Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-            sendCosData(query, apiResponse, cookieStore);
+            processData(query, apiResponse, cookieStore);
 
             Headers responseHeader = req.getResponseHeaders();
             packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
@@ -82,13 +83,40 @@ public class CourseFunctionButton implements EndpointModule {
         return httpHandler;
     }
 
-    private void sendCosData(Map<String, String> query, ApiResponse apiResponse, CookieStore cookieStore) {
+    private void processData(Map<String, String> query, ApiResponse apiResponse, CookieStore cookieStore) {
         String key;
-        if ((key = query.get("cosdata")) == null) {
+        if ((key = query.get("cosdata")) != null) {
+            postCosData(key, cookieStore, apiResponse);
+        } else if ((key = query.get("prekey")) != null) {
+            postPreKey(key, cookieStore, apiResponse);
+        } else
             apiResponse.addError(TAG + "Key not found");
-            return;
-        }
+    }
 
+    private void postPreKey(String key, CookieStore cookieStore, ApiResponse apiResponse) {
+        try {
+            Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=add_presub")
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .method(Connection.Method.POST)
+                    .requestBody("key=" + URLEncoder.encode(key, "UTF-8"))
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .execute();
+            JsonObject postResult = new JsonObject(post.body());
+            String msg = parseUnicode(postResult.getString("msg"));
+            if (!postResult.getBoolean("result")) {
+                apiResponse.setMessage(msg);
+            } else
+                apiResponse.addError(msg);
+        } catch (IOException e) {
+            logger.err(e);
+            apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+        }
+    }
+
+    private void postCosData(String key, CookieStore cookieStore, ApiResponse apiResponse) {
         try {
             JsonObject resultData = null;
             String postData;
@@ -151,7 +179,7 @@ public class CourseFunctionButton implements EndpointModule {
             else
                 apiResponse.addError(msg);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.err(e);
             apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
     }

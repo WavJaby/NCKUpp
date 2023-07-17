@@ -84,7 +84,7 @@ module.exports = function (loginState) {
      */
     function onLoginState(state) {
         if (state && state.login)
-            window.fetchApi('/courseSchedule').then(scheduleTable.init);
+            window.fetchApi('/courseSchedule', 'Get schedule').then(scheduleTable.init);
         else {
             if (state)
                 window.askForLoginAlert();
@@ -319,7 +319,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow, showClassroomChec
         const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
 
         // fetch data
-        window.fetchApi('/search?serial=' + courseFetchData).then(i => {
+        window.fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
             for (const entry of Object.entries(i.data))
                 for (const course of entry[1])
                     courseInfo[course.sn] = course;

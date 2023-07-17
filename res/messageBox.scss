@@ -1,0 +1,57 @@
+@import 'variables';
+
+.messageBox {
+    position: fixed;
+    width: 100%;
+    //height: 100%;
+
+    > .info {
+        background: rgba(30, 30, 30, 0.7);
+    }
+
+    > .error {
+        background: rgba(70, 0, 0, 0.7);
+    }
+
+    > .success {
+        background: rgba(0, 70, 0, 0.7);
+    }
+
+    // Message box
+    > div {
+        min-height: 120px;
+        max-width: 100%;
+        width: 600px;
+        position: relative;
+        left: 0;
+        right: 0;
+        margin: 0 auto 0 auto;
+        &.animation {
+            @include transition((500ms margin-top, 200ms opacity));
+        }
+
+        > .title {
+            font-size: 20px;
+            display: block;
+            padding: 0 5px;
+        }
+
+        > .description {
+            word-wrap: break-word;
+            display: block;
+            padding: 0 5px;
+            white-space: pre-wrap;
+        }
+
+        > .closeButton {
+            content: $icon-close;
+            width: 1em;
+            height: 1em;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+        }
+    }
+
+}

@@ -84,6 +84,7 @@ public class Main {
         registerModule(new NCKUHub(), "/api/nckuhub");
         registerModule(new Logout(proxyManager), "/api/logout");
         registerModule(new CourseSchedule(proxyManager), "/api/courseSchedule");
+        registerModule(new PreCourseSchedule(proxyManager), "/api/preCourseSchedule");
         registerModule(new ExtractUrl(proxyManager), "/api/extract");
         registerModule(new PreferenceAdjust(proxyManager), "/api/preferenceAdjust");
         registerModule(new StudentIdentificationSystem(), "/api/stuIdSys");

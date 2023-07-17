@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {div, button, Signal, span, State, img, linkStylesheet, h1, text, ShowIf} = require('../domHelper');
+const {div, button, Signal, span, State, img, linkStylesheet, h1, text, ShowIf, svg} = require('../domHelper');
 /*ExcludeEnd*/
 
 /**
@@ -81,7 +81,7 @@ module.exports = function (loginState) {
         // Login
         if (state && state.login) {
             loadingState.set(true);
-            window.fetchApi('/login?m=i').then(i => {
+            window.fetchApi('/login?m=i', 'Login identification system').then(i => {
                 // Student Identification System login success
                 if (i.success && i.data && i.data.login) {
                     semesterLoadingStateCount = 2;

@@ -133,12 +133,10 @@ public class ProxyManager {
         if (proxy == null)
             return null;
         return proxy.toProxy();
-//        return null;
     }
 
     public ProxyData getProxyData() {
         return proxy;
-//        return null;
     }
 
 }

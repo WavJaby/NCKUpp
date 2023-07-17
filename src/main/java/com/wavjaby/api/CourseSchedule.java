@@ -33,7 +33,7 @@ import static com.wavjaby.lib.Lib.setAllowOrigin;
 public class CourseSchedule implements EndpointModule {
     private static final String TAG = "[Schedule]";
     private static final Logger logger = new Logger(TAG);
-    private static final HashMap<String, Integer> DayTextToInt = new HashMap<String, Integer>() {{
+    public static final HashMap<String, Integer> DayTextToInt = new HashMap<String, Integer>() {{
         put("時間未定", -1);
         put("Undecided", -1);
         put("星期一", 0);
@@ -80,18 +80,18 @@ public class CourseSchedule implements EndpointModule {
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
-            ApiResponse data = new ApiResponse();
-            boolean success = getCourseSchedule(cookieStore, data);
+            ApiResponse apiResponse = new ApiResponse();
+            getCourseSchedule(cookieStore, apiResponse);
 
             Headers responseHeader = req.getResponseHeaders();
             packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
 
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -108,7 +108,7 @@ public class CourseSchedule implements EndpointModule {
         return httpHandler;
     }
 
-    private boolean getCourseSchedule(CookieStore cookieStore, ApiResponse response) {
+    private void getCourseSchedule(CookieStore cookieStore, ApiResponse response) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
@@ -120,7 +120,7 @@ public class CourseSchedule implements EndpointModule {
         }
         if (root == null) {
             response.addError(TAG + "Can not fetch schedule");
-            return false;
+            return;
         }
 
 
@@ -160,7 +160,7 @@ public class CourseSchedule implements EndpointModule {
                 userIdEle.childNodeSize() != 3 ||
                 (textNodes = userIdEle.textNodes()).size() != 2) {
             response.addError(TAG + "Student ID not found");
-            return false;
+            return;
         }
         String studentID = textNodes.get(1).toString();
         int idStart = studentID.lastIndexOf(';');
@@ -171,7 +171,7 @@ public class CourseSchedule implements EndpointModule {
         Element creditsEle = userIdEle.parent();
         if (creditsEle == null || creditsEle.childrenSize() != 2) {
             response.addError(TAG + "Credits not found");
-            return false;
+            return;
         }
         String creditsStr = creditsEle.child(1).text();
         int creditsStart = -1, creditsEnd = -1;
@@ -187,7 +187,7 @@ public class CourseSchedule implements EndpointModule {
         }
         if (creditsStart == -1) {
             response.addError(TAG + "Credits parse error");
-            return false;
+            return;
         }
         float credits = Float.parseFloat(creditsEnd == -1 ? creditsStr.substring(creditsStart) : creditsStr.substring(creditsStart, creditsEnd));
 
@@ -196,12 +196,12 @@ public class CourseSchedule implements EndpointModule {
         Elements tables = root.getElementsByTag("table");
         if (tables.size() == 0) {
             response.addError(TAG + "Table not found");
-            return false;
+            return;
         }
         Elements tbody = tables.get(0).getElementsByTag("tbody");
         if (tbody.size() == 0) {
             response.addError(TAG + "Table body not found");
-            return false;
+            return;
         }
         Elements eachCourse = tbody.get(0).getElementsByTag("tr");
         JsonArray courseInfo = null;
@@ -210,7 +210,7 @@ public class CourseSchedule implements EndpointModule {
         for (Element row : eachCourse) {
             if (row.childNodeSize() < 10) {
                 response.addError(TAG + "Course info not found");
-                return false;
+                return;
             }
             Elements rowElements = row.children();
 
@@ -276,7 +276,7 @@ public class CourseSchedule implements EndpointModule {
             int roomIdEnd = room.indexOf(' ');
             if (room.length() > 0 && roomIdEnd == -1) {
                 response.addError(TAG + "Course room id not found: " + room);
-                return false;
+                return;
             }
             String roomID = roomIdEnd == -1 ? null : room.substring(0, roomIdEnd);
             if (roomIdEnd != -1)
@@ -297,6 +297,5 @@ public class CourseSchedule implements EndpointModule {
         builder.append("credits", credits);
         builder.append("schedule", courseScheduleData);
         response.setData(builder.toString());
-        return true;
     }
 }

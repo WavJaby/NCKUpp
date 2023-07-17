@@ -80,7 +80,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 semester = null;
             else
                 semester = semID.substring(yearStart, yearEnd) +
-                        (semID.charAt(semID.length() - 1) == '上' ? 0 : 1);
+                        (semID.charAt(semID.length() - 1) == '上' ? '0' : '1');
             requireCredits = Float.parseFloat(row.get(2).text().trim());
             electiveCredits = Float.parseFloat(row.get(3).text().trim());
             summerCourses = Float.parseFloat(row.get(4).text().trim());
@@ -539,11 +539,16 @@ public class StudentIdentificationSystem implements EndpointModule {
                 );
                 // Bar
                 float height = (float) yAxisHeight * studentCount[i] / totalStudentCount * highestPercent;
+                float barY = svgHeight - graphPaddingY - height;
                 svg.appendChild(
-                        new SvgRect(x, svgHeight - graphPaddingY - height, xAxisPadding, height)
+                        new SvgRect(x, barY, xAxisPadding, height)
                                 .setBackgroundColor("#3376BD")
                                 .setStrokeColor("#3390FF")
                                 .setStrokeWidth(2)
+                                .setClass("grow")
+                                .addAttrStyle(new AttrStyle()
+                                        .addStyle("transform-origin", "0 " + (barY + height + 2) + "px;")
+                                )
                 );
                 if (studentCount[i] > 0)
                     svg.appendChild(
@@ -559,6 +564,14 @@ public class StudentIdentificationSystem implements EndpointModule {
                             .setStrokeColor("#AAA")
                             .setStrokeWidth(2)
                             .setStrokeLinecap(StrokeLinecap.SQUARE)
+            );
+
+            svg.appendChild(new SvgStyle()
+                    .addStyle(".grow",
+                            "animation: grow 1s;")
+                    .addStyle("@keyframes grow",
+                            "from{transform: scaleY(0);}" +
+                                    "to{transform: scaleY(1);}")
             );
 
             double avg = 0, stdDev = 0;

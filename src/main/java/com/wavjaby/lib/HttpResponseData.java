@@ -1,6 +1,6 @@
-package com.wavjaby;
+package com.wavjaby.lib;
 
-public class ResponseData {
+public class HttpResponseData {
     public enum ResponseState {
         SUCCESS,
         ROBOT_CODE_CRACK_ERROR,

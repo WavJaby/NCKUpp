@@ -12,6 +12,9 @@
   height: 2em;
   text-align: center;
 }
+.courseSchedule > .courseScheduleTable > thead > tr > td:nth-child(n+2) {
+  min-width: 8em;
+}
 .courseSchedule > .courseScheduleTable > thead > tr > .background {
   background-color: #282B2C;
   width: 100%;

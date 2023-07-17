@@ -44,7 +44,6 @@ const apiEndPoint = window.location.hostname === 'localhost'
     ? 'https://localhost/api'
     : 'https://api.simon.chummydns.com/api';
 const mobileWidth = 700;
-window.messageAlert = MessageAlert();
 /**
  * @typedef {Object} ApiResponse
  * @property {string} success
@@ -61,10 +60,11 @@ window.messageAlert = MessageAlert();
  */
 /**
  * @param {string} endpoint
+ * @param {string | null} [showState]
  * @param {ApiFetch} [option]
  * @return Promise<ApiResponse>
  */
-window.fetchApi = function (endpoint, option) {
+window.fetchApi = function (endpoint, showState, option) {
     if (option) option.credentials = 'include';
     else option = {credentials: 'include'};
     let abortTimeout;
@@ -73,6 +73,8 @@ window.fetchApi = function (endpoint, option) {
         option.signal = controller.signal;
         abortTimeout = setTimeout(() => controller.abort(), option.timeout);
     }
+    const stateObj = showState ? requestState.addState(showState) : null;
+
     return fetch(apiEndPoint + endpoint, option)
         .then(i => i.json())
         // Handle self defined error
@@ -83,6 +85,8 @@ window.fetchApi = function (endpoint, option) {
                 window.messageAlert.addError(
                     'Api response error',
                     i.err.join('\n'), 2000);
+            if (stateObj)
+                requestState.removeState(stateObj);
             return i;
         })
         .catch(e => {
@@ -98,14 +102,16 @@ window.fetchApi = function (endpoint, option) {
                     'Network error',
                     e instanceof Error ? e.stack || e || 'Unknown error!' : e, 2000);
             }
+            if (stateObj)
+                requestState.removeState(stateObj);
         });
 };
-window.askForLoginAlert = () =>
-    window.messageAlert.addInfo("Login to use this page", 'Click login button at top right corner to login in', 3000);
-
+window.askForLoginAlert = () => window.messageAlert.addInfo("Login to use this page", 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
 window.pageLoading = new Signal(false);
+window.messageAlert = MessageAlert();
+const requestState = requestStateObject();
 /**
  * @typedef {Object} LoginData
  * @property {boolean} login
@@ -172,7 +178,7 @@ window.pageLoading = new Signal(false);
     }
 
     // check login
-    window.fetchApi('/login').then(onLoginStateChange);
+    window.fetchApi('/login', 'Check login').then(onLoginStateChange);
 
     const root = div('root',
         // Pages
@@ -210,6 +216,7 @@ window.pageLoading = new Signal(false);
         ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
         ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
         window.messageAlert,
+        requestState,
         debugWindow,
     );
     window.onload = () => {
@@ -309,7 +316,7 @@ function MessageAlert() {
         createMessageBox('success', title, description, removeTimeout);
     }
 
-    function onclick() {
+    function onCloseBtn() {
         removeMessageBox(this.parentElement);
     }
 
@@ -317,22 +324,32 @@ function MessageAlert() {
         const messageBox = div(classname,
             span(title, 'title'),
             span(description, 'description'),
-            div('closeButton', {onclick})
+            div('closeButton', {onclick: onCloseBtn})
         );
-        messageBoxRoot.appendChild(messageBox);
         // height += messageBox.offsetHeight + 10;
         if (removeTimeout !== undefined)
-            setTimeout(() => removeMessageBox(messageBox), removeTimeout);
-        if (!updateTop)
-            updateTop = setTimeout(updateMessageBoxTop, 0);
+            messageBox.removeTimeout = setTimeout(() => removeMessageBox(messageBox), removeTimeout);
+        // if (!updateTop)
+        //     updateTop = setTimeout(updateMessageBoxTop, 0);
+        if (messageBoxRoot.childElementCount > 0)
+            messageBoxRoot.insertBefore(messageBox, messageBoxRoot.firstElementChild);
+        else
+            messageBoxRoot.appendChild(messageBox);
+        messageBox.style.marginTop = -messageBox.offsetHeight + 'px';
+
+        setTimeout(() => {
+            messageBox.classList.add('animation');
+            messageBox.style.marginTop = '10px';
+        });
     }
 
     function removeMessageBox(messageBox) {
+        clearTimeout(messageBox.removeTimeout);
         messageBox.style.opacity = '0';
+        messageBox.style.marginTop = (-messageBox.offsetHeight) + 'px';
         setTimeout(() => {
             messageBoxRoot.removeChild(messageBox);
-            updateMessageBoxTop();
-        }, 200);
+        }, 500);
     }
 
     function updateMessageBoxTop() {
@@ -345,6 +362,23 @@ function MessageAlert() {
     }
 
     return messageBoxRoot;
+}
+
+function requestStateObject() {
+    const stateBox = div('stateBox');
+
+    stateBox.addState = function (title) {
+        return stateBox.appendChild(div(null,
+            window.loadingElement.cloneNode(true),
+            h1(title, 'title')
+        ));
+    };
+
+    stateBox.removeState = function (stateElement) {
+        stateBox.removeChild(stateElement);
+    };
+
+    return stateBox;
 }
 
 function LoginWindow(onLoginStateChange) {
@@ -361,7 +395,7 @@ function LoginWindow(onLoginStateChange) {
             loading = true;
             window.pageLoading.set(true);
             const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-            window.fetchApi('/login', {
+            window.fetchApi('/login', 'login', {
                 method: 'POST',
                 body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
                 timeout: 10000,

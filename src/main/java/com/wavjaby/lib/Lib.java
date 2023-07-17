@@ -41,25 +41,30 @@ public class Lib {
         }
 //        logger.log("Make CosPreCheck " + cookieStore.getCookies().toString());
 
-        long now = System.currentTimeMillis() / 1000;
-        try {
-            String postData = cosPreCheckKey == null ? ("time=" + now) : ("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"));
-            HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
-                    .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .proxy(proxyManager.getProxy())
-                    .method(Connection.Method.POST)
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .requestBody(postData)
-                    .timeout(5000)
-                    .execute();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            if (response != null)
-                response.addWarn(TAG + "Network error");
+        // 3 try
+        for (int i = 0; i < 3; i++) {
+            long now = System.currentTimeMillis() / 1000;
+            try {
+                String postData = cosPreCheckKey == null ? ("time=" + now) : ("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"));
+                HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .proxy(proxyManager.getProxy())
+                        .method(Connection.Method.POST)
+                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                        .header("X-Requested-With", "XMLHttpRequest")
+                        .requestBody(postData)
+                        .timeout(4000)
+                        .execute();
+                return;
+            } catch (IOException e) {
+                logger.errTrace(e);
+            }
         }
+        // Failed
+        if (response != null)
+            response.addWarn(TAG + "Network error");
     }
 
     public static String readResponse(HttpExchange req) {

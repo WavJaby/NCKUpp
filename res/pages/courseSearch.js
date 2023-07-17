@@ -309,7 +309,7 @@ module.exports = function (loginState) {
         searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 
         // fetch data
-        const result = (await window.fetchApi('/search?' + queryString, {timeout: 5000}));
+        const result = (await window.fetchApi('/search?' + queryString, 'Searching', {timeout: 10000}));
 
         if (!result || !result.success || !result.data) {
             searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null});
@@ -493,7 +493,7 @@ module.exports = function (loginState) {
         let serialIndex, result;
         if ((serialIndex = watchList.indexOf(courseData.serialNumber)) === -1) {
             console.log('add watch');
-            result = window.fetchApi('/watchdog', {
+            result = window.fetchApi('/watchdog', 'add course to watch list', {
                 method: 'POST',
                 body: `studentID=${loginState.state.studentID}&courseSerial=${courseData.serialNumber}`
             });
@@ -501,7 +501,7 @@ module.exports = function (loginState) {
             watchList.push(courseData.serialNumber);
         } else {
             console.log('remove watch');
-            result = window.fetchApi('/watchdog', {
+            result = window.fetchApi('/watchdog', 'remove course from watch list', {
                 method: 'POST',
                 body: `studentID=${loginState.state.studentID}&removeCourseSerial=${courseData.serialNumber}`
             });
@@ -528,7 +528,17 @@ module.exports = function (loginState) {
      * @this {{cosdata: string}}
      */
     function sendCosData() {
-        window.fetchApi(`/courseFuncBtn?cosdata=${this.cosdata}`).then(i => {
+        window.fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.cosdata)}`).then(i => {
+            if (i.success)
+                window.messageAlert.addSuccess('Message', i.msg, 5000);
+        });
+    }
+
+    /**
+     * @this {{prekey: string}}
+     */
+    function sendPreKey() {
+        window.fetchApi(`/courseFuncBtn?prekey=${encodeURIComponent(this.prekey)}`).then(i => {
             if (i.success)
                 window.messageAlert.addSuccess('Message', i.msg, 5000);
         });
@@ -649,11 +659,13 @@ module.exports = function (loginState) {
                         nckuhubInfo,
                         td(null, 'options', {rowSpan: 2},
                             !data.serialNumber || !loginState.state ? null :
-                                button('addToWatch', watchList && watchList.indexOf(data.serialNumber) !== -1 ? 'remove watch' : 'add watch', watchedCourseAddRemove, {courseData: data}),
+                                button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? 'remove watch' : 'add watch', watchedCourseAddRemove, {courseData: data}),
+                            !data.preRegister ? null :
+                                button(null, '加入預排', sendPreKey, {prekey: data.preRegister}),
                             !data.preferenceEnter ? null :
-                                button('addToWatch', '加入志願', sendCosData, {cosdata: data.preferenceEnter}),
+                                button(null, '加入志願', sendCosData, {cosdata: data.preferenceEnter}),
                             !data.addCourse ? null :
-                                button('addToWatch', '單科加選', sendCosData, {cosdata: data.addCourse}),
+                                button(null, '單科加選', sendCosData, {cosdata: data.addCourse}),
                         ),
                     ),
                     tr('courseDetail',
