@@ -2,10 +2,13 @@ $course-block-bg-color: #5985ef;
 $schedule-head-bg-color: #282B2C;
 
 .courseSchedule {
+    > .options {
+        margin: 10px 10px 0 10px;
+    }
 
-    > .courseScheduleTable {
+    .courseScheduleTable {
         margin: 10px;
-        border-spacing: 5px;
+        border-spacing: 3px;
 
         > caption {
             text-align: left;
@@ -99,6 +102,52 @@ $schedule-head-bg-color: #282B2C;
                         cursor: pointer;
                     }
                 }
+            }
+        }
+    }
+
+    // PreScheduleTable
+    .courseScheduleTable.pre {
+
+        > tbody {
+            // Schedule section row
+            > tr > td {
+                &.activate {
+                    vertical-align: top;
+                    border: 1px #666 solid;
+                    border-radius: 15px;
+                }
+
+                > div {
+                    min-width: 8em;
+                    padding: 5px;
+                    border-radius: 10px;
+                    vertical-align: top;
+                    cursor: pointer;
+
+                    &:nth-child(n+2) {
+                        margin-top: 5px;
+                    }
+
+                    &.sure {
+                        background: $course-block-bg-color;
+                    }
+
+                    &.pre {
+                        border: 2px gray dashed;
+                    }
+
+                    & > span {
+                        white-space: nowrap;
+                        //display: block;
+                    }
+
+                    & > span.room {
+                        display: block;
+                    }
+                }
+
+
             }
         }
     }

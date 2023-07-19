@@ -203,6 +203,7 @@ module.exports = function (loginState) {
     console.log('Course search Init');
     const styles = linkStylesheet('./res/pages/courseSearch.css');
     const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
+    expandArrowImage.className = 'noSelect noDrag';
 
     const searchResultSignal = new Signal({loading: false, courseResult: null, nckuhubResult: null});
     const instructorInfoBubble = InstructorInfoBubble();
@@ -273,12 +274,16 @@ module.exports = function (loginState) {
         if (searching) return;
         searching = true;
         // get all course ID
-        if (nckuHubCourseID === null)
-            nckuHubCourseID = (await window.fetchApi('/nckuhub')).data;
+        if (nckuHubCourseID === null) {
+            searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
+            nckuHubCourseID = (await window.fetchApi('/nckuhub', 'get nckuhub id')).data;
+        }
 
         // get urSchool data
-        if (urSchoolData === null)
-            urSchoolData = (await window.fetchApi('/urschool')).data;
+        if (urSchoolData === null) {
+            searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
+            urSchoolData = (await window.fetchApi('/urschool', 'get urschool data')).data;
+        }
 
         let queryData = rawQuery instanceof Event ? null : rawQuery;
         if (!queryData) {
@@ -505,7 +510,7 @@ module.exports = function (loginState) {
                 method: 'POST',
                 body: `studentID=${loginState.state.studentID}&removeCourseSerial=${courseData.serialNumber}`
             });
-            this.textContent = 'add watch';
+            this.textContent = '移除關注';
             watchList.splice(serialIndex, 1);
         }
         result.then(i => {
@@ -528,7 +533,7 @@ module.exports = function (loginState) {
      * @this {{cosdata: string}}
      */
     function sendCosData() {
-        window.fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.cosdata)}`).then(i => {
+        window.fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.cosdata)}`, 'Send course data').then(i => {
             if (i.success)
                 window.messageAlert.addSuccess('Message', i.msg, 5000);
         });
@@ -538,7 +543,7 @@ module.exports = function (loginState) {
      * @this {{prekey: string}}
      */
     function sendPreKey() {
-        window.fetchApi(`/courseFuncBtn?prekey=${encodeURIComponent(this.prekey)}`).then(i => {
+        window.fetchApi(`/courseFuncBtn?prekey=${encodeURIComponent(this.prekey)}`, 'Send key data').then(i => {
             if (i.success)
                 window.messageAlert.addSuccess('Message', i.msg, 5000);
         });
@@ -570,7 +575,7 @@ module.exports = function (loginState) {
 
                 // Course detail
                 let expandableHeightReference, expandableElement;
-                const courseDetail = td(null, null, {colSpan: 12},
+                const courseDetail = td(null, null, {colSpan: 13},
                     expandableElement = div('expandable', expandableHeightReference = div('info',
                         div('splitLine'),
                         // Course tags
@@ -651,15 +656,19 @@ module.exports = function (loginState) {
                         td(data.departmentName, 'departmentName'),
                         td(data.serialNumber, 'serialNumber'),
                         td(data.courseType, 'courseType'),
+                        td(data.courseGrade, 'grade'),
                         td(data.classInfo, 'class'),
                         td(data.timeString, 'courseTime'),
-                        td(data.courseName, 'courseName'),
+                        td(data.courseName, 'courseName', {
+                            onclick: () =>
+                                window.open(createSyllabusUrl(data.semester, data.systemNumber), '_blank')
+                        }),
                         td(data.credits, 'credits'),
                         td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
                         nckuhubInfo,
                         td(null, 'options', {rowSpan: 2},
                             !data.serialNumber || !loginState.state ? null :
-                                button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? 'remove watch' : 'add watch', watchedCourseAddRemove, {courseData: data}),
+                                button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
                             !data.preRegister ? null :
                                 button(null, '加入預排', sendPreKey, {prekey: data.preRegister}),
                             !data.preferenceEnter ? null :
@@ -682,6 +691,21 @@ module.exports = function (loginState) {
         return tbody(null, courseRenderResultSort);
     }
 
+    function createSyllabusUrl(yearSem, sysNumClassCode) {
+        const year = yearSem.substring(0, yearSem.length - 1).padStart(4, '0');
+        const sem = yearSem.charAt(yearSem.length - 1) === '0' ? '1' : '2';
+
+        let systemNumber = sysNumClassCode, classCode = '';
+        const index = sysNumClassCode.indexOf('-');
+        if (index !== -1) {
+            systemNumber = sysNumClassCode.substring(0, index);
+            classCode = sysNumClassCode.substring(index + 1);
+        }
+
+        return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
+            '&co_no=' + systemNumber +
+            '&class_code=' + classCode;
+    }
 
     // Sort
     const sortArrow = expandArrowImage.cloneNode();
@@ -849,6 +873,7 @@ module.exports = function (loginState) {
                     th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
                     th('Serial', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
                     th('Type', 'courseType', {key: 'courseType', onclick: sortStringKey}),
+                    th('Grade', 'grade', {key: 'courseType', onclick: sortIntKey}),
                     th('Class', 'class', {key: 'classInfo', onclick: sortStringKey}),
                     th('Time', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
                     th('Course name', 'courseName', {key: 'courseName', onclick: sortStringKey}),

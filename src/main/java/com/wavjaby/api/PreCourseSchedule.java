@@ -152,12 +152,14 @@ public class PreCourseSchedule implements EndpointModule {
                                 .append(time, timeSplit + 1, time.length());
                 } else
                     builder.append(date);
-                timeArr.add(builder.toString());
+                timeArr.add(new JsonObjectStringBuilder().append("time", builder.toString()));
             }
+            course.put("info", timeArr);
 
-            course.put("time", timeArr);
             course.put("addTime", rowElements.get(5).text());
-            course.put("info", rowElements.get(6).text());
+            course.put("remark", rowElements.get(6).text());
+            Element delBtn = rowElements.get(7).firstElementChild();
+            course.put("delete", delBtn == null ? null : delBtn.attr("data-info"));
 //            logger.log(row);
 
             courseScheduleData.add(course);

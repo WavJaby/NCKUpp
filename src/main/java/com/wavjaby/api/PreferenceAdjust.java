@@ -8,6 +8,9 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -82,82 +85,130 @@ public class PreferenceAdjust implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
 
-        String body;
+        Document body;
         try {
-            body = pageFetch.execute().body();
+            body = pageFetch.execute().parse();
         } catch (IOException e) {
             e.printStackTrace();
+            apiResponse.addError(TAG + "Network error");
             return;
         }
-
-        int tableStart;
-        if ((tableStart = body.indexOf("id=\"list_A9_000_999\"")) == -1) {
-            apiResponse.addError(TAG + "list body not found");
-        }
-        tableStart += 20;
-
-        // Get data type
-        int datatypeStart, datatypeEnd;
-        if ((datatypeStart = body.indexOf("data_type=\"", tableStart)) == -1 ||
-                (datatypeEnd = body.indexOf('"', datatypeStart += 11)) == -1) {
-            apiResponse.addError(TAG + "datatype not found");
-            return;
-        }
-        String datatype = body.substring(datatypeStart, datatypeEnd);
 
         // Get action key
-        int actionKeyStart, actionKeyEnd;
-        if ((actionKeyStart = body.indexOf("id='cos21342_action'")) == -1 ||
-                (actionKeyStart = body.indexOf('>', actionKeyStart + 20)) == -1 ||
-                (actionKeyEnd = body.indexOf('<', actionKeyStart += 1)) == -1) {
-            apiResponse.addError(TAG + "actionKey not found");
+        Element action = body.getElementById("cos21342_action");
+        Element remove = body.getElementById("cos21342_remove");
+        Element group2action = body.getElementById("cos_group2_action");
+        if (action == null) {
+            apiResponse.addError(TAG + "Action key not found");
             return;
         }
-        String actionKey = body.substring(actionKeyStart, actionKeyEnd);
+        if (remove == null) {
+            apiResponse.addError(TAG + "Action remove key not found");
+            return;
+        }
 
-        // Get list items
-        int itemTagStart, itemTagEnd = datatypeEnd,
-                itemIdStart, itemIdEnd,
-                courseNameStart, courseNameEnd,
-                courseInfoStart, courseInfoEnd;
-        while ((itemTagStart = body.indexOf("class=\"list-group-item", itemTagEnd)) != -1 &&
-                (itemTagEnd = body.indexOf('>', itemTagStart + 22)) != -1) {
-            // Get itemID
-            if ((itemIdStart = body.indexOf("data_item=\"", itemTagStart)) == -1 ||
-                    (itemIdEnd = body.indexOf('"', itemIdStart += 11)) == -1 ||
-                    itemIdStart > itemTagEnd || itemIdEnd > itemTagEnd) {
-                apiResponse.addError(TAG + "item id not found");
-                return;
-            }
-            String itemId = body.substring(itemIdStart, itemIdEnd);
+        // All data need adjust
+        Elements allTabs = body.getElementsByClass("tab-content");
+        if (allTabs.size() == 0) {
+            apiResponse.addError(TAG + "No preference adjust not found");
+            return;
+        }
 
-            // Get course name
-            if ((courseNameStart = body.indexOf("class=\"course_name\"", itemTagEnd)) == -1 ||
-                    (courseNameStart = body.indexOf('>', courseNameStart + 19)) == -1 ||
-                    (courseNameEnd = body.indexOf('<', courseNameStart)) == -1) {
-                apiResponse.addError(TAG + "course name not found");
-                return;
-            }
-            String courseIdAndName = body.substring(courseNameStart, courseNameEnd);
-
-            // Get course info
-            if ((courseInfoStart = body.indexOf('>', courseNameEnd)) == -1 ||
-                    (courseInfoEnd = body.indexOf('<', courseInfoStart += 1)) == -1) {
-                apiResponse.addError(TAG + "course info not found");
-                return;
-            }
-            String courseInfo = body.substring(courseInfoStart, courseInfoEnd).trim();
-
-            System.out.println(itemId);
-            System.out.println(courseIdAndName);
-            System.out.println(courseInfo);
-
-            itemTagEnd = courseNameEnd;
+        // Get list item
+        Element adjList = allTabs.get(0).getElementById("list_A9_000_999");
+        if (adjList == null) {
+            apiResponse.addError(TAG + "List item to adjust not found");
+            return;
         }
 
 
-        System.out.println(actionKey);
-        System.out.println(datatype);
+        // Get type
+        if (!adjList.hasAttr("data_type")) {
+            apiResponse.addError(TAG + "Adjust list type not found");
+            return;
+        }
+        String type = adjList.attr("data_type");
+        logger.log("type: " + type);
+
+        for (Element item : adjList.children()) {
+            if (!item.hasAttr("data_item")) {
+                apiResponse.addError(TAG + "Adjust list item key not found");
+                return;
+            }
+            String itemKey = item.attr("data_item");
+
+            logger.log(itemKey);
+        }
+
+
+//        int tableStart;
+//        if ((tableStart = body.indexOf("id=\"list_A9_000_999\"")) == -1) {
+//            apiResponse.addError(TAG + "list body not found");
+//        }
+//        tableStart += 20;
+//
+//        // Get data type
+//        int datatypeStart, datatypeEnd;
+//        if ((datatypeStart = body.indexOf("data_type=\"", tableStart)) == -1 ||
+//                (datatypeEnd = body.indexOf('"', datatypeStart += 11)) == -1) {
+//            apiResponse.addError(TAG + "datatype not found");
+//            return;
+//        }
+//        String datatype = body.substring(datatypeStart, datatypeEnd);
+//
+//        // Get action key
+//        int actionKeyStart, actionKeyEnd;
+//        if ((actionKeyStart = body.indexOf("id='cos21342_action'")) == -1 ||
+//                (actionKeyStart = body.indexOf('>', actionKeyStart + 20)) == -1 ||
+//                (actionKeyEnd = body.indexOf('<', actionKeyStart += 1)) == -1) {
+//            apiResponse.addError(TAG + "actionKey not found");
+//            return;
+//        }
+//        String actionKey = body.substring(actionKeyStart, actionKeyEnd);
+//
+//        // Get list items
+//        int itemTagStart, itemTagEnd = datatypeEnd,
+//                itemIdStart, itemIdEnd,
+//                courseNameStart, courseNameEnd,
+//                courseInfoStart, courseInfoEnd;
+//        while ((itemTagStart = body.indexOf("class=\"list-group-item", itemTagEnd)) != -1 &&
+//                (itemTagEnd = body.indexOf('>', itemTagStart + 22)) != -1) {
+//            // Get itemID
+//            if ((itemIdStart = body.indexOf("data_item=\"", itemTagStart)) == -1 ||
+//                    (itemIdEnd = body.indexOf('"', itemIdStart += 11)) == -1 ||
+//                    itemIdStart > itemTagEnd || itemIdEnd > itemTagEnd) {
+//                apiResponse.addError(TAG + "item id not found");
+//                return;
+//            }
+//            String itemId = body.substring(itemIdStart, itemIdEnd);
+//
+//            // Get course name
+//            if ((courseNameStart = body.indexOf("class=\"course_name\"", itemTagEnd)) == -1 ||
+//                    (courseNameStart = body.indexOf('>', courseNameStart + 19)) == -1 ||
+//                    (courseNameEnd = body.indexOf('<', courseNameStart)) == -1) {
+//                apiResponse.addError(TAG + "course name not found");
+//                return;
+//            }
+//            String courseIdAndName = body.substring(courseNameStart, courseNameEnd);
+//
+//            // Get course info
+//            if ((courseInfoStart = body.indexOf('>', courseNameEnd)) == -1 ||
+//                    (courseInfoEnd = body.indexOf('<', courseInfoStart += 1)) == -1) {
+//                apiResponse.addError(TAG + "course info not found");
+//                return;
+//            }
+//            String courseInfo = body.substring(courseInfoStart, courseInfoEnd).trim();
+//
+//            System.out.println(itemId);
+//            System.out.println(courseIdAndName);
+//            System.out.println(courseInfo);
+//
+//            itemTagEnd = courseNameEnd;
+//        }
+//
+//
+//        System.out.println(actionKey);
+//        System.out.println(datatype);
     }
 
     @Override

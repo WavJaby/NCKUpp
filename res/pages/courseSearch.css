@@ -174,6 +174,12 @@
 .courseSearch > .result > tbody > tr:nth-child(3n+2) > td:first-child {
   border-radius: 10px 0 0 0;
 }
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > .courseName {
+  cursor: pointer;
+}
+.courseSearch > .result > tbody > tr:nth-child(3n+2) > .courseName:hover {
+  background: #21262d;
+}
 .courseSearch > .result > tbody > tr:nth-child(3n+2) > .options > button {
   padding: 2px;
   font-size: 18px;
@@ -184,10 +190,10 @@
 .courseSearch > .result > tbody > .courseDetail > td > .expandable {
   overflow: hidden;
   transition: 0.2s height;
-  -webkit-transition: 0.2s height;
-  -moz-transition: 0.2s height;
-  -ms-transition: 0.2s height;
   -o-transition: 0.2s height;
+  -ms-transition: 0.2s height;
+  -moz-transition: 0.2s height;
+  -webkit-transition: 0.2s height;
 }
 .courseSearch > .result > tbody > .courseDetail .info {
   white-space: pre-wrap;
@@ -273,6 +279,7 @@
   background: var(--popupWindow-bg-color);
   overflow: auto;
   border-radius: 10px;
+  padding: 5px;
 }
 @media only screen and (max-width: 700px) {
   .courseSearch > .popupWindow > div {
@@ -280,11 +287,13 @@
     height: 100%;
     position: static;
     border-radius: 0;
+    box-sizing: border-box;
+    padding: 5px 0 0 5px;
   }
 }
 .courseSearch > .popupWindow .closeButton {
   background: none;
-  padding: 5px;
+  padding: 2px;
   top: 0;
   position: sticky;
   cursor: pointer;
@@ -326,7 +335,7 @@
 }
 .courseSearch .nckuhubDetailWindow > .comments > .commentBlock {
   background: var(--comment-bg-color);
-  margin: 0 10px 10px 10px;
+  margin: 0 5px 5px 5px;
   border-radius: 10px;
   padding: 10px;
 }

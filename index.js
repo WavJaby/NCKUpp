@@ -5,6 +5,7 @@ const {
     Signal,
     ShowIf,
     HashRouter,
+    checkboxWithName,
     div,
     nav,
     ul,
@@ -226,11 +227,6 @@ const requestState = requestStateObject();
 
     // functions
     function onLoginStateChange(response) {
-        // Request timeout or cancel
-        if (!response) {
-            window.messageAlert.addError('Network error', 'Try again later', 3000);
-            return;
-        }
         const loginData = /**@type LoginData*/response.data;
         if (!loginData) {
             window.messageAlert.addError('Unknown error', 'Try again later', 3000);
@@ -339,8 +335,7 @@ function MessageAlert() {
 
         setTimeout(() => {
             messageBox.classList.add('animation');
-            messageBox.style.marginTop = '10px';
-        });
+        },20);
     }
 
     function removeMessageBox(messageBox) {

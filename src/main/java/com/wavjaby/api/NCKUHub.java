@@ -35,7 +35,7 @@ public class NCKUHub implements EndpointModule {
     private final long courseIDUpdateInterval = 10 * 60 * 1000;
     private long lastCourseIDUpdateTime;
     private static final int maxCacheSize = 20 * 1000 * 1000;
-    private static final int maxCacheTime = 60 * 1000;
+    private static final int maxCacheTime = 10 * 60 * 1000;
     private static final int cacheCleanerInterval = 30 * 1000;
     private int lastCacheSize = 0;
     private int cacheSize = 0;

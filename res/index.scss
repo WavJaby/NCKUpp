@@ -260,3 +260,59 @@ footer {
     -o-transition: height 0.2s;
     overflow: hidden;
 }
+
+// Checkbox with name
+.checkboxWithName {
+    display: block;
+    line-height: 1.6em;
+    margin-bottom: 5px;
+
+    > input {
+        width: 0;
+        height: 0;
+        margin: 0;
+        position: absolute;
+        display: none;
+    }
+
+    > input:checked {
+        display: block;
+    }
+
+    > input:checked ~ .checkmark {
+        background-color: #2196F3;
+    }
+
+    > input:checked ~ .checkmark::after {
+        display: block;
+    }
+
+    > .checkmark {
+        background-color: $button-bg-color;
+        height: 1.6em;
+        width: 1.6em;
+        margin-right: 5px;
+        border-radius: 5px;
+        float: left;
+        position: relative;
+    }
+
+    > .checkmark:hover {
+        background-color: $button-hover-color;
+    }
+
+    > .checkmark::after {
+        content: '';
+        border: solid white;
+        width: 5px;
+        height: 10px;
+        left: 0;
+        right: 0;
+        top: 0.3em;
+        margin: auto;
+        border-width: 0 3px 3px 0;
+        position: absolute;
+        display: none;
+        @include transform(rotate(45deg));
+    }
+}

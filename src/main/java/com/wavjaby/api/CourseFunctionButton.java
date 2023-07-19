@@ -106,7 +106,7 @@ public class CourseFunctionButton implements EndpointModule {
                     .execute();
             JsonObject postResult = new JsonObject(post.body());
             String msg = parseUnicode(postResult.getString("msg"));
-            if (!postResult.getBoolean("result")) {
+            if (postResult.getBoolean("result")) {
                 apiResponse.setMessage(msg);
             } else
                 apiResponse.addError(msg);

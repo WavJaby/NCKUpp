@@ -197,6 +197,14 @@ $search-result-header-bg-color: #1D2329;
                     border-radius: 10px 0 0 0;
                 }
 
+                // Result course name
+                > .courseName {
+                    cursor: pointer;
+                    &:hover {
+                        background: #21262d;
+                    }
+                }
+
                 // Option button
                 > .options > button {
                     padding: 2px;
@@ -213,11 +221,7 @@ $search-result-header-bg-color: #1D2329;
                 // Course info
                 > td > .expandable {
                     overflow: hidden;
-                    transition: 0.2s height;
-                    -webkit-transition: 0.2s height;
-                    -moz-transition: 0.2s height;
-                    -ms-transition: 0.2s height;
-                    -o-transition: 0.2s height;
+                    @include transition(0.2s height);
                 }
 
                 .info {
@@ -323,6 +327,7 @@ $search-result-header-bg-color: #1D2329;
         background: var(--popupWindow-bg-color);
         overflow: auto;
         border-radius: 10px;
+        padding: 5px;
     }
 
     @media only screen and ($small-screen) {
@@ -331,12 +336,14 @@ $search-result-header-bg-color: #1D2329;
             height: 100%;
             position: static;
             border-radius: 0;
+            box-sizing: border-box;
+            padding: 5px 0 0 5px;
         }
     }
 
     > .popupWindow .closeButton {
         background: none;
-        padding: 5px;
+        padding: 2px;
         top: 0;
         position: sticky;
         cursor: pointer;
@@ -344,11 +351,11 @@ $search-result-header-bg-color: #1D2329;
         &:focus {
             box-shadow: none;
         }
-    }
 
-    > .popupWindow .closeButton > .icon {
-        content: $icon-close;
-        width: 24px;
+        > .icon {
+            content: $icon-close;
+            width: 24px;
+        }
     }
 
     @media only screen and ($small-screen) {
@@ -383,7 +390,7 @@ $search-result-header-bg-color: #1D2329;
 
     .nckuhubDetailWindow > .comments > .commentBlock {
         background: var(--comment-bg-color);
-        margin: 0 10px 10px 10px;
+        margin: 0 5px 5px 5px;
         border-radius: 10px;
         padding: 10px;
     }

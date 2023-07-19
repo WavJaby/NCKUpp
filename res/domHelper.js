@@ -137,6 +137,7 @@ function ClassList(...className) {
             for (let i = 0; i < classList.length; i++) {
                 element.classList.add(classList[i]);
             }
+
             this.add = function (names) {
                 element.classList.add(names);
             };
@@ -150,6 +151,8 @@ function ClassList(...className) {
                 element.classList.contains(name);
             };
         } else {
+            element.className += classList.join(' ');
+
             this.add = function (...className) {
                 Array.prototype.push.apply(classList, className);
                 element.className = classList.join(' ');
@@ -181,8 +184,6 @@ function ClassList(...className) {
             this.contains = function (className) {
                 return classList.indexOf(className) !== -1;
             };
-
-            element.className = classList.join(' ');
         }
     };
 }
@@ -191,7 +192,7 @@ function parseClassInput(className, element) {
     if (className instanceof ClassList)
         className.init(element);
     else
-        element.className = className;
+        element.className += className;
 }
 
 window.urlHashData = (function () {
@@ -366,6 +367,24 @@ module.exports = {
     TextState,
     ClassList,
     HashRouter,
+
+    checkboxWithName(classN, title, defaultState, ...options) {
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        const checkmark = document.createElement('div');
+        checkmark.className = 'checkmark';
+
+        const element = document.createElement('label');
+        element.className = 'checkboxWithName noSelect';
+        if (classN) parseClassInput(classN, element);
+        element.textContent = title;
+        element.appendChild(input);
+        element.appendChild(checkmark);
+        element.input = input;
+        if (options.length) addOption(element, options);
+        return element;
+    },
+
     /**
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element

@@ -1228,8 +1228,8 @@ public class Search implements EndpointModule {
                         break;
                     }
 
-                char c = searchResultBody.charAt(end - 2);
-                allSemester = searchResultBody.substring(start + 1, end - 1) + ((c == 1) ? '0' : '1');
+                char c = searchResultBody.charAt(end - 1);
+                allSemester = searchResultBody.substring(start, end - 1) + ((c == '1') ? '0' : '1');
             }
         }
 

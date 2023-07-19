@@ -1,6 +1,7 @@
 .messageBox {
   position: fixed;
   width: 100%;
+  height: 0;
 }
 .messageBox > .info {
   background: rgba(30, 30, 30, 0.7);
@@ -21,6 +22,7 @@
   margin: 0 auto 0 auto;
 }
 .messageBox > div.animation {
+  margin-top: 10px !important;
   transition: 500ms margin-top, 200ms opacity;
   -o-transition: 500ms margin-top, 200ms opacity;
   -ms-transition: 500ms margin-top, 200ms opacity;
