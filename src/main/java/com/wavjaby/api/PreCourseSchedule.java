@@ -134,7 +134,7 @@ public class PreCourseSchedule implements EndpointModule {
                 // Parse day of week
                 int dayEnd = time.indexOf(' ');
                 String day = dayEnd == -1 ? time : time.substring(0, dayEnd);
-                Integer date = CourseSchedule.DayTextToInt.get(day);
+                Integer date = CourseSchedule.dayOfWeekTextToInt.get(day);
                 if (date == null) {
                     response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
                     continue;

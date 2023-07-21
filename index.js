@@ -145,6 +145,7 @@ const requestState = requestStateObject();
         search: '課程查詢',
         schedule: '課表',
         grades: '成績查詢',
+        preAdj: '志願排序',
     };
     const defaultPage = 'search';
     const userLoginData = new Signal();
@@ -154,6 +155,7 @@ const requestState = requestStateObject();
             search: () => require('./res/pages/courseSearch')(userLoginData),
             schedule: () => require('./res/pages/courseSchedule')(userLoginData),
             grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
+            preAdj: () => require('./res/pages/preferenceAdjust')(userLoginData),
         },
         footer(
             div('borderLine'),

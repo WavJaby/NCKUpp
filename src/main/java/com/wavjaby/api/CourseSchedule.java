@@ -33,7 +33,7 @@ import static com.wavjaby.lib.Lib.setAllowOrigin;
 public class CourseSchedule implements EndpointModule {
     private static final String TAG = "[Schedule]";
     private static final Logger logger = new Logger(TAG);
-    public static final HashMap<String, Integer> DayTextToInt = new HashMap<String, Integer>() {{
+    public static final HashMap<String, Integer> dayOfWeekTextToInt = new HashMap<String, Integer>() {{
         put("時間未定", -1);
         put("Undecided", -1);
         put("星期一", 0);
@@ -255,7 +255,7 @@ public class CourseSchedule implements EndpointModule {
                 String time = timeElement.text();
                 int dayEnd = time.indexOf(' ');
                 String day = dayEnd == -1 ? time : time.substring(0, dayEnd);
-                Integer date = DayTextToInt.get(day);
+                Integer date = dayOfWeekTextToInt.get(day);
                 if (date == null) {
                     response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
                     continue;

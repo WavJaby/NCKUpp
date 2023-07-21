@@ -162,7 +162,11 @@
   background: #252b33;
 }
 .courseSearch > .result > tbody > tr:nth-child(3n+1) {
-  height: var(--course-result-item-spacing);
+  height: 10px;
+}
+.courseSearch > .result > tbody > tr:nth-child(3n+2) {
+  font-weight: bold;
+  font-size: 20px;
 }
 .courseSearch > .result > tbody > tr:nth-child(3n+2) > td {
   padding: 5px 0;
@@ -183,6 +187,9 @@
 .courseSearch > .result > tbody > tr:nth-child(3n+2) > .options > button {
   padding: 2px;
   font-size: 18px;
+}
+.courseSearch > .result > tbody > .courseDetail {
+  color: #d8d6d3;
 }
 .courseSearch > .result > tbody > .courseDetail > td {
   border-radius: 0 0 0 10px;
@@ -206,6 +213,7 @@
 }
 .courseSearch > .result > tbody > .courseDetail .info > .tags {
   padding: 5px 0;
+  color: #ffffff;
 }
 .courseSearch > .result > tbody > .courseDetail .info > .tags > div, .courseSearch > .result > tbody > .courseDetail .info > .tags > a {
   margin-right: 10px;

@@ -82,7 +82,7 @@ public class ProxyChecker {
             proxyUrl = "https://www.proxy-list.download/api/v1/get?type=socks4";
             getTextTypeProxyList(proxyUrl, "socks4", proxyDataList);
             try {
-                Thread.sleep(5000);
+                Thread.sleep(6000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -288,7 +288,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
 
         long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
-        testProxy(proxyDataList, 50, 1000, 2, -1, true);
+        testProxy(proxyDataList, 60, 1000, 2, -1, true);
 //        proxyDataList.removeIf(i -> i.ping == -1);
 //        testProxy(proxyDataList, 20, 2000);
         proxyDataList.removeIf(i -> i.ping == -1);
@@ -301,10 +301,11 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         System.out.println("\nUsed: " + ((System.currentTimeMillis() - start) / 1000) + "s");
         try {
             FileWriter fileWriter = new FileWriter("proxy.txt");
-            for (ProxyManager.ProxyData proxyData : proxyDataList.stream().sorted((a, b) -> (int) (a.ping - b.ping)).collect(Collectors.toList())) {
-                fileWriter.write(proxyData.toUrl() + '\n');
-                System.out.println(proxyData);
-            }
+            if (proxyDataList.size() > 0)
+                for (ProxyManager.ProxyData proxyData : proxyDataList.stream().sorted((a, b) -> (int) (a.ping - b.ping)).collect(Collectors.toList())) {
+                    fileWriter.write(proxyData.toUrl() + '\n');
+                    System.out.println(proxyData);
+                }
             fileWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -315,6 +316,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount);
         Semaphore fetchPoolLock = new Semaphore(threadCount);
         ThreadPoolExecutor checkConnectionPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        Semaphore checkPoolLock = new Semaphore(threadCount * 2);
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
         final boolean conforming = conformTry != -1;
 
@@ -328,55 +330,44 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
             }
 
             pool.submit(() -> {
-                String error = null;
-                String message = null;
-                boolean timeout = true;
                 long latency = -1;
+                boolean timeout = false;
+                String errorMsg = null;
                 int maxTryCount = Math.max(maxTry, conformTry);
                 for (int tryCount = 0; tryCount < maxTryCount; tryCount++) {
-                    String[] finalError = new String[]{null};
-                    String[] finalMessage = new String[]{null};
+                    String testUrl = conforming
+                            ? "https://course.ncku.edu.tw/index.php?c=qry_all"
+                            : "https://ifconfig.me/ip";
+                    ProxyTestResult result = null;
+                    latency = -1;
                     timeout = false;
-                    Future<Long> future = checkConnectionPool.submit(() -> {
-                        long start = System.currentTimeMillis();
-                        try {
-                            Proxy proxy = proxyData.toProxy();
-                            Connection conn;
-                            if (conforming)
-                                conn = HttpConnection.connect("https://course.ncku.edu.tw/index.php?c=qry_all");
-                            else
-                                conn = HttpConnection.connect("https://ifconfig.me/ip");
-                            conn.proxy(proxy);
-                            conn.ignoreContentType(true);
-                            Connection.Response response = conn.execute();
-
-                            if (response.statusCode() == 200) {
-                                finalMessage[0] = response.body();
-                            } else
-                                finalError[0] = "ResponseCode Error\n";
-                        } catch (Exception e) {
-                            finalError[0] = e.getMessage();
-//                        e.printStackTrace();
-                        }
-                        return System.currentTimeMillis() - start;
-                    });
+                    errorMsg = null;
+                    Future<ProxyTestResult> future = testProxyConnection(proxyData, testUrl, checkConnectionPool);
                     try {
-                        latency = future.get(timeoutTime, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (TimeoutException e) {
+                        checkPoolLock.acquire();
+                        result = future.get(timeoutTime, TimeUnit.MILLISECONDS);
+                    }
+                    // Timeout
+                    catch (TimeoutException e) {
                         future.cancel(true);
                         timeout = true;
                     }
-                    error = finalError[0];
-                    message = finalMessage[0];
+                    // Other error
+                    catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                    checkPoolLock.release();
+                    if (result != null) {
+                        latency = result.latency;
+                        errorMsg = result.errorMessage;
+                    }
                     if (conforming) {
                         // Conform failed (error or time out)
-                        if (error != null || timeout)
+                        if (timeout || result == null || result.error)
                             break;
                     } else {
                         // Not timeout, pass
-                        if (!timeout)
+                        if (!timeout && result != null && !result.error)
                             break;
                     }
                 }
@@ -389,11 +380,8 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                     String ipStr = strLenLimit(ip, 16, 16);
                     String portStr = strLenLimit(String.valueOf(port), 8, 8);
                     String messageStr;
-                    if (error != null) {
-                        if (errorSameLine)
-                            messageStr = "Error";
-                        else
-                            messageStr = "Error: " + error;
+                    if (errorMsg != null) {
+                        messageStr = "Error: " + errorMsg;
                         proxyData.ping = -1;
                     } else if (timeout) {
                         messageStr = "Time out";
@@ -402,13 +390,18 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                         messageStr = latency + "ms " + proxyData.providerUrl;
                         proxyData.ping = latency;
                     }
-                    messageStr = strLenLimit(messageStr, 10, 75);
-                    if (errorSameLine) {
-                        if (error == null && !timeout)
-                            messageStr += '\n';
-                        System.out.print('\r' + progress + left + type + ipStr + portStr + messageStr);
-                    } else
-                        System.out.println(left + type + ipStr + portStr + messageStr);
+                    messageStr = strLenLimit(messageStr, 70, 70);
+                    // Proxy pass
+                    if (errorMsg == null && !timeout) {
+                        System.out.println('\r' + left + strLenLimit(proxyData.toUrl(), 31, 31) + messageStr);
+                    }
+                    // Progress
+                    else {
+                        if (errorSameLine) {
+                            System.out.print('\r' + progress + left + type + ipStr + portStr + messageStr);
+                        } else
+                            System.out.println(left + type + ipStr + portStr + messageStr);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -433,6 +426,46 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private static class ProxyTestResult {
+        final String errorMessage;
+        final String data;
+        final long latency;
+        final boolean error;
+
+        private ProxyTestResult(String errorMessage, String data, long latency) {
+            this.errorMessage = errorMessage;
+            this.data = data;
+            this.latency = latency;
+
+            error = errorMessage != null;
+        }
+    }
+
+    private Future<ProxyTestResult> testProxyConnection(ProxyManager.ProxyData proxyData, String url, ThreadPoolExecutor checkConnectionPool) {
+        return checkConnectionPool.submit(() -> {
+            long start = System.currentTimeMillis();
+            String error = null, data = null;
+            try {
+                Proxy proxy = proxyData.toProxy();
+                Connection conn = HttpConnection.connect(url)
+                        .proxy(proxy)
+                        .ignoreContentType(true)
+                        .header("Connection", "keep-alive");
+                Connection.Response response = conn.execute();
+
+                if (response.statusCode() == 200) {
+                    data = response.body();
+                } else
+                    error = "ResponseCode Error\n";
+            } catch (Exception e) {
+                error = e.getMessage();
+                if (error == null)
+                    error = "Unknown error";
+            }
+            return new ProxyTestResult(error, data, System.currentTimeMillis() - start);
+        });
     }
 
     private void getTextTypeProxyList(String url, String protocol, Set<ProxyManager.ProxyData> proxyDataList) {

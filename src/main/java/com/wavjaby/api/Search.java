@@ -5,12 +5,12 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
-import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
@@ -35,8 +35,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.wavjaby.Main.*;
-import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Cookie.*;
+import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Lib.*;
 
 public class Search implements EndpointModule {
@@ -1439,14 +1439,15 @@ public class Search implements EndpointModule {
                 }
                 // Parse state 2, save time data and reset
                 if (timeParseState == 2 && node instanceof Element) {
-                    String tagName = ((Element) node).tagName();
+                    boolean detailedTime = ((Element) node).tagName().equals("div");
                     // Save time data
-                    timeDataList.add(new CourseData.TimeData(timeCacheDayOfWeek, timeCacheSection, timeCacheSectionTo,
-                            timeCacheMapLocation, timeCacheMapRoomNo, timeCacheMapRoomName));
+                    if (timeCacheDayOfWeek != null || timeCacheSection != null || timeCacheSectionTo != null ||
+                            timeCacheMapLocation != null || timeCacheMapRoomNo != null || timeCacheMapRoomName != null)
+                        timeDataList.add(new CourseData.TimeData(timeCacheDayOfWeek, timeCacheSection, timeCacheSectionTo,
+                                timeCacheMapLocation, timeCacheMapRoomNo, timeCacheMapRoomName));
                     // Add detailed time data
-                    if (tagName.equals("div")) {
+                    if (detailedTime)
                         timeDataList.add(new CourseData.TimeData(node.attr("data-mkey")));
-                    }
                     // Reset state
                     timeCacheDayOfWeek = null;
                     timeCacheSection = null;

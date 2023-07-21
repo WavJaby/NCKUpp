@@ -231,6 +231,7 @@ function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
     const routerRoot = document.createElement('div');
     routerRoot.className = 'router';
     const loadPageCache = {};
+    const pageScrollSave = {};
     let lastPage, lastPageId = null;
 
     window.addEventListener('popstate', function () {
@@ -260,6 +261,7 @@ function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
 
         // Switch page element
         if (lastPage) {
+            pageScrollSave[lastPageId] = routerRoot.scrollTop;
             if (lastPage.onPageClose) lastPage.onPageClose();
             routerRoot.replaceChild(page, lastPage);
         }
@@ -274,6 +276,7 @@ function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
             page.render = true;
             page.onRender();
         }
+        routerRoot.scrollTop = pageScrollSave[pageId] || 0;
         if (page.onPageOpen) page.onPageOpen(!!isHistory);
         if (routerRoot.onPageOpen) routerRoot.onPageOpen(lastPageId, pageId, page);
 

@@ -53,7 +53,7 @@ module.exports = function (loginState) {
     const normalDestImg = new Signal();
     let semesterLoadingStateCount = 0;
 
-    async function onRender() {
+    function onRender() {
         console.log('StuIdSys grades Render');
         styles.mount();
     }

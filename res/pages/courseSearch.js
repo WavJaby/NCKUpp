@@ -221,7 +221,7 @@ module.exports = function (loginState) {
     let lastQueryString;
     let searching;
 
-    async function onRender() {
+    function onRender() {
         console.log('Course search Render');
         styles.mount();
         window.fetchApi('/alldept').then(i => {
@@ -377,7 +377,7 @@ module.exports = function (loginState) {
                         classroomName: i[5].length === 0 ? null : i[5]
                     };
                 });
-            courseData.timeString = courseData.time === null ? 'pending' : courseData.time.map(i => {
+            courseData.timeString = courseData.time === null ? '未定' : courseData.time.map(i => {
                 if (i.extraTimeDataKey) return '';
                 if (i.sectionStart !== null) {
                     let section;
@@ -492,7 +492,7 @@ module.exports = function (loginState) {
      * @this {{courseData: CourseData}}
      */
     function watchedCourseAddRemove() {
-        if (!loginState.state || !watchList) return;
+        if (!loginState.state || !loginState.state.login || !watchList) return;
 
         const courseData = this.courseData;
         let serialIndex, result;
@@ -519,7 +519,7 @@ module.exports = function (loginState) {
     }
 
     function getWatchCourse() {
-        if (!loginState.state) return;
+        if (!loginState.state || !loginState.state.login) return;
         window.fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
             const eql = encodeURIComponent('&');
             watchList = [];
@@ -667,7 +667,7 @@ module.exports = function (loginState) {
                         td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
                         nckuhubInfo,
                         td(null, 'options', {rowSpan: 2},
-                            !data.serialNumber || !loginState.state ? null :
+                            !data.serialNumber || !loginState.state || !loginState.state.login ? null :
                                 button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
                             !data.preRegister ? null :
                                 button(null, '加入預排', sendPreKey, {prekey: data.preRegister}),

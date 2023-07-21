@@ -1,6 +1,7 @@
 @import '../variables';
 
 $search-result-header-bg-color: #1D2329;
+$search-result-item-spacing: 10px;
 
 :root {
     --fade-time: 0.2s;
@@ -179,11 +180,13 @@ $search-result-header-bg-color: #1D2329;
 
             // Block spacing
             > tr:nth-child(3n+1) {
-                height: var(--course-result-item-spacing);
+                height: $search-result-item-spacing;
             }
 
             // Block
             > tr:nth-child(3n+2) {
+                font-weight: bold;
+                font-size: 20px;
                 > td {
                     padding: 5px 0;
                 }
@@ -214,6 +217,8 @@ $search-result-header-bg-color: #1D2329;
 
             // Block detail
             > .courseDetail {
+                color: $font-color2;
+
                 > td {
                     border-radius: 0 0 0 10px;
                 }
@@ -238,6 +243,7 @@ $search-result-header-bg-color: #1D2329;
                 // Course tags
                 .info > .tags {
                     padding: 5px 0;
+                    color: #ffffff;
 
                     > div, > a {
                         margin-right: 10px;

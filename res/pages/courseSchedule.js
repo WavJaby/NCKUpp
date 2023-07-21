@@ -2,7 +2,7 @@
 
 /*ExcludeStart*/
 const module = {};
-const {checkboxWithName, div, button, table, Signal, text, span, ShowIf, checkbox, label, linkStylesheet} = require('../domHelper');
+const {checkboxWithName, div, button, table, Signal, text, span, ShowIf, linkStylesheet} = require('../domHelper');
 /*ExcludeEnd*/
 
 // static
@@ -62,7 +62,7 @@ module.exports = function (loginState) {
 
     showPreScheduleCheckbox.input.onchange = () => scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
 
-    async function onRender() {
+    function onRender() {
         console.log('Course schedule Render');
         styles.mount();
     }
@@ -383,13 +383,13 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
             parsedTime[0] = parseInt(time[0]);
             if (time.length > 1) {
                 parsedTime[1] = time[1] === 'N' ? -1 : parseInt(time[1], 16);
-                if (time[1] > 4) time[1]++;
-                else if (parsedTime[1] === -1) time[1] = 5;
+                if (time[1] > 4) parsedTime[1]++;
+                else if (parsedTime[1] === -1) parsedTime[1] = 5;
             }
             if (time.length > 2) {
                 parsedTime[2] = time[2] === 'N' ? -1 : parseInt(time[2], 16);
-                if (time[2] > 4) time[2]++;
-                else if (parsedTime[1] === -1) time[2] = 5;
+                if (time[2] > 4) parsedTime[2]++;
+                else if (parsedTime[1] === -1) parsedTime[2] = 5;
             }
             // Make section end equals to section start
             else if (time.length > 1)
