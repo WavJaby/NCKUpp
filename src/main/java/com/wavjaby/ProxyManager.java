@@ -14,14 +14,13 @@ public class ProxyManager {
     private static final Logger logger = new Logger(TAG);
     private ProxyData proxy;
 
-    public static class ProxyData {
+    public static class ProxyData extends ProxyInfo {
         public final String ip;
         public final int port;
-        private final Proxy proxy;
         public final String protocol;
+        private final Proxy proxy;
 
         public final String providerUrl;
-        public long ping;
 
 
         public ProxyData(String ip, int port, String protocol, String providerUrl) {
@@ -29,7 +28,6 @@ public class ProxyManager {
             this.port = port;
             this.protocol = protocol;
             this.providerUrl = providerUrl;
-            this.ping = -1;
 
             this.proxy = new Proxy(getProxyType(), new InetSocketAddress(ip, port));
         }
@@ -44,9 +42,7 @@ public class ProxyManager {
                 if (url.charAt(portEnd) < '0' || url.charAt(portEnd) > '9')
                     break;
             this.port = Integer.parseInt(url.substring(ipEnd + 1, portEnd));
-
             this.providerUrl = providerUrl;
-            this.ping = -1;
 
             this.proxy = new Proxy(getProxyType(), new InetSocketAddress(ip, port));
         }
@@ -89,15 +85,30 @@ public class ProxyManager {
                     ((ProxyData) obj).ip.equals(ip) &&
                     ((ProxyData) obj).port == port;
         }
+    }
 
-        @Override
-        public String toString() {
-            if (providerUrl.length() > 45)
-                return "ping: " + ping + ", url: " + toUrl() + ", providerUrl: " + providerUrl.substring(0, 45) + "...";
-            else
-                return "ping: " + ping + ", url: " + toUrl() + ", providerUrl: " + providerUrl;
+    public static abstract class ProxyInfo {
+        private int ping = -1;
+        private boolean alive = false;
+
+        public void setPing(int ping) {
+            this.ping = ping;
         }
 
+        public int getPing() {
+            return ping;
+        }
+
+        public void setAlive(boolean alive) {
+            this.alive = alive;
+        }
+
+        public boolean isAlive() {
+            return alive;
+        }
+        public boolean isUnavailable() {
+            return !alive;
+        }
     }
 
     ProxyManager(PropertiesReader properties) {

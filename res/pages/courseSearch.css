@@ -296,7 +296,7 @@
     position: static;
     border-radius: 0;
     box-sizing: border-box;
-    padding: 5px 0 0 5px;
+    padding: 2px;
   }
 }
 .courseSearch > .popupWindow .closeButton {
@@ -409,17 +409,11 @@
 .courseSearch .instructorInfo .red {
   color: #FF311E;
 }
-.courseSearch .instructorDetailWindow > .title {
-  margin: 0 10px;
-}
 .courseSearch .instructorDetailWindow > .title span {
   margin-right: 0.5em;
 }
 .courseSearch .instructorDetailWindow > .title > .name {
   display: inline-block;
-}
-.courseSearch .instructorDetailWindow > .tags {
-  margin: 0 10px;
 }
 .courseSearch .instructorDetailWindow > .tags > span {
   background: #5b5b5b;
@@ -428,15 +422,9 @@
   margin-top: 5px;
   display: inline-block;
 }
-.courseSearch .instructorDetailWindow > .reviewerCount {
-  margin: 0 10px;
-}
 .courseSearch .instructorDetailWindow > .reviewerCount > span:first-child {
   font-weight: bold;
   margin-right: 0.5em;
-}
-.courseSearch .instructorDetailWindow > .comments {
-  margin: 0 10px;
 }
 .courseSearch .instructorDetailWindow > .comments > .item {
   background: var(--comment-bg-color);
@@ -461,26 +449,6 @@
 }
 .courseSearch .instructorDetailWindow > .comments > .item > .body > span {
   display: block;
-}
-.courseSearch .instructorDetailWindow > .instructorInfo {
-  margin: 0 10px;
-}
-@media only screen and (max-width: 700px) {
-  .courseSearch .instructorDetailWindow > .title {
-    margin: 0;
-  }
-  .courseSearch .instructorDetailWindow > .tags {
-    margin: 0;
-  }
-  .courseSearch .instructorDetailWindow > .reviewerCount {
-    margin: 0;
-  }
-  .courseSearch .instructorDetailWindow > .comments {
-    margin: 0;
-  }
-  .courseSearch .instructorDetailWindow > .instructorInfo {
-    margin: 0;
-  }
 }
 
 /*# sourceMappingURL=courseSearch.css.map */

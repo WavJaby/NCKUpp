@@ -575,7 +575,7 @@ module.exports = function (loginState) {
 
                 // Course detail
                 let expandableHeightReference, expandableElement;
-                const courseDetail = td(null, null, {colSpan: 13},
+                const courseDetail = td(null, null, {colSpan: 14},
                     expandableElement = div('expandable', expandableHeightReference = div('info',
                         div('splitLine'),
                         // Course tags
@@ -663,6 +663,7 @@ module.exports = function (loginState) {
                             onclick: () =>
                                 window.open(createSyllabusUrl(data.semester, data.systemNumber), '_blank')
                         }),
+                        td(data.required ? '必修' : '選修', 'required'),
                         td(data.credits, 'credits'),
                         td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
                         nckuhubInfo,
@@ -877,6 +878,7 @@ module.exports = function (loginState) {
                     th('Class', 'class', {key: 'classInfo', onclick: sortStringKey}),
                     th('Time', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
                     th('Course name', 'courseName', {key: 'courseName', onclick: sortStringKey}),
+                    th('Required', 'required', {key: 'required', onclick: sortIntKey}),
                     th('Credits', 'credits', {key: 'credits', onclick: sortIntKey}),
                     th('Sel/Avail', 'available', {key: 'available', onclick: sortIntKey}),
                     // NckuHub

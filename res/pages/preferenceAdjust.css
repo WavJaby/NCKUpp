@@ -1,3 +1,65 @@
-
+.preferenceAdjust > .adjustList {
+  text-align: center;
+  position: relative;
+}
+.preferenceAdjust > .adjustList .item {
+  background: gray;
+  border-radius: 10px;
+  padding: 5px;
+  box-sizing: border-box;
+}
+.preferenceAdjust > .adjustList > .body {
+  display: inline-block;
+  position: relative;
+  touch-action: none;
+  -ms-touch-action: none;
+}
+.preferenceAdjust > .adjustList > .body.adjusting > .itemHolder > .item {
+  position: absolute;
+  transition: top 100ms;
+  -o-transition: top 100ms;
+  -ms-transition: top 100ms;
+  -moz-transition: top 100ms;
+  -webkit-transition: top 100ms;
+}
+.preferenceAdjust > .adjustList > .body > .itemHolder {
+  height: 50px;
+  width: 100%;
+  margin-bottom: 5px;
+}
+.preferenceAdjust > .adjustList > .body > .itemHolder > .item {
+  height: 50px;
+  width: 100%;
+  cursor: -webkit-grab;
+  cursor: -moz-grab;
+  cursor: -o-grab;
+  cursor: -ms-grab;
+  cursor: grab;
+  cursor: url("https://www.google.com/intl/en_ALL/mapfiles/openhand.cur"), all-scroll;
+}
+.preferenceAdjust > .adjustList > .body > .itemHolder > .item.grabbing {
+  opacity: 0.3;
+}
+.preferenceAdjust > .adjustList > .adjustItemHolder {
+  position: relative;
+}
+.preferenceAdjust > .adjustList > .adjustItemHolder > .item {
+  z-index: 1;
+  cursor: -webkit-grabbing;
+  cursor: -moz-grabbing;
+  cursor: -o-grabbing;
+  cursor: -ms-grabbing;
+  cursor: grabbing;
+  cursor: url("https://www.google.com/intl/en_ALL/mapfiles/closedhand.cur"), all-scroll;
+  position: absolute;
+  box-shadow: 1px 1px 3px 1px #0d1117;
+}
+.preferenceAdjust > .adjustList > .adjustItemHolder > .item.moveBack {
+  transition: top 100ms, left 100ms;
+  -o-transition: top 100ms, left 100ms;
+  -ms-transition: top 100ms, left 100ms;
+  -moz-transition: top 100ms, left 100ms;
+  -webkit-transition: top 100ms, left 100ms;
+}
 
 /*# sourceMappingURL=preferenceAdjust.css.map */

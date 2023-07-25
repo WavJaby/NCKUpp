@@ -1,0 +1,67 @@
+@import '../variables';
+
+.preferenceAdjust {
+
+    > .adjustList {
+        text-align: center;
+        position: relative;
+
+        > .title {
+        }
+
+        // List items
+        .item {
+            background: gray;
+            border-radius: 10px;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        // List item holder
+        > .body {
+            display: inline-block;
+            position: relative;
+            touch-action: none;
+            -ms-touch-action: none;
+
+            // When adjusting items
+            &.adjusting > .itemHolder {
+                > .item {
+                    position: absolute;
+                    @include transition(top 100ms);
+                }
+            }
+
+            > .itemHolder {
+                height: 50px;
+                width: 100%;
+                margin-bottom: 5px;
+
+                > .item {
+                    height: 50px;
+                    width: 100%;
+                    @include cursor-grab;
+
+                    &.grabbing {
+                        opacity: 0.3
+                    }
+                }
+            }
+        }
+
+        // Item grab by mouse
+        > .adjustItemHolder {
+            position: relative;
+            > .item {
+                z-index: 1;
+                @include cursor-grabbing;
+                position: absolute;
+                box-shadow: 1px 1px 3px 1px $background-color;
+
+                &.moveBack {
+                    @include transition((top 100ms, left 100ms));
+                }
+            }
+        }
+    }
+}

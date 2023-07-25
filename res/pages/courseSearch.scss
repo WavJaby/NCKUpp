@@ -343,7 +343,7 @@ $search-result-item-spacing: 10px;
             position: static;
             border-radius: 0;
             box-sizing: border-box;
-            padding: 5px 0 0 5px;
+            padding: 2px;
         }
     }
 
@@ -475,7 +475,6 @@ $search-result-item-spacing: 10px;
 
     // Instructor detail window
     .instructorDetailWindow > .title {
-        margin: 0 10px;
     }
 
     .instructorDetailWindow > .title span {
@@ -487,7 +486,6 @@ $search-result-item-spacing: 10px;
     }
 
     .instructorDetailWindow > .tags {
-        margin: 0 10px;
     }
 
     .instructorDetailWindow > .tags > span {
@@ -499,7 +497,6 @@ $search-result-item-spacing: 10px;
     }
 
     .instructorDetailWindow > .reviewerCount {
-        margin: 0 10px;
     }
 
     .instructorDetailWindow > .reviewerCount > span:first-child {
@@ -508,7 +505,6 @@ $search-result-item-spacing: 10px;
     }
 
     .instructorDetailWindow > .comments {
-        margin: 0 10px;
     }
 
     .instructorDetailWindow > .comments > .item {
@@ -541,28 +537,5 @@ $search-result-item-spacing: 10px;
     }
 
     .instructorDetailWindow > .instructorInfo {
-        margin: 0 10px;
-    }
-
-    @media only screen and ($small-screen) {
-        .instructorDetailWindow > .title {
-            margin: 0;
-        }
-
-        .instructorDetailWindow > .tags {
-            margin: 0;
-        }
-
-        .instructorDetailWindow > .reviewerCount {
-            margin: 0;
-        }
-
-        .instructorDetailWindow > .comments {
-            margin: 0;
-        }
-
-        .instructorDetailWindow > .instructorInfo {
-            margin: 0;
-        }
     }
 }

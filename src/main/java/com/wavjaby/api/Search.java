@@ -720,9 +720,8 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
-        HttpResponseData httpResponseData = new HttpResponseData();
-        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, httpResponseData);
-        if (state != ResponseState.SUCCESS)
+        HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, cookieStore);
+        if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
         String body = httpResponseData.data;
 
@@ -747,9 +746,8 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
-        HttpResponseData httpResponseData = new HttpResponseData();
-        ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, httpResponseData);
-        if (state != ResponseState.SUCCESS)
+        HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, cookieStore);
+        if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
         String body = httpResponseData.data;
 
@@ -851,9 +849,8 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = new HttpResponseData();
-        ResponseState state = checkRobot(courseNckuOrg, request, deptToken.cookieStore, httpResponseData);
-        if (state != ResponseState.SUCCESS)
+        HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, deptToken.cookieStore);
+        if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
 
         if (cosPreCheckPoolLock.availablePermits() == 0)
@@ -963,9 +960,8 @@ public class Search implements EndpointModule {
                             .cookieStore(postCookieStore)
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy());
-                    HttpResponseData httpResponseData = new HttpResponseData();
-                    ResponseState state = checkRobot(courseQueryNckuOrg, request, postCookieStore, httpResponseData);
-                    if (state != ResponseState.SUCCESS)
+                    HttpResponseData httpResponseData = checkRobot(courseQueryNckuOrg, request, postCookieStore);
+                    if (httpResponseData.state != ResponseState.SUCCESS)
                         return null;
 
                     cosPreCheck(courseQueryNckuOrg, httpResponseData.data, postCookieStore, response, proxyManager);
@@ -1062,8 +1058,8 @@ public class Search implements EndpointModule {
 //                            .ignoreContentType(true)
 //                            .proxy(proxyManager.getProxy());
 //                    ResponseData responseData = new ResponseData();
-//                    ResponseState state = checkRobot(courseNckuOrg, request, cookieStore, responseData);
-//                    if (state != ResponseState.SUCCESS)
+//                    HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, cookieStore, responseData);
+//                    if (httpResponseData.state != ResponseState.SUCCESS)
 //                        return null;
 //
 //                    cosPreCheck(courseNckuOrg, responseData.data, cookieStore, response, proxyManager);
@@ -1141,9 +1137,8 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(5000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = new HttpResponseData();
-        ResponseState state = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore, httpResponseData);
-        if (state != ResponseState.SUCCESS)
+        HttpResponseData httpResponseData = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
+        if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
         if (cosPreCheckPoolLock.availablePermits() == 0)
             logger.log("CosPreCheck waiting");
@@ -1579,14 +1574,14 @@ public class Search implements EndpointModule {
         return body.substring(idStart + 1, idEnd);
     }
 
-    public ResponseState checkRobot(String urlOrigin, Connection request, CookieStore cookieStore, HttpResponseData httpResponseData) {
+    public HttpResponseData checkRobot(String urlOrigin, Connection request, CookieStore cookieStore) {
         for (int i = 0; i < MAX_ROBOT_CHECK_TRY; i++) {
             String response;
             try {
                 response = request.execute().body();
             } catch (IOException e) {
                 logger.errTrace(e);
-                return ResponseState.NETWORK_ERROR;
+                return new HttpResponseData(ResponseState.NETWORK_ERROR);
             }
 
             // Check if no robot
@@ -1595,8 +1590,7 @@ public class Search implements EndpointModule {
                     (codeTicketStart = response.indexOf("code_ticket=", codeTicketStart)) == -1 ||
                     (codeTicketEnd = response.indexOf("&", codeTicketStart)) == -1
             ) {
-                httpResponseData.data = response;
-                return ResponseState.SUCCESS;
+                return new HttpResponseData(ResponseState.SUCCESS, response);
             }
             String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);
 
@@ -1626,6 +1620,6 @@ public class Search implements EndpointModule {
                 }
             }
         }
-        return ResponseState.ROBOT_CODE_CRACK_ERROR;
+        return new HttpResponseData(ResponseState.ROBOT_CODE_CRACK_ERROR);
     }
 }

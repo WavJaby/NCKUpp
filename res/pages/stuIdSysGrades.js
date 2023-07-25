@@ -132,13 +132,30 @@ module.exports = function (loginState) {
     /**
      * @this {{courseInfo: CourseGrade}}
      */
-    function getNormalDestImg() {
-        const courseInfo = this.courseInfo;
+    function getNormalDestImg(inCourseInfo) {
+        const courseInfo = this && this.courseInfo || inCourseInfo;
         if (!courseInfo.imgQuery)
             return;
-        window.fetchApi('/stuIdSys?m=i&q=' + courseInfo.imgQuery).then(i =>
-            normalDestImg.set({graph: i.data[0], courseInfo: courseInfo})
-        );
+        window.fetchApi('/stuIdSys?m=i&q=' + courseInfo.imgQuery).then(i => {
+            if (i.success) {
+                normalDestImg.set({graph: i.data[0], courseInfo: courseInfo})
+            } else {
+                // // Normal distribution graph not exist
+                // if (i.msg) {
+                //     // Try
+                //     if (courseInfo.imgQuery.endsWith(','))
+                //         courseInfo.imgQuery += '1';
+                //     else {
+                //         const index = courseInfo.imgQuery.lastIndexOf(',');
+                //         const classCodeTry = parseInt(courseInfo.imgQuery.substring(index + 1)) + 1;
+                //         if (classCodeTry > 5)
+                //             return;
+                //         courseInfo.imgQuery = courseInfo.imgQuery.substring(0, index + 1) + classCodeTry;
+                //     }
+                //     getNormalDestImg(courseInfo);
+                // }
+            }
+        });
     }
 
     const gpaPoint = {A: 4, B: 4, C: 3, D: 2, E: 1, F: 0, X: 0};

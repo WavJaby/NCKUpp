@@ -7,6 +7,7 @@ import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.svgbuilder.*;
 import org.jsoup.Connection;
@@ -17,7 +18,6 @@ import org.jsoup.select.Elements;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.CookieManager;
@@ -141,11 +141,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 if (split != -1) {
                     String dept = serialNumber_.substring(0, split);
                     String num = serialNumber_.substring(split + 1);
-                    serialNumber = dept + '-' + (num.length() == 1
-                            ? "00" + num
-                            : num.length() == 2
-                            ? "0" + num
-                            : num);
+                    serialNumber = dept + '-' + leftPad(num, 3, '0');
 
                 } else serialNumber = null;
             } else serialNumber = null;
@@ -166,26 +162,22 @@ public class StudentIdentificationSystem implements EndpointModule {
             if (link_.length < 9)
                 normalDistImgQuery = null;
             else {
-                String syear = link_[2],
+                String sYear = link_[2],
                         sem = link_[4],
                         co_no = link_[6],
                         class_code = link_[8];
-                normalDistImgQuery = syear + ',' + sem + ',' + co_no + ',' + class_code;
+                normalDistImgQuery = sYear + ',' + sem + ',' + co_no + ',' + class_code;
             }
         }
 
-        public CourseGrade(Elements row, boolean current) {
+        public CourseGrade(Elements row, String semester) {
             String[] requireAndRemark = row.get(0).text().trim().split("/", 2);
             require = requireAndRemark[0];
             remark = requireAndRemark[1].equals("通") ? "通識" : requireAndRemark[1];
 
             String dept = row.get(1).text().trim();
             String num = row.get(2).text().trim();
-            serialNumber = dept + '-' + (num.length() == 1
-                    ? "00" + num
-                    : num.length() == 2
-                    ? "0" + num
-                    : num);
+            serialNumber = dept + '-' + leftPad(num, 3, '0');
 
             systemNumber = row.get(3).text().trim();
             courseName = row.get(4).text().trim();
@@ -194,7 +186,10 @@ public class StudentIdentificationSystem implements EndpointModule {
             grade = grade_.equals("成績未到") ? -2 : Float.parseFloat(grade_);
 
             gpa = null;
-            normalDistImgQuery = null;
+
+            String sYear = leftPad(semester.substring(0, semester.length() - 1), 4, '0');
+            char sem = sYear.charAt(semester.length() - 1) == '0' ? '1' : '2';
+            normalDistImgQuery = sYear + ',' + sem + ',' + systemNumber + ',';
         }
 
         @Override
@@ -311,11 +306,14 @@ public class StudentIdentificationSystem implements EndpointModule {
 
             // Get image
             if (imageQuery != null) {
-                String data = getDistributionGraph(imageQuery, cookieStore);
-                if (data == null)
+                HttpResponseData responseData = getDistributionGraph(imageQuery, cookieStore);
+                if (responseData.state == HttpResponseData.ResponseState.SUCCESS)
+                    apiResponse.setData(new JsonArray().add(responseData.data).toString());
+                else {
+                    if (responseData.state == HttpResponseData.ResponseState.DATA_PARSE_ERROR)
+                        apiResponse.setMessage("Normal distribution graph not exist");
                     apiResponse.addError(TAG + "Cant get semester course grade normal distribution");
-                else
-                    apiResponse.setData(new JsonArray().add(data).toString());
+                }
             }
         }
         // Unknown mode
@@ -421,26 +419,34 @@ public class StudentIdentificationSystem implements EndpointModule {
             return;
         }
 
+        // Parse semester
+        String semester;
+        {
+            String semesterRaw = tableRows.get(0).text();
+            int firstIndex, secondIndex, thirdIndex, forthIndex;
+            int i = 0;
+            char c;
+            while ((c = semesterRaw.charAt(i)) < '0' || c > '9') i++;
+            firstIndex = i;
+            while ((c = semesterRaw.charAt(i)) >= '0' && c <= '9') i++;
+            secondIndex = i;
+            while ((c = semesterRaw.charAt(i)) < '0' || c > '9') i++;
+            thirdIndex = i;
+            while ((c = semesterRaw.charAt(i)) >= '0' && c <= '9') i++;
+            forthIndex = i;
+            if (thirdIndex + 1 != forthIndex) {
+                apiResponse.addError(TAG + "Current semester parse error");
+                return;
+            }
+            semester = semesterRaw.substring(firstIndex, secondIndex) +
+                    (semesterRaw.substring(thirdIndex, forthIndex).equals("1") ? '0' : '1');
+        }
+
         // Parse course grade
         List<CourseGrade> courseGradeList = new ArrayList<>(tableRows.size() - 4);
         for (int i = 3; i < tableRows.size() - 1; i++) {
-            courseGradeList.add(new CourseGrade(tableRows.get(i).children(), true));
+            courseGradeList.add(new CourseGrade(tableRows.get(i).children(), semester));
         }
-
-        // Parse semester
-        String semester = tableRows.get(0).text();
-        int firstIndex, secondIndex, thirdIndex, forthIndex;
-        int i = 0;
-        char c;
-        while ((c = semester.charAt(i)) < '0' || c > '9') i++;
-        firstIndex = i;
-        while ((c = semester.charAt(i)) >= '0' && c <= '9') i++;
-        secondIndex = i;
-        while ((c = semester.charAt(i)) < '0' || c > '9') i++;
-        thirdIndex = i;
-        while ((c = semester.charAt(i)) >= '0' && c <= '9') i++;
-        forthIndex = i;
-        semester = semester.substring(firstIndex, secondIndex) + semester.substring(thirdIndex, forthIndex);
 
         JsonObjectStringBuilder out = new JsonObjectStringBuilder();
         out.append("semester", semester);
@@ -483,157 +489,159 @@ public class StudentIdentificationSystem implements EndpointModule {
     }
 
 
-    private String getDistributionGraph(String query, CookieStore cookieStore) {
+    private HttpResponseData getDistributionGraph(String query, CookieStore cookieStore) {
+        BufferedImage image;
         try {
             BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + query)
                     .header("Connection", "keep-alive")
                     .ignoreContentType(true)
                     .cookieStore(cookieStore).execute().bodyStream();
-            BufferedImage image = ImageIO.read(in);
+            image = ImageIO.read(in);
 
-            int imageWidth = image.getWidth();
-            int imageHeight = image.getHeight();
-            int[] imageRGB = image.getRGB(0, 0, imageWidth, imageHeight, null, 0, imageWidth);
 
-            int[] studentCount = parseImage(imageRGB, imageWidth, imageHeight, false);
-            image.setRGB(0, 0, imageWidth, imageHeight, imageRGB, 0, imageWidth);
-            ImageIO.write(image, "png", new File("image1.png"));
+        } catch (IOException e) {
+            logger.err(e);
+            return new HttpResponseData(HttpResponseData.ResponseState.NETWORK_ERROR);
+        }
+        int imageWidth = image.getWidth();
+        int imageHeight = image.getHeight();
+        int[] imageRGB = image.getRGB(0, 0, imageWidth, imageHeight, null, 0, imageWidth);
 
-            if (studentCount == null)
-                return null;
-            int totalStudentCount = 0;
-            float highestPercent = 0;
-            for (int i = 0; i < 11; i++)
-                totalStudentCount += studentCount[i];
-            for (int i = 0; i < 11; i++) {
-                float percent = (float) studentCount[i] / totalStudentCount;
-                if (percent > highestPercent)
-                    highestPercent = percent;
-            }
-            highestPercent = 1 / highestPercent;
+        int[] studentCount = parseImage(imageRGB, imageWidth, imageHeight, false);
+//        image.setRGB(0, 0, imageWidth, imageHeight, imageRGB, 0, imageWidth);
+//        ImageIO.write(image, "png", new File("image1.png"));
 
-            int svgWidth = 600, svgHeight = 450;
-            Svg svg = new Svg(svgWidth, svgHeight);
-            svg.setBackgroundColor("#181A1B");
-            svg.setAttribute("font-family", "monospace");
-            int graphPaddingX = 20;
-            int graphPaddingY = 35;
-            int graphPaddingTopY = 80;
-            int xAxisWidth = svgWidth - graphPaddingX - graphPaddingX;
-            int yAxisHeight = svgHeight - graphPaddingY - graphPaddingTopY;
-            float xAxisPadding = xAxisWidth / 11f;
-            // X axis
-            for (int i = 0; i < 11; i++) {
-                float x = graphPaddingX + xAxisPadding * i;
-                // Axis
-                svg.appendChild(
-                        new SvgLine(x, svgHeight - graphPaddingY, x, svgHeight - graphPaddingY + 10)
-                                .setStrokeColor("#AAA")
-                                .setStrokeWidth(2)
-                );
-                svg.appendChild(
-                        new SvgText(x, svgHeight - graphPaddingY + 28, String.valueOf(i * 10))
-                                .setTextAnchor(TextAnchor.MIDDLE)
-                                .setFontSize("18px")
-                                .setFontColor("#DDD")
-                );
-                // Bar
-                float height = (float) yAxisHeight * studentCount[i] / totalStudentCount * highestPercent;
-                float barY = svgHeight - graphPaddingY - height;
-                svg.appendChild(
-                        new SvgRect(x, barY, xAxisPadding, height)
-                                .setBackgroundColor("#3376BD")
-                                .setStrokeColor("#3390FF")
-                                .setStrokeWidth(2)
-                                .setClass("grow")
-                                .addAttrStyle(new AttrStyle()
-                                        .addStyle("transform-origin", "0 " + (barY + height + 2) + "px;")
-                                )
-                );
-                if (studentCount[i] > 0)
-                    svg.appendChild(
-                            new SvgText(x + xAxisPadding * 0.5f, svgHeight - graphPaddingY - height - 5, String.valueOf(studentCount[i]))
-                                    .setTextAnchor(TextAnchor.MIDDLE)
-                                    .setFontSize("20px")
-                                    .setFontColor("#DDD")
-                    );
-            }
-            // Baseline
+        if (studentCount == null)
+            return new HttpResponseData(HttpResponseData.ResponseState.DATA_PARSE_ERROR);
+        int totalStudentCount = 0;
+        float highestPercent = 0;
+        for (int i = 0; i < 11; i++)
+            totalStudentCount += studentCount[i];
+        for (int i = 0; i < 11; i++) {
+            float percent = (float) studentCount[i] / totalStudentCount;
+            if (percent > highestPercent)
+                highestPercent = percent;
+        }
+        highestPercent = 1 / highestPercent;
+
+        int svgWidth = 600, svgHeight = 450;
+        Svg svg = new Svg(svgWidth, svgHeight);
+        svg.setBackgroundColor("#181A1B");
+        svg.setAttribute("font-family", "monospace");
+        int graphPaddingX = 20;
+        int graphPaddingY = 35;
+        int graphPaddingTopY = 80;
+        int xAxisWidth = svgWidth - graphPaddingX - graphPaddingX;
+        int yAxisHeight = svgHeight - graphPaddingY - graphPaddingTopY;
+        float xAxisPadding = xAxisWidth / 11f;
+        // X axis
+        for (int i = 0; i < 11; i++) {
+            float x = graphPaddingX + xAxisPadding * i;
+            // Axis
             svg.appendChild(
-                    new SvgLine(graphPaddingX, svgHeight - graphPaddingY, svgWidth - graphPaddingX, svgHeight - graphPaddingY)
+                    new SvgLine(x, svgHeight - graphPaddingY, x, svgHeight - graphPaddingY + 10)
                             .setStrokeColor("#AAA")
                             .setStrokeWidth(2)
-                            .setStrokeLinecap(StrokeLinecap.SQUARE)
             );
-
-            svg.appendChild(new SvgStyle()
-                    .addStyle(".grow",
-                            "animation: grow 1s;")
-                    .addStyle("@keyframes grow",
-                            "from{transform: scaleY(0);}" +
-                                    "to{transform: scaleY(1);}")
+            svg.appendChild(
+                    new SvgText(x, svgHeight - graphPaddingY + 28, String.valueOf(i * 10))
+                            .setTextAnchor(TextAnchor.MIDDLE)
+                            .setFontSize("18px")
+                            .setFontColor("#DDD")
             );
+            // Bar
+            float height = (float) yAxisHeight * studentCount[i] / totalStudentCount * highestPercent;
+            float barY = svgHeight - graphPaddingY - height;
+            svg.appendChild(
+                    new SvgRect(x, barY, xAxisPadding, height)
+                            .setBackgroundColor("#3376BD")
+                            .setStrokeColor("#3390FF")
+                            .setStrokeWidth(2)
+                            .setClass("grow")
+                            .addAttrStyle(new AttrStyle()
+                                    .addStyle("transform-origin", "0 " + (barY + height + 2) + "px;")
+                            )
+            );
+            if (studentCount[i] > 0)
+                svg.appendChild(
+                        new SvgText(x + xAxisPadding * 0.5f, svgHeight - graphPaddingY - height - 5, String.valueOf(studentCount[i]))
+                                .setTextAnchor(TextAnchor.MIDDLE)
+                                .setFontSize("20px")
+                                .setFontColor("#DDD")
+                );
+        }
+        // Baseline
+        svg.appendChild(
+                new SvgLine(graphPaddingX, svgHeight - graphPaddingY, svgWidth - graphPaddingX, svgHeight - graphPaddingY)
+                        .setStrokeColor("#AAA")
+                        .setStrokeWidth(2)
+                        .setStrokeLinecap(StrokeLinecap.SQUARE)
+        );
 
-            double avg = 0, stdDev = 0;
-            for (int i = 0; i < 11; i++) {
-                float score = (i < 10 ? (i + i + 1) : (i * 2)) * 5;
-                avg += score * studentCount[i];
-                stdDev += score * score * studentCount[i];
-            }
-            avg /= totalStudentCount;
-            stdDev = Math.sqrt(stdDev / totalStudentCount - avg * avg);
+        svg.appendChild(new SvgStyle()
+                .addStyle(".grow",
+                        "animation: grow 1s;")
+                .addStyle("@keyframes grow",
+                        "from{transform: scaleY(0);}" +
+                                "to{transform: scaleY(1);}")
+        );
+
+        double avg = 0, stdDev = 0;
+        for (int i = 0; i < 11; i++) {
+            float score = (i < 10 ? (i + i + 1) : (i * 2)) * 5;
+            avg += score * studentCount[i];
+            stdDev += score * score * studentCount[i];
+        }
+        avg /= totalStudentCount;
+        stdDev = Math.sqrt(stdDev / totalStudentCount - avg * avg);
 //            System.out.println(avg);
 //            System.out.println(stdDev);
 
-            int peakStudentCount = 0;
-            for (int i = 0; i < 11; i++) {
-                float score = (i < 10 ? (i + i + 1) : (i * 2)) * 5;
-                if (avg - stdDev < score && score < avg + stdDev)
-                    peakStudentCount += studentCount[i];
-            }
-
-            // Create standard deviation curve
-            int totalPoints = 220;
-            int maxValue = 110;
-            double step = (double) maxValue / totalPoints;
-            float stdDevCurveDelta = (float) xAxisWidth / (totalPoints - 1);
-            float baseY = svgHeight - graphPaddingY - 2;
-            float[][] points = new float[totalPoints][2];
-            for (int i = 0; i < totalPoints; i++) {
-                float y = (float) (stdDevFunction(i * step, stdDev, avg) * yAxisHeight * peakStudentCount / totalStudentCount);
-                float x = graphPaddingX + i * stdDevCurveDelta;
-                points[i][0] = x;
-                points[i][1] = baseY - y;
-            }
-            // Build smooth curve
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < totalPoints; i++) {
-                if (i == 0)
-                    builder.append("M ").append(points[i][0]).append(',').append(points[i][1]);
-                else
-                // Create the bezier curve command
-                {
-                    // start control point
-                    float[] cps = controlPoint(points[i - 1], i < 2 ? null : points[i - 2], points[i], false);
-                    // end control point
-                    float[] cpe = controlPoint(points[i], points[i - 1], i >= points.length - 1 ? null : points[i + 1], true);
-                    builder.append("C ").append(cps[0]).append(',').append(cps[1]).append(' ')
-                            .append(cpe[0]).append(',').append(cpe[1]).append(' ')
-                            .append(points[i][0]).append(',').append(points[i][1]);
-                }
-            }
-            // Apply curve
-            SvgPath stdDevLine = new SvgPath()
-                    .setStrokeWidth(2)
-                    .setStrokeColor("#85A894");
-            stdDevLine.addPoint(builder.toString());
-            svg.appendChild(stdDevLine);
-
-            return svg.toString();
-        } catch (IOException e) {
-            logger.err(e);
+        int peakStudentCount = 0;
+        for (int i = 0; i < 11; i++) {
+            float score = (i < 10 ? (i + i + 1) : (i * 2)) * 5;
+            if (avg - stdDev < score && score < avg + stdDev)
+                peakStudentCount += studentCount[i];
         }
-        return null;
+
+        // Create standard deviation curve
+        int totalPoints = 220;
+        int maxValue = 110;
+        double step = (double) maxValue / totalPoints;
+        float stdDevCurveDelta = (float) xAxisWidth / (totalPoints - 1);
+        float baseY = svgHeight - graphPaddingY - 2;
+        float[][] points = new float[totalPoints][2];
+        for (int i = 0; i < totalPoints; i++) {
+            float y = (float) (stdDevFunction(i * step, stdDev, avg) * yAxisHeight * peakStudentCount / totalStudentCount);
+            float x = graphPaddingX + i * stdDevCurveDelta;
+            points[i][0] = x;
+            points[i][1] = baseY - y;
+        }
+        // Build smooth curve
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < totalPoints; i++) {
+            if (i == 0)
+                builder.append("M ").append(points[i][0]).append(',').append(points[i][1]);
+            else
+            // Create the bezier curve command
+            {
+                // start control point
+                float[] cps = controlPoint(points[i - 1], i < 2 ? null : points[i - 2], points[i], false);
+                // end control point
+                float[] cpe = controlPoint(points[i], points[i - 1], i >= points.length - 1 ? null : points[i + 1], true);
+                builder.append("C ").append(cps[0]).append(',').append(cps[1]).append(' ')
+                        .append(cpe[0]).append(',').append(cpe[1]).append(' ')
+                        .append(points[i][0]).append(',').append(points[i][1]);
+            }
+        }
+        // Apply curve
+        SvgPath stdDevLine = new SvgPath()
+                .setStrokeWidth(2)
+                .setStrokeColor("#85A894");
+        stdDevLine.addPoint(builder.toString());
+        svg.appendChild(stdDevLine);
+
+        return new HttpResponseData(HttpResponseData.ResponseState.SUCCESS, svg.toString());
     }
 
     private float[] controlPoint(float[] current, float[] previous, float[] next, boolean reverse) {

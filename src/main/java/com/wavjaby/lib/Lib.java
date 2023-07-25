@@ -160,4 +160,11 @@ public class Lib {
         builder.append(input, lastIndex, length);
         return builder.toString();
     }
+
+    public static String leftPad(String input, int length, char chr) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = input.length(); i < length; i++)
+            builder.append(chr);
+        return builder + input;
+    }
 }
