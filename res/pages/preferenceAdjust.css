@@ -34,8 +34,8 @@
 .preferenceAdjust > .adjustList > .body > .itemHolder > .item {
   height: 50px;
   width: 100%;
-  cursor: grab;
   cursor: url("https://www.google.com/intl/en_ALL/mapfiles/openhand.cur"), all-scroll;
+  cursor: grab;
 }
 .preferenceAdjust > .adjustList > .body > .itemHolder > .item.grabbing {
   opacity: 0.3;
@@ -45,8 +45,8 @@
 }
 .preferenceAdjust > .adjustList > .adjustItemHolder > .item {
   z-index: 1;
-  cursor: grabbing;
   cursor: url("https://www.google.com/intl/en_ALL/mapfiles/closedhand.cur"), all-scroll;
+  cursor: grabbing;
   position: absolute;
   box-shadow: 1px 1px 3px 1px #0d1117;
 }

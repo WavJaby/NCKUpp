@@ -211,7 +211,6 @@ module.exports = function (loginState) {
     const nckuhubDetailWindow = NckuhubDetailWindow();
 
     // Element
-    const courseRenderResult = [];
     let courseSearch, courseSearchForm, courseSearchResultCount;
     // Static data
     let nckuHubCourseID = null;
@@ -550,20 +549,25 @@ module.exports = function (loginState) {
     }
 
     // Render result
+    const courseRenderResult = [];
     const courseRenderResultDisplay = [];
     const courseRenderResultFilter = [];
     const expandButtons = [];
+    let waitingResult = false;
 
     function renderSearchResult(state) {
         if (state.loading) {
+            waitingResult = true;
             courseRenderResult.length = 0;
+            courseRenderResultDisplay.length = 0;
+            expandButtons.length = 0;
             return window.loadingElement.cloneNode(true);
         }
         if (!state.courseResult) return div();
 
-        if (courseRenderResult.length === 0) {
+        if (waitingResult) {
+            waitingResult = false;
             // Render result elements
-            expandButtons.length = 0;
             for (/**@type{CourseData}*/const data of state.courseResult) {
                 const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
                 const nckuhubResultData = state.nckuhubResult[data.serialNumber];
