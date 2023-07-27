@@ -20,6 +20,7 @@ function addOption(element, options) {
 }
 
 /**
+ * @constructor
  * @param {string | boolean | number | object} [initState] Init state data
  * */
 function Signal(initState) {
@@ -371,9 +372,19 @@ module.exports = {
     ClassList,
     HashRouter,
 
-    checkboxWithName(classN, title, defaultState, ...options) {
+    /**
+     * @param {string | ClassList} [classN] Class Name
+     * @param {string} title
+     * @param {boolean} [defaultState]
+     * @param {function(ev: Event): any} [onchange]
+     * @param [options] Options for element
+     * @return {HTMLLabelElement & {input: HTMLInputElement}}
+     * */
+    checkboxWithName(classN, title, defaultState, onchange, ...options) {
         const input = document.createElement('input');
         input.type = 'checkbox';
+        input.onchange = onchange;
+        input.checked = !!defaultState;
         const checkmark = document.createElement('div');
         checkmark.className = 'checkmark';
 
@@ -603,7 +614,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} [text]
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLParagraphElement}
@@ -631,7 +642,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} [text]
      * @param {string | ClassList} [classN] Class Name
      * @param [options] Options for element
      * @return {HTMLHeadingElement}
@@ -645,7 +656,7 @@ module.exports = {
     },
 
     /**
-     * @param {string | Signal | TextStateChanger} text
+     * @param {string | Signal | TextStateChanger} [text]
      * @param {string} [href]
      * @param {string | ClassList} [classN] Class Name
      * @param {function(MouseEvent)} [onClick]

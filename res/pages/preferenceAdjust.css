@@ -2,10 +2,14 @@
   text-align: center;
   position: relative;
 }
+.preferenceAdjust > .adjustList > .title {
+  margin: 10px 0 0 0;
+}
 .preferenceAdjust > .adjustList .item {
-  background: gray;
-  border-radius: 10px;
+  background: #252b33;
   padding: 5px;
+  border-radius: 10px;
+  text-align: left;
   box-sizing: border-box;
 }
 .preferenceAdjust > .adjustList > .body {
@@ -30,10 +34,6 @@
 .preferenceAdjust > .adjustList > .body > .itemHolder > .item {
   height: 50px;
   width: 100%;
-  cursor: -webkit-grab;
-  cursor: -moz-grab;
-  cursor: -o-grab;
-  cursor: -ms-grab;
   cursor: grab;
   cursor: url("https://www.google.com/intl/en_ALL/mapfiles/openhand.cur"), all-scroll;
 }
@@ -45,10 +45,6 @@
 }
 .preferenceAdjust > .adjustList > .adjustItemHolder > .item {
   z-index: 1;
-  cursor: -webkit-grabbing;
-  cursor: -moz-grabbing;
-  cursor: -o-grabbing;
-  cursor: -ms-grabbing;
   cursor: grabbing;
   cursor: url("https://www.google.com/intl/en_ALL/mapfiles/closedhand.cur"), all-scroll;
   position: absolute;

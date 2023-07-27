@@ -81,38 +81,35 @@
   position: sticky;
   top: 0;
 }
-.courseSearch > .result > thead .expandDownArrow {
-  height: 1.7em;
-}
-.courseSearch > .result > thead .filterSection {
-  height: 4em;
+.courseSearch > .result > thead > tr > .textSearch {
   text-align: left;
 }
-.courseSearch > .result > thead .filterSection > div {
-  position: absolute;
-  width: 100%;
-  z-index: 1;
-}
-.courseSearch > .result > thead .filterSection .options {
-  background: #1D2329;
-  overflow: hidden;
-}
-.courseSearch > .result > thead .filterSection .options > img {
+.courseSearch > .result > thead > tr > .textSearch > img {
   float: left;
 }
-.courseSearch > .result > thead .filterSection .options > .filter {
-  height: 2em;
+.courseSearch > .result > thead > tr > .textSearch > .searchBar {
+  height: 100%;
   display: block;
   overflow: hidden;
 }
-.courseSearch > .result > thead .filterSection .options > .filter > input {
+.courseSearch > .result > thead > tr > .textSearch > .searchBar > input {
   width: 100%;
   background: none;
   box-shadow: none;
 }
-.courseSearch > .result > thead .filterSection .options > .resultCount {
-  height: 2em;
+.courseSearch > .result > thead > tr > .filterOptions {
+  text-align: left;
   padding-left: 5px;
+}
+.courseSearch > .result > thead > tr > .filterOptions > .checkboxWithName {
+  display: inline-block;
+}
+.courseSearch > .result > thead > tr > .resultCount {
+  text-align: left;
+  padding-left: 5px;
+}
+.courseSearch > .result > thead > tr > th > .expandDownArrow {
+  height: 1.7em;
 }
 .courseSearch > .result > thead > tr > th > .sortArrow {
   position: absolute;
@@ -139,22 +136,22 @@
   line-height: 1.4em;
   vertical-align: bottom;
 }
+.courseSearch > .result > thead > tr > th:not(:first-child) {
+  border-left: lightgrey solid 1px;
+}
 .courseSearch > .result > thead > tr > th:not(:first-child):not(:last-child) {
   cursor: pointer;
   position: relative;
   padding: 0 1px;
 }
-.courseSearch > .result > thead > tr > th:not(:first-child) {
-  border-left: lightgrey solid 1px;
-}
 .courseSearch > .result > thead > tr > th:not(:first-child):not(:last-child):hover {
   background: #505050;
 }
-.courseSearch > .result > thead > tr > th:first-child {
+.courseSearch > .result > thead > tr:last-child > th:first-child {
   width: 0;
   border-bottom-left-radius: 10px;
 }
-.courseSearch > .result > thead > tr > th:last-child {
+.courseSearch > .result > thead > tr:last-child > th:last-child {
   border-bottom-right-radius: 10px;
   padding-right: 10px;
 }

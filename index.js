@@ -246,6 +246,36 @@ const requestState = requestStateObject();
     }
 })();
 
+window.timeParseSection = function (sectionText) {
+    let section;
+    if (sectionText === 'N')
+        section = 5;
+    else {
+        section = parseInt(sectionText, 16);
+        // Skip 5
+        if (section > 4)
+            ++section;
+    }
+    return section;
+};
+
+window.timeParse = function (timeStr) {
+    const time = timeStr.split(',');
+    const parsedTime = new Int8Array(3);
+
+    parsedTime[0] = parseInt(time[0]);
+    if (time.length > 1) {
+        parsedTime[1] = window.timeParseSection(time[1]);
+    }
+    if (time.length > 2) {
+        parsedTime[2] = window.timeParseSection(time[2]);
+    }
+    // Make section end equals to section start
+    else if (time.length > 1)
+        parsedTime[2] = parsedTime[1];
+    return parsedTime;
+};
+
 /**
  * @param {string} classname
  * @param {Text|Element|Element[]} title
@@ -337,7 +367,7 @@ function MessageAlert() {
 
         setTimeout(() => {
             messageBox.classList.add('animation');
-        },20);
+        }, 20);
     }
 
     function removeMessageBox(messageBox) {

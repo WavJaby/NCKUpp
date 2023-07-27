@@ -139,9 +139,8 @@ public class ProxyChecker {
 
 [['xpp',5],['xf1',1],['xf2',1],['xf5',1,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
 
-
 let list = document.querySelectorAll('body > table:nth-child(4) > tbody > tr:nth-child(4) > td > table > tbody > tr');
-console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].innerText.toLowerCase()+'://'+i[0].innerText).join('\n'));
+console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firstChild.innerText.toLowerCase()+'://'+i[0].innerText).join('\n'));
 
          */
         try {
@@ -235,7 +234,8 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                 for (int tryCount = 0; tryCount < maxTryCount; tryCount++) {
                     String testUrl = conforming
                             ? "https://course.ncku.edu.tw/index.php?c=qry_all"
-                            : "https://api.simon.chummydns.com/api/ip";
+//                            : "https://api.simon.chummydns.com/api/ip";
+                            : "https://ifconfig.me/ip";
                     ProxyTestResult result = null;
                     latency = -1;
                     timeout = false;
@@ -290,13 +290,12 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
                         proxyData.setAlive(true);
                     }
                     // Proxy pass
+                    messageStr = strLenLimit(messageStr, 50, 50);
                     if (errorMsg == null && !timeout) {
-                        messageStr = strLenLimit(messageStr, 50, 50);
-                        System.out.print('\r' + left + strLenLimit(proxyData.toUrl(), 31, 31) + messageStr + "\n");
+                        System.out.print('\r' + left + strLenLimit(proxyData.toUrl(), 31, 31) + messageStr + '\n');
                     }
                     // Progress
                     else {
-                        messageStr = strLenLimit(messageStr, 50, 50);
                         if (errorSameLine) {
                             System.out.print('\r' + progress + left + type + ipStr + portStr + messageStr);
                         } else
@@ -364,7 +363,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].inne
 
                     data = out.toString("UTF-8");
                 } else
-                    error = "ResponseCode Error\n";
+                    error = "ResponseCode Error";
             } catch (Exception e) {
                 error = e.getMessage();
                 if (error == null)

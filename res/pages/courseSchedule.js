@@ -59,7 +59,6 @@ module.exports = function (loginState) {
     const scheduleTable = new ScheduleTable(showCourseInfoWindow, courseInfoWindow);
 
     showClassroomCheckbox.input.onchange = () => scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
-
     showPreScheduleCheckbox.input.onchange = () => scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
 
     function onRender() {
@@ -89,11 +88,14 @@ module.exports = function (loginState) {
      */
     function onLoginState(state) {
         if (state && state.login) {
-            window.fetchApi('/courseSchedule', 'Get schedule').then(data => {
+            window.fetchApi('/courseSchedule', 'Get schedule').then(response => {
                 // Parse normal schedule
-                scheduleTable.init(data);
+                scheduleTable.init(response);
                 // Parse pre schedule
-                window.fetchApi('/preCourseSchedule', 'Get pre schedule').then(scheduleTable.initPreSchedule);
+                window.fetchApi('/preCourseSchedule', 'Get pre schedule').then(response => {
+                    scheduleTable.initPreSchedule(response);
+                    scheduleTable.fetchCourseInfo();
+                });
             });
         } else {
             if (state)
@@ -115,6 +117,14 @@ module.exports = function (loginState) {
 };
 
 /**
+ * @typedef ScheduleDataInfo
+ * @property {string} type
+ * @property {string} time
+ * @property {string} roomID
+ * @property {string} room
+ * @property {int[]} time
+ */
+/**
  * @typedef ScheduleData
  * @property {string} studentId
  * @property {int} year
@@ -126,23 +136,17 @@ module.exports = function (loginState) {
  *     name: string,
  *     required: boolean,
  *     credits: float,
- *     info: {
- *         type: string,
- *         time: string,
- *         roomID: string,
- *         room: string,
- *         time: int[],
- *     }[],
+ *     info: ScheduleDataInfo[],
  * }[]} schedule
  */
 function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
-    const courseInfo = {};
     const roomNameElements = [];
     const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
     const preScheduleTable = table('courseScheduleTable pre', {'cellPadding': 0});
     preScheduleTable.style.display = 'none';
     this.table = div(null, scheduleTable, preScheduleTable);
 
+    let courseInfo = {};
     let savedScheduleData = null;
     let savedScheduleTableWidth = 0;
     let savedScheduleTableHeight = 0;
@@ -191,6 +195,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         initTable(scheduleTable);
         scheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
         roomNameElements.length = 0;
+        courseInfo = {};
 
         // Get table size
         const [tableWidth, tableHeight] = timeTxt2IntAndGetTableSize(scheduleData);
@@ -207,8 +212,9 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         const rowSize = new Int32Array(tableHeight);
         for (let i = 0; i < tableWidth; i++) {
             for (let j = 0; j < tableHeight; j++) {
-                const course = dayTable[i][j];
-                if (!course) continue;
+                const dayCourse = dayTable[i][j];
+                if (!dayCourse) continue;
+                const course = Object.values(dayCourse)[0];
                 // Fill time section
                 if (i - rowSize[j] > 0)
                     rows[j].insertCell().colSpan = i - rowSize[j];
@@ -266,28 +272,6 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         for (let i = 0; i < tableHeight; i++) {
             rows[i].appendChild(div('splitLine'));
         }
-
-        // get course info
-        const courseDept = {};
-        for (const serialID in courseInfo) {
-            const dept = serialID.split('-');
-            let deptData = courseDept[dept[0]];
-            if (deptData)
-                deptData.push(dept[1]);
-            else
-                courseDept[dept[0]] = [dept[1]];
-        }
-        const courseFetchArr = [];
-        for (const serialID in courseDept)
-            courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
-        const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
-
-        // fetch data
-        window.fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
-            for (const entry of Object.entries(i.data))
-                for (const course of entry[1])
-                    courseInfo[course.sn] = course;
-        });
     };
 
     this.initPreSchedule = function (response) {
@@ -321,8 +305,9 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         // Put course
         for (let i = 0; i < tableWidth; i++) {
             for (let j = 0; j < tableHeight; j++) {
-                const course = dayTable[i][j];
-                if (course) {
+                const dayCourse = dayTable[i][j];
+                if (dayCourse) {
+                    const course = Object.values(dayCourse)[0];
                     // Add section
                     if (course[1].time.length === 3) {
                         const length = course[1].time[2] - course[1].time[1] + 1;
@@ -331,13 +316,16 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
                         }
                     }
                 }
-                const preCourse = dayTablePre[i][j];
-                if (preCourse) {
-                    // Add section
-                    if (preCourse[1].time.length === 3) {
-                        const length = preCourse[1].time[2] - preCourse[1].time[1] + 1;
-                        for (let k = 0; k < length; k++) {
-                            createCourseCellSingle(cellTable[j + k][i], preCourse, true);
+                const dayPreCourse = dayTablePre[i][j];
+                if (dayPreCourse) {
+                    // Multi pre course in section
+                    for (const preCourse of Object.values(dayPreCourse)) {
+                        // Add section
+                        if (preCourse[1].time.length === 3) {
+                            const length = preCourse[1].time[2] - preCourse[1].time[1] + 1;
+                            for (let k = 0; k < length; k++) {
+                                createCourseCellSingle(cellTable[j + k][i], preCourse, true);
+                            }
                         }
                     }
                 }
@@ -349,7 +337,31 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         for (let i = 0; i < tableHeight; i++) {
             rows[i].appendChild(div('splitLine'));
         }
-    }
+    };
+
+    this.fetchCourseInfo = function () {
+        // get course info
+        const courseDept = {};
+        for (const serialID in courseInfo) {
+            const dept = serialID.split('-');
+            let deptData = courseDept[dept[0]];
+            if (deptData)
+                deptData.push(dept[1]);
+            else
+                courseDept[dept[0]] = [dept[1]];
+        }
+        const courseFetchArr = [];
+        for (const serialID in courseDept)
+            courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
+        const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
+
+        // fetch data
+        window.fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
+            for (const entry of Object.entries(i.data))
+                for (const course of entry[1])
+                    courseInfo[course.sn] = course;
+        });
+    };
 
     this.clear = function () {
         initTable(scheduleTable);
@@ -377,23 +389,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
         let holiday = false;
         for (const i of scheduleData.schedule) for (const j of i.info) {
             // parse time
-            const time = j.time.split(',');
-            const parsedTime = new Int8Array(3);
-
-            parsedTime[0] = parseInt(time[0]);
-            if (time.length > 1) {
-                parsedTime[1] = time[1] === 'N' ? -1 : parseInt(time[1], 16);
-                if (time[1] > 4) parsedTime[1]++;
-                else if (parsedTime[1] === -1) parsedTime[1] = 5;
-            }
-            if (time.length > 2) {
-                parsedTime[2] = time[2] === 'N' ? -1 : parseInt(time[2], 16);
-                if (time[2] > 4) parsedTime[2]++;
-                else if (parsedTime[1] === -1) parsedTime[2] = 5;
-            }
-            // Make section end equals to section start
-            else if (time.length > 1)
-                parsedTime[2] = parsedTime[1];
+            const parsedTime = window.timeParse(j.time);
 
             // Find table width
             if (parsedTime[0] > 4)
@@ -409,10 +405,10 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 
     function parseData2DayTable(tableWidth, tableHeight, scheduleData) {
         // Parse schedule
-        const dayTable = new Array(tableWidth);
+        const daySectionTable = new Array(tableWidth);
         const dayUndecided = [];
         for (let i = 0; i < 7; i++)
-            dayTable[i] = new Array(tableHeight);
+            daySectionTable[i] = new Array(tableHeight);
         for (const eachCourse of scheduleData.schedule)
             for (const timeLocInfo of eachCourse.info) {
                 // Time undecided
@@ -422,14 +418,18 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
                 }
 
                 // Add course to timetable
-                const k = dayTable[timeLocInfo.time[0]][timeLocInfo.time[1]];
-                if (k instanceof Array)
-                    k.push(timeLocInfo);
+                let section = daySectionTable[timeLocInfo.time[0]][timeLocInfo.time[1]];
+                if (!section)
+                    section = daySectionTable[timeLocInfo.time[0]][timeLocInfo.time[1]] = {};
+
+                let sectionCourse = section[eachCourse.deptID + eachCourse.sn];
+                if (!sectionCourse)
+                    sectionCourse = section[eachCourse.deptID + eachCourse.sn] = [eachCourse, timeLocInfo];
                 else
-                    dayTable[timeLocInfo.time[0]][timeLocInfo.time[1]] = [eachCourse, timeLocInfo];
+                    sectionCourse.push(timeLocInfo);
             }
 
-        return {dayTable, dayUndecided};
+        return {dayTable: daySectionTable, dayUndecided};
     }
 
     /**
@@ -464,7 +464,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 
     /**
      * @param row Table row
-     * @param {[info, ...time]} course
+     * @param {[ScheduleDataInfo, ...time]} course
      * @return {HTMLTableCellElement}
      */
     function createCourseCell(row, course) {
@@ -490,12 +490,13 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
     function createCourseCellSingle(cell, course, pre) {
         cell.className = 'activate';
         const info = course[0];
-        const subCell = div(pre ? 'pre' : 'sure', {serialID: info.deptID + '-' + info.sn, onclick: cellClick},
+        const serialID = info.deptID + '-' + info.sn;
+        const subCell = div(pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
             span('[' + info.deptID + ']' + info.sn + ' '),
             span(info.name),
         );
-        if (courseInfo[cell.serialID] === undefined)
-            courseInfo[cell.serialID] = null;
+        if (courseInfo[serialID] === undefined)
+            courseInfo[serialID] = null;
 
         // Add room
         for (let k = 1; k < course.length; k++) {

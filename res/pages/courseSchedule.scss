@@ -4,6 +4,10 @@ $schedule-head-bg-color: #282B2C;
 .courseSchedule {
     > .options {
         margin: 10px 10px 0 10px;
+
+        > .checkboxWithName {
+            margin-bottom: 5px;
+        }
     }
 
     .courseScheduleTable {

@@ -1,6 +1,9 @@
 .courseSchedule > .options {
   margin: 10px 10px 0 10px;
 }
+.courseSchedule > .options > .checkboxWithName {
+  margin-bottom: 5px;
+}
 .courseSchedule .courseScheduleTable {
   margin: 10px;
   border-spacing: 3px;

@@ -1398,7 +1398,7 @@ public class Search implements EndpointModule {
                     if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
                         // Get dayOfWeek, format: [1]2~3
                         if (text.length() > 2 && text.charAt(2) == ']') {
-                            timeCacheDayOfWeek = (short) (text.charAt(1) - '0');
+                            timeCacheDayOfWeek = (short) ((text.charAt(1) - '0') - 1);
                             // Get section
                             if (text.length() > 3) {
                                 timeCacheSection = text.charAt(3);

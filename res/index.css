@@ -233,8 +233,7 @@ footer > .openRepo > span {
 
 .checkboxWithName {
   display: block;
-  line-height: 1.6em;
-  margin-bottom: 5px;
+  line-height: 1.4em;
 }
 .checkboxWithName > input {
   width: 0;
@@ -254,8 +253,8 @@ footer > .openRepo > span {
 }
 .checkboxWithName > .checkmark {
   background-color: #5b5b5b;
-  height: 1.6em;
-  width: 1.6em;
+  height: 1.4em;
+  width: 1.4em;
   margin-right: 5px;
   border-radius: 5px;
   float: left;
@@ -271,7 +270,8 @@ footer > .openRepo > span {
   height: 10px;
   left: 0;
   right: 0;
-  top: 0.3em;
+  top: 0;
+  bottom: 0.2em;
   margin: auto;
   border-width: 0 3px 3px 0;
   position: absolute;

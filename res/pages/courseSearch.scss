@@ -85,57 +85,58 @@ $search-result-item-spacing: 10px;
             position: sticky;
             top: 0;
 
-            .expandDownArrow {
-                height: 1.7em;
-            }
+            > tr {
+                // Course search result filter
+                > .textSearch {
+                    text-align: left;
 
-            // Course search result filter
-            .filterSection {
-                height: 4em;
-                text-align: left;
-            }
+                    > img {
+                        float: left;
+                    }
 
-            .filterSection > div {
-                position: absolute;
-                width: 100%;
-                z-index: 1;
-            }
+                    > .searchBar {
+                        height: 100%;
+                        display: block;
+                        overflow: hidden;
+                    }
 
-            .filterSection .options {
-                background: $search-result-header-bg-color;
-                overflow: hidden;
-            }
+                    > .searchBar > input {
+                        width: 100%;
+                        background: none;
+                        box-shadow: none;
+                    }
+                }
 
-            .filterSection .options > img {
-                float: left;
-            }
+                > .filterOptions {
+                    text-align: left;
+                    padding-left: 5px;
 
-            .filterSection .options > .filter {
-                height: 2em;
-                display: block;
-                overflow: hidden;
-            }
+                    > .checkboxWithName {
+                        display: inline-block;
+                    }
+                }
 
-            .filterSection .options > .filter > input {
-                width: 100%;
-                background: none;
-                box-shadow: none;
-            }
+                > .resultCount {
+                    text-align: left;
+                    padding-left: 5px;
+                }
 
-            .filterSection .options > .resultCount {
-                height: 2em;
-                padding-left: 5px;
-            }
+                > th {
+                    > .expandDownArrow {
+                        height: 1.7em;
+                    }
 
-            > tr > th > .sortArrow {
-                position: absolute;
-                bottom: 1em;
-                left: 0;
-                right: 0;
-                margin: 0 auto;
-                height: 0.8em;
-                pointer-events: none;
-                @include transition(0.1s transform);
+                    > .sortArrow {
+                          position: absolute;
+                          bottom: 1em;
+                          left: 0;
+                          right: 0;
+                          margin: 0 auto;
+                          height: 0.8em;
+                          pointer-events: none;
+                          @include transition(0.1s transform);
+                      }
+                }
             }
 
             > tr > th > .sortArrow.reverse {
@@ -147,26 +148,27 @@ $search-result-item-spacing: 10px;
                 vertical-align: bottom;
             }
 
+            > tr > th:not(:first-child) {
+                border-left: lightgrey solid 1px;
+            }
+
             > tr > th:not(:first-child):not(:last-child) {
                 cursor: pointer;
                 position: relative;
                 padding: 0 1px;
             }
 
-            > tr > th:not(:first-child) {
-                border-left: lightgrey solid 1px;
-            }
-
             > tr > th:not(:first-child):not(:last-child):hover {
                 background: $button-hover-color;
             }
 
-            > tr > th:first-child {
+            // Round corner
+            > tr:last-child > th:first-child {
                 width: 0;
                 border-bottom-left-radius: 10px;
             }
 
-            > tr > th:last-child {
+            > tr:last-child > th:last-child {
                 border-bottom-right-radius: 10px;
                 padding-right: 10px;
             }
@@ -187,6 +189,7 @@ $search-result-item-spacing: 10px;
             > tr:nth-child(3n+2) {
                 font-weight: bold;
                 font-size: 20px;
+
                 > td {
                     padding: 5px 0;
                 }
@@ -203,6 +206,7 @@ $search-result-item-spacing: 10px;
                 // Result course name
                 > .courseName {
                     cursor: pointer;
+
                     &:hover {
                         background: #21262d;
                     }

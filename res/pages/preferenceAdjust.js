@@ -1,6 +1,6 @@
 /*ExcludeStart*/
 const module = {};
-const {checkboxWithName, div, button, table, Signal, text, span, ShowIf, checkbox, label, linkStylesheet, th, h1} = require('../domHelper');
+const {div, span, linkStylesheet, h1} = require('../domHelper');
 /*ExcludeEnd*/
 
 module.exports = function (loginState) {
@@ -43,28 +43,73 @@ module.exports = function (loginState) {
      */
     function onLoginState(state) {
         if (state && state.login) {
-
+            window.fetchApi('/preferenceAdjust', 'Get preference').then(i => {
+                if (i.success)
+                    renderAdjustList(i.data);
+            });
         } else {
             if (state)
                 window.askForLoginAlert();
+            renderAdjustList(null);
         }
     }
 
-    const items = [text('123'), text('123456'), text('123456789')];
+
+    const adjustItemTitle = h1(null, 'title');
     const adjustItemHolder = div('adjustItemHolder');
-    const adjustListBody = div('body',
-        items.map((i, index) =>
-            div('itemHolder', div('item noSelect', {onmousedown: onGrabItem, ontouchstart: onGrabItem}, i))
-        )
-    );
+    /**@type{HTMLDivElement}*/
+    const adjustListBody = div('body');
     const adjustList = div('adjustList',
-        h1('Test'),
+        adjustItemTitle,
         adjustItemHolder,
-        adjustListBody
+        adjustListBody,
     );
     /**@type{HTMLDivElement}*/
     let movingItem = null, grabbingItem = null;
     let startGrabbingOffsetX, startGrabbingOffsetY;
+
+    function renderAdjustList(state) {
+        if (!state) {
+            adjustItemTitle.textContent = '';
+            adjustListClearItems();
+            return;
+        }
+
+        console.log(state)
+
+        adjustItemTitle.textContent = state.name;
+        const items = state.items.map(i => div(null,
+            span('[' + i.sn + '] '),
+            span(i.name + ' '),
+            span(toTimeStr(i.time) + ' '),
+            span(i.credits + '學分 '),
+            span(i.require ? '必修' : '選修'),
+        ));
+        adjustListUpdateItems(items);
+    }
+
+    const dayOfWeek = ['星期一', '星期-二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+
+    function toTimeStr(time) {
+        if (time === null)
+            return '未定';
+        time = time.split(',');
+        return '(' + dayOfWeek[time[0]] + ')' + (time.length === 2 ? time[1] : time[1] + '~' + time[2]);
+    }
+
+    function adjustListUpdateItems(items) {
+        adjustListClearItems();
+        for (const item of items) {
+            adjustListBody.appendChild(
+                div('itemHolder', div('item noSelect', {onmousedown: onGrabItem, ontouchstart: onGrabItem}, item))
+            )
+        }
+    }
+
+    function adjustListClearItems() {
+        while (adjustListBody.firstChild)
+            adjustListBody.removeChild(adjustListBody.firstChild);
+    }
 
     function onGrabItem(e) {
         let pointerX, pointerY;
@@ -78,7 +123,7 @@ module.exports = function (loginState) {
             pointerY = e.clientY;
         }
         startGrabbingOffsetX = this.offsetLeft - pointerX + adjustListBody.offsetLeft;
-        startGrabbingOffsetY = this.offsetTop - pointerY + adjustListBody.offsetTop;
+        startGrabbingOffsetY = this.offsetTop - pointerY;
 
         const grabbingItemHolder = this.parentElement;
 
@@ -88,13 +133,12 @@ module.exports = function (loginState) {
             const bound = grabbingItemHolder.getBoundingClientRect();
             movingItem.style.width = bound.width + 'px';
             movingItem.style.height = bound.height + 'px';
-            console.log(movingItem.style.width)
         } else {
             movingItem.style.width = grabbingItemHolder.offsetWidth + 'px';
             movingItem.style.height = grabbingItemHolder.offsetHeight + 'px';
         }
         movingItem.style.left = (this.offsetLeft + adjustListBody.offsetLeft) + 'px';
-        movingItem.style.top = (this.offsetTop + adjustListBody.offsetTop) + 'px';
+        movingItem.style.top = (this.offsetTop) + 'px';
         if (adjustItemHolder.firstElementChild)
             adjustItemHolder.removeChild(adjustItemHolder.firstElementChild);
         adjustItemHolder.appendChild(movingItem);
@@ -147,9 +191,9 @@ module.exports = function (loginState) {
                 // Animation
                 switchGrabbingItem.style.top = switchGrabbingItem.offsetTop + 'px';
                 // clearTimeout(switchGrabbingItem['animationTimeout']);
-                requestAnimationFrame(() => {
+                setTimeout(() => {
                     switchGrabbingItem.style.top = nextPosition + 'px';
-                });
+                }, 5);
                 // switchGrabbingItem['animationTimeout'] = setTimeout(() => {
                 //     switchGrabbingItem.style.top = null;
                 // }, 110);
@@ -170,7 +214,7 @@ module.exports = function (loginState) {
 
         // Animation
         movingItemFinal.classList.add('moveBack');
-        movingItemFinal.style.top = (grabbingItem.parentElement.offsetTop + adjustListBody.offsetTop) + 'px';
+        movingItemFinal.style.top = (grabbingItem.parentElement.offsetTop) + 'px';
         movingItemFinal.style.left = (grabbingItem.parentElement.offsetLeft + adjustListBody.offsetLeft) + 'px';
         setTimeout(() => {
             grabbingItem.classList.remove('grabbing');
@@ -187,7 +231,7 @@ module.exports = function (loginState) {
                 adjustListBody.classList.remove('adjusting');
                 adjustListBody.style.width = null;
             }
-        }, 100);
+        }, 105);
     }
 
     return div('preferenceAdjust',

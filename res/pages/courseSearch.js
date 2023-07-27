@@ -65,12 +65,12 @@
 /**
  * @typedef {Object} CourseDataTime
  * @property {int} dayOfWeek
- * @property {int} sectionStart
- * @property {int} [sectionEnd]
- * @property {string} deptID
- * @property {string} classroomID
- * @property {string} classroomName
- * @property {string} [extraTimeDataKey]
+ * @property {int | null} sectionStart
+ * @property {int | null} sectionEnd
+ * @property {string | null} deptID
+ * @property {string | null} classroomID
+ * @property {string | null} classroomName
+ * @property {string | null} extraTimeDataKey
  */
 /**
  * @typedef {Object} UrSchoolInstructor
@@ -184,7 +184,7 @@ const {
     col,
     text,
     a,
-    linkStylesheet
+    linkStylesheet, checkboxWithName
 } = require('../domHelper');
 const SelectMenu = require('../selectMenu');
 /*ExcludeEnd*/
@@ -366,7 +366,7 @@ module.exports = function (loginState) {
             if (data.t != null)
                 courseData.time = data.t.map(i => {
                     if (i.indexOf(',') === -1)
-                        return {extraTimeDataKey: i[0]};
+                        return {extraTimeDataKey: i};
                     i = i.split(',');
                     return {
                         dayOfWeek: parseInt(i[0]),
@@ -385,9 +385,9 @@ module.exports = function (loginState) {
                         section = i.sectionStart + '~' + i.sectionEnd;
                     } else
                         section = i.sectionStart;
-                    return '[' + i.dayOfWeek + ']' + section;
+                    return '[' + (i.dayOfWeek + 1) + ']' + section;
                 }
-                return '[' + i.dayOfWeek + ']';
+                return '[' + (i.dayOfWeek + 1) + ']';
             }).join(', ');
 
             // Parse instructors
@@ -550,13 +550,12 @@ module.exports = function (loginState) {
     }
 
     // Render result
-    const courseRenderResultSort = [];
+    const courseRenderResultDisplay = [];
     const courseRenderResultFilter = [];
     const expandButtons = [];
 
     function renderSearchResult(state) {
         if (state.loading) {
-            resetSortArrow();
             courseRenderResult.length = 0;
             return window.loadingElement.cloneNode(true);
         }
@@ -564,8 +563,6 @@ module.exports = function (loginState) {
 
         if (courseRenderResult.length === 0) {
             // Render result elements
-            courseRenderResultSort.length = 0;
-            courseRenderResultFilter.length = 0;
             expandButtons.length = 0;
             for (/**@type{CourseData}*/const data of state.courseResult) {
                 const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
@@ -684,12 +681,11 @@ module.exports = function (loginState) {
                     )
                 ];
                 courseRenderResult.push([data, courseResult]);
-                courseRenderResultFilter.push([data, courseResult]);
-                courseRenderResultSort.push(courseResult);
             }
+            updateFilter();
         }
-        courseSearchResultCount.textContent = courseRenderResultSort.length;
-        return tbody(null, courseRenderResultSort);
+        courseSearchResultCount.textContent = courseRenderResultDisplay.length;
+        return tbody(null, courseRenderResultDisplay);
     }
 
     function createSyllabusUrl(yearSem, sysNumClassCode) {
@@ -725,7 +721,7 @@ module.exports = function (loginState) {
     function sortResultItem(key, element, method) {
         /**@type{[CourseData, HTMLElement][]}*/
         const courseResult = courseRenderResultFilter;
-        courseRenderResultSort.length = courseResult.length;
+        courseRenderResultDisplay.length = courseResult.length;
         let reverse;
         if (sortKey !== key) {
             sortKey = key;
@@ -745,9 +741,9 @@ module.exports = function (loginState) {
         let i = 0;
         if (reverse)
             for (; i < sortLastIndex; i++)
-                courseRenderResultSort[i] = courseResult[courseResult.length - i - 1][1];
+                courseRenderResultDisplay[i] = courseResult[courseResult.length - i - 1][1];
         for (; i < courseResult.length; i++)
-            courseRenderResultSort[i] = courseResult[i][1];
+            courseRenderResultDisplay[i] = courseResult[i][1];
 
         searchResultSignal.update();
     }
@@ -790,32 +786,62 @@ module.exports = function (loginState) {
 
 
     // Filter
-    let lastFilterKey = null;
+    const filterOptions = [
+        checkboxWithName(null, '隱藏衝堂', false, hideConflictFilterChange, {condition: hideConflictFilter})
+    ];
+    let textSearchFilterKeys = [];
+    let lastTextSearchFilterKey = null;
 
-    function filterChange() {
+    function updateFilter() {
+        console.log('Update Filter');
+        resetSortArrow();
+        courseRenderResultFilter.length = 0;
+        courseRenderResultDisplay.length = 0;
+        for (/**@type{[CourseData, HTMLElement]}*/const i of courseRenderResult) {
+            if (!textSearchFilter(i[0]))
+                continue;
+            let pass = true;
+            for (const j of filterOptions) {
+                if (j.condition && !j.condition(i[0])) {
+                    pass = false;
+                    break;
+                }
+            }
+            if (!pass)
+                continue;
+
+            courseRenderResultFilter.push(i);
+            courseRenderResultDisplay.push(i[1]);
+        }
+        searchResultSignal.update();
+    }
+
+    function textSearchFilterChange() {
         if (courseRenderResult.length === 0) return;
         const key = this.value.trim();
         // if word not finish
-        if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w -]+$/g)) return;
+        if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w -]+$/g))
+            return;
 
         // if same
-        if (lastFilterKey === key) return;
-        lastFilterKey = key;
-        const keys = key.split(' ');
+        if (lastTextSearchFilterKey === key)
+            return;
+        lastTextSearchFilterKey = key;
+        textSearchFilterKeys = key.length === 0 ? [] : key.split(' ');
+        updateFilter();
+    }
 
-        sortKey = null;
-        courseRenderResultFilter.length = 0;
-        courseRenderResultSort.length = 0;
-        for (/**@type{[CourseData, HTMLElement]}*/const i of courseRenderResult) {
-            if (findIfContains(i[0].courseName, keys) ||
-                findIfContains(i[0].serialNumber, keys) ||
-                i[0].instructors && i[0].instructors.find(i => findIfContains(i instanceof Object ? i.name : i, keys))
-            ) {
-                courseRenderResultFilter.push(i);
-                courseRenderResultSort.push(i[1]);
-            }
-        }
-        searchResultSignal.update();
+    /**
+     * @param {CourseData} courseData
+     */
+    function textSearchFilter(courseData) {
+        if (textSearchFilterKeys.length === 0)
+            return true;
+        return findIfContains(courseData.courseName, textSearchFilterKeys) ||
+            findIfContains(courseData.serialNumber, textSearchFilterKeys) ||
+            findIfContains(courseData.classInfo, textSearchFilterKeys) ||
+            courseData.instructors && courseData.instructors.find(i =>
+                findIfContains(i instanceof Object ? i.name : i, textSearchFilterKeys))
     }
 
     function findIfContains(data, keys) {
@@ -825,6 +851,71 @@ module.exports = function (loginState) {
         return false;
     }
 
+    /**
+     * @param {CourseData} courseData
+     */
+    function hideConflictFilter(courseData) {
+        const checkBox = this.input;
+        if (!checkBox.checked)
+            return true;
+        if (!courseData.time)
+            return true;
+
+        for (const cosTime of courseData.time) {
+            if (!cosTime.sectionStart)
+                continue;
+            const sectionStart = window.timeParseSection(cosTime.sectionStart);
+            const sectionEnd = cosTime.sectionEnd ? window.timeParseSection(cosTime.sectionEnd) : sectionStart;
+
+            for (const usedCosTime of checkBox.timeData) {
+                if (cosTime.dayOfWeek !== usedCosTime[0])
+                    continue;
+
+                if (sectionStart >= usedCosTime[1] && sectionStart <= usedCosTime[2] ||
+                    sectionEnd >= usedCosTime[1] && sectionEnd <= usedCosTime[2] ||
+                    sectionStart <= usedCosTime[1] && sectionEnd >= usedCosTime[2])
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    function hideConflictFilterChange() {
+        const checkBox = this;
+        // If no data
+        if (checkBox.checked) {
+            // If not login
+            if (!loginState.state || !loginState.state.login) {
+                checkBox.checked = false;
+                window.askForLoginAlert();
+            } else if (!checkBox.fetchingData) {
+                checkBox.fetchingData = true;
+                window.fetchApi('/courseSchedule', 'Get schedule').then(response => {
+                    if (!response.success || !response.data) {
+                        checkBox.checked = false;
+                        return;
+                    }
+
+                    // Parse time data
+                    const usedTime = [];
+                    for (const i of response.data.schedule) {
+                        for (const info of i.info) {
+                            const time = window.timeParse(info.time);
+                            usedTime.push(time);
+                        }
+                    }
+                    checkBox.timeData = usedTime;
+
+                    checkBox.fetchingData = false;
+                    updateFilter();
+                });
+            }
+        }
+
+        if (checkBox.timeData)
+            updateFilter();
+    }
 
     function onkeyup(e) {
         if (e.key === 'Enter') search();
@@ -853,22 +944,23 @@ module.exports = function (loginState) {
             ),
             State(searchResultSignal, renderSearchResult),
             thead('noSelect',
+                tr(null, th(null, 'textSearch', {colSpan: 15},
+                    // Filter options
+                    img('./res/assets/funnel_icon.svg'),
+                    div('searchBar', input(null, 'Teacher, Course name, Serial number', null, {
+                        oninput: textSearchFilterChange,
+                        onpropertychange: textSearchFilterChange
+                    })),
+                )),
+                tr(null, th(null, 'filterOptions', {colSpan: 15},
+                    filterOptions
+                )),
+                tr(null, th(null, 'resultCount', {colSpan: 15},
+                    span('Result count: '),
+                    courseSearchResultCount = span()
+                )),
                 tr(null,
                     th(null, null,
-                        // Filter options
-                        div('filterSection',
-                            div(null, div('options',
-                                img('./res/assets/funnel_icon.svg'),
-                                div('filter', input(null, 'Teacher, Course name, Serial number', null, {
-                                    oninput: filterChange,
-                                    onpropertychange: filterChange
-                                })),
-                                div('resultCount',
-                                    span('Result count: '),
-                                    courseSearchResultCount = span()
-                                ),
-                            )),
-                        ),
                         div('expandDownArrow', expandArrowImage.cloneNode()),
                     ),
                     th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
@@ -885,6 +977,7 @@ module.exports = function (loginState) {
                     th('Reward', 'nckuhub', {key: 'got', onclick: sortNckuhubKey}),
                     th('Sweet', 'nckuhub', {key: 'sweet', onclick: sortNckuhubKey}),
                     th('Cool', 'nckuhub', {key: 'cold', onclick: sortNckuhubKey}),
+                    // Function buttons
                     th('Options', 'options'),
                 ),
             ),
