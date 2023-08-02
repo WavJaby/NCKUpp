@@ -109,7 +109,7 @@ public class Login implements EndpointModule {
 
                         logger.log(studentID + " is login");
                     } else {
-                        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrg, entry.getValue());
+                        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, entry.getValue());
                         logger.log(PHPSESSID + " is logout");
                         loginUserCookie.remove(entry.getKey());
                     }
@@ -218,34 +218,38 @@ public class Login implements EndpointModule {
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
         Headers responseHeader = req.getResponseHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String[] cookies = splitCookie(requestHeaders);
         String authState = unpackAuthCookie(cookies, cookieStore);
 
         Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
         String mode = query.get("m");
+        String method = req.getRequestMethod();
+        boolean post = method.equalsIgnoreCase("POST");
+        boolean get = method.equalsIgnoreCase("GET");
+        // Unknown mode
+        if (!post && !get) {
+            apiResponse.addError(TAG + "Unknown method: " + mode);
+        }
         // Login course ncku
-        if (mode == null || mode.equals("c")) {
+        else if (mode == null || mode.equals("c")) {
             String loginState = unpackCourseLoginStateCookie(cookies, cookieStore);
-            boolean get = req.getRequestMethod().equalsIgnoreCase("GET");
-            String postData = get ? null : readResponse(req);
+            String postData = post ? readRequestBody(req) : null;
             loginCourseNcku(get, postData, apiResponse, cookieStore);
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
         }
         // Login student identification system
         else if (mode.equals("i")) {
             String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
-            boolean get = req.getRequestMethod().equalsIgnoreCase("GET");
-            String postData = get ? null : readResponse(req);
+            String postData = post ? readRequestBody(req) : null;
             loginNckuStudentIdSystem(get, postData, apiResponse, cookieStore);
-            packStudentIdSysLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
         }
         // Unknown mode
         else
             apiResponse.addError(TAG + "Unknown mode: " + mode);
 
 
-        packAuthCookie(responseHeader, authState, originUrl, cookieStore);
+        packAuthCookie(responseHeader, authState, cookieStore);
     }
 
     @Override
@@ -588,7 +592,7 @@ public class Login implements EndpointModule {
         }
 
         // PHPSESSID
-        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrg, cookie);
+        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookie);
         if (PHPSESSID == null)
             response.addError(TAG + "User PHPSESSID id not found");
         loginDataEdit(studentID, name, deptGradeInfo, PHPSESSID);

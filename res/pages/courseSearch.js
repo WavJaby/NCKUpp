@@ -223,8 +223,10 @@ module.exports = function (loginState) {
     function onRender() {
         console.log('Course search Render');
         styles.mount();
-        window.fetchApi('/alldept').then(i => {
-            deptNameSelectMenu.setOptions(i.data.deptGroup.map(i => [i.name, i.dept]));
+        window.fetchApi('/alldept').then(response => {
+            if (response == null || !response.success || !response.data)
+                return;
+            deptNameSelectMenu.setOptions(response.data.deptGroup.map(i => [i.name, i.dept]));
             loadLastSearch();
         });
     }
@@ -896,8 +898,11 @@ module.exports = function (loginState) {
             } else if (!checkBox.fetchingData) {
                 checkBox.fetchingData = true;
                 window.fetchApi('/courseSchedule', 'Get schedule').then(response => {
-                    if (!response.success || !response.data) {
+                    checkBox.fetchingData = false;
+
+                    if (!response || !response.success || !response.data) {
                         checkBox.checked = false;
+                        checkBox.timeData = null;
                         return;
                     }
 
@@ -911,7 +916,6 @@ module.exports = function (loginState) {
                     }
                     checkBox.timeData = usedTime;
 
-                    checkBox.fetchingData = false;
                     updateFilter();
                 });
             }
@@ -1001,22 +1005,30 @@ function InstructorInfoElement(/**@param{UrSchoolInstructorSimple}*/{
         div('rate',
             recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
                 ? table(null,
-                    tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
+                    // tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
+                    tr(null, th('推薦'), th('收穫'), th('口條'), th('壓力'), th('分數甜度')),
                     tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), th(pressure, getColor(5 - pressure)), td(sweet, getColor(sweet))),
                 )
                 : null,
         ),
         div('info',
             table(null,
-                tr(null, th('Average score'), td(averageScore)),
-                tr(null, th('Note'), td(note)),
-                tr(null, th('Nickname'), td(nickname)),
-                tr(null, th('Department'), td(department)),
-                tr(null, th('Job title'), td(jobTitle)),
-                tr(null, th('Roll call method'), td(rollCallMethod)),
+                // tr(null, th('Average score'), td(averageScore)),
+                // tr(null, th('Note'), td(note)),
+                // tr(null, th('Nickname'), td(nickname)),
+                // tr(null, th('Department'), td(department)),
+                // tr(null, th('Job title'), td(jobTitle)),
+                // tr(null, th('Roll call method'), td(rollCallMethod)),
+                // tr(null, th('Academic qualifications'), td(qualifications)),
+                tr(null, th('平均成績'), td(averageScore)),
+                tr(null, th('值得一提'), td(note)),
+                tr(null, th('綽號'), td(nickname)),
+                tr(null, th('系所'), td(department)),
+                tr(null, th('職稱'), td(jobTitle)),
+                tr(null, th('點名方式'), td(rollCallMethod)),
+                tr(null, th('最高學歷'), td(qualifications)),
             ),
-        ),
-        span('Academic qualifications: ' + qualifications),
+        )
     );
 }
 
@@ -1049,12 +1061,9 @@ function InstructorDetailWindow() {
         const instructorInfo = InstructorInfoElement(instructor.info);
         return div('instructorDetailWindow',
             div('title',
-                span('Evaluation for'),
-                div('name',
-                    span(instructor.info.department),
-                    span(instructor.info.name),
-                    span(instructor.info.jobTitle),
-                ),
+                span(instructor.info.department),
+                span(instructor.info.name),
+                span(instructor.info.jobTitle),
             ),
             div('tags',
                 instructor.tags.map(i => {
@@ -1062,8 +1071,8 @@ function InstructorDetailWindow() {
                 })
             ),
             div('reviewerCount',
-                span('Total votes'),
                 span(instructor.reviewerCount.toString()),
+                span('人共同評分'),
             ),
             instructorInfo,
             div('comments',

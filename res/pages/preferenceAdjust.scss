@@ -7,7 +7,8 @@
         position: relative;
 
         > .title {
-            margin: 10px 0 0 0;
+            margin: 0;
+            padding-top: 10px;
         }
 
         // List items
@@ -25,6 +26,7 @@
             position: relative;
             touch-action: none;
             -ms-touch-action: none;
+            vertical-align:top;
 
             // When adjusting items
             &.adjusting > .itemHolder {
@@ -54,6 +56,7 @@
         // Item grab by mouse
         > .adjustItemHolder {
             position: relative;
+
             > .item {
                 z-index: 1;
                 @include cursor-grabbing;
@@ -64,6 +67,14 @@
                     @include transition((top 100ms, left 100ms));
                 }
             }
+        }
+    }
+
+    > .saveOrderBtn {
+        visibility: hidden;
+
+        &.show {
+            visibility: visible;
         }
     }
 }

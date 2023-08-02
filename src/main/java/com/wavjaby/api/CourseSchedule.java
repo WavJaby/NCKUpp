@@ -27,7 +27,6 @@ import java.util.List;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class CourseSchedule implements EndpointModule {
@@ -76,7 +75,6 @@ public class CourseSchedule implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -84,7 +82,7 @@ public class CourseSchedule implements EndpointModule {
             getCourseSchedule(cookieStore, apiResponse);
 
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
 
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");

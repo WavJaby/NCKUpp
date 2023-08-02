@@ -184,14 +184,14 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
 
         long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
-        testProxy(proxyDataList, 50, 1000, 2, -1, true);
+        testProxy(proxyDataList, 60, 1000, 2, -1, true);
         proxyDataList.removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("\nDone");
         readLocalProxyList(proxyDataList);
         System.out.println(proxyDataList.size());
 
         System.out.println("Ping...");
-        testProxy(proxyDataList, 1, 1000, -1, 3, false);
+        testProxy(proxyDataList, 2, 1500, -1, 4, false);
         proxyDataList.removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("\nUsed: " + ((System.currentTimeMillis() - start) / 1000) + "s");
         try {
@@ -211,9 +211,9 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
 
     private void testProxy(Set<ProxyManager.ProxyData> proxyDataList, int threadCount, int timeoutTime, int maxTry, int conformTry, boolean errorSameLine) {
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount);
-        Semaphore fetchPoolLock = new Semaphore(threadCount);
+        Semaphore fetchPoolLock = new Semaphore(threadCount, true);
         ThreadPoolExecutor checkConnectionPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-        Semaphore checkPoolLock = new Semaphore(threadCount * 2);
+        Semaphore checkPoolLock = new Semaphore(threadCount * 2, true);
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
         final boolean conforming = conformTry != -1;
 
@@ -261,11 +261,11 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                     }
                     if (conforming) {
                         // Conform failed (error or time out)
-                        if (timeout || result == null || result.error)
+                        if (timeout || result == null || result.haveError())
                             break;
                     } else {
                         // Not timeout, pass
-                        if (!timeout && result != null && !result.error)
+                        if (!timeout && result != null && !result.haveError())
                             break;
                     }
                 }
@@ -331,14 +331,15 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
         final String errorMessage;
         final String data;
         final long latency;
-        final boolean error;
 
         private ProxyTestResult(String errorMessage, String data, long latency) {
             this.errorMessage = errorMessage;
             this.data = data;
             this.latency = latency;
+        }
 
-            error = errorMessage != null;
+        public boolean haveError() {
+            return errorMessage != null;
         }
     }
 
@@ -351,7 +352,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                 HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection(proxy);
                 conn.setConnectTimeout(timeoutTime);
                 conn.setReadTimeout(timeoutTime);
-                conn.setRequestProperty("Connection", "keep-alive");
+//                conn.setRequestProperty("Connection", "keep-alive");
 
                 if (conn.getResponseCode() == 200) {
                     InputStream in = conn.getInputStream();

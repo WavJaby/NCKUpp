@@ -127,15 +127,15 @@ $search-result-item-spacing: 10px;
                     }
 
                     > .sortArrow {
-                          position: absolute;
-                          bottom: 1em;
-                          left: 0;
-                          right: 0;
-                          margin: 0 auto;
-                          height: 0.8em;
-                          pointer-events: none;
-                          @include transition(0.1s transform);
-                      }
+                        position: absolute;
+                        bottom: 1em;
+                        left: 0;
+                        right: 0;
+                        margin: 0 auto;
+                        height: 0.8em;
+                        pointer-events: none;
+                        @include transition(0.1s transform);
+                    }
                 }
             }
 
@@ -441,105 +441,96 @@ $search-result-item-spacing: 10px;
         visibility: visible;
     }
 
-    .instructorInfo > span {
-        display: block;
-    }
-
     .instructorInfo > .rate {
         overflow: auto;
-    }
 
-    .instructorInfo > .rate > table {
-        width: 100%;
-    }
+        > table {
+            width: 100%;
+        }
 
-    .instructorInfo > .rate > table td {
-        text-align: center;
-    }
+        > table > tr > td {
+            text-align: center;
+        }
 
-    .instructorInfo > .rate > table td:after {
-        content: '★';
+        > table > tr > td:after {
+            content: '★';
+        }
+
+        .blue {
+            color: #33A2F4;
+        }
+
+        .yellow {
+            color: #FFC71E;
+        }
+
+        .red {
+            color: #FF311E;
+        }
+
     }
 
     .instructorInfo > .info > table {
         text-align: left;
-    }
-
-    .instructorInfo .blue {
-        color: #33A2F4;
-    }
-
-    .instructorInfo .yellow {
-        color: #FFC71E;
-    }
-
-    .instructorInfo .red {
-        color: #FF311E;
+        border-spacing: 5px 0;
     }
 
     // Instructor detail window
-    .instructorDetailWindow > .title {
-    }
+    .instructorDetailWindow {
+        > .title {
+            display: inline-block;
 
-    .instructorDetailWindow > .title span {
-        margin-right: 0.5em;
-    }
+            > span {
+                margin-right: 0.5em;
+            }
+        }
 
-    .instructorDetailWindow > .title > .name {
-        display: inline-block;
-    }
+        > .tags > span {
+            background: $button-bg-color;
+            padding: 5px;
+            margin-right: 5px;
+            margin-top: 5px;
+            display: inline-block;
+        }
 
-    .instructorDetailWindow > .tags {
-    }
+        > .reviewerCount {
+        }
 
-    .instructorDetailWindow > .tags > span {
-        background: $button-bg-color;
-        padding: 5px;
-        margin-right: 5px;
-        margin-top: 5px;
-        display: inline-block;
-    }
+        > .reviewerCount > span:first-child {
+            font-weight: bold;
+            margin-right: 0.5em;
+        }
 
-    .instructorDetailWindow > .reviewerCount {
-    }
+        > .comments {
+        }
 
-    .instructorDetailWindow > .reviewerCount > span:first-child {
-        font-weight: bold;
-        margin-right: 0.5em;
-    }
+        > .comments > .item {
+            background: var(--comment-bg-color);
+            margin-bottom: 5px;
+            margin-top: 5px;
+            border-radius: 10px;
+            padding: 10px;
+            overflow: hidden;
+        }
 
-    .instructorDetailWindow > .comments {
-    }
+        > .comments > .item > .profile {
+            height: 2.5em;
+            display: block;
+            float: left;
+            border-radius: 2.5em;
+        }
 
-    .instructorDetailWindow > .comments > .item {
-        background: var(--comment-bg-color);
-        margin-bottom: 5px;
-        margin-top: 5px;
-        border-radius: 10px;
-        padding: 10px;
-        overflow: hidden;
-    }
+        > .comments > .item > .body {
+            padding-left: 3em;
+        }
 
-    .instructorDetailWindow > .comments > .item > .profile {
-        height: 2.5em;
-        display: block;
-        float: left;
-        border-radius: 2.5em;
-    }
+        > .comments > .item > .body > span {
+            display: block;
+            white-space: pre-wrap;
+        }
 
-    .instructorDetailWindow > .comments > .item > .body {
-        padding-left: 3em;
-    }
-
-    .instructorDetailWindow > .comments > .item > .body > span {
-        display: block;
-        white-space: pre-wrap;
-    }
-
-    .instructorDetailWindow > .comments > .item > .body > span {
-        display: block;
-    }
-
-    .instructorDetailWindow > .instructorInfo {
+        > .comments > .item > .body > span {
+            display: block;
+        }
     }
 }

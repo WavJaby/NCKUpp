@@ -1,12 +1,16 @@
 /*ExcludeStart*/
 const module = {};
-const {div, span, linkStylesheet, h1} = require('../domHelper');
+const {div, span, linkStylesheet, h1, button} = require('../domHelper');
 /*ExcludeEnd*/
 
 module.exports = function (loginState) {
     console.log('Preference adjust Init');
     // static element
     const styles = linkStylesheet('./res/pages/preferenceAdjust.css');
+    const adjustList = new AdjustList();
+    const saveItemOrderButton = button('saveOrderBtn');
+    const saveItemOrderDelayTime = 5000;
+    let saveItemOrderTimeout = null, saveItemOrderTimeLeft = 0;
 
     function onRender() {
         console.log('Course schedule Render');
@@ -18,24 +22,16 @@ module.exports = function (loginState) {
         // close navLinks when using mobile devices
         window.navMenu.remove('open');
         styles.enable();
-        loginState.addListener(onLoginState);
         onLoginState(loginState.state);
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('touchmove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-        window.addEventListener('touchend', onMouseUp);
-        window.addEventListener('touchcancel', onMouseUp);
+        loginState.addListener(onLoginState);
+        adjustList.addListeners();
     }
 
     function onPageClose() {
         console.log('Course schedule Close');
         styles.disable();
         loginState.removeListener(onLoginState);
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('touchmove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        window.removeEventListener('touchend', onMouseUp);
-        window.removeEventListener('touchcancel', onMouseUp);
+        adjustList.removeListeners();
     }
 
     /**
@@ -54,40 +50,6 @@ module.exports = function (loginState) {
         }
     }
 
-
-    const adjustItemTitle = h1(null, 'title');
-    const adjustItemHolder = div('adjustItemHolder');
-    /**@type{HTMLDivElement}*/
-    const adjustListBody = div('body');
-    const adjustList = div('adjustList',
-        adjustItemTitle,
-        adjustItemHolder,
-        adjustListBody,
-    );
-    /**@type{HTMLDivElement}*/
-    let movingItem = null, grabbingItem = null;
-    let startGrabbingOffsetX, startGrabbingOffsetY;
-
-    function renderAdjustList(state) {
-        if (!state) {
-            adjustItemTitle.textContent = '';
-            adjustListClearItems();
-            return;
-        }
-
-        console.log(state)
-
-        adjustItemTitle.textContent = state.name;
-        const items = state.items.map(i => div(null,
-            span('[' + i.sn + '] '),
-            span(i.name + ' '),
-            span(toTimeStr(i.time) + ' '),
-            span(i.credits + '學分 '),
-            span(i.require ? '必修' : '選修'),
-        ));
-        adjustListUpdateItems(items);
-    }
-
     const dayOfWeek = ['星期一', '星期-二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 
     function toTimeStr(time) {
@@ -97,19 +59,168 @@ module.exports = function (loginState) {
         return '(' + dayOfWeek[time[0]] + ')' + (time.length === 2 ? time[1] : time[1] + '~' + time[2]);
     }
 
-    function adjustListUpdateItems(items) {
-        adjustListClearItems();
-        for (const item of items) {
-            adjustListBody.appendChild(
-                div('itemHolder', div('item noSelect', {onmousedown: onGrabItem, ontouchstart: onGrabItem}, item))
-            )
+    function renderAdjustList(state) {
+        if (!state) {
+            adjustList.setTitle(null);
+            adjustList.clearItems();
+            return;
         }
+
+        console.log(state);
+        adjustList.setTitle(state.name);
+        const items = state.items.map(i => div(null, {key: i.key},
+            span('[' + i.sn + '] '),
+            span(i.name + ' '),
+            span(toTimeStr(i.time) + ' '),
+            span(i.credits + '學分 '),
+            span(i.require ? '必修' : '選修'),
+        ));
+        adjustList.updateItem(items);
     }
 
-    function adjustListClearItems() {
+    function saveItemOrder() {
+        saveItemOrderButton.classList.remove('show');
+        const orderKeys = [];
+        const items = adjustList.getItems();
+        for (const item of items)
+            orderKeys.push('data_item[]=' + item.key);
+        const postData = orderKeys.join('&');
+        console.log(postData);
+    }
+
+    adjustList.onchange = function () {
+        clearTimeout(saveItemOrderTimeout);
+        saveItemOrderTimeLeft = saveItemOrderDelayTime;
+        saveItemOrderButton.textContent = '在' + (saveItemOrderTimeLeft / 1000) + '秒後儲存';
+        saveItemOrderButton.classList.add('show');
+        saveItemOrderTimeout = setInterval(() => {
+            saveItemOrderTimeLeft -= 1000;
+            if (saveItemOrderTimeLeft === 0) {
+                clearTimeout(saveItemOrderTimeout);
+                saveItemOrder();
+                return;
+            }
+
+            saveItemOrderButton.textContent = '在' + (saveItemOrderTimeLeft / 1000) + '秒後儲存';
+        }, 1000);
+    };
+
+    adjustList.ongrab = function () {
+        saveItemOrderButton.classList.remove('show');
+        clearTimeout(saveItemOrderTimeout);
+    };
+
+    setTimeout(() =>
+        renderAdjustList(({
+            "success": true,
+            "data": {
+                "name": "通識",
+                "type": "UwgCE1I9W1AMbFVhCT4AUQFiATgKYwQN",
+                "items": [{
+                    "key": "Vg1TQgZpBw4CCVdhVWAOMAME",
+                    "sn": "A9-220",
+                    "name": "日常疼痛控制",
+                    "require": true,
+                    "credits": 2.0,
+                    "time": null
+                }, {
+                    "key": "VwwAEQZpAQhQWwI2ATYNMgAH",
+                    "sn": "A9-001",
+                    "name": "流行樂賞析與實務",
+                    "require": true,
+                    "credits": 2.0,
+                    "time": "2,5,6"
+                }, {
+                    "key": "BF8CE1c4AwoAC1VgVWIPM1pd",
+                    "sn": "A9-102",
+                    "name": "生涯規劃-精英論壇",
+                    "require": true,
+                    "credits": 2.0,
+                    "time": "3,5,6"
+                }, {
+                    "key": "Vg0FFFwzUVgFDlJlBTIIN1FW",
+                    "sn": "A9-301",
+                    "name": "認識地震",
+                    "require": true,
+                    "credits": 2.0,
+                    "time": "3,5,6"
+                }]
+            }
+        }).data), 300);
+
+    return div('preferenceAdjust',
+        {onRender, onPageOpen, onPageClose},
+        adjustList.element,
+        saveItemOrderButton,
+    );
+};
+
+/**
+ * @constructor
+ */
+function AdjustList() {
+    const thisInstance = this;
+    const adjustItemTitle = h1(null, 'title');
+    const adjustItemHolder = div('adjustItemHolder');
+    /**@type{HTMLDivElement}*/
+    const adjustListBody = div('body');
+    this.element = div('adjustList',
+        adjustItemTitle,
+        adjustItemHolder,
+        adjustListBody,
+    );
+    /**@type{HTMLDivElement}*/
+    let movingItem = null, grabbingItem = null;
+    let startGrabbingOffsetX, startGrabbingOffsetY;
+
+    this.addListeners = function () {
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('touchmove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        window.addEventListener('touchend', onMouseUp);
+        window.addEventListener('touchcancel', onMouseUp);
+    };
+
+    this.removeListeners = function () {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('touchmove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        window.removeEventListener('touchend', onMouseUp);
+        window.removeEventListener('touchcancel', onMouseUp);
+    };
+
+    this.setTitle = function (title) {
+        adjustItemTitle.textContent = title;
+    };
+
+    this.updateItem = function (items) {
+        this.clearItems();
+        let i = 0;
+        for (const item of items) {
+            adjustListBody.appendChild(
+                div('itemHolder', div('item noSelect', {onmousedown: onGrabItem, ontouchstart: onGrabItem}, item), {index: i++})
+            );
+        }
+    };
+
+    this.clearItems = function () {
         while (adjustListBody.firstChild)
             adjustListBody.removeChild(adjustListBody.firstChild);
+    };
+
+    this.getItems = function () {
+        const items = new Array(adjustListBody.childElementCount);
+        let i = 0;
+        for (const element of adjustListBody.children) {
+            items[i++] = element.firstElementChild.firstElementChild;
+        }
+        return items;
     }
+
+    /**@type{function(): any}*/
+    this.ongrab = null;
+    /**@type{function(): any}*/
+    this.onchange = null;
 
     function onGrabItem(e) {
         let pointerX, pointerY;
@@ -124,6 +235,8 @@ module.exports = function (loginState) {
         }
         startGrabbingOffsetX = this.offsetLeft - pointerX + adjustListBody.offsetLeft;
         startGrabbingOffsetY = this.offsetTop - pointerY;
+        if (thisInstance.ongrab)
+            thisInstance.ongrab();
 
         const grabbingItemHolder = this.parentElement;
 
@@ -212,6 +325,21 @@ module.exports = function (loginState) {
         const movingItemFinal = movingItem;
         movingItem = null;
 
+        // Check if item change
+        if (thisInstance.onchange) {
+            let changed = false;
+            let i = 0;
+            for (const element of adjustListBody.children) {
+                if (element.index !== i) {
+                    changed = true;
+                    element.index = i;
+                }
+                ++i;
+            }
+            if (changed)
+                thisInstance.onchange();
+        }
+
         // Animation
         movingItemFinal.classList.add('moveBack');
         movingItemFinal.style.top = (grabbingItem.parentElement.offsetTop) + 'px';
@@ -233,9 +361,4 @@ module.exports = function (loginState) {
             }
         }, 105);
     }
-
-    return div('preferenceAdjust',
-        {onRender, onPageOpen, onPageClose},
-        adjustList
-    );
-};
+}

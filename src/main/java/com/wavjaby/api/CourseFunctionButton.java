@@ -21,7 +21,8 @@ import java.util.Map;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
+import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class CourseFunctionButton implements EndpointModule {
     private static final String TAG = "[CourseFunctionButton]";
@@ -50,7 +51,6 @@ public class CourseFunctionButton implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -60,7 +60,7 @@ public class CourseFunctionButton implements EndpointModule {
             processData(query, apiResponse, cookieStore);
 
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -105,7 +105,7 @@ public class CourseFunctionButton implements EndpointModule {
                     .header("X-Requested-With", "XMLHttpRequest")
                     .execute();
             JsonObject postResult = new JsonObject(post.body());
-            String msg = parseUnicode(postResult.getString("msg"));
+            String msg = postResult.getString("msg");
             if (postResult.getBoolean("result")) {
                 apiResponse.setMessage(msg);
             } else
@@ -136,7 +136,7 @@ public class CourseFunctionButton implements EndpointModule {
                         .execute();
                 JsonObject postResult = new JsonObject(post.body());
                 if (!postResult.getBoolean("status")) {
-                    apiResponse.addError(parseUnicode(postResult.getString("msg")));
+                    apiResponse.addError(postResult.getString("msg"));
                     return;
                 }
 
@@ -170,7 +170,7 @@ public class CourseFunctionButton implements EndpointModule {
                 if (!msg.contains("CAPTCHA") && !msg.contains("驗證碼"))
                     break;
             }
-            String msg = parseUnicode(resultData.getString("msg"));
+            String msg = resultData.getString("msg");
             msg = msg.replace("<br>", "\\n");
             int start = msg.indexOf('>'), end = msg.lastIndexOf('<');
             if (start != -1 && end != -1) msg = msg.substring(start + 1, end);

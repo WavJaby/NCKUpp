@@ -23,7 +23,6 @@ import java.util.concurrent.TimeoutException;
 
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class RobotCode implements EndpointModule {
@@ -100,7 +99,6 @@ public class RobotCode implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -111,7 +109,7 @@ public class RobotCode implements EndpointModule {
 
             // Set cookie
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
 
             byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");

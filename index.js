@@ -74,7 +74,7 @@ window.fetchApi = function (endpoint, showState, option) {
         option.signal = controller.signal;
         abortTimeout = setTimeout(() => controller.abort(), option.timeout);
     }
-    const stateObj = showState ? requestState.addState(showState) : null;
+    const stateElement = showState ? requestState.addState(showState) : null;
 
     return fetch(apiEndPoint + endpoint, option)
         .then(i => i.json())
@@ -86,8 +86,8 @@ window.fetchApi = function (endpoint, showState, option) {
                 window.messageAlert.addError(
                     'Api response error',
                     i.err.join('\n'), 2000);
-            if (stateObj)
-                requestState.removeState(stateObj);
+            if (stateElement)
+                requestState.removeState(stateElement);
             return i;
         })
         .catch(e => {
@@ -103,8 +103,9 @@ window.fetchApi = function (endpoint, showState, option) {
                     'Network error',
                     e instanceof Error ? e.stack || e || 'Unknown error!' : e, 2000);
             }
-            if (stateObj)
-                requestState.removeState(stateObj);
+            if (stateElement)
+                requestState.removeState(stateElement);
+            return null;
         });
 };
 window.askForLoginAlert = () => window.messageAlert.addInfo("Login to use this page", 'Click login button at top right corner to login in', 3000);
@@ -229,9 +230,14 @@ const requestState = requestStateObject();
 
     // functions
     function onLoginStateChange(response) {
-        const loginData = /**@type LoginData*/response.data;
+        if (!response) {
+            window.messageAlert.addError('Network error', 'Try again later', 3000);
+            return;
+        }
+        /**@type LoginData*/
+        const loginData = response.data;
         if (!loginData) {
-            window.messageAlert.addError('Unknown error', 'Try again later', 3000);
+            window.messageAlert.addError('Unknown login error', 'Try again later', 3000);
             return;
         }
         // Check if login error
@@ -329,8 +335,6 @@ function NavSelectList(classname, title, items, enableHover, onOpen) {
 
 function MessageAlert() {
     const messageBoxRoot = div('messageBox');
-    let updateTop = null;
-    let height = 0;
 
     messageBoxRoot.addInfo = function (title, description, removeTimeout) {
         createMessageBox('info', title, description, removeTimeout);
@@ -377,15 +381,6 @@ function MessageAlert() {
         setTimeout(() => {
             messageBoxRoot.removeChild(messageBox);
         }, 500);
-    }
-
-    function updateMessageBoxTop() {
-        height = 0;
-        for (let node of messageBoxRoot.childNodes) {
-            height -= node.offsetHeight + 10;
-            node.style.bottom = height + 'px';
-        }
-        updateTop = null;
     }
 
     return messageBoxRoot;

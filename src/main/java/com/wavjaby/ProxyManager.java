@@ -106,6 +106,7 @@ public class ProxyManager {
         public boolean isAlive() {
             return alive;
         }
+
         public boolean isUnavailable() {
             return !alive;
         }

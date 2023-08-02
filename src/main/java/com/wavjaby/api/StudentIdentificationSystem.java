@@ -92,13 +92,23 @@ public class StudentIdentificationSystem implements EndpointModule {
             weightedGrades = Float.parseFloat(row.get(9).text().trim());
             averageScore = Float.parseFloat(row.get(10).text().trim());
 
-            String[] classRankingStr = row.get(11).text().trim().split("／");
-            classRanking = Integer.parseInt(classRankingStr[0]);
-            classRankingTotal = Integer.parseInt(classRankingStr[1]);
+            String classRankingStr = row.get(11).text().trim();
+            if (classRankingStr.equals("　"))
+                classRanking = classRankingTotal = -1;
+            else {
+                String[] classRankingArr = classRankingStr.split("／");
+                classRanking = Integer.parseInt(classRankingArr[0]);
+                classRankingTotal = Integer.parseInt(classRankingArr[1]);
+            }
 
-            String[] deptRankingStr = row.get(12).text().trim().split("／");
-            deptRanking = Integer.parseInt(deptRankingStr[0]);
-            deptRankingTotal = Integer.parseInt(deptRankingStr[1]);
+            String deptRankingStr = row.get(12).text().trim();
+            if (classRankingStr.equals("　"))
+                deptRanking = deptRankingTotal = -1;
+            else {
+                String[] deptRankingArr = deptRankingStr.split("／");
+                deptRanking = Integer.parseInt(deptRankingArr[0]);
+                deptRankingTotal = Integer.parseInt(deptRankingArr[1]);
+            }
         }
 
         @Override
@@ -258,7 +268,6 @@ public class StudentIdentificationSystem implements EndpointModule {
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
         Headers responseHeader = req.getResponseHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String[] cookies = splitCookie(requestHeaders);
         String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
 
@@ -320,7 +329,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         else
             apiResponse.addError(TAG + "Unknown mode: " + mode);
 
-        packStudentIdSysLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+        packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
     }
 
     private List<SemesterOverview> getSemestersOverview(CookieStore cookieStore) {

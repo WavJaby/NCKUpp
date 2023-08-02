@@ -25,7 +25,6 @@ import java.util.HashMap;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class PreferenceAdjust implements EndpointModule {
@@ -65,7 +64,6 @@ public class PreferenceAdjust implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -73,7 +71,7 @@ public class PreferenceAdjust implements EndpointModule {
 
             preferenceAdjust(apiResponse, cookieStore);
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -214,7 +212,7 @@ public class PreferenceAdjust implements EndpointModule {
                             courseInfo.substring(index2 + 1).trim() + ',';
                 }
             }
-            if(requireText == null || creditsText == null) {
+            if (requireText == null || creditsText == null) {
                 apiResponse.addError(TAG + "Adjust list item content not found: " + courseInfo);
                 return;
             }

@@ -19,7 +19,6 @@ import java.util.Arrays;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
-import static com.wavjaby.lib.Lib.getOriginUrl;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class Logout implements EndpointModule {
@@ -50,7 +49,6 @@ public class Logout implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
@@ -59,9 +57,9 @@ public class Logout implements EndpointModule {
             logout(apiResponse, cookieStore);
 
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
-            responseHeader.add("Set-Cookie", removeCookie("authData") + "; Path=/api/login" + setCookieDomain(originUrl));
-            responseHeader.add("Set-Cookie", removeCookie("stuSysLoginData") + "; Path=/" + setCookieDomain(originUrl));
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
+            responseHeader.add("Set-Cookie", removeCookie("authData") + "; Path=/api/login" + setCookieDomain());
+            responseHeader.add("Set-Cookie", removeCookie("stuSysLoginData") + "; Path=/" + setCookieDomain());
 
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");

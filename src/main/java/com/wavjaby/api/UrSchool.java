@@ -7,6 +7,7 @@ import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
 import org.jsoup.Connection;
@@ -30,18 +31,78 @@ import static com.wavjaby.lib.Lib.*;
 public class UrSchool implements EndpointModule {
     private static final String TAG = "[UrSchool]";
     private static final Logger logger = new Logger(TAG);
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private static final long updateInterval = 2 * 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 5 * 60 * 1000;
+    private static final int UPDATE_THREAD_COUNT = 8;
+    private final ExecutorService pool = Executors.newFixedThreadPool(4, new ThreadFactory("UrSchool-"));
 
     private final CookieStore urSchoolCookie = new CookieManager().getCookieStore();
 
     private String urSchoolDataJson;
-    private JsonArray urSchoolData;
+    private List<ProfessorSummary> urSchoolData;
     private long lastFileUpdateTime;
 
     private final Map<String, Object[]> instructorCache = new HashMap<>();
 
+    private static class ProfessorSummary {
+        final String id, method;
+
+        String name;
+        String department;
+        String jobTitle;
+        String averageScore;
+        String highestQualification;
+        String note;
+        String nickName;
+        String rollCallMethod;
+
+        float recommend, reward, articulate, pressure, sweet;
+
+        public ProfessorSummary(String id, String method) {
+            this.id = id;
+            this.method = method;
+        }
+
+        public ProfessorSummary(JsonArray jsonArray) {
+            id = jsonArray.getString(0);
+            method = jsonArray.getString(1);
+            name = jsonArray.getString(2);
+            department = jsonArray.getString(3);
+            jobTitle = jsonArray.getString(4);
+            averageScore = jsonArray.getString(10);
+            highestQualification = jsonArray.getString(11);
+            note = jsonArray.getString(12);
+            nickName = jsonArray.getString(13);
+            rollCallMethod = jsonArray.getString(14);
+            recommend = jsonArray.getFloat(5);
+            reward = jsonArray.getFloat(6);
+            articulate = jsonArray.getFloat(7);
+            pressure = jsonArray.getFloat(8);
+            sweet = jsonArray.getFloat(9);
+        }
+
+        @Override
+        public String toString() {
+            return new JsonArrayStringBuilder()
+                    .append(id)
+                    .append(method)
+                    .append(name)
+                    .append(department)
+                    .append(jobTitle)
+                    .append(recommend)
+                    .append(reward)
+                    .append(articulate)
+                    .append(pressure)
+                    .append(sweet)
+                    .append(averageScore)
+                    .append(highestQualification)
+                    .append(note)
+                    .append(nickName)
+                    .append(rollCallMethod)
+                    .toString();
+
+        }
+    }
 
     @Override
     public void start() {
@@ -57,8 +118,11 @@ public class UrSchool implements EndpointModule {
                     out.write(buff, 0, len);
                 reader.close();
 
+                urSchoolData = new ArrayList<>();
                 urSchoolDataJson = out.toString("UTF-8");
-                urSchoolData = new JsonArray(urSchoolDataJson);
+                for (Object i : new JsonArray(urSchoolDataJson)) {
+                    urSchoolData.add(new ProfessorSummary((JsonArray) i));
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -335,22 +399,24 @@ public class UrSchool implements EndpointModule {
         if (start - lastFileUpdateTime <= updateInterval) return true;
         lastFileUpdateTime = start;
         pool.submit(() -> {
-            int[] maxPage = new int[1];
-            StringBuilder result = new StringBuilder();
 
             // Get first page
             ProgressBar progressBar = new ProgressBar(TAG + "Update data ");
             Logger.addProgressBar(progressBar);
             progressBar.setProgress(0f);
-            String firstPage = fetchUrSchoolData(1, maxPage);
+            int[] maxPage = new int[1];
+            List<ProfessorSummary> firstPage = fetchUrSchoolData(1, maxPage);
             progressBar.setProgress((float) 1 / maxPage[0] * 100);
             if (firstPage == null)
                 return;
-            result.append(firstPage);
+            List<ProfessorSummary> result = new ArrayList<>(firstPage);
 
             // Get the rest of the page
-            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
-            Semaphore fetchPoolLock = new Semaphore(8);
+            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
+                    UPDATE_THREAD_COUNT,
+                    new ThreadFactory("UrSchool-", Thread.NORM_PRIORITY - 1)
+            );
+            Semaphore fetchPoolLock = new Semaphore(UPDATE_THREAD_COUNT, true);
             CountDownLatch fetchLeft = new CountDownLatch(maxPage[0] - 1);
             for (int i = 1; i < maxPage[0]; i++) {
                 try {
@@ -368,12 +434,10 @@ public class UrSchool implements EndpointModule {
 
                 int finalI = i + 1;
                 fetchPool.submit(() -> {
-                    String page = fetchUrSchoolData(finalI, null);
+                    List<ProfessorSummary> page = fetchUrSchoolData(finalI, null);
                     fetchPoolLock.release();
-                    if (pool.isShutdown()) return;
-                    synchronized (result) {
-                        result.append(page);
-                    }
+                    if (page != null)
+                        result.addAll(page);
                     fetchLeft.countDown();
                     progressBar.setProgress(((float) (maxPage[0] - fetchLeft.getCount() + 1) / maxPage[0]) * 100);
                 });
@@ -389,12 +453,10 @@ public class UrSchool implements EndpointModule {
 
             progressBar.setProgress(100f);
             Logger.removeProgressBar(progressBar);
-            if (result.length() > 0) result.setCharAt(0, '[');
-            else result.append('[');
-            result.append(']');
+
             String resultString = result.toString();
             urSchoolDataJson = resultString;
-            urSchoolData = new JsonArray(urSchoolDataJson);
+            urSchoolData = result;
             try {
                 File file = new File("./urschool.json");
                 FileWriter fileWriter = new FileWriter(file);
@@ -422,7 +484,7 @@ public class UrSchool implements EndpointModule {
         }
     }
 
-    private String fetchUrSchoolData(int page, int[] maxPage) {
+    private List<ProfessorSummary> fetchUrSchoolData(int page, int[] maxPage) {
         try {
             Connection pageFetch = HttpConnection.connect("https://urschool.org/ncku/list?page=" + page)
                     .header("Connection", "keep-alive")
@@ -468,7 +530,7 @@ public class UrSchool implements EndpointModule {
             String bodyStr = resultBody.substring(resultTableBodyStart, resultTableBodyEnd + 8);
             Node tbody = Parser.parseFragment(bodyStr, new Element("tbody"), "").get(0);
 
-            StringBuilder out = new StringBuilder();
+            List<ProfessorSummary> professorSummaries = new ArrayList<>();
             for (Element i : ((Element) tbody).getElementsByTag("tr")) {
                 String id = i.attr("onclick");
                 int idStart, idEnd;
@@ -488,33 +550,76 @@ public class UrSchool implements EndpointModule {
                 String mode = id.substring(modeStart + 1, modeEnd);
                 id = id.substring(idStart + 1, idEnd);
 
-                StringBuilder builder = new StringBuilder();
-                builder.append(',').append('"').append(id).append('"');
-                builder.append(',').append('"').append(mode).append('"');
 
                 // table data
-                Elements elements = i.getElementsByTag("td");
+                Elements elements = i.children();
+                if (elements.size() < 13) {
+                    logger.log("Professor summary parse error");
+                    return null;
+                }
+
+                ProfessorSummary professorSummary = new ProfessorSummary(id, mode);
                 for (int j = 0; j < elements.size(); j++) {
                     Element element = elements.get(j);
                     String text = element.text();
-                    // rating
-                    if (j > 2 && j < 8) {
-                        int end = text.lastIndexOf(' ');
-                        if (end != -1)
-                            text = text.substring(0, end);
-                        else
-                            text = "-1";
-                        builder.append(',').append(text);
+                    switch (j) {
+                        // info
+                        case 0:
+                            professorSummary.name = text;
+                            break;
+                        case 1:
+                            professorSummary.department = text;
+                            break;
+                        case 2:
+                            professorSummary.jobTitle = text;
+                            break;
+                        // rating
+                        case 3: {
+                            int end = text.lastIndexOf(' ');
+                            professorSummary.recommend = end == -1 ? -1 : Float.parseFloat(text.substring(0, end));
+                            break;
+                        }
+                        case 4: {
+                            int end = text.lastIndexOf(' ');
+                            professorSummary.reward = end == -1 ? -1 : Float.parseFloat(text.substring(0, end));
+                            break;
+                        }
+                        case 5: {
+                            int end = text.lastIndexOf(' ');
+                            professorSummary.articulate = end == -1 ? -1 : Float.parseFloat(text.substring(0, end));
+                            break;
+                        }
+                        case 6: {
+                            int end = text.lastIndexOf(' ');
+                            professorSummary.pressure = end == -1 ? -1 : Float.parseFloat(text.substring(0, end));
+                            break;
+                        }
+                        case 7: {
+                            int end = text.lastIndexOf(' ');
+                            professorSummary.sweet = end == -1 ? -1 : Float.parseFloat(text.substring(0, end));
+                            break;
+                        }
+                        // details
+                        case 8:
+                            professorSummary.averageScore = text;
+                            break;
+                        case 9:
+                            professorSummary.highestQualification = text;
+                            break;
+                        case 10:
+                            professorSummary.note = text;
+                            break;
+                        case 11:
+                            professorSummary.nickName = text;
+                            break;
+                        case 12:
+                            professorSummary.rollCallMethod = text;
+                            break;
                     }
-                    // info text
-                    else
-                        builder.append(',').append('"').append(text.replace("\\", "\\\\")).append('"');
                 }
-                builder.setCharAt(0, '[');
-                builder.append(']');
-                out.append(',').append(builder);
+                professorSummaries.add(professorSummary);
             }
-            return out.toString();
+            return professorSummaries;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -525,18 +630,17 @@ public class UrSchool implements EndpointModule {
 //        logger.log(Arrays.toString(instructors));
         pool.submit(() -> {
             for (String name : instructors) {
-                List<JsonArray> results = new ArrayList<>();
-                for (Object i : urSchoolData) {
-                    JsonArray array = (JsonArray) i;
-                    if (array.getString(2).equals(name))
-                        results.add(array);
+                List<ProfessorSummary> results = new ArrayList<>();
+                for (ProfessorSummary i : urSchoolData) {
+                    if (i.name.equals(name))
+                        results.add(i);
                 }
                 String id = null, mode = null;
                 // TODO: Determine if the same name
-                for (JsonArray array : results) {
-                    if (array.getFloat(5) != -1) {
-                        id = array.getString(0);
-                        mode = array.getString(1);
+                for (ProfessorSummary i : results) {
+                    if (i.recommend != -1) {
+                        id = i.id;
+                        mode = i.name;
                         break;
                     }
                 }

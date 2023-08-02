@@ -379,38 +379,36 @@
   opacity: 1;
   visibility: visible;
 }
-.courseSearch .instructorInfo > span {
-  display: block;
-}
 .courseSearch .instructorInfo > .rate {
   overflow: auto;
 }
 .courseSearch .instructorInfo > .rate > table {
   width: 100%;
 }
-.courseSearch .instructorInfo > .rate > table td {
+.courseSearch .instructorInfo > .rate > table > tr > td {
   text-align: center;
 }
-.courseSearch .instructorInfo > .rate > table td:after {
+.courseSearch .instructorInfo > .rate > table > tr > td:after {
   content: "★";
+}
+.courseSearch .instructorInfo > .rate .blue {
+  color: #33A2F4;
+}
+.courseSearch .instructorInfo > .rate .yellow {
+  color: #FFC71E;
+}
+.courseSearch .instructorInfo > .rate .red {
+  color: #FF311E;
 }
 .courseSearch .instructorInfo > .info > table {
   text-align: left;
+  border-spacing: 5px 0;
 }
-.courseSearch .instructorInfo .blue {
-  color: #33A2F4;
-}
-.courseSearch .instructorInfo .yellow {
-  color: #FFC71E;
-}
-.courseSearch .instructorInfo .red {
-  color: #FF311E;
-}
-.courseSearch .instructorDetailWindow > .title span {
-  margin-right: 0.5em;
-}
-.courseSearch .instructorDetailWindow > .title > .name {
+.courseSearch .instructorDetailWindow > .title {
   display: inline-block;
+}
+.courseSearch .instructorDetailWindow > .title > span {
+  margin-right: 0.5em;
 }
 .courseSearch .instructorDetailWindow > .tags > span {
   background: #5b5b5b;

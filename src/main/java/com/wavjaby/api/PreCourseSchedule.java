@@ -19,15 +19,17 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.getOriginUrl;
-import static com.wavjaby.lib.Lib.setAllowOrigin;
+import static com.wavjaby.lib.Lib.*;
 
 public class PreCourseSchedule implements EndpointModule {
     private static final String TAG = "[PreCourseSchedule]";
@@ -57,16 +59,19 @@ public class PreCourseSchedule implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
             ApiResponse apiResponse = new ApiResponse();
-            getPreCourseSchedule(cookieStore, apiResponse);
+            String method = req.getRequestMethod();
+            if (method.equalsIgnoreCase("GET"))
+                getPreCourseSchedule(cookieStore, apiResponse);
+            else if (method.equalsIgnoreCase("POST"))
+                postPreCourseSchedule(readRequestBody(req), cookieStore, apiResponse);
 
 
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -115,8 +120,9 @@ public class PreCourseSchedule implements EndpointModule {
         Elements eachCourse = tbody.get(0).getElementsByTag("tr");
         for (Element row : eachCourse) {
             Elements rowElements = row.children();
-            if (rowElements.size() < 8) {
-                continue;
+            if (rowElements.size() < 7) {
+                response.addError(TAG + "Table body parse error");
+                return;
             }
 
             JsonObject course = new JsonObject();
@@ -158,16 +164,64 @@ public class PreCourseSchedule implements EndpointModule {
 
             course.put("addTime", rowElements.get(5).text());
             course.put("remark", rowElements.get(6).text());
-            Element delBtn = rowElements.get(7).firstElementChild();
-            course.put("delete", delBtn == null ? null : delBtn.attr("data-info"));
-//            logger.log(row);
 
+            if (rowElements.size() == 8) {
+                Element delBtn = rowElements.get(7).firstElementChild();
+                course.put("delete", delBtn == null ? null : delBtn.attr("data-info"));
+            }
             courseScheduleData.add(course);
         }
 
         JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
         builder.append("schedule", courseScheduleData);
         response.setData(builder.toString());
+    }
+
+    private void postPreCourseSchedule(String postData, CookieStore cookieStore, ApiResponse response) {
+        Map<String, String> form = parseUrlEncodedForm(postData);
+        String action = form.get("action");
+        String info = form.get("info");
+        if (action == null || action.length() == 0) {
+            response.addError(TAG + "Form data require \"action\" key");
+            return;
+        }
+        boolean delete = action.equals("delete");
+        if (delete && (info == null || info.length() == 0)) {
+            response.addError(TAG + "Action delete require \"info\" key");
+            return;
+        } else if (!delete && !action.equals("reset")) {
+            response.addError(TAG + "Unknown action \"" + action + "\"");
+            return;
+        }
+
+        String postPayload;
+        try {
+            postPayload = info == null
+                    ? "action=" + action
+                    : "action=" + action + "&info=" + URLEncoder.encode(info, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            logger.log(e);
+            return;
+        }
+
+        Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos31315&m=" + action)
+                .header("Connection", "keep-alive")
+                .cookieStore(cookieStore)
+                .proxy(proxyManager.getProxy())
+                .ignoreContentType(true)
+                .method(Connection.Method.POST)
+                .requestBody(postPayload);
+
+        try {
+            JsonObject postResult = new JsonObject(conn.execute().body());
+            String msg = postResult.getString("msg");
+            if (postResult.getBoolean("success"))
+                response.setMessage(msg);
+            else
+                response.addError(msg);
+        } catch (IOException e) {
+            response.addError(TAG + "Network error");
+        }
     }
 
     @Override

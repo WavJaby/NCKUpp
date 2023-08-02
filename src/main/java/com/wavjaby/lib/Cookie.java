@@ -5,7 +5,6 @@ import com.sun.net.httpserver.Headers;
 import java.net.CookieStore;
 import java.net.HttpCookie;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,14 +19,10 @@ public class Cookie {
         return httpCookie;
     }
 
-    public static String getCookie(String name, String url, CookieStore cookieStore) {
-        try {
-            for (HttpCookie httpCookie : cookieStore.get(new URI(url)))
-                if (httpCookie.getName().equalsIgnoreCase(name))
-                    return httpCookie.getValue();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+    public static String getCookie(String name, URI uri, CookieStore cookieStore) {
+        for (HttpCookie httpCookie : cookieStore.get(uri))
+            if (httpCookie.getName().equals(name))
+                return httpCookie.getValue();
         return null;
     }
 
@@ -53,7 +48,7 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packAuthCookie(Headers headers, String orgCookie, String originUrl, CookieStore cookieStore) {
+    public static void packAuthCookie(Headers headers, String orgCookie, CookieStore cookieStore) {
         StringBuilder cookieValueBuilder = new StringBuilder();
         Map<String, String> portalNckuCookies = new HashMap<>();
         for (HttpCookie i : cookieStore.get(portalNckuOrgUri))
@@ -70,7 +65,7 @@ public class Cookie {
 
         String cookieValue = cookieValueBuilder.toString();
         if (!cookieValue.equals(orgCookie))
-            headers.add("Set-Cookie", "authData=" + cookieValue + "; Path=/api/login" + setCookieDomain(originUrl));
+            headers.add("Set-Cookie", "authData=" + cookieValue + "; Path=/api/login" + setCookieDomain());
     }
 
     public static String unpackCourseLoginStateCookie(String[] cookieIn, CookieStore cookieStore) {
@@ -97,7 +92,7 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packCourseLoginStateCookie(Headers headers, String orgCookie, String originUrl, CookieStore cookieStore) {
+    public static void packCourseLoginStateCookie(Headers headers, String orgCookie, CookieStore cookieStore) {
         Map<String, String> courseNckuCookies = new HashMap<>();
         for (HttpCookie i : cookieStore.get(courseNckuOrgUri))
             courseNckuCookies.put(i.getName(), i.getValue());
@@ -117,7 +112,7 @@ public class Cookie {
 
         String cookieValue = cookieValueBuilder.toString();
         if (!cookieValue.equals(orgCookie))
-            headers.add("Set-Cookie", "courseLoginData=" + cookieValue + "; Path=/" + setCookieDomain(originUrl));
+            headers.add("Set-Cookie", "courseLoginData=" + cookieValue + "; Path=/" + setCookieDomain());
     }
 
     public static String unpackStudentIdSysLoginStateCookie(String[] cookieIn, CookieStore cookieStore) {
@@ -138,7 +133,7 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packStudentIdSysLoginStateCookie(Headers headers, String orgCookie, String originUrl, CookieStore cookieStore) {
+    public static void packStudentIdSysLoginStateCookie(Headers headers, String orgCookie, CookieStore cookieStore) {
         String cookieValue = null;
         for (HttpCookie i : cookieStore.get(stuIdSysNckuOrgUri)) {
             String out = i.getName() + '|' + i.getValue();
@@ -146,7 +141,7 @@ public class Cookie {
                 cookieValue = out;
         }
         if (cookieValue != null && !cookieValue.equals(orgCookie))
-            headers.add("Set-Cookie", "stuSysLoginData=" + cookieValue + "; Path=/" + setCookieDomain(originUrl));
+            headers.add("Set-Cookie", "stuSysLoginData=" + cookieValue + "; Path=/" + setCookieDomain());
     }
 
     public static String[] splitCookie(Headers requestHeaders) {
@@ -159,9 +154,7 @@ public class Cookie {
         return unpackCourseLoginStateCookie(splitCookie(requestHeaders), cookieStore);
     }
 
-    public static String setCookieDomain(String originUrl) {
-        if (originUrl == null || originUrl.startsWith("http://localhost") || originUrl.startsWith("https://localhost"))
-            return "; SameSite=None; Secure; Domain=localhost";
+    public static String setCookieDomain() {
         return "; SameSite=None; Secure; Domain=" + cookieDomain;
     }
 

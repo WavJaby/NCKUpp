@@ -18,7 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
-import static com.wavjaby.Main.courseNckuOrg;
+import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
@@ -168,19 +168,18 @@ public class DeptWatchDog implements EndpointModule {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String originUrl = getOriginUrl(requestHeaders);
         String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
             ApiResponse apiResponse = new ApiResponse();
 
             String method = req.getRequestMethod();
-            String PHPSESSID = getCookie("PHPSESSID", courseNckuOrg, cookieStore);
+            String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
             if (PHPSESSID == null) {
                 apiResponse.addError(TAG + "Cookie \"PHPSESSID\" not found");
             } else {
                 if (method.equalsIgnoreCase("POST")) {
-                    Map<String, String> query = parseUrlEncodedForm(readResponse(req));
+                    Map<String, String> query = parseUrlEncodedForm(readRequestBody(req));
                     String studentID = query.get("studentID");
                     String courseSerial = query.get("courseSerial");
                     if (courseSerial != null) {
@@ -201,7 +200,7 @@ public class DeptWatchDog implements EndpointModule {
             }
 
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, originUrl, cookieStore);
+            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 

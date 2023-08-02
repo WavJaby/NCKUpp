@@ -67,7 +67,7 @@ public class Lib {
             response.addWarn(TAG + "Network error");
     }
 
-    public static String readResponse(HttpExchange req) {
+    public static String readRequestBody(HttpExchange req) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             InputStream in = req.getRequestBody();
@@ -136,7 +136,7 @@ public class Lib {
     }
 
     public static String getOriginUrl(Headers requestHeaders) {
-        return requestHeaders.getFirst("Origin");
+        return requestHeaders.getFirst("Host");
     }
 
     public static String parseUnicode(String input) {

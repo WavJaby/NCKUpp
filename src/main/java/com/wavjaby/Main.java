@@ -42,7 +42,7 @@ public class Main {
             "https://api.simon.chummydns.com",
             "https://wavjaby.github.io"
     };
-    public static final String cookieDomain = "simon.chummydns.com";
+    public static String cookieDomain;
     private final HttpServer server;
     private final Map<String, Module> modules = new LinkedHashMap<>();
     private boolean running = false;
@@ -53,6 +53,7 @@ public class Main {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
 
         PropertiesReader serverSettings = new PropertiesReader("./server.properties");
+        cookieDomain = serverSettings.getProperty("domain", "localhost");
 
         server = new HttpServer(serverSettings);
         if (!server.opened) return;

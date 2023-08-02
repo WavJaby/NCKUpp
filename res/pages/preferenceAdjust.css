@@ -3,7 +3,8 @@
   position: relative;
 }
 .preferenceAdjust > .adjustList > .title {
-  margin: 10px 0 0 0;
+  margin: 0;
+  padding-top: 10px;
 }
 .preferenceAdjust > .adjustList .item {
   background: #252b33;
@@ -17,6 +18,7 @@
   position: relative;
   touch-action: none;
   -ms-touch-action: none;
+  vertical-align: top;
 }
 .preferenceAdjust > .adjustList > .body.adjusting > .itemHolder > .item {
   position: absolute;
@@ -56,6 +58,12 @@
   -ms-transition: top 100ms, left 100ms;
   -moz-transition: top 100ms, left 100ms;
   -webkit-transition: top 100ms, left 100ms;
+}
+.preferenceAdjust > .saveOrderBtn {
+  visibility: hidden;
+}
+.preferenceAdjust > .saveOrderBtn.show {
+  visibility: visible;
 }
 
 /*# sourceMappingURL=preferenceAdjust.css.map */
