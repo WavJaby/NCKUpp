@@ -369,9 +369,7 @@ function MessageAlert() {
             messageBoxRoot.appendChild(messageBox);
         messageBox.style.marginTop = -messageBox.offsetHeight + 'px';
 
-        setTimeout(() => {
-            messageBox.classList.add('animation');
-        }, 20);
+        setTimeout(() => messageBox.classList.add('animation'));
     }
 
     function removeMessageBox(messageBox) {
