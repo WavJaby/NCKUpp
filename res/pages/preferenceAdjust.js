@@ -114,7 +114,7 @@ module.exports = function (loginState) {
         renderAdjustList(({
             "success": true,
             "data": {
-                "name": "通識",
+                "name": "通識(測試用)",
                 "type": "UwgCE1I9W1AMbFVhCT4AUQFiATgKYwQN",
                 "items": [{
                     "key": "Vg1TQgZpBw4CCVdhVWAOMAME",

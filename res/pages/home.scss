@@ -1,82 +1,126 @@
 @import '../variables';
 
-.home {
-    .title {
-        margin: 20px 0 0 0;
-    }
+.router > .home {
 
-    .splitLine {
-        border-bottom: white 2px solid;
-        margin-bottom: 10px;
-    }
+    > .siteInfo {
+        text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: -1;
 
-    > .newsPanel {
-        width: 70%;
-        margin: auto;
-        box-sizing: border-box;
+        > .title {
+            display: inline-block;
+            border-bottom: solid 2px;
+            margin-bottom: 20px;
 
-        @media only screen and ($small-screen) {
-            width: 100%;
-            padding: 10px;
+            > img {
+                height: 100px;
+                margin-right: 20px;
+            }
+
+            > span {
+                font-size: 60px;
+                line-height: 1em;
+            }
+
+            > .slideOut {
+                width: 0;
+                display: inline-block;
+                vertical-align: bottom;
+                overflow: hidden;
+                @include transition(width 400ms ease-out);
+
+                &.open {
+                    width: 4em;
+                }
+
+                > span {
+                    float: right;
+                }
+            }
         }
 
-        > .news {
-            background: #00000050;
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            overflow: hidden;
+        > .description {
+            font-size: 25px;
+            line-height: 2em;
 
-            > .department {
+            > img {
+                height: 1.6em;
+                vertical-align: text-bottom;
+                display: inline-block;
+            }
+        }
+    }
+
+    > .panels {
+        background: $background-color;
+        padding: 5px 15% 0 15%;
+
+        @media only screen and ($small-screen) {
+            padding: 5px 5px 0 5px;
+        }
+
+        .title {
+            margin: 0;
+        }
+
+        .splitLine {
+            border-bottom: white 2px solid;
+            margin-bottom: 10px;
+        }
+
+        > .newsPanel {
+            margin-bottom: 20px;
+
+            > .items > .news {
+                background: #00000050;
+                padding: 10px;
+                border-radius: 10px;
+                margin-bottom: 10px;
+                overflow: hidden;
+
+                > .department {
+                    background: #1a1d28;
+                    padding: 5px;
+                    border-radius: 10px;
+                    margin-bottom: 5px;
+                    display: inline-block;
+                }
+
+                > .content > span {
+                    display: block;
+                    margin-bottom: 5px;
+                }
+
+                > .content > a {
+                    text-decoration: underline;
+                }
+
+                > .date {
+                    float: right;
+                    color: gray;
+                }
+            }
+        }
+
+        > .bulletinPanel {
+            > .items > .bulletin {
                 background: #1a1d28;
                 padding: 5px;
                 border-radius: 10px;
                 margin-bottom: 5px;
-                display: inline-block;
-            }
-
-            > .content > span {
                 display: block;
-                margin-bottom: 5px;
-            }
-
-            > .content > a {
                 text-decoration: underline;
-            }
 
-            > .date {
-                float: right;
-                color: gray;
-            }
-        }
-    }
-
-    > .bulletinPanel {
-        width: 70%;
-        margin: auto;
-        box-sizing: border-box;
-
-        @media only screen and ($small-screen) {
-            width: 100%;
-            padding: 10px;
-        }
-
-        > .bulletin {
-            background: #1a1d28;
-            padding: 5px;
-            border-radius: 10px;
-            margin-bottom: 5px;
-            display: block;
-            text-decoration: underline;
-
-            &::after {
-                content: '';
-                background: $icon-new-tab no-repeat 0 0 / 1em;
-                width: 1em;
-                height: 1em;
-                display: inline-block;
-                vertical-align: middle;
-                margin-left: 5px;
+                &::after {
+                    content: '';
+                    background: $icon-new-tab no-repeat 0 0 / 1em;
+                    width: 1em;
+                    height: 1em;
+                    display: inline-block;
+                    vertical-align: middle;
+                    margin-left: 5px;
+                }
             }
         }
     }

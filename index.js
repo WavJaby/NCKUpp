@@ -154,7 +154,7 @@ const requestState = requestStateObject();
     const showLoginWindow = new Signal(false);
     const hashRouter = HashRouter('NCKU++', pageIdName[defaultPage], defaultPage,
         {
-            home: () => require('./res/pages/home')(),
+            home: () => require('./res/pages/home')(hashRouter),
             search: () => require('./res/pages/courseSearch')(userLoginData),
             schedule: () => require('./res/pages/courseSchedule')(userLoginData),
             grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
