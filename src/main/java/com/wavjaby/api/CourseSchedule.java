@@ -111,19 +111,20 @@ public class CourseSchedule implements EndpointModule {
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .proxy(proxyManager.getProxy());
-        Document root = null;
+        Document document = null;
         try {
-            root = conn.get();
+            document = conn.get();
         } catch (IOException ignore) {
         }
-        if (root == null) {
+        if (document == null) {
             response.addError(TAG + "Can not fetch schedule");
             return;
         }
+        Element body = document.body();
 
 
         // Get year, semester
-        Elements pagePath = root.getElementsByClass("breadcrumb");
+        Elements pagePath = body.getElementsByClass("breadcrumb");
         if (pagePath.size() == 0) {
             response.addWarn(TAG + "Year and Semester not found");
         } else {
@@ -152,7 +153,7 @@ public class CourseSchedule implements EndpointModule {
         }
 
         // Get student ID
-        Element userIdEle = root.getElementById("current_time");
+        Element userIdEle = body.getElementById("current_time");
         List<TextNode> textNodes;
         if (userIdEle == null ||
                 userIdEle.childNodeSize() != 3 ||
@@ -191,7 +192,7 @@ public class CourseSchedule implements EndpointModule {
 
         // get table
         JsonArray courseScheduleData = new JsonArray();
-        Elements tables = root.getElementsByTag("table");
+        Elements tables = document.getElementsByTag("table");
         if (tables.size() == 0) {
             response.addError(TAG + "Table not found");
             return;

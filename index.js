@@ -143,16 +143,18 @@ const requestState = requestStateObject();
         // search: 'Search',
         // schedule: 'Schedule',
         // grades: 'Grades',
+        home: '主頁',
         search: '課程查詢',
         schedule: '課表',
         grades: '成績查詢',
         preAdj: '志願排序',
     };
-    const defaultPage = 'search';
+    const defaultPage = 'home';
     const userLoginData = new Signal();
     const showLoginWindow = new Signal(false);
     const hashRouter = HashRouter('NCKU++', pageIdName[defaultPage], defaultPage,
         {
+            home: () => require('./res/pages/home')(),
             search: () => require('./res/pages/courseSearch')(userLoginData),
             schedule: () => require('./res/pages/courseSchedule')(userLoginData),
             grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
@@ -162,23 +164,25 @@ const requestState = requestStateObject();
             div('borderLine'),
             span('By WavJaby'),
             span('Email: WavJaby@gmail.com'),
-            a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null,
-                {target: '_blank'},
+            a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null, {target: '_blank'},
                 img('./res/assets/github_icon.svg', 'githubIcon noDrag'),
                 span('GitRepo'),
             ),
         )
     );
     const pageButtons = {};
-    for (const pageId of hashRouter.getPageIds()) {
-        pageButtons[pageId] = li(null, text(pageIdName[pageId]), {
-            onclick: () => hashRouter.openPage(pageId, pageIdName[pageId])
-        });
+    for (const pageId in pageIdName) {
+        if (pageId === 'home')
+            continue;
+        pageButtons[pageId] = li(null, a(pageIdName[pageId], '/', null, null, {pageId: pageId, onclick: pageButtonClick}));
     }
     hashRouter.onPageOpen = function (lastPageId, pageId) {
-        if (lastPageId)
-            pageButtons[lastPageId].classList.remove('opened');
-        pageButtons[pageId].classList.add('opened');
+        const lastPageButton = pageButtons[lastPageId];
+        if (lastPageId && lastPageButton)
+            lastPageButton.classList.remove('opened');
+        const nextPageButton = pageButtons[pageId];
+        if (nextPageButton)
+            nextPageButton.classList.add('opened');
     }
 
     // check login
@@ -208,7 +212,7 @@ const requestState = requestStateObject();
                 }
             ),
             ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => window.navMenu.toggle('open')})),
-            ul('homePage', li(null, text('NCKU++'))),
+            ul('homePage', li(null, a('NCKU++', './', null, pageButtonClick, {pageId: 'home'}))),
             ul(window.navMenu,
                 Object.values(pageButtons),
                 // NavSelectList('arrow', text('List'), [
@@ -229,6 +233,13 @@ const requestState = requestStateObject();
     };
 
     // functions
+    function pageButtonClick(e) {
+        e.preventDefault();
+        const pageId = this['pageId'];
+        hashRouter.openPage(pageId, pageIdName[pageId])
+        return false;
+    }
+
     function onLoginStateChange(response) {
         if (!response) {
             window.messageAlert.addError('Network error', 'Try again later', 3000);

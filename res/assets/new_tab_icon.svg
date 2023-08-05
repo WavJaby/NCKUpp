@@ -1,0 +1,6 @@
+<svg fill="#FFFFFF" width="32" height="32" viewBox="0 0 32 32" id="icon" xmlns="http://www.w3.org/2000/svg">
+    <path d="M28,17 H24 V24 H8 V8 H15 V4
+    H6 Q4 4,4 6 V26 Q4 28,6 28 H26 Q28 28,28 26 Z"/>
+    <polygon points="18 5 18 2 30 2 30 14 27 14
+    27 7.1213 18 16.1213 15.8786 14 24.8786 5"/>
+</svg>

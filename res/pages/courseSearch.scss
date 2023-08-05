@@ -256,9 +256,13 @@ $search-result-item-spacing: 10px;
                         display: inline-block;
                     }
 
-                    a:after {
+                    > a {
+                        text-decoration: underline;
+                    }
+
+                    a::after {
                         content: '';
-                        background: $icon-down-triangle no-repeat 0 0 / 1em;
+                        background: $icon-new-tab no-repeat 0 0 / 1em;
                         width: 1em;
                         height: 1em;
                         display: inline-block;

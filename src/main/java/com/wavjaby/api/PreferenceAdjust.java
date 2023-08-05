@@ -90,20 +90,21 @@ public class PreferenceAdjust implements EndpointModule {
     };
 
     private void preferenceAdjust(ApiResponse apiResponse, CookieStore cookieStore) {
-        Connection pageFetch = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21342")
+        Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21342")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy());
 
-        Document body;
+        Document document;
         try {
-            body = pageFetch.execute().parse();
+            document = conn.get();
         } catch (IOException e) {
             e.printStackTrace();
             apiResponse.addError(TAG + "Network error");
             return;
         }
+        Element body = document.body();
 
         // Get action key
         Element action = body.getElementById("cos21342_action");

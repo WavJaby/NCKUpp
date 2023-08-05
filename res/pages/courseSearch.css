@@ -218,9 +218,12 @@
   padding: 1px 3px;
   display: inline-block;
 }
-.courseSearch > .result > tbody > .courseDetail .info > .tags a:after {
+.courseSearch > .result > tbody > .courseDetail .info > .tags > a {
+  text-decoration: underline;
+}
+.courseSearch > .result > tbody > .courseDetail .info > .tags a::after {
   content: "";
-  background: url("/NCKUpp/res/assets/down_triangle_icon.svg") no-repeat 0 0/1em;
+  background: url("/NCKUpp/res/assets/new_tab_icon.svg") no-repeat 0 0/1em;
   width: 1em;
   height: 1em;
   display: inline-block;

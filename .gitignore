@@ -1,5 +1,6 @@
-/key/
 /.idea/discord.xml
+/.idea/httpRequests/*
+/key/
 /out/
 /lib/
 /res/quizlet/

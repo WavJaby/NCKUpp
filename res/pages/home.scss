@@ -1,0 +1,83 @@
+@import '../variables';
+
+.home {
+    .title {
+        margin: 20px 0 0 0;
+    }
+
+    .splitLine {
+        border-bottom: white 2px solid;
+        margin-bottom: 10px;
+    }
+
+    > .newsPanel {
+        width: 70%;
+        margin: auto;
+        box-sizing: border-box;
+
+        @media only screen and ($small-screen) {
+            width: 100%;
+            padding: 10px;
+        }
+
+        > .news {
+            background: #00000050;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            overflow: hidden;
+
+            > .department {
+                background: #1a1d28;
+                padding: 5px;
+                border-radius: 10px;
+                margin-bottom: 5px;
+                display: inline-block;
+            }
+
+            > .content > span {
+                display: block;
+                margin-bottom: 5px;
+            }
+
+            > .content > a {
+                text-decoration: underline;
+            }
+
+            > .date {
+                float: right;
+                color: gray;
+            }
+        }
+    }
+
+    > .bulletinPanel {
+        width: 70%;
+        margin: auto;
+        box-sizing: border-box;
+
+        @media only screen and ($small-screen) {
+            width: 100%;
+            padding: 10px;
+        }
+
+        > .bulletin {
+            background: #1a1d28;
+            padding: 5px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            display: block;
+            text-decoration: underline;
+
+            &::after {
+                content: '';
+                background: $icon-new-tab no-repeat 0 0 / 1em;
+                width: 1em;
+                height: 1em;
+                display: inline-block;
+                vertical-align: middle;
+                margin-left: 5px;
+            }
+        }
+    }
+}

@@ -335,11 +335,10 @@ public class StudentIdentificationSystem implements EndpointModule {
     private List<SemesterOverview> getSemestersOverview(CookieStore cookieStore) {
         Element tbody = null;
         try {
-            Connection.Response gradesHistoryListPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
+            Connection conn = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
                     .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .execute();
-            Elements tbodyElements = gradesHistoryListPage.parse().getElementsByTag("tbody");
+                    .cookieStore(cookieStore);
+            Elements tbodyElements = conn.get().getElementsByTag("tbody");
             if (tbodyElements.size() < 4)
                 return null;
             tbody = tbodyElements.get(3);
@@ -367,11 +366,10 @@ public class StudentIdentificationSystem implements EndpointModule {
     private void getCurrentSemesterGradeTable(CookieStore cookieStore, ApiResponse apiResponse) {
         Element tbody = null;
         try {
-            Connection.Response homePage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp")
+            Connection conn = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp")
                     .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .execute();
-            Elements tbodyElements = homePage.parse().getElementsByTag("tbody");
+                    .cookieStore(cookieStore);
+            Elements tbodyElements = conn.get().getElementsByTag("tbody");
             if (tbodyElements.size() < 4) {
                 apiResponse.addError(TAG + "Cant get IdSys homepage");
                 return;
@@ -404,11 +402,10 @@ public class StudentIdentificationSystem implements EndpointModule {
         // Get current semester table
         tbody = null;
         try {
-            Connection.Response homePage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/" + url)
+            Connection conn = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/" + url)
                     .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .execute();
-            Elements tbodyElements = homePage.parse().getElementsByTag("tbody");
+                    .cookieStore(cookieStore);
+            Elements tbodyElements = conn.get().getElementsByTag("tbody");
             if (tbodyElements.size() < 4) {
                 apiResponse.addError(TAG + "Cant get current semester page");
                 return;
@@ -466,14 +463,13 @@ public class StudentIdentificationSystem implements EndpointModule {
     private List<CourseGrade> getSemesterGradeTable(String semesterID, CookieStore cookieStore) {
         Element tbody = null;
         try {
-            Connection.Response gradesListPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
+            Connection gradesListPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody("submit1=" + semesterID)
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .execute();
-            Elements tbodyElements = gradesListPage.parse().getElementsByTag("tbody");
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            Elements tbodyElements = gradesListPage.post().body().getElementsByTag("tbody");
             if (tbodyElements.size() < 4)
                 return null;
             tbody = tbodyElements.get(3);

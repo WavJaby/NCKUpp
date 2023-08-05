@@ -37,6 +37,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,7 +54,7 @@ public class Search implements EndpointModule {
     private static final int COS_PRE_CHECK_COOKIE_LOCK = 2;
     private final ThreadPoolExecutor cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("CosPreT-"));
     private final Semaphore cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize(), true);
-    private final Map<String, Semaphore> cosPreCheckCookieLock = new HashMap<>();
+    private final Map<String, CookieLock> cosPreCheckCookieLock = new ConcurrentHashMap<>();
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
 
     private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
@@ -68,6 +69,16 @@ public class Search implements EndpointModule {
     private final UrSchool urSchool;
     private final RobotCode robotCode;
     private final ProxyManager proxyManager;
+
+    private static class CookieLock {
+        final Semaphore semaphore;
+        final ReentrantLock lock;
+
+        public CookieLock(Semaphore semaphore) {
+            this.semaphore = semaphore;
+            this.lock = new ReentrantLock(true);
+        }
+    }
 
     public Search(UrSchool urSchool, RobotCode robotCode, ProxyManager proxyManager) {
         this.urSchool = urSchool;
@@ -649,7 +660,7 @@ public class Search implements EndpointModule {
 
     private void search(SearchQuery searchQuery, ApiResponse response, CookieStore cookieStore) {
         try {
-            boolean success = true;
+            boolean success;
             // get all course
             if (searchQuery.getAll) {
                 ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
@@ -715,6 +726,7 @@ public class Search implements EndpointModule {
                         logger.warn("FetchPool shutdown timeout");
                     }
                     success = allSuccess.get();
+                    response.setData(courseDataList.toString());
                 }
                 progressBar.setProgress(100f);
                 Logger.removeProgressBar(progressBar);
@@ -1199,31 +1211,40 @@ public class Search implements EndpointModule {
     private void cosPreCheckCookie(String pageBody, CookieStore cookieStore) {
         // Get cookie lock
         String PHPSESSID = Cookie.getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
-        final Semaphore cookieLock;
-        synchronized (cosPreCheckCookieLock) {
-            // Remove free cookie lock
-            cosPreCheckCookieLock.entrySet().removeIf(i -> i.getValue().availablePermits() == COS_PRE_CHECK_COOKIE_LOCK);
-            // Get cookie lock
-            Semaphore cookieLock0 = cosPreCheckCookieLock.get(PHPSESSID);
-            if (cookieLock0 == null)
-                cosPreCheckCookieLock.put(PHPSESSID, cookieLock0 = new Semaphore(COS_PRE_CHECK_COOKIE_LOCK, true));
-            cookieLock = cookieLock0;
+
+        // Get cookie lock
+        CookieLock cookieLock = cosPreCheckCookieLock.get(PHPSESSID);
+        if (cookieLock != null)
+            cookieLock.lock.lock();
+        else {
+            cookieLock = new CookieLock(new Semaphore(COS_PRE_CHECK_COOKIE_LOCK, true));
+            cookieLock.lock.lock();
+            cosPreCheckCookieLock.put(PHPSESSID, cookieLock);
         }
+        final CookieLock finalCookieLock = cookieLock;
+
         // Wait cookie and pool available
         try {
 //            if (cookieLock.availablePermits() == 0)
 //                logger.log("CosPreCheckCookie waiting");
-            cookieLock.acquire();
+            finalCookieLock.semaphore.acquire();
+            finalCookieLock.lock.unlock();
             if (cosPreCheckPoolLock.availablePermits() == 0)
                 logger.log("CosPreCheck waiting");
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
-            logger.log(e);
+            logger.err(e);
         }
         // Submit cos pre check
         cosPreCheckPool.submit(() -> {
             cosPreCheck(courseNckuOrg, pageBody, cookieStore, null, proxyManager);
-            cookieLock.release();
+
+            finalCookieLock.semaphore.release();
+            finalCookieLock.lock.lock();
+            if (finalCookieLock.semaphore.availablePermits() == COS_PRE_CHECK_COOKIE_LOCK)
+                cosPreCheckCookieLock.remove(PHPSESSID);
+            finalCookieLock.lock.unlock();
+
             cosPreCheckPoolLock.release();
         });
     }

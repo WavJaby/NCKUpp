@@ -25,16 +25,15 @@ public class Lib {
 
     public static void cosPreCheck(String urlOrigin, String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
         String cosPreCheckKey = null;
-        int cosPreCheckStart = body.indexOf("m=cosprecheck");
-        if (cosPreCheckStart != -1) {
-            cosPreCheckStart = body.indexOf("&ref=", cosPreCheckStart + 13);
-            if (cosPreCheckStart != -1) {
-                cosPreCheckStart += 5;
-                int cosPreCheckEnd = body.indexOf('"', cosPreCheckStart);
-                if (cosPreCheckEnd != -1)
-                    cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
-            }
-        } else {
+        int cosPreCheckStart;
+        if ((cosPreCheckStart = body.indexOf("m=cosprecheck")) != -1 &&
+                (cosPreCheckStart = body.indexOf("&ref=", cosPreCheckStart + 13)) != -1) {
+            cosPreCheckStart += 5;
+            int cosPreCheckEnd = body.indexOf('"', cosPreCheckStart);
+            if (cosPreCheckEnd != -1)
+                cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
+        }
+        if (cosPreCheckKey == null) {
             if (response != null)
                 response.addWarn(TAG + "CosPreCheck key not found");
             return;
@@ -45,7 +44,7 @@ public class Lib {
         for (int i = 0; i < 3; i++) {
             long now = System.currentTimeMillis() / 1000;
             try {
-                String postData = cosPreCheckKey == null ? ("time=" + now) : ("time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8"));
+                String postData = "time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8");
                 HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
@@ -122,21 +121,16 @@ public class Lib {
         if (originUrl == null)
             return;
 
+        responseHeader.set("Access-Control-Allow-Credentials", "true");
         for (String i : accessControlAllowOrigin)
             if (originUrl.equals(i)) {
                 responseHeader.set("Access-Control-Allow-Origin", i);
-                responseHeader.set("Access-Control-Allow-Credentials", "true");
                 return;
             }
         if (originUrl.startsWith("http://localhost") || originUrl.startsWith("https://localhost"))
             responseHeader.set("Access-Control-Allow-Origin", originUrl);
         else
             responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);
-        responseHeader.set("Access-Control-Allow-Credentials", "true");
-    }
-
-    public static String getOriginUrl(Headers requestHeaders) {
-        return requestHeaders.getFirst("Host");
     }
 
     public static String parseUnicode(String input) {

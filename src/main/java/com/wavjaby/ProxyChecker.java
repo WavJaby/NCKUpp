@@ -20,7 +20,7 @@ import java.util.concurrent.*;
 
 public class ProxyChecker {
     ProxyChecker() {
-        Set<ProxyManager.ProxyData> proxyDataList = new HashSet<>();
+        Map<ProxyManager.ProxyData, Object> proxyDataList = new ConcurrentHashMap<>();
 
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
 
@@ -148,20 +148,20 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
             File proxyCheckListFile = new File("proxyCheck.txt");
             if (proxyCheckListFile.exists() && proxyCheckListFile.isFile()) {
                 String freeProxyStr = new String(Files.readAllBytes(proxyCheckListFile.toPath()));
-                Set<ProxyManager.ProxyData> newData = new HashSet<>();
+                Map<ProxyManager.ProxyData, Object> newData = new HashMap<>();
                 for (String s : freeProxyStr.split("\n?\n")) {
                     if (s.length() == 0) break;
                     try {
-                        newData.add(new ProxyManager.ProxyData(s, url));
+                        newData.put(new ProxyManager.ProxyData(s, url), new Object());
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
-                proxyDataList.addAll(newData);
+                proxyDataList.putAll(newData);
 
                 FileOutputStream out = new FileOutputStream(proxyCheckListFile);
                 StringBuilder builder = new StringBuilder();
-                for (ProxyManager.ProxyData data : newData)
+                for (ProxyManager.ProxyData data : newData.keySet())
                     builder.append(data.toUrl()).append('\n');
                 out.write(builder.toString().getBytes());
                 out.close();
@@ -184,20 +184,21 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
 
         long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
-        testProxy(proxyDataList, 60, 1000, 2, -1, true);
-        proxyDataList.removeIf(ProxyManager.ProxyInfo::isUnavailable);
+        testProxy(proxyDataList, 60, 700, 2, -1, true);
+        proxyDataList.keySet().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("\nDone");
         readLocalProxyList(proxyDataList);
         System.out.println(proxyDataList.size());
 
         System.out.println("Ping...");
-        testProxy(proxyDataList, 2, 1500, -1, 4, false);
-        proxyDataList.removeIf(ProxyManager.ProxyInfo::isUnavailable);
-        System.out.println("\nUsed: " + ((System.currentTimeMillis() - start) / 1000) + "s");
+        testProxy(proxyDataList, 2, 1200, -1, 4, false);
+        proxyDataList.keySet().removeIf(ProxyManager.ProxyInfo::isUnavailable);
+        System.out.println("\nAvailable: " + proxyDataList.size());
+        System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
         try {
             if (proxyDataList.size() > 0) {
                 FileWriter fileWriter = new FileWriter("proxy.txt");
-                ArrayList<ProxyManager.ProxyData> sorted = new ArrayList<>(proxyDataList);
+                ArrayList<ProxyManager.ProxyData> sorted = new ArrayList<>(proxyDataList.keySet());
                 sorted.sort(Comparator.comparingInt(ProxyManager.ProxyInfo::getPing));
                 for (ProxyManager.ProxyData proxyData : sorted) {
                     fileWriter.write(proxyData.toUrl() + '\n');
@@ -209,7 +210,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
         }
     }
 
-    private void testProxy(Set<ProxyManager.ProxyData> proxyDataList, int threadCount, int timeoutTime, int maxTry, int conformTry, boolean errorSameLine) {
+    private void testProxy(Map<ProxyManager.ProxyData, Object> proxyDataList, int threadCount, int timeoutTime, int maxTry, int conformTry, boolean errorSameLine) {
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount);
         Semaphore fetchPoolLock = new Semaphore(threadCount, true);
         ThreadPoolExecutor checkConnectionPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
@@ -217,7 +218,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
         final boolean conforming = conformTry != -1;
 
-        for (final ProxyManager.ProxyData proxyData : proxyDataList) {
+        for (final ProxyManager.ProxyData proxyData : proxyDataList.keySet()) {
             String ip = proxyData.ip;
             int port = proxyData.port;
             try {
@@ -374,29 +375,29 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
         });
     }
 
-    private void getTextTypeProxyList(String proxyUrl, String protocol, Set<ProxyManager.ProxyData> proxyDataList) {
-        Set<ProxyManager.ProxyData> newData = new HashSet<>();
+    private void getTextTypeProxyList(String proxyUrl, String protocol, Map<ProxyManager.ProxyData, Object> proxyDataList) {
+        Map<ProxyManager.ProxyData, Object> newData = new HashMap<>();
         try {
             String proxyGet = HttpConnection.connect(proxyUrl)
                     .ignoreContentType(true)
                     .execute().body();
             for (String s : proxyGet.split("\r?\n")) {
                 String[] data = s.split(":");
-                newData.add(new ProxyManager.ProxyData(data[0], Integer.parseInt(data[1]), protocol, proxyUrl));
+                newData.put(new ProxyManager.ProxyData(data[0], Integer.parseInt(data[1]), protocol, proxyUrl), new Object());
             }
         } catch (IOException e) {
             System.err.println("Error\t" + proxyUrl);
         }
-        proxyDataList.addAll(newData);
+        proxyDataList.putAll(newData);
         System.out.println(newData.size() + "\t" + proxyUrl);
     }
 
-    private void getFreeProxy(String proxyUrl, Set<ProxyManager.ProxyData> proxyDataList) {
-        Set<ProxyManager.ProxyData> newData = new HashSet<>();
+    private void getFreeProxy(String proxyUrl, Map<ProxyManager.ProxyData, Object> proxyDataList) {
+        Map<ProxyManager.ProxyData, Object> newData = new HashMap<>();
         try {
             Document freeProxyDoc = HttpConnection.connect(proxyUrl)
                     .ignoreContentType(true)
-                    .execute().parse();
+                    .get();
             Element tbody = freeProxyDoc.getElementsByTag("tbody").first();
             if (tbody == null) {
                 System.err.println("Error\t" + proxyUrl);
@@ -407,18 +408,18 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                 Elements tds = tr.children();
                 // Check support https
                 if (tds.get(6).text().equalsIgnoreCase("yes"))
-                    newData.add(new ProxyManager.ProxyData(tds.get(0).text(), Integer.parseInt(tds.get(1).text()), "https", proxyUrl));
+                    newData.put(new ProxyManager.ProxyData(tds.get(0).text(), Integer.parseInt(tds.get(1).text()), "https", proxyUrl), new Object());
             }
         } catch (IOException e) {
             System.err.println("Error\t" + proxyUrl);
         }
-        proxyDataList.addAll(newData);
+        proxyDataList.putAll(newData);
         System.out.println(newData.size() + "\t" + proxyUrl);
     }
 
-    private void getGeonodeProxyList(String protocol, int maxPage, Set<ProxyManager.ProxyData> proxyDataList) {
+    private void getGeonodeProxyList(String protocol, int maxPage, Map<ProxyManager.ProxyData, Object> proxyDataList) {
         String proxyUrlPrefix = "https://proxylist.geonode.com/api/proxy-list?protocols=" + protocol;
-        Set<ProxyManager.ProxyData> newData = new HashSet<>();
+        Map<ProxyManager.ProxyData, Object> newData = new HashMap<>();
         for (int page = 1; page <= maxPage; page++) {
             String proxyUrl = proxyUrlPrefix + "&sort_by=responseTime&sort_type=asc&limit=500&page=" + page;
             JsonObject data;
@@ -436,16 +437,16 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                 JsonObject each = (JsonObject) i;
                 String proxyProtocol = each.getArray("protocols").getString(0);
                 int proxyPort = Integer.parseInt(each.getString("port"));
-                newData.add(new ProxyManager.ProxyData(each.getString("ip"), proxyPort, proxyProtocol, proxyUrl));
+                newData.put(new ProxyManager.ProxyData(each.getString("ip"), proxyPort, proxyProtocol, proxyUrl), new Object());
             }
             if (page * 500 > data.getInt("total"))
                 break;
         }
         System.out.println(newData.size() + "\t" + proxyUrlPrefix);
-        proxyDataList.addAll(newData);
+        proxyDataList.putAll(newData);
     }
 
-    private void getCheckerProxy(Set<ProxyManager.ProxyData> proxyDataList) {
+    private void getCheckerProxy(Map<ProxyManager.ProxyData, Object> proxyDataList) {
         final String[] protocols = {"http", "https", "socks4", "socks5"};
         String proxyUrl = "https://checkerproxy.net/api/archive/" + LocalDate.now().format(DateTimeFormatter.ISO_DATE);
         JsonArray data;
@@ -460,7 +461,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
             return;
         }
 
-        Set<ProxyManager.ProxyData> newData = new HashSet<>();
+        Map<ProxyManager.ProxyData, Object> newData = new HashMap<>();
         for (Object i : data) {
             JsonObject proxy = (JsonObject) i;
             String addr = proxy.getString("addr");
@@ -472,22 +473,22 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
             if (typeInt == 0)
                 continue;
             String protocol = protocols[typeInt];
-            newData.add(new ProxyManager.ProxyData(ip, port, protocol, proxyUrl));
+            newData.put(new ProxyManager.ProxyData(ip, port, protocol, proxyUrl), new Object());
         }
         System.out.println(newData.size() + "\t" + proxyUrl);
-        proxyDataList.addAll(newData);
+        proxyDataList.putAll(newData);
     }
 
-    private void readLocalProxyList(Set<ProxyManager.ProxyData> proxyDataList) {
+    private void readLocalProxyList(Map<ProxyManager.ProxyData, Object> proxyDataList) {
         try {
             String proxy = new String(Files.readAllBytes(Paths.get("proxy.txt")));
-            Set<ProxyManager.ProxyData> newData = new HashSet<>();
+            Map<ProxyManager.ProxyData, Object> newData = new HashMap<>();
             for (String s : proxy.split("\r?\n")) {
                 if (s.length() == 0)
                     break;
-                newData.add(new ProxyManager.ProxyData(s, "local"));
+                newData.put(new ProxyManager.ProxyData(s, "local"), new Object());
             }
-            proxyDataList.addAll(newData);
+            proxyDataList.putAll(newData);
             System.out.println(newData.size() + "\tlocal");
         } catch (IOException e) {
             e.printStackTrace();

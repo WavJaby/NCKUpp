@@ -80,6 +80,7 @@ public class Main {
         Search search = new Search(urSchool, robotCode, proxyManager);
         registerModule(search, "/api/search");
         registerModule(new AllDept(search), "/api/alldept");
+        registerModule(new HomeInfo(proxyManager), "/api/homeInfo");
         registerModule(new Login(search, sqLite, proxyManager), "/api/login");
         registerModule(new CourseFunctionButton(robotCode), "/api/courseFuncBtn");
         registerModule(new NCKUHub(), "/api/nckuhub");

@@ -394,7 +394,7 @@ module.exports = function (loginState) {
             // Parse instructors
             if (data.i !== null)
                 courseData.instructors = data.i.map(i => {
-                    for (const j of urSchoolData) if (j[2] === i)
+                    for (const j of urSchoolData) if (j && j[2] === i)
                         return {
                             id: j[0],
                             mode: j[1],

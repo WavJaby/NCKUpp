@@ -16,15 +16,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static com.wavjaby.Main.*;
 import static com.wavjaby.lib.Cookie.*;
@@ -41,7 +39,7 @@ public class Login implements EndpointModule {
     private final ProxyManager proxyManager;
     private PreparedStatement loginDataAddPre, loginDataEditPre;
 
-    private final Map<String, CookieStore> loginUserCookie = new HashMap<>();
+    private final Map<String, CookieStore> loginUserCookie = new ConcurrentHashMap<>();
     private final ScheduledExecutorService keepLoginUpdater = Executors.newSingleThreadScheduledExecutor();
     private final ThreadPoolExecutor loginCosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
 

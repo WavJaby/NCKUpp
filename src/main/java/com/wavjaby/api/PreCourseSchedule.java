@@ -94,19 +94,19 @@ public class PreCourseSchedule implements EndpointModule {
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .proxy(proxyManager.getProxy());
-        Document root = null;
+        Document document = null;
         try {
-            root = conn.get();
+            document = conn.get();
         } catch (IOException ignore) {
         }
-        if (root == null) {
+        if (document == null) {
             response.addError(TAG + "Can not fetch schedule");
             return;
         }
 
         // get table
         JsonArray courseScheduleData = new JsonArray();
-        Elements tables = root.getElementsByTag("table");
+        Elements tables = document.body().getElementsByTag("table");
         if (tables.size() == 0) {
             response.addError(TAG + "Table not found");
             return;
