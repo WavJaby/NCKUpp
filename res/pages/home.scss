@@ -94,6 +94,16 @@
 
                 > .content > a {
                     text-decoration: underline;
+
+                    &::after {
+                        content: '';
+                        background: $icon-new-tab no-repeat 0 0 / 1em;
+                        width: 1em;
+                        height: 1em;
+                        display: inline-block;
+                        vertical-align: middle;
+                        margin-left: 5px;
+                    }
                 }
 
                 > .date {

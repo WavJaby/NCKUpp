@@ -2,8 +2,6 @@
 :root {
   --fade-time: 0.2s;
   --popupWindow-bg-color: rgba(0, 0, 0);
-  --comment-bg-color: gray;
-  --ratebox-bg-color: gray;
   --course-result-item-spacing: 10px;
   --course-info-title-font-size: 20px;
 }
@@ -278,8 +276,9 @@
 .courseSearch > .popupWindow > div {
   top: 100px;
   bottom: 100px;
-  left: 100px;
-  right: 100px;
+  left: 40px;
+  right: 40px;
+  max-width: 1200px;
   position: absolute;
   margin: auto;
 }
@@ -323,32 +322,46 @@
     -webkit-transform: rotate(90deg);
   }
 }
-.courseSearch .nckuhubDetailWindow > .rates {
+.courseSearch .nckuhubDetailWindow > .courseInfoPanel > span {
+  font-size: 25px;
+  margin-right: 10px;
+}
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .title {
+  margin-top: 10px;
+  display: block;
+}
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .rates {
   width: 100%;
+  padding: 10px 0;
   display: table;
   table-layout: fixed;
   text-align: center;
 }
-.courseSearch .nckuhubDetailWindow > .rates > div {
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .rates > div {
   display: table-cell;
 }
-.courseSearch .nckuhubDetailWindow > .rates > div > .rateBox {
-  background: var(--ratebox-bg-color);
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .rates > div > .rateBox {
+  background: #252b33;
   max-width: 7em;
   margin: auto;
   border-radius: 10px;
 }
-.courseSearch .nckuhubDetailWindow > .rates .rateBox > span {
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .rates > div > .rateBox > span {
   display: block;
 }
-.courseSearch .nckuhubDetailWindow > .comments > .commentBlock {
-  background: var(--comment-bg-color);
-  margin: 0 5px 5px 5px;
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .comments > .commentBlock {
+  background: #252b33;
+  margin: 10px 5px;
   border-radius: 10px;
   padding: 10px;
 }
-.courseSearch .nckuhubDetailWindow > .comments > .commentBlock > span {
-  display: block;
+.courseSearch .nckuhubDetailWindow > .nckuhubPanel > .comments > .commentBlock > span {
+  background-color: white;
+  color: #f35a5a;
+  padding: 2px 10px;
+  border-radius: 2em;
+  margin-bottom: 10px;
+  display: inline-block;
 }
 @media only screen and (max-width: 700px) {
   .courseSearch > .instructorInfoOffset > .instructorInfo {
@@ -391,7 +404,7 @@
 .courseSearch .instructorInfo > .rate > table > tr > td {
   text-align: center;
 }
-.courseSearch .instructorInfo > .rate > table > tr > td:after {
+.courseSearch .instructorInfo > .rate > table > tr > td::after {
   content: "★";
 }
 .courseSearch .instructorInfo > .rate .blue {
@@ -425,7 +438,7 @@
   margin-right: 0.5em;
 }
 .courseSearch .instructorDetailWindow > .comments > .item {
-  background: var(--comment-bg-color);
+  background: #252b33;
   margin-bottom: 5px;
   margin-top: 5px;
   border-radius: 10px;

@@ -350,9 +350,9 @@ public class Login implements EndpointModule {
             loginCosPreCheckPool.execute(() ->
                     cosPreCheck(courseNckuOrg, finalResult, cookieStore, response, proxyManager)
             );
-        } catch (Exception e) {
-            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+        } catch (IOException e) {
+            response.addError(TAG + "Network error");
+            logger.err(e);
         }
     }
 

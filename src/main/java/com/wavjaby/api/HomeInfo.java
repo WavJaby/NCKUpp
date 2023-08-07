@@ -179,7 +179,7 @@ public class HomeInfo implements EndpointModule {
             String url = linkElement.attr("href");
             if (!url.startsWith("http"))
                 url = courseNckuOrg + '/' + url;
-            String text = linkElement.text().trim().replace("&nbsp;", " ");
+            String text = linkElement.text().trim();
             switch (text) {
                 case "選課公告":
                 case "Announcement of Course Enrollment":

@@ -643,10 +643,10 @@ module.exports = function (loginState) {
                     }
                 }
 
-                // Open nckuhub detail window
+                // Open NCKU Hub detail window
                 function openNckuhubDetailWindow() {
                     if (!data.nckuhub) return;
-                    nckuhubDetailWindow.set(data.nckuhub, true);
+                    nckuhubDetailWindow.set(data, true);
                 }
 
                 // render result item
@@ -1095,33 +1095,40 @@ function getColor(number) {
 }
 
 function NckuhubDetailWindow() {
-    return PopupWindow(/**@param{NckuHub}nckuhub*/nckuhub => {
+    return PopupWindow(/**@param{CourseData}courseData*/courseData => {
+        const nckuhub = courseData.nckuhub;
         return div('nckuhubDetailWindow',
-            // rates
-            span(`Evaluation(${nckuhub.rate_count})`, 'title'),
-            nckuhub.rate_count === 0 ? div('rates') : div('rates',
-                div(null, div('rateBox',
-                    span('Reward'),
-                    span(nckuhub.got.toFixed(1)),
-                )),
-                div(null, div('rateBox',
-                    span('Sweetness'),
-                    span(nckuhub.sweet.toFixed(1)),
-                )),
-                div(null, div('rateBox',
-                    span('Cool'),
-                    span(nckuhub.cold.toFixed(1)),
-                )),
+            div('courseInfoPanel',
+                span(courseData.serialNumber),
+                span(courseData.courseName),
+                span(courseData.timeString),
             ),
-            // comment
-            span(`Comments(${nckuhub.comments.length})`, 'title'),
-            div('comments',
-                nckuhub.comments.map(comment => div('commentBlock',
-                    span(comment.semester, 'semester'),
-                    p(comment.comment, 'comment'),
-                )),
-            ),
-            // span(JSON.stringify(nckuhub, null, 2)),
+            div('nckuhubPanel',
+                // rates
+                span('課程評分 (' + nckuhub.rate_count + ')', 'title'),
+                nckuhub.rate_count === 0 ? div('rates') : div('rates',
+                    div(null, div('rateBox',
+                        span('Reward'),
+                        span(nckuhub.got.toFixed(1)),
+                    )),
+                    div(null, div('rateBox',
+                        span('Sweetness'),
+                        span(nckuhub.sweet.toFixed(1)),
+                    )),
+                    div(null, div('rateBox',
+                        span('Cool'),
+                        span(nckuhub.cold.toFixed(1)),
+                    )),
+                ),
+                // comment
+                span('課程心得 (' + nckuhub.comments.length + ')', 'title'),
+                div('comments',
+                    nckuhub.comments.map(comment => div('commentBlock',
+                        span(comment.semester, 'semester'),
+                        p(comment.comment, 'comment'),
+                    )),
+                ),
+            )
         );
     });
 }

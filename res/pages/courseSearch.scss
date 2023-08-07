@@ -1,13 +1,12 @@
 @import '../variables';
 
 $search-result-header-bg-color: #1D2329;
+$search-result-course-block-bg-color: #252b33;
 $search-result-item-spacing: 10px;
 
 :root {
     --fade-time: 0.2s;
     --popupWindow-bg-color: rgba(0, 0, 0);
-    --comment-bg-color: gray;
-    --ratebox-bg-color: gray;
     --course-result-item-spacing: 10px;
     --course-info-title-font-size: 20px;
 }
@@ -177,7 +176,7 @@ $search-result-item-spacing: 10px;
         > tbody {
             // Block background
             > tr {
-                background: #252b33;
+                background: $search-result-course-block-bg-color;
             }
 
             // Block spacing
@@ -330,8 +329,9 @@ $search-result-item-spacing: 10px;
     > .popupWindow > div {
         top: 100px;
         bottom: 100px;
-        left: 100px;
-        right: 100px;
+        left: 40px;
+        right: 40px;
+        max-width: 1200px;
         position: absolute;
         margin: auto;
     }
@@ -380,37 +380,62 @@ $search-result-item-spacing: 10px;
     }
 
     // Course detail window
-    .nckuhubDetailWindow > .rates {
-        width: 100%;
-        display: table;
-        table-layout: fixed;
-        text-align: center;
-    }
+    .nckuhubDetailWindow {
+        > .courseInfoPanel {
+            > span {
+                font-size: 25px;
+                margin-right: 10px;
+            }
+        }
 
-    .nckuhubDetailWindow > .rates > div {
-        display: table-cell;
-    }
+        > .nckuhubPanel {
 
-    .nckuhubDetailWindow > .rates > div > .rateBox {
-        background: var(--ratebox-bg-color);
-        max-width: 7em;
-        margin: auto;
-        border-radius: 10px;
-    }
+            > .title {
+                margin-top: 10px;
+                display: block;
+            }
 
-    .nckuhubDetailWindow > .rates .rateBox > span {
-        display: block;
-    }
+            > .rates {
+                width: 100%;
+                padding: 10px 0;
+                display: table;
+                table-layout: fixed;
+                text-align: center;
 
-    .nckuhubDetailWindow > .comments > .commentBlock {
-        background: var(--comment-bg-color);
-        margin: 0 5px 5px 5px;
-        border-radius: 10px;
-        padding: 10px;
-    }
+                > div {
+                    display: table-cell;
+                }
 
-    .nckuhubDetailWindow > .comments > .commentBlock > span {
-        display: block;
+                > div > .rateBox {
+                    background: $search-result-course-block-bg-color;
+                    max-width: 7em;
+                    margin: auto;
+                    border-radius: 10px;
+
+                    > span {
+                        display: block;
+                    }
+                }
+            }
+
+            > .comments {
+                > .commentBlock {
+                    background: $search-result-course-block-bg-color;
+                    margin: 10px 5px;
+                    border-radius: 10px;
+                    padding: 10px;
+
+                    > span {
+                        background-color: white;
+                        color: #f35a5a;
+                        padding: 2px 10px;
+                        border-radius: 2em;
+                        margin-bottom: 10px;
+                        display: inline-block;
+                    }
+                }
+            }
+        }
     }
 
     @media only screen and ($small-screen) {
@@ -456,7 +481,7 @@ $search-result-item-spacing: 10px;
             text-align: center;
         }
 
-        > table > tr > td:after {
+        > table > tr > td::after {
             content: '★';
         }
 
@@ -509,7 +534,7 @@ $search-result-item-spacing: 10px;
         }
 
         > .comments > .item {
-            background: var(--comment-bg-color);
+            background: $search-result-course-block-bg-color;
             margin-bottom: 5px;
             margin-top: 5px;
             border-radius: 10px;
