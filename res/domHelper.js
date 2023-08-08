@@ -197,10 +197,10 @@ function parseClassInput(className, element) {
 }
 
 window.urlHashData = (function () {
-    let data = window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {};
+    let data = window.location.hash.length !== 0 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
     return {
         update: function () {
-            data = window.location.hash.length !== 0 ? JSON.parse(decodeURIComponent(atob(window.location.hash.slice(1)))) : {};
+            data = window.location.hash.length !== 0 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
         },
         get: function (key) {
             return data[key];
@@ -210,8 +210,8 @@ window.urlHashData = (function () {
         },
         pushHistory: function () {
             const newUrl = new URL(window.location);
-            newUrl.hash = btoa(encodeURIComponent(JSON.stringify(data)));
-            console.log('Append history', JSON.stringify(data));
+            newUrl.hash = btoa(JSON.stringify(data).toUnicode());
+            // console.log('Append history', JSON.stringify(data));
             window.history.pushState({}, document.title, newUrl);
         },
         contains: function (key) {
@@ -219,6 +219,12 @@ window.urlHashData = (function () {
         }
     }
 })();
+
+String.prototype.toUnicode = function () {
+    return this.replace(/[^\x00-\xFF]/g, function(ch) {
+        return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
+    });
+};
 
 /**
  * @param {string} titlePrefix
