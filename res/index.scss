@@ -36,13 +36,13 @@ $navbar-bg-color: #161b22;
 
     > .hamburgerMenu {
         height: $navbar-height;
-        padding: 5px;
-        box-sizing: border-box;
         vertical-align: top;
         display: none;
 
-        > img {
+        > li > img {
             height: 100%;
+            padding: 5px;
+            box-sizing: border-box;
         }
     }
 
@@ -74,15 +74,19 @@ $navbar-bg-color: #161b22;
         @include transition(height 0.15s ease-in);
 
         // List title
-        > li {
+        > li.title {
             background: $navbar-bg-color;
             padding: 0 10px;
             display: block;
             position: relative;
+
+            &:hover {
+                background: $button-hover-color;
+            }
         }
 
         // List title with arrow
-        &.arrow > li::before {
+        &.arrow > li.titl::before {
             background: url('./assets/down_triangle_icon.svg') 0 0 / 1em;
             width: 1em;
             height: 1em;
@@ -92,15 +96,18 @@ $navbar-bg-color: #161b22;
         }
 
         // List items
-        > ul {
-            background: $navbar-bg-color;
-            min-width: 100%;
-            display: block;
+        > li.items {
             position: absolute;
             bottom: 0;
+            min-width: 100%;
 
-            > li {
-                padding: 0 10px;
+            > ul {
+                background: $navbar-bg-color;
+                display: block;
+
+                > li {
+                    padding: 0 10px;
+                }
             }
         }
     }
@@ -131,22 +138,6 @@ $navbar-bg-color: #161b22;
     // Login button
     > .loginBtn {
         float: right;
-
-        > li {
-            height: $navbar-height;
-            box-sizing: border-box;
-
-            > img {
-                height: 80%;
-                vertical-align: middle;
-            }
-
-            > span {
-                vertical-align: top;
-                padding-left: 5px;
-                display: inline-block;
-            }
-        }
     }
 
     // Mobile css
