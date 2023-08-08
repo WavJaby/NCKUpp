@@ -1,72 +1,81 @@
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-    <!-- IE version check -->
-    <!--[if !IE]> -->
-    <script>window.ieVersion = null;</script>
-    <!-- <![endif]-->
-    <!--[if lte IE 9]>
-    <script>window.ieVersion = 8;</script>
-    <![endif]-->
-    <!--[if IE 9]>
-    <script>window.ieVersion = 9;</script>
-    <![endif]-->
-    <script>
-        var SystemStartTime = (window.ieVersion !== null && window.ieVersion < 10 ? Date.now() : performance.now());
-        if (window.ieVersion === null)
-            try {
-                // noinspection JSUnusedLocalSymbols
-                eval('const __ignore=1;');
-            } catch (e) {
-                window.ieVersion = 10;
-            }
-        if (window.ieVersion === null && (!!window.ActiveXObject || "ActiveXObject" in window))
-            window.ieVersion = 11;
-    </script>
+	<!-- IE version check -->
+	<!--[if !IE]> -->
+	<script>window.ieVersion = null;</script>
+	<!-- <![endif]-->
+	<!--[if lte IE 9]>
+	<script>window.ieVersion = 8;</script>
+	<![endif]-->
+	<!--[if IE 9]>
+	<script>window.ieVersion = 9;</script>
+	<![endif]-->
+	<script>
+		var SystemStartTime = (window.ieVersion !== null && window.ieVersion < 10 ? Date.now() : performance.now());
+		if (window.ieVersion === null)
+			try {
+				// noinspection JSUnusedLocalSymbols
+				eval('const __ignore=1;');
+			} catch (e) {
+				window.ieVersion = 10;
+			}
+		if (window.ieVersion === null && (!!window.ActiveXObject || "ActiveXObject" in window))
+			window.ieVersion = 11;
+	</script>
 
-    <!-- Main head -->
-    <link href="res/assets/icon.svg" rel="icon">
-    <title>NCKU++ 國立成功大學課程資訊及選課系統</title>
-    <meta property="og:title" content="NCKU++ | 成功大學課程資訊及選課系統"/>
-    <meta property="og:site_name" content="NCKU++ 更好的成大選課系統"/>
-    <meta itemprop="name" content="NCKU++ | 成功大學課程資訊及選課系統">
-    <meta name="twitter:title" content="NCKU++ | 成功大學課程資訊及選課系統">
-    <meta name="twitter:site" content="NCKU++ 更好的成大選課系統">
+	<!-- Main head -->
+	<link href="res/assets/icon.svg" rel="icon">
+	<title>NCKU++ 國立成功大學課程資訊及選課系統</title>
+	<meta property="og:title" content="NCKU++ | 成功大學課程資訊及選課系統"/>
+	<meta property="og:site_name" content="NCKU++ 更好的成大選課系統"/>
+	<meta itemprop="name" content="NCKU++ | 成功大學課程資訊及選課系統">
+	<meta name="twitter:title" content="NCKU++ | 成功大學課程資訊及選課系統">
+	<meta name="twitter:site" content="NCKU++ 更好的成大選課系統">
 
-    <meta property="og:locale" content="zh-TW">
-    <meta property="og:type" content="website"/>
-    <meta property="og:url" content="https://wavjaby.github.io/NCKUpp"/>
-    <meta name="author" content="WavJaby">
-    <meta name="google-site-verification" content="hu_LHlM6wd1Oy4KvF1dtN_qRmFmUgMQ3jARg-MdiwGk" />
+	<meta property="og:locale" content="zh-TW">
+	<meta property="og:type" content="website"/>
+	<meta property="og:url" content="https://wavjaby.github.io/NCKUpp"/>
+	<link rel="canonical" href="https://wavjaby.github.io/NCKUpp"/>
+	<meta name="author" content="WavJaby">
+	<meta name="google-site-verification" content="hu_LHlM6wd1Oy4KvF1dtN_qRmFmUgMQ3jARg-MdiwGk"/>
 
-    <meta property="og:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
-    <meta itemprop="image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg">
-    <meta name="twitter:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg">
+	<meta property="og:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
+	<meta itemprop="image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg">
+	<meta name="twitter:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg">
 
-    <meta name="description" content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
-    <meta itemprop="description" content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~">
-    <meta property="og:description" content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
-    <meta itemprop="description" content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~">
+	<meta name="description"
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
+	<meta itemprop="description"
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~">
+	<meta property="og:description"
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
+	<meta itemprop="description"
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~">
 
-    <meta name="theme-color" content="#A31F34">
-    <!--Make the og:image larger -->
-    <meta name="twitter:card" content="summary_large_image">
+	<meta name="theme-color" content="#A31F34">
+	<!--Make the og:image larger -->
+	<meta name="twitter:card" content="summary_large_image">
 
-    <script src="./res/require.js"></script>
-    <script async src="./index.js"></script>
-    <link href="./res/static.css" rel="stylesheet">
-    <link href="./res/index.css" rel="stylesheet">
-    <link href="./res/selectMenu.css" rel="stylesheet">
-    <link href="./res/loading.css" rel="stylesheet">
-    <link href="./res/messageBox.css" rel="stylesheet">
-    <link href="./res/stateBox.css" rel="stylesheet">
+	<script src="./res/require.js"></script>
+	<script async src="./index.js"></script>
+	<link href="./res/static.css" rel="stylesheet">
+	<link href="./res/index.css" rel="stylesheet">
+	<link href="./res/selectMenu.css" rel="stylesheet">
+	<link href="./res/loading.css" rel="stylesheet">
+	<link href="./res/messageBox.css" rel="stylesheet">
+	<link href="./res/stateBox.css" rel="stylesheet">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet">
 </head>
 <body>
 <noscript>請啟用JavaScript來使用NCKU++.<br>Please enable JavaScript to use NCKU++</noscript>
-<script> if (ieVersion !== null && ieVersion !== undefined) require('./index'); </script>
+<script> if (!ieVersion) require('./index'); </script>
 </body>
 </html>

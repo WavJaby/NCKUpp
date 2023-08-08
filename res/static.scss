@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
 @import 'variables';
 
 html, body {
@@ -119,12 +118,12 @@ a, a:visited, a:hover, a:active {
 
 
 .noSelect {
-    -webkit-touch-callout: none; //  iOS Safari 
-    -webkit-user-select: none; //  Safari 
-    -khtml-user-select: none; //  Konqueror HTML 
-    -moz-user-select: none; //  Old versions of Firefox 
-    -ms-user-select: none; //  Internet Explorer/Edge 
-    user-select: none; //  Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox 
+    -webkit-touch-callout: none; //  iOS Safari
+    -webkit-user-select: none; //  Safari
+    -khtml-user-select: none; //  Konqueror HTML
+    -moz-user-select: none; //  Old versions of Firefox
+    -ms-user-select: none; //  Internet Explorer/Edge
+    user-select: none; //  Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox
 }
 
 .noDrag {

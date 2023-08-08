@@ -211,7 +211,7 @@ const requestState = requestStateObject();
                     return false; // Not open select list
                 }
             ),
-            ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {onclick: () => window.navMenu.toggle('open')})),
+            ul('hamburgerMenu', img('./res/assets/burger_menu_icon.svg', 'noDrag', {alt: 'mobile menu button', onclick: () => window.navMenu.toggle('open')})),
             ul('homePage', li(null, a('NCKU++', './', null, pageButtonClick, {pageId: 'home'}))),
             ul(window.navMenu,
                 Object.values(pageButtons),
