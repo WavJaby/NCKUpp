@@ -197,10 +197,11 @@ function parseClassInput(className, element) {
 }
 
 window.urlHashData = (function () {
-	let data = window.location.hash.length !== 0 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
+	const havePushState = typeof window.history.pushState === 'function';
+	let data = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
 	return {
 		update: function () {
-			data = window.location.hash.length !== 0 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
+			data = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
 		},
 		get: function (key) {
 			return data[key];
@@ -212,7 +213,10 @@ window.urlHashData = (function () {
 			const newUrl = new URL(window.location);
 			newUrl.hash = btoa(JSON.stringify(data).toUnicode());
 			// console.log('Append history', JSON.stringify(data));
-			window.history.pushState({}, document.title, newUrl);
+			if (havePushState)
+				window.history.pushState({}, document.title, newUrl);
+			else
+				window.location.hash = newUrl.hash;
 		},
 		contains: function (key) {
 			return data[key] !== undefined;
@@ -228,12 +232,12 @@ String.prototype.toUnicode = function () {
 
 /**
  * @param {string} titlePrefix
- * @param {string} defaultSuffix
+ * @param {Object.<string, string>} pageSuffix
  * @param {string} defaultPageId
  * @param {Object<string, function()|HTMLElement>} routs
  * @param {HTMLElement} [footer]
  * */
-function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
+function HashRouter(titlePrefix, pageSuffix, defaultPageId,
 					routs, footer) {
 	const routerRoot = document.createElement('div');
 	routerRoot.className = 'router';
@@ -243,10 +247,11 @@ function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
 
 	window.addEventListener('popstate', function () {
 		window.urlHashData.update();
-		routerRoot.openPage(window.urlHashData.get('page'), window.urlHashData.get('titleSuffix'), true);
+		const pageId = window.urlHashData.get('page');
+		routerRoot.openPage(pageId, true);
 	});
 
-	routerRoot.openPage = function (pageId, titleSuffix, isHistory) {
+	routerRoot.openPage = function (pageId, isHistory) {
 		// If same page
 		if (lastPageId === pageId) {
 			// If from history
@@ -257,8 +262,7 @@ function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
 			}
 			return;
 		}
-		document.title = titlePrefix + ' ' + titleSuffix;
-		window.urlHashData.set('titleSuffix', titleSuffix);
+		document.title = titlePrefix + ' ' + pageSuffix[pageId];
 		window.urlHashData.set('page', pageId);
 		if (!isHistory)
 			window.urlHashData.pushHistory();
@@ -312,10 +316,11 @@ function HashRouter(titlePrefix, defaultSuffix, defaultPageId,
 
 	// open default page
 	routerRoot.init = function () {
-		if (!window.urlHashData.contains('page'))
-			routerRoot.openPage(defaultPageId, defaultSuffix);
+		const pageId = window.urlHashData.get('page');
+		if (!pageId || !pageSuffix[pageId])
+			routerRoot.openPage(defaultPageId);
 		else
-			routerRoot.openPage(window.urlHashData.get('page') || defaultPageId, window.urlHashData.get('titleSuffix'));
+			routerRoot.openPage(pageId);
 	}
 
 	/**
@@ -771,7 +776,7 @@ module.exports = {
 		return element;
 	},
 
-	debug() {
+	doomHelperDebug() {
 		debug = console;
 	}
 };

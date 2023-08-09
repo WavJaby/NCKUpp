@@ -110,44 +110,6 @@ module.exports = function (loginState) {
 		clearTimeout(saveItemOrderTimeout);
 	};
 
-	setTimeout(() =>
-		renderAdjustList(({
-			"success": true,
-			"data": {
-				"name": "通識(測試用)",
-				"type": "UwgCE1I9W1AMbFVhCT4AUQFiATgKYwQN",
-				"items": [{
-					"key": "Vg1TQgZpBw4CCVdhVWAOMAME",
-					"sn": "A9-220",
-					"name": "日常疼痛控制",
-					"require": true,
-					"credits": 2.0,
-					"time": null
-				}, {
-					"key": "VwwAEQZpAQhQWwI2ATYNMgAH",
-					"sn": "A9-001",
-					"name": "流行樂賞析與實務",
-					"require": true,
-					"credits": 2.0,
-					"time": "2,5,6"
-				}, {
-					"key": "BF8CE1c4AwoAC1VgVWIPM1pd",
-					"sn": "A9-102",
-					"name": "生涯規劃-精英論壇",
-					"require": true,
-					"credits": 2.0,
-					"time": "3,5,6"
-				}, {
-					"key": "Vg0FFFwzUVgFDlJlBTIIN1FW",
-					"sn": "A9-301",
-					"name": "認識地震",
-					"require": true,
-					"credits": 2.0,
-					"time": "3,5,6"
-				}]
-			}
-		}).data), 300);
-
 	return div('preferenceAdjust',
 		{onRender, onPageOpen, onPageClose},
 		adjustList.element,

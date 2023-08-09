@@ -186,7 +186,6 @@ const {
 	a,
 	linkStylesheet, checkboxWithName
 } = require('../domHelper');
-const SelectMenu = require('../selectMenu');
 /*ExcludeEnd*/
 
 // [default, success, info, primary, warning, danger]
@@ -662,10 +661,9 @@ module.exports = function (loginState) {
 						td(data.courseGrade, 'grade'),
 						td(data.classInfo, 'class'),
 						td(data.timeString, 'courseTime'),
-						td(data.courseName, 'courseName', {
-							onclick: () =>
-								window.open(createSyllabusUrl(data.semester, data.systemNumber), '_blank')
-						}),
+						td(null, 'courseName',
+							a(data.courseName, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'})
+						),
 						td(data.required ? '必修' : '選修', 'required'),
 						td(data.credits, 'credits'),
 						td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),

@@ -3,13 +3,8 @@
 $search-result-header-bg-color: #1D2329;
 $search-result-course-block-bg-color: #252b33;
 $search-result-item-spacing: 10px;
-
-:root {
-    --fade-time: 0.2s;
-    --popupWindow-bg-color: rgba(0, 0, 0);
-    --course-result-item-spacing: 10px;
-    --course-info-title-font-size: 20px;
-}
+$popupWindow-bg-color: #15181D;
+$instructor-info-fade-time: 200ms;
 
 .courseSearch {
     // Search form
@@ -190,7 +185,8 @@ $search-result-item-spacing: 10px;
                 font-size: 20px;
 
                 > td {
-                    padding: 5px 0;
+                    padding: 5px 2px;
+                    text-align: center;
                 }
 
                 > td:last-child {
@@ -204,7 +200,9 @@ $search-result-item-spacing: 10px;
 
                 // Result course name
                 > .courseName {
-                    cursor: pointer;
+                    > a {
+                        display: block;
+                    }
 
                     &:hover {
                         background: #21262d;
@@ -338,7 +336,7 @@ $search-result-item-spacing: 10px;
 
     // Popup window
     > .popupWindow > div {
-        background: var(--popupWindow-bg-color);
+        background: $popupWindow-bg-color;
         overflow: auto;
         border-radius: 10px;
         padding: 5px;
@@ -367,8 +365,10 @@ $search-result-item-spacing: 10px;
         }
 
         > .icon {
-            content: $icon-close;
+            content: '';
+            background: $icon-close no-repeat 0 0 / 24px;
             width: 24px;
+            height: 24px;
         }
     }
 
@@ -462,7 +462,7 @@ $search-result-item-spacing: 10px;
         margin: auto;
         opacity: 0;
         visibility: hidden;
-        @include transition((visibility var(--fade-time), opacity var(--fade-time) ease-in));
+        @include transition((visibility var($instructor-info-fade-time), opacity var($instructor-info-fade-time) ease-in));
     }
 
     > .instructorInfoOffset.show {

@@ -1,17 +1,13 @@
 'use strict';
 
-/*ExcludeStart*/
-const {div, input, ul, li, text, span, Signal, img} = require('./domHelper');
-const module = {};
-/*ExcludeEnd*/
-
+// const {div, input, ul, li, text, span, Signal, img} = require('.//domHelper');
 
 /**
+ * @constructor
  * @typedef {[string, string]|[string, Array]} Option
  * [optionID, displayName] or [groupName, options]
  */
-
-module.exports = function (id, placeholder) {
+function SelectMenu(id, placeholder) {
 	const selectItemName = span(null, 'empty selectItemName', {placeholder: placeholder});
 	const clearButton = img('./res/assets/close_icon.svg', 'clearBtn');
 	clearButton.style.display = 'none';
@@ -199,4 +195,4 @@ module.exports = function (id, placeholder) {
 	};
 
 	return selectMenu;
-};
+}

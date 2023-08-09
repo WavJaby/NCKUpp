@@ -30,52 +30,102 @@
 
 	<!-- Main head -->
 	<link href="res/assets/icon.svg" rel="icon">
-	<title>NCKU++ 國立成功大學課程資訊及選課系統</title>
-	<meta property="og:title" content="NCKU++ | 成功大學課程資訊及選課系統"/>
-	<meta property="og:site_name" content="NCKU++ 更好的成大選課系統"/>
-	<meta itemprop="name" content="NCKU++ | 成功大學課程資訊及選課系統">
-	<meta name="twitter:title" content="NCKU++ | 成功大學課程資訊及選課系統">
-	<meta name="twitter:site" content="NCKU++ 更好的成大選課系統">
+	<title>NCKU++ 新成功大學課程資訊及選課系統</title>
+	<meta itemprop="name" content="NCKU++ 新成功大學課程資訊及選課系統">
+	<meta property="og:title" content="NCKU++ 新成功大學課程資訊及選課系統"/>
+	<meta name="twitter:title" content="NCKU++ 新成功大學課程資訊及選課系統">
+	<meta property="og:site_name" content="NCKU++ 更好的成功大學選課系統"/>
+	<meta name="twitter:site" content="NCKU++ 更好的成功大學選課系統"/>
 
-	<meta property="og:locale" content="zh-TW">
+	<meta property="og:locale" content="zh-TW"/>
 	<meta property="og:type" content="website"/>
 	<meta property="og:url" content="https://wavjaby.github.io/NCKUpp"/>
 	<link rel="canonical" href="https://wavjaby.github.io/NCKUpp"/>
-	<meta name="author" content="WavJaby">
+	<meta name="author" content="WavJaby"/>
 	<meta name="google-site-verification" content="hu_LHlM6wd1Oy4KvF1dtN_qRmFmUgMQ3jARg-MdiwGk"/>
 
 	<meta property="og:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
-	<meta itemprop="image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg">
-	<meta name="twitter:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg">
+	<meta itemprop="image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
+	<meta name="twitter:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
 
 	<meta name="description"
 		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
 	<meta itemprop="description"
-		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~">
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
 	<meta property="og:description"
 		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
 	<meta itemprop="description"
-		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~">
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢，讓選課更輕鬆~"/>
 
-	<meta name="theme-color" content="#A31F34">
+	<meta name="theme-color" content="#A31F34"/>
 	<!--Make the og:image larger -->
-	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:card" content="summary_large_image"/>
 
 	<script src="./res/require.js"></script>
+	<script src="./res/selectMenu.js"></script>
 	<script async src="./index.js"></script>
-	<link href="./res/static.css" rel="stylesheet">
-	<link href="./res/index.css" rel="stylesheet">
-	<link href="./res/selectMenu.css" rel="stylesheet">
-	<link href="./res/loading.css" rel="stylesheet">
-	<link href="./res/messageBox.css" rel="stylesheet">
-	<link href="./res/stateBox.css" rel="stylesheet">
 
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet">
+	<link href="./res/loading.css" rel="stylesheet"/>
+	<link href="./res/static.css" rel="stylesheet"/>
+	<link href="./res/index.css" rel="stylesheet"/>
+	<link href="./res/selectMenu.css" rel="stylesheet"/>
+	<link href="./res/messageBox.css" rel="stylesheet"/>
+	<link href="./res/stateBox.css" rel="stylesheet"/>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com"/>
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+
+
+	<!--Script for IE-->
+	<script>
+		if (ieVersion) {
+
+			var requireToLoad = 3;
+
+			loadScript('https://unpkg.com/@babel/polyfill@7/dist/polyfill.min.js', onScriptLoad);
+			loadScript('https://unpkg.com/babel-standalone@6/babel.min.js', function () {
+				loadScript('https://unpkg.com/babel-preset-env-standalone@1.6.2/babel-preset-env.min.js', onScriptLoad);
+			});
+			loadScript('https://inexorabletash.github.io/polyfill/url.js', onScriptLoad);
+
+			if (ieVersion < 10) {
+				requireToLoad += 2;
+				loadScript('https://inexorabletash.github.io/polyfill/html.js', onScriptLoad);
+				loadScript('https://inexorabletash.github.io/polyfill/dom.js', onScriptLoad);
+			}
+
+			function onScriptLoad() {
+				if (--requireToLoad > 0)
+					return;
+
+				window.SelectMenu =
+					eval('(function(){' + parseScript(fetchSync('./res/selectMenu.js').body, './res/selectMenu.js', 1) + 'return SelectMenu;})')();
+
+				// Load index.js
+				Object.assign(window,
+					eval('(function(){' + parseScript(fetchSync('./index.js').body, './index.js', 1) + 'return _require;})')()
+				);
+
+				if (ieVersion === 9)
+					window.onload();
+			}
+
+			function loadScript(src, onload) {
+				var script = document.createElement('script');
+				script.src = src;
+				script.onload = onload;
+				document.head.appendChild(script);
+			}
+		}
+	</script>
 </head>
 <body>
 <noscript>請啟用JavaScript來使用NCKU++.<br>Please enable JavaScript to use NCKU++</noscript>
-<script> if (!ieVersion) require('./index'); </script>
+
+<!--Loading-->
+<svg class="loaderCircle" viewBox="0 0 50 50" style="display: block; margin: auto;">
+	<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>
+</svg>
 </body>
 </html>

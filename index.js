@@ -1,7 +1,8 @@
 'use strict';
+
 // noinspection JSUnusedLocalSymbols
 const {
-	debug: doomDebug,
+	doomHelperDebug,
 	Signal,
 	ShowIf,
 	HashRouter,
@@ -38,8 +39,6 @@ const {
 	footer,
 	linkStylesheet
 } = require('./res/domHelper');
-// noinspection JSUnusedLocalSymbols
-const SelectMenu = require('./res/selectMenu');
 
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'
@@ -112,8 +111,7 @@ window.askForLoginAlert = () => window.messageAlert.addInfo("Login to use this p
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
 window.pageLoading = new Signal(false);
-window.messageAlert = MessageAlert();
-const requestState = requestStateObject();
+
 /**
  * @typedef {Object} LoginData
  * @property {boolean} login
@@ -123,19 +121,24 @@ const requestState = requestStateObject();
  * @property {int} semester
  */
 // Main function
-(function main() {
+(async function main() {
+	window.messageAlert = MessageAlert();
+	window.requestState = requestStateObject();
+
 	// debug
 	let debugWindow = null;
 	if (location.hostname === 'localhost') {
 		console.log('Debug enabled');
-		doomDebug();
+		doomHelperDebug();
 
-		const memoryUpdate = new Signal(window.performance.memory);
-		setInterval(() => memoryUpdate.set(window.performance.memory), 1000);
-		debugWindow = span(
-			TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'),
-			null,
-			{style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px; opacity: 0.5;'})
+		if (window.performance.memory) {
+			const memoryUpdate = new Signal(window.performance.memory);
+			setInterval(() => memoryUpdate.set(window.performance.memory), 1000);
+			debugWindow = span(
+				TextState(memoryUpdate, state => (state.usedJSHeapSize / 1000 / 1000).toFixed(2) + 'MB'),
+				null,
+				{style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px; opacity: 0.5;'});
+		}
 	}
 
 	// main code
@@ -143,7 +146,7 @@ const requestState = requestStateObject();
 		// search: 'Search',
 		// schedule: 'Schedule',
 		// grades: 'Grades',
-		home: '主頁',
+		home: '新成功大學課程資訊及選課系統',
 		search: '課程查詢',
 		schedule: '課表',
 		grades: '成績查詢',
@@ -152,7 +155,7 @@ const requestState = requestStateObject();
 	const defaultPage = 'home';
 	const userLoginData = new Signal();
 	const showLoginWindow = new Signal(false);
-	const hashRouter = HashRouter('NCKU++', pageIdName[defaultPage], defaultPage,
+	const hashRouter = HashRouter('NCKU++', pageIdName, defaultPage,
 		{
 			home: () => require('./res/pages/home')(hashRouter),
 			search: () => require('./res/pages/courseSearch')(userLoginData),
@@ -230,7 +233,8 @@ const requestState = requestStateObject();
 		debugWindow,
 	);
 	window.onload = () => {
-		document.body.append(root)
+		document.body.innerHTML = '';
+		document.body.appendChild(root);
 		hashRouter.init();
 	};
 
@@ -238,7 +242,7 @@ const requestState = requestStateObject();
 	function pageButtonClick(e) {
 		e.preventDefault();
 		const pageId = this['pageId'];
-		hashRouter.openPage(pageId, pageIdName[pageId])
+		hashRouter.openPage(pageId)
 		return false;
 	}
 
@@ -262,6 +266,159 @@ const requestState = requestStateObject();
 		// Success, set login data
 		userLoginData.set(loginData);
 		showLoginWindow.set(false);
+	}
+
+	/**
+	 * @param {string} classname
+	 * @param {Text|Element|Element[]} title
+	 * @param {[string, function()][]} items
+	 * @param {boolean} [enableHover]
+	 * @param {function(): boolean} [onOpen]
+	 * @return {HTMLUListElement}
+	 */
+	function NavSelectList(classname, title, items, enableHover, onOpen) {
+		const itemsElement = ul(null);
+		const list = ul(
+			classname ? 'list ' + classname : 'list',
+			enableHover ? {onmouseleave: closeSelectList, onmouseenter: openSelectList} : null,
+			// Element
+			li('items', itemsElement),
+			li('title', title, {onclick: toggleSelectList}),
+		);
+
+		for (const item of items) {
+			const itemOnclick = item[1];
+			itemsElement.appendChild(
+				li(null, text(item[0]), {
+					onclick: itemOnclick ? () => {
+						itemOnclick();
+						closeSelectList();
+					} : closeSelectList
+				})
+			);
+		}
+
+		function openSelectList() {
+			if (window.innerWidth > mobileWidth)
+				list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
+		}
+
+		function closeSelectList() {
+			list.style.height = null;
+		}
+
+		function toggleSelectList() {
+			if (onOpen && !onOpen() && !list.style.height) return;
+
+			if (list.style.height)
+				list.style.height = null;
+			else
+				list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
+		}
+
+		return list;
+	}
+
+	function MessageAlert() {
+		const messageBoxRoot = div('messageBox');
+
+		messageBoxRoot.addInfo = function (title, description, removeTimeout) {
+			createMessageBox('info', title, description, removeTimeout);
+		}
+
+		messageBoxRoot.addError = function (title, description, removeTimeout) {
+			createMessageBox('error', title, description, removeTimeout);
+		}
+
+		messageBoxRoot.addSuccess = function (title, description, removeTimeout) {
+			createMessageBox('success', title, description, removeTimeout);
+		}
+
+		function onCloseBtn() {
+			removeMessageBox(this.parentElement);
+		}
+
+		function createMessageBox(classname, title, description, removeTimeout) {
+			const messageBox = div(classname,
+				span(title, 'title'),
+				span(description, 'description'),
+				div('closeButton', {onclick: onCloseBtn})
+			);
+			// height += messageBox.offsetHeight + 10;
+			if (removeTimeout !== undefined)
+				messageBox.removeTimeout = setTimeout(() => removeMessageBox(messageBox), removeTimeout);
+			// if (!updateTop)
+			//     updateTop = setTimeout(updateMessageBoxTop, 0);
+			if (messageBoxRoot.childElementCount > 0)
+				messageBoxRoot.insertBefore(messageBox, messageBoxRoot.firstElementChild);
+			else
+				messageBoxRoot.appendChild(messageBox);
+			messageBox.style.marginTop = -messageBox.offsetHeight + 'px';
+
+			setTimeout(() => messageBox.classList.add('animation'));
+		}
+
+		function removeMessageBox(messageBox) {
+			clearTimeout(messageBox.removeTimeout);
+			messageBox.style.opacity = '0';
+			messageBox.style.marginTop = (-messageBox.offsetHeight) + 'px';
+			setTimeout(() => {
+				messageBoxRoot.removeChild(messageBox);
+			}, 500);
+		}
+
+		return messageBoxRoot;
+	}
+
+	function requestStateObject() {
+		const stateBox = div('stateBox noSelect');
+
+		stateBox.addState = function (title) {
+			return stateBox.appendChild(div(null,
+				window.loadingElement.cloneNode(true),
+				h1(title, 'title')
+			));
+		};
+
+		stateBox.removeState = function (stateElement) {
+			stateBox.removeChild(stateElement);
+		};
+
+		return stateBox;
+	}
+
+	function LoginWindow(onLoginStateChange) {
+		const username = input('loginField', 'Account', null, {onkeyup, type: 'text'});
+		const password = input('loginField', 'Password', null, {onkeyup, type: 'password'});
+		let loading = false;
+
+		function onkeyup(e) {
+			if (e.key === 'Enter') login();
+		}
+
+		function login() {
+			if (!loading) {
+				loading = true;
+				window.pageLoading.set(true);
+				const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
+				window.fetchApi('/login', 'login', {
+					method: 'POST',
+					body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
+					timeout: 10000,
+				}).then(i => {
+					loading = false;
+					window.pageLoading.set(false);
+					onLoginStateChange(i);
+				});
+			}
+		}
+
+		// element
+		return div('loginWindow', {onRender: () => username.focus()},
+			username,
+			password,
+			button('loginField', 'Login', login, {type: 'submit'}),
+		);
 	}
 })();
 
@@ -294,156 +451,3 @@ window.timeParse = function (timeStr) {
 		parsedTime[2] = parsedTime[1];
 	return parsedTime;
 };
-
-/**
- * @param {string} classname
- * @param {Text|Element|Element[]} title
- * @param {[string, function()][]} items
- * @param {boolean} [enableHover]
- * @param {function(): boolean} [onOpen]
- * @return {HTMLUListElement}
- */
-function NavSelectList(classname, title, items, enableHover, onOpen) {
-	const itemsElement = ul(null);
-	const list = ul(
-		classname ? 'list ' + classname : 'list',
-		enableHover ? {onmouseleave: closeSelectList, onmouseenter: openSelectList} : null,
-		// Element
-		li('items', itemsElement),
-		li('title', title, {onclick: toggleSelectList}),
-	);
-
-	for (const item of items) {
-		const itemOnclick = item[1];
-		itemsElement.appendChild(
-			li(null, text(item[0]), {
-				onclick: itemOnclick ? () => {
-					itemOnclick();
-					closeSelectList();
-				} : closeSelectList
-			})
-		);
-	}
-
-	function openSelectList() {
-		if (window.innerWidth > mobileWidth)
-			list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
-	}
-
-	function closeSelectList() {
-		list.style.height = null;
-	}
-
-	function toggleSelectList() {
-		if (onOpen && !onOpen() && !list.style.height) return;
-
-		if (list.style.height)
-			list.style.height = null;
-		else
-			list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
-	}
-
-	return list;
-}
-
-function MessageAlert() {
-	const messageBoxRoot = div('messageBox');
-
-	messageBoxRoot.addInfo = function (title, description, removeTimeout) {
-		createMessageBox('info', title, description, removeTimeout);
-	}
-
-	messageBoxRoot.addError = function (title, description, removeTimeout) {
-		createMessageBox('error', title, description, removeTimeout);
-	}
-
-	messageBoxRoot.addSuccess = function (title, description, removeTimeout) {
-		createMessageBox('success', title, description, removeTimeout);
-	}
-
-	function onCloseBtn() {
-		removeMessageBox(this.parentElement);
-	}
-
-	function createMessageBox(classname, title, description, removeTimeout) {
-		const messageBox = div(classname,
-			span(title, 'title'),
-			span(description, 'description'),
-			div('closeButton', {onclick: onCloseBtn})
-		);
-		// height += messageBox.offsetHeight + 10;
-		if (removeTimeout !== undefined)
-			messageBox.removeTimeout = setTimeout(() => removeMessageBox(messageBox), removeTimeout);
-		// if (!updateTop)
-		//     updateTop = setTimeout(updateMessageBoxTop, 0);
-		if (messageBoxRoot.childElementCount > 0)
-			messageBoxRoot.insertBefore(messageBox, messageBoxRoot.firstElementChild);
-		else
-			messageBoxRoot.appendChild(messageBox);
-		messageBox.style.marginTop = -messageBox.offsetHeight + 'px';
-
-		setTimeout(() => messageBox.classList.add('animation'));
-	}
-
-	function removeMessageBox(messageBox) {
-		clearTimeout(messageBox.removeTimeout);
-		messageBox.style.opacity = '0';
-		messageBox.style.marginTop = (-messageBox.offsetHeight) + 'px';
-		setTimeout(() => {
-			messageBoxRoot.removeChild(messageBox);
-		}, 500);
-	}
-
-	return messageBoxRoot;
-}
-
-function requestStateObject() {
-	const stateBox = div('stateBox');
-
-	stateBox.addState = function (title) {
-		return stateBox.appendChild(div(null,
-			window.loadingElement.cloneNode(true),
-			h1(title, 'title')
-		));
-	};
-
-	stateBox.removeState = function (stateElement) {
-		stateBox.removeChild(stateElement);
-	};
-
-	return stateBox;
-}
-
-function LoginWindow(onLoginStateChange) {
-	const username = input('loginField', 'Account', null, {onkeyup, type: 'text'});
-	const password = input('loginField', 'Password', null, {onkeyup, type: 'password'});
-	let loading = false;
-
-	function onkeyup(e) {
-		if (e.key === 'Enter') login();
-	}
-
-	function login() {
-		if (!loading) {
-			loading = true;
-			window.pageLoading.set(true);
-			const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-			window.fetchApi('/login', 'login', {
-				method: 'POST',
-				body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
-				timeout: 10000,
-			}).then(i => {
-				loading = false;
-				window.pageLoading.set(false);
-				onLoginStateChange(i);
-			});
-		}
-	}
-
-	// element
-	return div('loginWindow', {onRender: () => username.focus()},
-		username,
-		password,
-		button('loginField', 'Login', login, {type: 'submit'}),
-	);
-}

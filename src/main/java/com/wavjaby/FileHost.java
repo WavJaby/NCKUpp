@@ -81,6 +81,10 @@ public class FileHost implements EndpointModule {
 
                         in = Files.newInputStream(file.toPath());
                     }
+//                    responseHeader.set("Cache-Control", "max-age=600");
+//                    responseHeader.set("Age", "100");
+//                    responseHeader.set("Date", DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.now()));
+//                    responseHeader.set("Last-Modified", DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(file.lastModified())));
                 }
 
                 if (in != null) {
