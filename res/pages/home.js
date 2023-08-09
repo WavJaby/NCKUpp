@@ -25,8 +25,8 @@ module.exports = function (routerElement) {
 		),
 		p(null, 'description',
 			text('集合'),
-			img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', null, {alt: 'NCKUcourse logo'}),
-			img('https://nckuhub.com/dist/images/table/nav_logo.svg', null, {alt: 'nckuhub logo'}),
+			img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', null, {alt: 'NCKUCourse logo'}),
+			img('https://nckuhub.com/dist/images/table/nav_logo.svg', null, {alt: 'NCKUHub logo'}),
 			img('res/assets/UrSchool_logo.png', null, {alt: 'UrSchool logo'}),
 			br(),
 			text('眾多功能，提供更好的選課環境')

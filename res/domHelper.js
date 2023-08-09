@@ -668,6 +668,76 @@ module.exports = {
 
 	/**
 	 * @param {string | Signal | TextStateChanger} [text]
+	 * @param {string | ClassList} [classN] Class Name
+	 * @param [options] Options for element
+	 * @return {HTMLHeadingElement}
+	 * */
+	h2(text, classN, ...options) {
+		const element = document.createElement('h2');
+		if (classN) parseClassInput(classN, element);
+		if (text) parseTextInput(text, element);
+		if (options.length) addOption(element, options);
+		return element;
+	},
+
+	/**
+	 * @param {string | Signal | TextStateChanger} [text]
+	 * @param {string | ClassList} [classN] Class Name
+	 * @param [options] Options for element
+	 * @return {HTMLHeadingElement}
+	 * */
+	h3(text, classN, ...options) {
+		const element = document.createElement('h3');
+		if (classN) parseClassInput(classN, element);
+		if (text) parseTextInput(text, element);
+		if (options.length) addOption(element, options);
+		return element;
+	},
+
+	/**
+	 * @param {string | Signal | TextStateChanger} [text]
+	 * @param {string | ClassList} [classN] Class Name
+	 * @param [options] Options for element
+	 * @return {HTMLHeadingElement}
+	 * */
+	h4(text, classN, ...options) {
+		const element = document.createElement('h4');
+		if (classN) parseClassInput(classN, element);
+		if (text) parseTextInput(text, element);
+		if (options.length) addOption(element, options);
+		return element;
+	},
+
+	/**
+	 * @param {string | Signal | TextStateChanger} [text]
+	 * @param {string | ClassList} [classN] Class Name
+	 * @param [options] Options for element
+	 * @return {HTMLHeadingElement}
+	 * */
+	h5(text, classN, ...options) {
+		const element = document.createElement('h5');
+		if (classN) parseClassInput(classN, element);
+		if (text) parseTextInput(text, element);
+		if (options.length) addOption(element, options);
+		return element;
+	},
+
+	/**
+	 * @param {string | Signal | TextStateChanger} [text]
+	 * @param {string | ClassList} [classN] Class Name
+	 * @param [options] Options for element
+	 * @return {HTMLHeadingElement}
+	 * */
+	h6(text, classN, ...options) {
+		const element = document.createElement('h6');
+		if (classN) parseClassInput(classN, element);
+		if (text) parseTextInput(text, element);
+		if (options.length) addOption(element, options);
+		return element;
+	},
+
+	/**
+	 * @param {string | Signal | TextStateChanger} [text]
 	 * @param {string} [href]
 	 * @param {string | ClassList} [classN] Class Name
 	 * @param {function(MouseEvent)} [onClick]

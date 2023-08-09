@@ -204,19 +204,28 @@ footer {
     box-sizing: border-box;
     text-align: center;
 
-    > span {
-        display: block;
-        line-height: 2em;
-    }
-
     > .borderLine {
         width: 100%;
         margin-bottom: 10px;
         border-top: gray 1px solid;
     }
 
+    > .splitLine {
+        width: 50%;
+        margin: 15px auto 10px auto;
+        border-top: gray 1px solid;
+    }
+
+    > h3 {
+        display: block;
+        margin: 0;
+        line-height: 2em;
+        font-weight: normal;
+        font-size: 1em;
+    }
+
+    // Project repo link
     > .openRepo {
-        height: 2em;
         display: inline-block;
         padding: 5px;
         margin: auto;
@@ -230,6 +239,21 @@ footer {
             line-height: 2em;
             float: left;
             padding-left: 5px;
+        }
+    }
+
+    // 資料來源
+    > .source {
+        > h2 {
+            margin: 7px 0;
+        }
+
+        > a {
+            display: block;
+
+            > img {
+                height: 2em;
+            }
         }
     }
 }
