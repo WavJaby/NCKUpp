@@ -131,7 +131,7 @@ function parseTextInput(text, element) {
 function ClassList(...className) {
 	const classList = className;
 	this.add = this.remove = this.toggle = this.contains = function () {
-	}
+	};
 
 	this.init = function (element) {
 		if (element.classList) {
@@ -318,9 +318,9 @@ function HashRouter(titlePrefix, pageSuffix, defaultPageId,
 	routerRoot.init = function () {
 		const pageId = window.urlHashData.get('page');
 		if (!pageId || !pageSuffix[pageId])
-			routerRoot.openPage(defaultPageId);
+			routerRoot.openPage(defaultPageId, true);
 		else
-			routerRoot.openPage(pageId);
+			routerRoot.openPage(pageId, true);
 	}
 
 	/**

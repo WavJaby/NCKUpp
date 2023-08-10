@@ -200,8 +200,6 @@ window.pageLoading = new Signal(false);
 	window.fetchApi('/login', 'Check login').then(onLoginStateChange);
 
 	const root = div('root',
-		// Pages
-		hashRouter,
 		// Navbar
 		nav('navbar noSelect',
 			NavSelectList('loginBtn',
@@ -234,6 +232,8 @@ window.pageLoading = new Signal(false);
 				// ]),
 			)
 		),
+		// Pages
+		hashRouter,
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert,
@@ -250,7 +250,7 @@ window.pageLoading = new Signal(false);
 	function pageButtonClick(e) {
 		e.preventDefault();
 		const pageId = this['pageId'];
-		hashRouter.openPage(pageId)
+		hashRouter.openPage(pageId);
 		return false;
 	}
 
