@@ -11,8 +11,7 @@ $instructor-info-fade-time: 200ms;
     > .form {
         padding: 5px;
 
-        > input,
-        > .selectMenu {
+        > input, > label, > .selectMenu {
             width: 350px;
             margin-bottom: 5px;
             display: block;
@@ -316,7 +315,7 @@ $instructor-info-fade-time: 200ms;
         top: 0;
         left: 0;
         position: fixed;
-        z-index: 999;
+        z-index: 100;
         display: none;
     }
 

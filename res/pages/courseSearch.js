@@ -245,24 +245,24 @@ module.exports = function (loginState) {
 	}
 
 	function loadLastSearch() {
-		const rawQuery = window.urlHashData.get('searchRawQuery');
-		if (!rawQuery || rawQuery.length === 0)
-			return;
+		const rawQuery = window.urlHashData['searchRawQuery'];
 
-		for (const rawQueryElement of rawQuery) {
-			for (const node of courseSearchForm.children) {
-				if (node instanceof HTMLInputElement) {
-					if (node.id === rawQueryElement[0])
+		for (const node of courseSearchForm.getElementsByTagName('input')) {
+			let found = false;
+			if (rawQuery)
+				for (const rawQueryElement of rawQuery) {
+					if (node.id === rawQueryElement[0]) {
 						node.value = rawQueryElement[1];
+						found = true;
+						break;
+					}
 				}
-				// Self define input
-				else if (node instanceof HTMLDivElement && node.id !== undefined && node.value !== undefined) {
-					if (node.id === rawQueryElement[0])
-						node.setValue(rawQueryElement[1]);
-				}
-			}
+			if (!found)
+				node.value = '';
 		}
-		search(rawQuery, false);
+
+		if (rawQuery && rawQuery.length > 0)
+			search(rawQuery, false);
 	}
 
 	/**
@@ -289,9 +289,8 @@ module.exports = function (loginState) {
 		if (!queryData) {
 			// Generate query from form
 			queryData = [];
-			for (const node of courseSearchForm.children) {
-				if (node instanceof HTMLInputElement ||
-					node instanceof HTMLDivElement && node.id !== undefined && node.value !== undefined) {
+			for (const node of courseSearchForm.getElementsByTagName('input')) {
+				if (node.id && node.id.length > 0 && node.value) {
 					const value = node.value.trim();
 					if (value.length > 0)
 						queryData.push([node.id, value]);
@@ -303,8 +302,8 @@ module.exports = function (loginState) {
 
 		// Save query string and create history
 		if ((saveQuery === undefined || saveQuery === true) && lastQueryString !== queryString) {
-			window.urlHashData.set('searchRawQuery', queryData);
-			window.urlHashData.pushHistory();
+			window.urlHashData['searchRawQuery'] = queryData;
+			window.pushHistory();
 		}
 
 		// Update queryString

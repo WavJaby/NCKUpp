@@ -1,4 +1,6 @@
 'use strict';
+
+/**@type {Console}*/
 let debug = null;
 
 function addOption(element, options) {
@@ -17,6 +19,34 @@ function addOption(element, options) {
 		else
 			Object.assign(element, option);
 	}
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} text
+ * @param {HTMLElement} element
+ */
+function parseTextInput(text, element) {
+	if (text instanceof Signal)
+		element.textContent = new TextStateChanger(text).init(element);
+	else if (text instanceof TextStateChanger)
+		element.textContent = text.init(element);
+	else if (typeof text === 'string')
+		element.textContent = text;
+	else if (debug)
+		debug.warn(element, 'text type error: ', text);
+}
+
+/**
+ * @param {string | ClassList} className
+ * @param {HTMLElement} element
+ */
+function parseClassInput(className, element) {
+	if (className instanceof ClassList)
+		className.init(element);
+	else if (typeof className === 'string')
+		element.className += className;
+	else if (debug)
+		debug.warn(element, 'classname type error: ', className);
 }
 
 /**
@@ -113,19 +143,6 @@ function TextStateChanger(signal, toString) {
 }
 
 /**
- * @param {string | Signal | TextStateChanger} text
- * @param element
- */
-function parseTextInput(text, element) {
-	if (text instanceof Signal)
-		element.textContent = new TextStateChanger(text).init(element);
-	else if (text instanceof TextStateChanger)
-		element.textContent = text.init(element);
-	else
-		element.textContent = text;
-}
-
-/**
  * @param {string} className
  * */
 function ClassList(...className) {
@@ -189,47 +206,6 @@ function ClassList(...className) {
 	};
 }
 
-function parseClassInput(className, element) {
-	if (className instanceof ClassList)
-		className.init(element);
-	else
-		element.className += className;
-}
-
-window.urlHashData = (function () {
-	const havePushState = typeof window.history.pushState === 'function';
-	let data = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
-	return {
-		update: function () {
-			data = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
-		},
-		get: function (key) {
-			return data[key];
-		},
-		set: function (key, value) {
-			data[key] = value;
-		},
-		pushHistory: function () {
-			const newUrl = new URL(window.location);
-			newUrl.hash = btoa(JSON.stringify(data).toUnicode());
-			// console.log('Append history', JSON.stringify(data));
-			if (havePushState)
-				window.history.pushState({}, document.title, newUrl);
-			else
-				window.location.hash = newUrl.hash;
-		},
-		contains: function (key) {
-			return data[key] !== undefined;
-		}
-	}
-})();
-
-String.prototype.toUnicode = function () {
-	return this.replace(/[^\x00-\xFF]/g, function (ch) {
-		return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
-	});
-};
-
 /**
  * @param {string} titlePrefix
  * @param {Object.<string, string>} pageSuffix
@@ -237,8 +213,8 @@ String.prototype.toUnicode = function () {
  * @param {Object<string, function()|HTMLElement>} routs
  * @param {HTMLElement} [footer]
  * */
-function HashRouter(titlePrefix, pageSuffix, defaultPageId,
-					routs, footer) {
+function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
+					 routs, footer) {
 	const routerRoot = document.createElement('div');
 	routerRoot.className = 'router';
 	const loadPageCache = {};
@@ -246,12 +222,19 @@ function HashRouter(titlePrefix, pageSuffix, defaultPageId,
 	let lastPage, lastPageId = null;
 
 	window.addEventListener('popstate', function () {
-		window.urlHashData.update();
-		const pageId = window.urlHashData.get('page');
-		routerRoot.openPage(pageId, true);
+		urlSearchDataUpdate();
+		urlHashDataUpdate();
+		routerRoot.openPage(null, true);
 	});
 
 	routerRoot.openPage = function (pageId, isHistory) {
+		if (!pageId)
+			pageId = urlSearchData.get('page');
+
+		// If page not found, load default page
+		if (!pageId || !pageSuffix[pageId] || !routs[pageId])
+			pageId = defaultPageId;
+
 		// If same page
 		if (lastPageId === pageId) {
 			// If from history
@@ -263,9 +246,9 @@ function HashRouter(titlePrefix, pageSuffix, defaultPageId,
 			return;
 		}
 		document.title = titlePrefix + ' ' + pageSuffix[pageId];
-		window.urlHashData.set('page', pageId);
+		urlSearchData.set('page', pageId);
 		if (!isHistory)
-			window.urlHashData.pushHistory();
+			window.pushHistory();
 
 		// Get page
 		const page = getPage(pageId);
@@ -316,11 +299,9 @@ function HashRouter(titlePrefix, pageSuffix, defaultPageId,
 
 	// open default page
 	routerRoot.init = function () {
-		const pageId = window.urlHashData.get('page');
-		if (!pageId || !pageSuffix[pageId])
-			routerRoot.openPage(defaultPageId, true);
-		else
-			routerRoot.openPage(pageId, true);
+		urlSearchDataUpdate();
+		urlHashDataUpdate();
+		routerRoot.openPage(null, true);
 	}
 
 	/**
@@ -375,13 +356,44 @@ function ShowIfStateChanger(signal, element) {
 	};
 }
 
+String.prototype.toUnicode = function () {
+	return this.replace(/[^\x00-\xFF]/g, function (ch) {
+		return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
+	});
+};
+
+let urlSearchData = new URLSearchParams(window.location.search);
+const havePushState = typeof window.history.pushState === 'function';
+window.urlHashData = null;
+urlHashDataUpdate();
+window.pushHistory = function () {
+	const newUrl = new URL(window.location);
+	const hashStr = JSON.stringify(window.urlHashData);
+	newUrl.hash = hashStr === '{}' ? '' : btoa(hashStr.toUnicode());
+	newUrl.search = urlSearchData.toString();
+	if (debug)
+		debug.log('Append history', window.urlHashData, newUrl.search);
+	if (havePushState)
+		window.history.pushState({}, document.title, newUrl);
+	else
+		window.location = newUrl;
+};
+
+function urlHashDataUpdate() {
+	window.urlHashData = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
+}
+
+function urlSearchDataUpdate() {
+	urlSearchData = new URLSearchParams(window.location.search);
+}
+
 module.exports = {
 	Signal,
 	ShowIf,
 	State,
 	TextState,
 	ClassList,
-	HashRouter,
+	QueryRouter,
 
 	/**
 	 * @param {string | ClassList} [classN] Class Name
@@ -755,10 +767,16 @@ module.exports = {
 	},
 
 	/**
-	 * @param {any} text
+	 * @param {string} text
 	 * @return {Text}
 	 */
 	text(text) {
+		if (debug && typeof text !== 'string') {
+			const element = document.createTextNode(text);
+			debug.warn(element, 'text type error: ', text);
+			return element;
+		}
+
 		return document.createTextNode(text);
 	},
 

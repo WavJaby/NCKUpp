@@ -32,7 +32,7 @@ $navbar-bg-color: #161b22;
     width: 100%;
     height: $navbar-height;
     position: absolute;
-    top: 0;
+    z-index: 100;
 
     > .hamburgerMenu {
         height: $navbar-height;
@@ -47,14 +47,9 @@ $navbar-bg-color: #161b22;
     }
 
     > .homePage {
-        line-height: $navbar-height;
         font-size: 1.5em;
         vertical-align: top;
         float: left;
-
-        > li {
-            padding: 0 10px;
-        }
     }
 
     ul {
@@ -113,7 +108,7 @@ $navbar-bg-color: #161b22;
         }
     }
 
-    > .links > li {
+    > .links > li, > .homePage > li {
         line-height: $navbar-height;
         cursor: pointer;
         float: left;

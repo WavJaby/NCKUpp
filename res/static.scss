@@ -116,6 +116,11 @@ a, a:visited, a:hover, a:active {
     text-decoration: none;
 }
 
+a:focus-visible {
+    outline-offset: -1px;
+    outline: white solid 1px;
+}
+
 
 .noSelect {
     -webkit-touch-callout: none; //  iOS Safari

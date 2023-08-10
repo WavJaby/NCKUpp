@@ -3,7 +3,7 @@
 // noinspection JSUnusedLocalSymbols
 const {
 	doomHelperDebug,
-	HashRouter,
+	QueryRouter,
 	Signal,
 	ShowIf,
 	State,
@@ -116,7 +116,7 @@ window.pageLoading = new Signal(false);
  * @property {int} semester
  */
 // Main function
-(async function main() {
+(function main() {
 	window.messageAlert = MessageAlert();
 	window.requestState = requestStateObject();
 
@@ -126,7 +126,8 @@ window.pageLoading = new Signal(false);
 		console.log('Debug enabled');
 		doomHelperDebug();
 
-		if (window.performance.memory) {
+		// Memory usage (for chrome)
+		if (window.performance && window.performance.memory) {
 			const memoryUpdate = new Signal(window.performance.memory);
 			setInterval(() => memoryUpdate.set(window.performance.memory), 1000);
 			debugWindow = span(
@@ -141,22 +142,22 @@ window.pageLoading = new Signal(false);
 		// search: 'Search',
 		// schedule: 'Schedule',
 		// grades: 'Grades',
-		home: '新成功大學課程資訊及選課系統',
-		search: '課程查詢',
-		schedule: '課表',
-		grades: '成績查詢',
-		preAdj: '志願排序',
+		Home: '成功大學課程資訊及選課系統',
+		CourseSearch: '課程查詢',
+		Schedule: '課表',
+		GradeInquiry: '成績查詢',
+		CourseSelectionPreference: '志願排序',
 	};
-	const defaultPage = 'home';
+	const defaultPage = 'Home';
 	const userLoginData = new Signal();
 	const showLoginWindow = new Signal(false);
-	const hashRouter = HashRouter('NCKU++', pageIdName, defaultPage,
+	const queryRouter = QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
-			home: () => require('./res/pages/home')(hashRouter),
-			search: () => require('./res/pages/courseSearch')(userLoginData),
-			schedule: () => require('./res/pages/courseSchedule')(userLoginData),
-			grades: () => require('./res/pages/stuIdSysGrades')(userLoginData),
-			preAdj: () => require('./res/pages/preferenceAdjust')(userLoginData),
+			Home: () => require('./res/pages/home')(queryRouter),
+			CourseSearch: () => require('./res/pages/courseSearch')(userLoginData),
+			Schedule: () => require('./res/pages/courseSchedule')(userLoginData),
+			GradeInquiry: () => require('./res/pages/stuIdSysGrades')(userLoginData),
+			CourseSelectionPreference: () => require('./res/pages/preferenceAdjust')(userLoginData),
 		},
 		footer(
 			div('borderLine'),
@@ -183,11 +184,11 @@ window.pageLoading = new Signal(false);
 	);
 	const pageButtons = {};
 	for (const pageId in pageIdName) {
-		if (pageId === 'home')
+		if (pageId === 'Home')
 			continue;
-		pageButtons[pageId] = li(null, a(pageIdName[pageId], '/', null, null, {pageId: pageId, onclick: pageButtonClick}));
+		pageButtons[pageId] = li(null, a(pageIdName[pageId], './?page=' + pageId, null, pageButtonClick, {pageId: pageId}));
 	}
-	hashRouter.onPageOpen = function (lastPageId, pageId) {
+	queryRouter.onPageOpen = function (lastPageId, pageId) {
 		const lastPageButton = pageButtons[lastPageId];
 		if (lastPageId && lastPageButton)
 			lastPageButton.classList.remove('opened');
@@ -223,7 +224,7 @@ window.pageLoading = new Signal(false);
 			ul('hamburgerMenu', li(null,
 				img('./res/assets/burger_menu_icon.svg', 'noDrag', {alt: 'mobile menu button', onclick: () => window.navMenu.toggle('open')})
 			)),
-			ul('homePage', li(null, a('NCKU++', './', null, pageButtonClick, {pageId: 'home'}))),
+			ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
 			ul(window.navMenu,
 				Object.values(pageButtons),
 				// NavSelectList('arrow', text('List'), [
@@ -233,7 +234,7 @@ window.pageLoading = new Signal(false);
 			)
 		),
 		// Pages
-		hashRouter,
+		queryRouter,
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert,
@@ -243,14 +244,14 @@ window.pageLoading = new Signal(false);
 	window.onload = () => {
 		document.body.innerHTML = '';
 		document.body.appendChild(root);
-		hashRouter.init();
+		queryRouter.init();
 	};
 
 	// functions
 	function pageButtonClick(e) {
 		e.preventDefault();
 		const pageId = this['pageId'];
-		hashRouter.openPage(pageId);
+		queryRouter.openPage(pageId);
 		return false;
 	}
 

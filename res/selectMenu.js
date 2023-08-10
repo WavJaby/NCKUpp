@@ -8,42 +8,46 @@
  * [optionID, displayName] or [groupName, options]
  */
 function SelectMenu(id, placeholder) {
-	const selectItemName = span(null, 'empty selectItemName', {placeholder: placeholder});
 	const clearButton = img('./res/assets/close_icon.svg', 'clearBtn');
 	clearButton.style.display = 'none';
-	const selectMenuBox = div('selectBtn', selectItemName, clearButton);
 
 	const optionsSignal = new Signal(div());
 	const searchInput = input(null, 'Search', null, {type: 'search', oninput: onSearch});
-	const contentWindow = div('content',
+	const searchBox = div('content',
 		div('searchBar', searchInput),
 		optionsSignal,
 	);
 
+	const resultBox = input(null, placeholder, id, {readOnly: true, type: 'secure'});
+
 	// Select menu body
-	const selectMenu = div('selectMenu noSelect', {id: id, value: ''},
-		selectMenuBox,
-		contentWindow,
+	const selectMenu = label('selectMenu noSelect', null, null,
+		resultBox, clearButton,
+		searchBox,
 	);
 
 	// Init select menu
 	setOptionSelect(null);
 
-	selectMenuBox.onclick = function (e) {
-		// If opened
-		if (contentWindow.classList.contains('open')) {
-			if (e.target !== clearButton)
-				closeSelectMenu();
+	selectMenu.onclick = function (e) {
+		if (e.target !== searchInput)
+			e.preventDefault();
+	};
+
+	resultBox.onclick = function () {
+		// Close search box
+		if (searchBox.classList.contains('open')) {
+			closeSelectMenu();
 		}
-		// If not open
-		else {
-			// Open select menu
+		// Open search box
+		else if (!searchBox.classList.contains('open')) {
 			window.addEventListener('mouseup', checkClickOutsideSelectMenu);
 			// Have item selected
-			if (selectMenu.value)
+			if (resultBox.value)
 				clearButton.style.display = 'block';
+			searchBox.classList.add('open');
 			searchInput.focus();
-			contentWindow.classList.add('open');
+			searchInput.oninput();
 		}
 	};
 
@@ -53,7 +57,7 @@ function SelectMenu(id, placeholder) {
 
 	function closeSelectMenu() {
 		clearButton.style.display = 'none';
-		contentWindow.classList.remove('open');
+		searchBox.classList.remove('open');
 		window.removeEventListener('mouseup', checkClickOutsideSelectMenu);
 	}
 
@@ -61,8 +65,8 @@ function SelectMenu(id, placeholder) {
 		let target = e.target;
 		// console.log(e);
 		while (target !== document.body) {
-			// return of find select menu, don't need to close
-			if (target === selectMenu || target === clearButton)
+			// return if found select menu, do not close
+			if (target === selectMenu)
 				return;
 			target = target.parentElement;
 		}
@@ -76,13 +80,9 @@ function SelectMenu(id, placeholder) {
 
 	function setOptionSelect(optionElement) {
 		if (optionElement) {
-			selectItemName.classList.remove('empty');
-			selectItemName.textContent = optionElement.textContent;
-			selectMenu.value = optionElement.optionValue;
+			resultBox.value = optionElement.optionValue;
 		} else {
-			selectItemName.classList.add('empty');
-			selectItemName.textContent = selectItemName.placeholder;
-			selectMenu.value = '';
+			resultBox.value = '';
 		}
 	}
 
@@ -151,18 +151,17 @@ function SelectMenu(id, placeholder) {
 	 * @param {HTMLUListElement} parent
 	 * @param {[string, Array]} options
 	 */
-	function createOptionsGroupElement(parent, options) {
-		const base = ul('group');
-		parent.appendChild(span(options[0], 'groupTitle', {onclick: expandGroupToggle}));
-		parent.appendChild(base);
-		for (const option of options[1]) {
-			// Is Group
+	function createOptionsElement(parent, options) {
+		for (let option of options) {
 			if (option[1] instanceof Array) {
-				createOptionsGroupElement(base, /**@type{[string, Array]}*/option);
-			}
-			// Option
-			else {
-				base.appendChild(li('option', text(option[1]), {optionValue: option[0], onclick: onOptionClick}));
+				// Create group
+				const base = ul('group');
+				parent.appendChild(span(option[0], 'groupTitle', {onclick: expandGroupToggle}));
+				parent.appendChild(base);
+				createOptionsElement(base, /**@type{[string, Array]}*/option[1]);
+			} else {
+				// Create item
+				parent.appendChild(li('option', text(option[1]), {optionValue: option[0], onclick: onOptionClick}));
 			}
 		}
 	}
@@ -172,16 +171,7 @@ function SelectMenu(id, placeholder) {
 	 */
 	selectMenu.setOptions = function (options) {
 		const base = ul('options');
-		for (const option of options) {
-			// Create group
-			if (option[1] instanceof Array) {
-				createOptionsGroupElement(base, option);
-			}
-			// Create option
-			else {
-				base.appendChild(li('option', text(option[1]), {optionValue: option[0], onclick: onOptionClick}));
-			}
-		}
+		createOptionsElement(base, options);
 		optionsSignal.set(base);
 	};
 

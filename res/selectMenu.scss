@@ -4,43 +4,32 @@
     font-size: 18px;
     position: relative;
 
-    .selectBtn {
-        background: $button-bg-color;
-        padding: 0 10px;
-        border-radius: 5px;
-        position: relative;
+    &::after {
+        content: '';
+        background: $icon-down-arrow no-repeat 0 0/1em;
+        width: 1em;
+        height: 1em;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0.5em;
+        margin: auto;
+        cursor: pointer;
+    }
 
-        .selectItemName {
-            padding: 5px 0;
-            display: block;
+    > input {
+        width: 100%;
+        cursor: pointer;
+    }
 
-            &.empty {
-                color: gray;
-            }
-        }
-
-        .clearBtn {
-            height: 1em;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            margin: auto;
-            cursor: pointer;
-            right: 2em;
-        }
-
-        &::after {
-            content: '';
-            background: $icon-down-arrow no-repeat 0 0/1em;
-            width: 1em;
-            height: 1em;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            right: 0.5em;
-            margin: auto;
-            cursor: pointer;
-        }
+    > .clearBtn {
+        height: 1em;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        margin: auto;
+        cursor: pointer;
+        right: 2em;
     }
 
     .content {

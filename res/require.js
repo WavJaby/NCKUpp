@@ -92,8 +92,8 @@ function fetchSync(url, init, onError) {
  * @return any
  */
 function require(url) {
-	if (url.startsWith('.//'))
-		return {};
+	// if (url.startsWith('.//'))
+	// 	return {};
 
 	var pathEnd = url.lastIndexOf('/');
 	if (url.indexOf('.', pathEnd) === -1)
@@ -187,28 +187,18 @@ function async_require(url) {
 // For IE
 function parseScript(script, url, pathEnd) {
 	script = script.replace(/\/\*ExcludeStart\*\//g, '/*').replace(/require\('\.\//g, 'require(\'' + url.slice(0, pathEnd + 1));
-	if (ieVersion === null || ieVersion === undefined)
-		return script;
-
-	if (!window.Babel)
+	if (ieVersion === null || ieVersion === undefined || !window.Babel)
 		return script;
 
 	var result = Babel.transform(script, {
 		sourceMap: false, comments: false, babelrc: false, plugins: [], presets: [
-			[
-				'env',
-				{
-					'onPresetBuild': null,
-					'targets': {
-						'browsers': [
-							'ie 6'
-						]
-					},
-					'forceAllTransforms': false,
-					'shippedProposals': false,
-					'useBuiltIns': false
-				}
-			]
+			['env', {
+				'onPresetBuild': null,
+				'targets': {'browsers': ['ie 6']},
+				'forceAllTransforms': false,
+				'shippedProposals': false,
+				'useBuiltIns': false
+			}]
 		]
 	});
 	// if (script.indexOf('search') !== -1)
