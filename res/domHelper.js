@@ -414,9 +414,9 @@ module.exports = {
 		const element = document.createElement('label');
 		element.className = 'checkboxWithName noSelect';
 		if (classN) parseClassInput(classN, element);
-		element.textContent = title;
 		element.appendChild(input);
 		element.appendChild(checkmark);
+		element.appendChild(document.createTextNode(title));
 		element.input = input;
 		if (options.length) addOption(element, options);
 		return element;

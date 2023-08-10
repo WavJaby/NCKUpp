@@ -299,7 +299,7 @@ footer {
     }
 
     > input:checked ~ .checkmark::after {
-        display: block;
+        display: inline-block;
     }
 
     > .checkmark {
@@ -308,26 +308,28 @@ footer {
         width: 1.4em;
         margin-right: 5px;
         border-radius: 5px;
-        float: left;
+        display: inline-block;
+        vertical-align: text-bottom;
         position: relative;
+        pointer-events: none;
     }
 
-    > .checkmark:hover {
+    &:hover >.checkmark {
         background-color: $button-hover-color;
     }
 
     > .checkmark::after {
         content: '';
-        border: solid white;
-        width: 5px;
-        height: 10px;
+        width: 0.3em;
+        height: 0.75em;
         left: 0;
         right: 0;
         top: 0;
-        bottom: 0.2em;
+        bottom: 0.1em;
         margin: auto;
-        border-width: 0 3px 3px 0;
         position: absolute;
+        border: solid white;
+        border-width: 0 0.2em 0.2em 0;
         display: none;
         @include transform(rotate(45deg));
     }

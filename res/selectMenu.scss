@@ -32,7 +32,7 @@
         right: 2em;
     }
 
-    .content {
+    > .content {
         background: #505050;
         width: 100%;
         margin-top: 5px;
@@ -74,14 +74,14 @@
             }
         }
 
-        > .options {
+        > .items {
             max-height: 200px;
             list-style-type: none;
             margin: 5px 0 0 0;
             padding: 0 5px 0 0;
             overflow: auto;
 
-            .groupTitle {
+            > .groupTitle {
                 width: 100%;
                 line-height: 1.5em;
                 display: block;
@@ -114,18 +114,31 @@
                 }
             }
 
-            .option {
+            .item {
                 line-height: 2em;
                 border-radius: 5px;
-                padding: 0 13px;
+                padding: 0 10px;
                 cursor: pointer;
             }
 
-            .option.hide, .groupTitle.hide {
+            .item.multi {
+                padding: 0;
+                // Multi selection
+                > .checkboxWithName {
+                    box-sizing: border-box;
+                    width: 100%;
+                    line-height: 2em;
+                    padding: 0 10px;
+                    display: inline-block;
+                    cursor: pointer;
+                }
+            }
+
+            .item.hide, .groupTitle.hide {
                 display: none;
             }
 
-            .option:hover, .groupTitle:hover {
+            .item:hover, .groupTitle:hover {
                 background: #676767;
             }
         }

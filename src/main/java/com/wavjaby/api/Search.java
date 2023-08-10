@@ -1141,7 +1141,7 @@ public class Search implements EndpointModule {
                 if (searchQuery.dayOfWeek != null) postData.append("&wk=").append(searchQuery.dayOfWeek);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
-                if (searchQuery.sectionOfDay != null) postData.append("&cl=").append(searchQuery.sectionOfDay);
+                if (searchQuery.sectionOfDay != null) postData.append("&cl=").append(URLEncoder.encode(searchQuery.sectionOfDay, "UTF-8"));
             }
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);

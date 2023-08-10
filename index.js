@@ -102,7 +102,7 @@ window.fetchApi = function (endpoint, showState, option) {
 			return null;
 		});
 };
-window.askForLoginAlert = () => window.messageAlert.addInfo("Login to use this page", 'Click login button at top right corner to login in', 3000);
+window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
 window.pageLoading = new Signal(false);

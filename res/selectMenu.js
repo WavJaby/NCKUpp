@@ -3,22 +3,43 @@
 // const {div, input, ul, li, text, span, Signal, img} = require('.//domHelper');
 
 /**
- * @constructor
- * @typedef {[string, string]|[string, Array]} Option
- * [optionID, displayName] or [groupName, options]
+ * @typedef {[string|number, string|number]|[string|number, ItemData[]]} ItemData
+ * [itemValue, displayName] or [groupName, ItemData[]]
  */
-function SelectMenu(id, placeholder) {
-	const clearButton = img('./res/assets/close_icon.svg', 'clearBtn');
-	clearButton.style.display = 'none';
 
-	const optionsSignal = new Signal(div());
+/**
+ * @typedef SelectMenuOption
+ * @property {boolean} [multiple] Multi selection. Default: false
+ * @property {boolean} [showValueName] Show value name at result. Default: false
+ * @property {boolean} [searchValue] Search with value. Default: false
+ * @property {boolean} [searchBar] Show search bar. Default: true
+ */
+
+/**
+ * @param {string} placeholder
+ * @param {string} id
+ * @param {ItemData[]} [items]
+ * @param {SelectMenuOption} [options]
+ * @return {HTMLElement}
+ * @constructor
+ */
+function SelectMenu(placeholder, id, items, options) {
+	if (!options)
+		options = {};
+	if (options.searchBar === null || options.searchBar === undefined)
+		options.searchBar = true;
+
+	// Init elements
+	const itemsContainer = ul('items');
 	const searchInput = input(null, 'Search', null, {type: 'search', oninput: onSearch});
 	const searchBox = div('content',
-		div('searchBar', searchInput),
-		optionsSignal,
+		options.searchBar ? div('searchBar', searchInput) : null,
+		itemsContainer,
 	);
 
 	const resultBox = input(null, placeholder, id, {readOnly: true, type: 'secure'});
+	const clearButton = img('./res/assets/close_icon.svg', 'clearBtn');
+	clearButton.style.display = 'none';
 
 	// Select menu body
 	const selectMenu = label('selectMenu noSelect', null, null,
@@ -27,10 +48,14 @@ function SelectMenu(id, placeholder) {
 	);
 
 	// Init select menu
-	setOptionSelect(null);
+	const selectedItemsValue = [];
+	const selectedItemsName = [];
+	selectItem(null);
+	if (items)
+		createItemsElement(itemsContainer, items);
 
 	selectMenu.onclick = function (e) {
-		if (e.target !== searchInput)
+		if (!(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLLabelElement))
 			e.preventDefault();
 	};
 
@@ -46,13 +71,16 @@ function SelectMenu(id, placeholder) {
 			if (resultBox.value)
 				clearButton.style.display = 'block';
 			searchBox.classList.add('open');
-			searchInput.focus();
-			searchInput.oninput();
+
+			if (options.searchBar) {
+				searchInput.focus();
+				searchInput.oninput();
+			}
 		}
 	};
 
 	clearButton.onclick = function () {
-		setOptionSelect(null);
+		selectItem(null);
 	};
 
 	function closeSelectMenu() {
@@ -73,15 +101,52 @@ function SelectMenu(id, placeholder) {
 		closeSelectMenu();
 	}
 
-	function onOptionClick() {
-		closeSelectMenu();
-		setOptionSelect(this);
+	function onItemClick() {
+		if (!options.multiple)
+			closeSelectMenu();
+		selectItem(this);
 	}
 
-	function setOptionSelect(optionElement) {
-		if (optionElement) {
-			resultBox.value = optionElement.optionValue;
+	function selectItem(itemElement, force) {
+		if (itemElement) {
+			if (options.multiple) {
+				const index = selectedItemsValue.indexOf(itemElement.itemValue);
+				// Add item
+				if (itemElement.input.checked || force) {
+					itemElement.input.checked = true;
+					if (index === -1) {
+						selectedItemsValue.push(itemElement.itemValue);
+						selectedItemsName.push(itemElement.itemName);
+					}
+				}
+				// Remove item
+				else {
+					if (index !== -1) {
+						selectedItemsValue.splice(index, 1);
+						selectedItemsName.splice(index, 1);
+					}
+				}
+			} else {
+				selectedItemsValue.length = 1;
+				selectedItemsName.length = 1;
+				selectedItemsValue[0] = itemElement.itemValue;
+				selectedItemsName[0] = itemElement.itemName;
+			}
+
+			// Show items
+			if (options.showValueName)
+				resultBox.value = selectedItemsValue.join(', ');
+			else
+				resultBox.value = selectedItemsName.join(', ');
 		} else {
+			// Clear checked
+			if (options.multiple) {
+				for (const itemElement of itemsContainer.getElementsByTagName('li')) {
+					itemElement.input.checked = false;
+				}
+			}
+			selectedItemsValue.length = 0;
+			selectedItemsName.length = 0;
 			resultBox.value = '';
 		}
 	}
@@ -112,17 +177,17 @@ function SelectMenu(id, placeholder) {
 
 	function onSearch() {
 		const searchValue = this.value;
-		checkItem(optionsSignal.state);
+		checkItem(itemsContainer);
 
 		function checkItem(group) {
 			let findItem = false;
 			for (const item of group.children) {
-				// Check option group
+				// Check item group
 				if (item instanceof HTMLSpanElement && item.classList.contains('groupTitle')) {
 					// Not searching, reset group expand
 					if (searchValue.length === 0)
 						resetGroupExpand(item);
-					// Check if option find in group
+					// Check if item find in group
 					if (checkItem(item.nextElementSibling)) {
 						item.classList.remove('hide');
 						if (searchValue.length !== 0)
@@ -132,10 +197,9 @@ function SelectMenu(id, placeholder) {
 						item.classList.add('hide');
 					}
 				}
-				// Check option
-				else if (item instanceof HTMLLIElement && item.classList.contains('option')) {
-					if (item.textContent.indexOf(searchValue) !== -1 ||
-						item.optionValue.indexOf(searchValue) !== -1) {
+				// Check item
+				else if (item instanceof HTMLLIElement && item.classList.contains('item')) {
+					if (item.itemName.indexOf(searchValue) !== -1 || (options.searchValue && item.itemValue.indexOf(searchValue) !== -1)) {
 						item.classList.remove('hide');
 						findItem = true;
 					} else {
@@ -149,39 +213,58 @@ function SelectMenu(id, placeholder) {
 
 	/**
 	 * @param {HTMLUListElement} parent
-	 * @param {[string, Array]} options
+	 * @param {[string, Array]} items
 	 */
-	function createOptionsElement(parent, options) {
-		for (let option of options) {
-			if (option[1] instanceof Array) {
+	function createItemsElement(parent, items) {
+		for (let item of items) {
+			if (item[1] instanceof Array) {
 				// Create group
 				const base = ul('group');
-				parent.appendChild(span(option[0], 'groupTitle', {onclick: expandGroupToggle}));
+				parent.appendChild(span(item[0], 'groupTitle', {onclick: expandGroupToggle}));
 				parent.appendChild(base);
-				createOptionsElement(base, /**@type{[string, Array]}*/option[1]);
+				createItemsElement(base, /**@type{[string, Array]}*/item[1]);
 			} else {
 				// Create item
-				parent.appendChild(li('option', text(option[1]), {optionValue: option[0], onclick: onOptionClick}));
+				if (options.multiple) {
+					const checkbox = checkboxWithName(null, item[1], false);
+					parent.appendChild(li('item multi', checkbox, {
+						itemValue: item[0],
+						itemName: item[1],
+						input: checkbox.input,
+						onclick: onItemClick
+					}));
+				} else
+					parent.appendChild(li('item', text(item[1]), {itemValue: item[0], itemName: item[1], onclick: onItemClick}));
 			}
 		}
 	}
 
 	/**
-	 * @param {Option[]} options
+	 * @param {ItemData[]} itemsData
 	 */
-	selectMenu.setOptions = function (options) {
-		const base = ul('options');
-		createOptionsElement(base, options);
-		optionsSignal.set(base);
+	selectMenu.setItems = function (itemsData) {
+		itemsContainer.innerHTML = '';
+		createItemsElement(itemsContainer, itemsData);
 	};
 
-	selectMenu.setValue = function (value) {
-		for (const optionElement of optionsSignal.state.getElementsByTagName('li')) {
-			if (optionElement.optionValue === value) {
-				setOptionSelect(optionElement);
-				break;
+	selectMenu.selectItemByValue = function (values) {
+		if (!options.multiple)
+			values = [values];
+
+		for (const value of values) {
+			for (const itemElement of itemsContainer.getElementsByTagName('li')) {
+				if (itemElement.itemValue === value) {
+					selectItem(itemElement, true);
+					break;
+				}
 			}
 		}
+	};
+
+	selectMenu.getSelectedValue = function () {
+		if (options.multiple)
+			return selectedItemsValue;
+		return selectedItemsValue[0];
 	};
 
 	return selectMenu;

@@ -90,7 +90,7 @@ module.exports = function (loginState) {
 				}
 				// Login failed
 				else {
-					window.messageAlert.addError("Identification system login failed", 'Refresh to try again', 3000);
+					window.messageAlert.addError('Identification system login failed', 'Refresh to try again', 3000);
 					loadingState.set(false);
 				}
 			});

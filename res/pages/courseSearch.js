@@ -225,7 +225,7 @@ module.exports = function (loginState) {
 		window.fetchApi('/alldept').then(response => {
 			if (response == null || !response.success || !response.data)
 				return;
-			deptNameSelectMenu.setOptions(response.data.deptGroup.map(i => [i.name, i.dept]));
+			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.name, i.dept]));
 			loadLastSearch();
 		});
 	}
@@ -252,7 +252,12 @@ module.exports = function (loginState) {
 			if (rawQuery)
 				for (const rawQueryElement of rawQuery) {
 					if (node.id === rawQueryElement[0]) {
-						node.value = rawQueryElement[1];
+						// From select menu
+						if (node.parentElement instanceof HTMLLabelElement &&
+							node.parentElement.selectItemByValue)
+							node.parentElement.selectItemByValue(rawQueryElement[1]);
+						else
+							node.value = rawQueryElement[1];
 						found = true;
 						break;
 					}
@@ -291,7 +296,15 @@ module.exports = function (loginState) {
 			queryData = [];
 			for (const node of courseSearchForm.getElementsByTagName('input')) {
 				if (node.id && node.id.length > 0 && node.value) {
-					const value = node.value.trim();
+					let value;
+					// From select menu
+					if (node.parentElement instanceof HTMLLabelElement &&
+						node.parentElement.getSelectedValue)
+						value = node.parentElement.getSelectedValue();
+					else
+						value = node.value.trim();
+
+					// console.log(value);
 					if (value.length > 0)
 						queryData.push([node.id, value]);
 				}
@@ -927,7 +940,7 @@ module.exports = function (loginState) {
 	}
 
 	// Select menu
-	const deptNameSelectMenu = new SelectMenu('dept', 'Dept Name');
+	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', null, {searchValue: true});
 
 	courseSearch = div('courseSearch',
 		{onRender, onPageClose, onPageOpen},
@@ -936,9 +949,12 @@ module.exports = function (loginState) {
 			input(null, 'Course name', 'courseName', {onkeyup}),
 			deptNameSelectMenu,
 			input(null, 'Instructor', 'instructor', {onkeyup}),
-			input(null, 'DayOfWeek', 'dayOfWeek', {onkeyup}),
-			input(null, 'Grade', 'grade', {onkeyup}),
-			input(null, 'Section', 'section', {onkeyup}),
+			new SelectMenu('Grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
+			new SelectMenu('DayOfWeek', 'dayOfWeek', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
+			new SelectMenu('Section', 'section', [
+				['1', '0'], ['2', '1'], ['3', '2'], ['4', '3'], ['5', '4'], ['6', 'N'], ['7', '5'], ['8', '6'], ['9', '7'], ['10', '8'], ['11', '9'],
+				['12', 'A'], ['13', 'B'], ['14', 'C'], ['15', 'D'], ['16', 'E']
+			], {multiple: true}),
 			button(null, 'search', search),
 			button(null, 'get watched course', getWatchCourse),
 		),
