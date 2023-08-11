@@ -1,7 +1,6 @@
 'use strict';
 
-/**@type {Console}*/
-let debug = null;
+let /**@type {Console}*/ debug = null;
 
 function addOption(element, options) {
 	for (let i = 0; i < options.length; i++) {
@@ -16,8 +15,10 @@ function addOption(element, options) {
 			option.init(element);
 		else if (option instanceof Signal)
 			new StateChanger(option).init(element);
-		else
+		else if (option instanceof Object)
 			Object.assign(element, option);
+		else if (debug && option)
+			debug.warn(element, 'options type error: ', option);
 	}
 }
 
@@ -372,7 +373,7 @@ window.pushHistory = function () {
 	newUrl.hash = hashStr === '{}' ? '' : btoa(hashStr.toUnicode());
 	newUrl.search = urlSearchData.toString();
 	if (debug)
-		debug.log('Append history', window.urlHashData, newUrl.search);
+		debug.log('Append history', window.urlHashData, Object.fromEntries(urlSearchData));
 	if (havePushState)
 		window.history.pushState({}, document.title, newUrl);
 	else

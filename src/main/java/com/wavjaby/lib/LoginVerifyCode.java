@@ -194,13 +194,10 @@ public class LoginVerifyCode {
 
                             if (text && numbers[i][y][x] == 1 || !text && numbers[i][y][x] == 0)
                                 count++;
-//                            if (i == 0) System.out.print(text ? '1' : ' ');
                         }
-//                        if (i == 0) System.out.println();
                     }
 
                     float score = (float) count / (cropWidth * cropHeight);
-//                    System.out.println(i + " " + score);
                     if (score > highestScore) {
                         highestScore = score;
                         highestScoreNumber = i;

@@ -50,6 +50,7 @@
 
         > .searchBar {
             position: relative;
+            margin-bottom: 5px;
 
             // Search icon
             &::before {
@@ -77,8 +78,8 @@
         > .items {
             max-height: 200px;
             list-style-type: none;
-            margin: 5px 0 0 0;
             padding: 0 5px 0 0;
+            margin: 0;
             overflow: auto;
 
             > .groupTitle {

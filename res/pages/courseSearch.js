@@ -181,7 +181,6 @@ const {
 	thead,
 	tbody,
 	colgroup,
-	col,
 	text,
 	a,
 	linkStylesheet, checkboxWithName
@@ -198,7 +197,7 @@ const courseDataTagColor = [
 	'#d9534f'
 ];
 
-module.exports = function (loginState) {
+module.exports = function (loginState, routerElement) {
 	console.log('Course search Init');
 	const styles = linkStylesheet('./res/pages/courseSearch.css');
 	const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
@@ -210,7 +209,7 @@ module.exports = function (loginState) {
 	const nckuhubDetailWindow = NckuhubDetailWindow();
 
 	// Element
-	let courseSearch, courseSearchForm, courseSearchResultCount;
+	let courseSearchForm, courseSearchResultCount;
 	// Static data
 	let nckuHubCourseID = null;
 	let urSchoolData = null;
@@ -497,6 +496,7 @@ module.exports = function (loginState) {
 		});
 	}
 
+
 	// Watched list
 	let watchList = null;
 
@@ -568,158 +568,6 @@ module.exports = function (loginState) {
 	const expandButtons = [];
 	let waitingResult = false;
 
-	function renderSearchResult(state) {
-		if (state.loading) {
-			waitingResult = true;
-			courseRenderResult.length = 0;
-			courseRenderResultDisplay.length = 0;
-			expandButtons.length = 0;
-			return window.loadingElement.cloneNode(true);
-		}
-		if (!state.courseResult) return div();
-
-		if (waitingResult) {
-			waitingResult = false;
-			// Render result elements
-			for (/**@type{CourseData}*/const data of state.courseResult) {
-				const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
-				const nckuhubResultData = state.nckuhubResult[data.serialNumber];
-				const expandButton = expandArrowImage.cloneNode();
-				expandButtons.push(toggleCourseInfo);
-
-				// Course detail
-				let expandableHeightReference, expandableElement;
-				const courseDetail = td(null, null, {colSpan: 14},
-					expandableElement = div('expandable', expandableHeightReference = div('info',
-						div('splitLine'),
-						// Course tags
-						data.tags === null ? null : div('tags',
-							data.tags.map(i => i.link
-								? a(i.name, i.link, null, null, {style: 'background-color:' + i.color, target: '_blank'})
-								: div(null, text(i.name), {style: 'background-color:' + i.color})
-							)
-						),
-
-						// Note, limit
-						data.courseNote === null ? null : span(data.courseNote, 'note'),
-						data.courseLimit === null ? null : span(data.courseLimit, 'limit red'),
-
-						// Instructor
-						span('Instructor: ', 'instructor'),
-						data.instructors === null ? null : data.instructors.map(/**@param{UrSchoolInstructorSimple|string}instructor*/instructor =>
-							button('instructorBtn',
-								instructor instanceof Object ? instructor.name : instructor,
-								instructor instanceof Object ? () => openInstructorDetailWindow(instructor) : null,
-								instructor instanceof Object ? {
-									onmouseenter: e => {
-										instructorInfoBubble.set({
-											target: e.target,
-											offsetY: courseSearch.parentElement.scrollTop,
-											data: instructor
-										});
-									},
-									onmouseleave: instructorInfoBubble.hide
-								} : null
-							)
-						)
-					))
-				);
-
-				// nckuhub info
-				const nckuhubInfo = nckuhubResultData && nckuhubResultData.signal
-					? State(nckuhubResultData.signal, () => {
-						if (data.nckuhub) {
-							if (data.nckuhub.noData) return td('No data', 'nckuhub', {colSpan: 3});
-							const options = {colSpan: 3, onclick: openNckuhubDetailWindow};
-							if (data.nckuhub.rate_count === 0)
-								return td('No rating', 'nckuhub', options);
-							return td(null, 'nckuhub', options,
-								span(data.nckuhub.got.toFixed(1), 'reward'),
-								span(data.nckuhub.sweet.toFixed(1), 'sweet'),
-								span(data.nckuhub.cold.toFixed(1), 'cool'),
-							);
-						}
-						return td('Loading...', 'nckuhub', {colSpan: 3});
-					})
-					: td('No data', 'nckuhub', {colSpan: 3})
-
-
-				function toggleCourseInfo(forceState) {
-					if (forceState instanceof Boolean ? forceState : expandArrowStateClass.toggle('expand')) {
-						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
-						setTimeout(() => expandableElement.style.height = null, 200);
-					} else {
-						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
-						setTimeout(() => expandableElement.style.height = '0');
-					}
-				}
-
-				// Open NCKU Hub detail window
-				function openNckuhubDetailWindow() {
-					if (!data.nckuhub) return;
-					nckuhubDetailWindow.set(data, true);
-				}
-
-				// render result item
-				const courseResult = [
-					tr(),
-					// Info
-					tr(null,
-						// Title sections
-						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
-						td(data.departmentName, 'departmentName'),
-						td(data.serialNumber, 'serialNumber'),
-						td(data.courseType, 'courseType'),
-						td(data.courseGrade, 'grade'),
-						td(data.classInfo, 'class'),
-						td(data.timeString, 'courseTime'),
-						td(null, 'courseName',
-							a(data.courseName, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'})
-						),
-						td(data.required ? '必修' : '選修', 'required'),
-						td(data.credits, 'credits'),
-						td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
-						nckuhubInfo,
-						td(null, 'options', {rowSpan: 2},
-							!data.serialNumber || !loginState.state || !loginState.state.login ? null :
-								button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
-							!data.preRegister ? null :
-								button(null, '加入預排', sendPreKey, {prekey: data.preRegister}),
-							!data.preferenceEnter ? null :
-								button(null, '加入志願', sendCosData, {cosdata: data.preferenceEnter}),
-							!data.addCourse ? null :
-								button(null, '單科加選', sendCosData, {cosdata: data.addCourse}),
-						),
-					),
-					tr('courseDetail',
-						// Details
-						courseDetail,
-					)
-				];
-				courseRenderResult.push([data, courseResult]);
-			}
-			updateFilter();
-		}
-		courseSearchResultCount.textContent = courseRenderResultDisplay.length;
-		return tbody(null, courseRenderResultDisplay);
-	}
-
-	function createSyllabusUrl(yearSem, sysNumClassCode) {
-		const year = yearSem.substring(0, yearSem.length - 1).padStart(4, '0');
-		const sem = yearSem.charAt(yearSem.length - 1) === '0' ? '1' : '2';
-
-		let systemNumber = sysNumClassCode, classCode = '';
-		const index = sysNumClassCode.indexOf('-');
-		if (index !== -1) {
-			systemNumber = sysNumClassCode.substring(0, index);
-			classCode = sysNumClassCode.substring(index + 1);
-		}
-
-		return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
-			'&co_no=' + systemNumber +
-			'&class_code=' + classCode;
-	}
-
 	// Sort
 	const sortArrow = expandArrowImage.cloneNode();
 	const sortArrowClass = new ClassList('sortArrow');
@@ -757,7 +605,8 @@ module.exports = function (loginState) {
 		let i = 0;
 		if (reverse)
 			for (; i < sortLastIndex; i++)
-				courseRenderResultDisplay[i] = courseResult[courseResult.length - i - 1][1];
+				courseRenderResultDisplay[i] = courseResult[sortLastIndex - i - 1][1];
+
 		for (; i < courseResult.length; i++)
 			courseRenderResultDisplay[i] = courseResult[i][1];
 
@@ -808,7 +657,7 @@ module.exports = function (loginState) {
 	let textSearchFilterKeys = [];
 	let lastTextSearchFilterKey = null;
 
-	function updateFilter() {
+	function updateFilter(firstRender) {
 		console.log('Update Filter');
 		resetSortArrow();
 		courseRenderResultFilter.length = 0;
@@ -829,7 +678,8 @@ module.exports = function (loginState) {
 			courseRenderResultFilter.push(i);
 			courseRenderResultDisplay.push(i[1]);
 		}
-		searchResultSignal.update();
+		if (!firstRender)
+			searchResultSignal.update();
 	}
 
 	function textSearchFilterChange() {
@@ -939,10 +789,182 @@ module.exports = function (loginState) {
 		if (e.key === 'Enter') search();
 	}
 
-	// Select menu
-	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', null, {searchValue: true});
 
-	courseSearch = div('courseSearch',
+	// Search result render
+	let showResultLastIndex = 0;
+	let showResultIndexStep = 30;
+
+	function renderSearchResult(state) {
+		if (state.loading) {
+			waitingResult = true;
+			courseRenderResult.length = 0;
+			courseRenderResultDisplay.length = 0;
+			expandButtons.length = 0;
+			courseSearchResultCount.textContent = 'Loading...';
+			return window.loadingElement.cloneNode(true);
+		}
+
+		// No result
+		if (!state.courseResult) {
+			courseSearchResultCount.textContent = 'No result';
+			return div();
+		}
+
+		if (waitingResult) {
+			waitingResult = false;
+			// Render result elements
+			for (/**@type{CourseData}*/const data of state.courseResult) {
+				const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
+				const nckuhubResultData = state.nckuhubResult[data.serialNumber];
+				const expandButton = expandArrowImage.cloneNode();
+				expandButtons.push(toggleCourseInfo);
+
+				// Course detail
+				let expandableHeightReference, expandableElement;
+				const courseDetail = td(null, null, {colSpan: 14},
+					expandableElement = div('expandable', expandableHeightReference = div('info',
+						div('splitLine'),
+						// Course tags
+						data.tags === null ? null : div('tags',
+							data.tags.map(i => i.link
+								? a(i.name, i.link, null, null, {style: 'background-color:' + i.color, target: '_blank'})
+								: div(null, text(i.name), {style: 'background-color:' + i.color})
+							)
+						),
+
+						// Note, limit
+						data.courseNote === null ? null : span(data.courseNote, 'note'),
+						data.courseLimit === null ? null : span(data.courseLimit, 'limit red'),
+
+						// Instructor
+						span('Instructor: ', 'instructor'),
+						data.instructors === null ? null : data.instructors.map(/**@param{UrSchoolInstructorSimple|string}instructor*/instructor =>
+							button('instructorBtn',
+								instructor instanceof Object ? instructor.name : instructor,
+								instructor instanceof Object ? () => openInstructorDetailWindow(instructor) : null,
+								instructor instanceof Object ? {
+									onmouseenter: e => {
+										instructorInfoBubble.set({
+											target: e.target,
+											offsetY: routerElement.scrollTop,
+											data: instructor
+										});
+									},
+									onmouseleave: instructorInfoBubble.hide
+								} : null
+							)
+						)
+					))
+				);
+
+				// nckuhub info
+				const nckuhubInfo = nckuhubResultData && nckuhubResultData.signal
+					? State(nckuhubResultData.signal, () => {
+						if (data.nckuhub) {
+							if (data.nckuhub.noData) return td('No data', 'nckuhub', {colSpan: 3});
+							const options = {colSpan: 3, onclick: openNckuhubDetailWindow};
+							if (data.nckuhub.rate_count === 0)
+								return td('No rating', 'nckuhub', options);
+							return td(null, 'nckuhub', options,
+								span(data.nckuhub.got.toFixed(1), 'reward'),
+								span(data.nckuhub.sweet.toFixed(1), 'sweet'),
+								span(data.nckuhub.cold.toFixed(1), 'cool'),
+							);
+						}
+						return td('Loading...', 'nckuhub', {colSpan: 3});
+					})
+					: td('No data', 'nckuhub', {colSpan: 3})
+
+
+				function toggleCourseInfo(forceState) {
+					if (forceState instanceof Boolean ? forceState : expandArrowStateClass.toggle('expand')) {
+						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
+						setTimeout(() => expandableElement.style.height = null, 200);
+					} else {
+						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
+						setTimeout(() => expandableElement.style.height = '0');
+					}
+				}
+
+				// Open NCKU Hub detail window
+				function openNckuhubDetailWindow() {
+					if (!data.nckuhub) return;
+					nckuhubDetailWindow.set(data, true);
+				}
+
+				// render result item
+				const courseResult = [
+					tr(),
+					// Info
+					tr(null,
+						// Title sections
+						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
+						td(data.departmentName, 'departmentName'),
+						td(data.serialNumber, 'serialNumber'),
+						td(data.courseType, 'courseType'),
+						td(data.courseGrade, 'grade'),
+						td(data.classInfo, 'class'),
+						td(data.timeString, 'courseTime'),
+						td(null, 'courseName',
+							a(data.courseName, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'})
+						),
+						td(data.required ? '必修' : '選修', 'required'),
+						td(data.credits, 'credits'),
+						td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
+						nckuhubInfo,
+						td(null, 'options', {rowSpan: 2},
+							!data.serialNumber || !loginState.state || !loginState.state.login ? null :
+								button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
+							!data.preRegister ? null :
+								button(null, '加入預排', sendPreKey, {prekey: data.preRegister}),
+							!data.preferenceEnter ? null :
+								button(null, '加入志願', sendCosData, {cosdata: data.preferenceEnter}),
+							!data.addCourse ? null :
+								button(null, '單科加選', sendCosData, {cosdata: data.addCourse}),
+						),
+					),
+					tr('courseDetail',
+						// Details
+						courseDetail,
+					)
+				];
+				courseRenderResult.push([data, courseResult]);
+			}
+			updateFilter(true);
+		}
+
+		// Update display element
+		courseSearchResultCount.textContent = courseRenderResultDisplay.length;
+		showResultLastIndex = showResultIndexStep - 1;
+		for (let i = 0; i < courseRenderResultDisplay.length; i++) {
+			const item = courseRenderResultDisplay[i];
+			const display = i > showResultLastIndex ? 'none' : 'table-row';
+			item[0].style.display = item[1].style.display = item[2].style.display = display;
+		}
+
+		return tbody(null, courseRenderResultDisplay);
+	}
+
+	function createSyllabusUrl(yearSem, sysNumClassCode) {
+		const year = yearSem.substring(0, yearSem.length - 1).padStart(4, '0');
+		const sem = yearSem.charAt(yearSem.length - 1) === '0' ? '1' : '2';
+
+		let systemNumber = sysNumClassCode, classCode = '';
+		const index = sysNumClassCode.indexOf('-');
+		if (index !== -1) {
+			systemNumber = sysNumClassCode.substring(0, index);
+			classCode = sysNumClassCode.substring(index + 1);
+		}
+
+		return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
+			'&co_no=' + systemNumber +
+			'&class_code=' + classCode;
+	}
+
+	// Search page
+	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', null, {searchValue: true});
+	let tHead;
+	const courseSearch = div('courseSearch',
 		{onRender, onPageClose, onPageOpen},
 		courseSearchForm = div('form',
 			// input(null, 'Serial number', 'serial', {onkeyup}),
@@ -960,11 +982,11 @@ module.exports = function (loginState) {
 		),
 		table('result', {cellPadding: 0},
 			colgroup(null,
-				col(null),
+				// col(null),
 				// col(null, {'style': 'visibility: collapse'}),
 			),
 			State(searchResultSignal, renderSearchResult),
-			thead('noSelect',
+			tHead = thead('noSelect',
 				tr(null, th(null, 'textSearch', {colSpan: 15},
 					// Filter options
 					img('./res/assets/funnel_icon.svg'),
@@ -987,7 +1009,7 @@ module.exports = function (loginState) {
 					th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 					th('Serial', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
 					th('Type', 'courseType', {key: 'courseType', onclick: sortStringKey}),
-					th('Grade', 'grade', {key: 'courseType', onclick: sortIntKey}),
+					th('Grade', 'grade', {key: 'grade', onclick: sortIntKey}),
 					th('Class', 'class', {key: 'classInfo', onclick: sortStringKey}),
 					th('Time', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
 					th('Course name', 'courseName', {key: 'courseName', onclick: sortStringKey}),
@@ -1007,6 +1029,20 @@ module.exports = function (loginState) {
 		instructorDetailWindow,
 		nckuhubDetailWindow,
 	);
+
+	routerElement.addEventListener('scroll', function () {
+		if (courseRenderResultDisplay.length > showResultLastIndex &&
+			courseRenderResultDisplay[showResultLastIndex][0].offsetTop - tHead.offsetTop < routerElement.offsetHeight) {
+			const pShowResultLastIndex = showResultLastIndex;
+			showResultLastIndex += showResultIndexStep;
+			for (let i = pShowResultLastIndex + 1; i < courseRenderResultDisplay.length; i++) {
+				const item = courseRenderResultDisplay[i];
+				const display = i > showResultLastIndex ? 'none' : null;
+				item[0].style.display = item[1].style.display = item[2].style.display = display;
+			}
+		}
+	});
+
 	return courseSearch;
 };
 

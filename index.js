@@ -154,7 +154,7 @@ window.pageLoading = new Signal(false);
 	const queryRouter = QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
 			Home: () => require('./res/pages/home')(queryRouter),
-			CourseSearch: () => require('./res/pages/courseSearch')(userLoginData),
+			CourseSearch: () => require('./res/pages/courseSearch')(userLoginData, queryRouter),
 			Schedule: () => require('./res/pages/courseSchedule')(userLoginData),
 			GradeInquiry: () => require('./res/pages/stuIdSysGrades')(userLoginData),
 			CourseSelectionPreference: () => require('./res/pages/preferenceAdjust')(userLoginData),

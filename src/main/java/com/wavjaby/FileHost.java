@@ -67,7 +67,6 @@ public class FileHost implements EndpointModule {
                         req.close();
                         return;
                     }
-//                    System.out.println(file.getAbsolutePath());
 
                     if (file.exists()) {
                         if (resFilePath.endsWith(".js"))

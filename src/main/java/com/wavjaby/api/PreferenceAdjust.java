@@ -294,16 +294,9 @@ public class PreferenceAdjust implements EndpointModule {
 //            }
 //            String courseInfo = body.substring(courseInfoStart, courseInfoEnd).trim();
 //
-//            System.out.println(itemId);
-//            System.out.println(courseIdAndName);
-//            System.out.println(courseInfo);
 //
 //            itemTagEnd = courseNameEnd;
 //        }
-//
-//
-//        System.out.println(actionKey);
-//        System.out.println(datatype);
     }
 
     @Override

@@ -28,13 +28,10 @@ $instructor-info-fade-time: 200ms;
         width: 100%;
         border-spacing: 0;
         font-size: 18px;
-        padding: 0 20px;
+        padding: 0 5px;
         white-space: nowrap;
         margin: auto;
-
-        @media only screen and ($small-screen) {
-            padding: 0;
-        }
+        position: relative;
 
         > .loaderCircle {
             position: absolute;

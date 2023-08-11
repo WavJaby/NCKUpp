@@ -599,8 +599,6 @@ public class StudentIdentificationSystem implements EndpointModule {
         }
         avg /= totalStudentCount;
         stdDev = Math.sqrt(stdDev / totalStudentCount - avg * avg);
-//            System.out.println(avg);
-//            System.out.println(stdDev);
 
         int peakStudentCount = 0;
         for (int i = 0; i < 11; i++) {

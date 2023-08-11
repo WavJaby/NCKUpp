@@ -1,7 +1,5 @@
 'use strict';
 
-// const {div, input, ul, li, text, span, Signal, img} = require('.//domHelper');
-
 /**
  * @typedef {[string|number, string|number]|[string|number, ItemData[]]} ItemData
  * [itemValue, displayName] or [groupName, ItemData[]]

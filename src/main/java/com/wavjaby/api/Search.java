@@ -1712,7 +1712,6 @@ public class Search implements EndpointModule {
                             .execute().body();
                     if (new JsonObject(result).getBoolean("status"))
                         break;
-//            System.out.println(new JsonObject(allDeptRes.body()).toStringBeauty());
                 } catch (IOException | JsonException e) {
                     logger.errTrace(e);
                 }
