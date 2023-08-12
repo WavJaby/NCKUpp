@@ -162,30 +162,31 @@
  * @property {[string, string][]} dept
  */
 
-/*ExcludeStart*/
-const module = {};
-const {
-	div,
-	input,
+
+import {
+	a,
 	button,
+	ClassList,
+	checkboxWithName,
+	colgroup,
+	div,
+	img,
+	input,
+	p,
 	span,
 	Signal,
 	State,
-	ClassList,
 	table,
 	tr,
 	th,
 	td,
-	p,
-	img,
 	thead,
 	tbody,
-	colgroup,
 	text,
-	a,
-	linkStylesheet, checkboxWithName
-} = require('../domHelper');
-/*ExcludeEnd*/
+	mountableStylesheet
+} from '../domHelper.js';
+
+import SelectMenu from '../selectMenu.js';
 
 // [default, success, info, primary, warning, danger]
 const courseDataTagColor = [
@@ -197,9 +198,14 @@ const courseDataTagColor = [
 	'#d9534f'
 ];
 
-module.exports = function (loginState, routerElement) {
+/**
+ * @param {QueryRouter} router
+ * @param loginState
+ * @return {HTMLDivElement}
+ */
+export default function (router, loginState) {
 	console.log('Course search Init');
-	const styles = linkStylesheet('./res/pages/courseSearch.css');
+	const styles = mountableStylesheet('./res/pages/courseSearch.css');
 	const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
 	expandArrowImage.className = 'noSelect noDrag';
 
@@ -339,7 +345,10 @@ module.exports = function (loginState, routerElement) {
 		const nckuhubResult = {};
 		if (!(result.data instanceof Array)) {
 			const arr = [];
-			Object.values(result.data).forEach(i => arr.push(...i));
+			for (const i of Object.values(result.data)) {
+				for (const j of i)
+					arr.push(j);
+			}
 			result.data = arr;
 		}
 		for (/**@type CourseDataRaw*/const data of result.data) {
@@ -846,7 +855,7 @@ module.exports = function (loginState, routerElement) {
 									onmouseenter: e => {
 										instructorInfoBubble.set({
 											target: e.target,
-											offsetY: routerElement.scrollTop,
+											offsetY: router.element.scrollTop,
 											data: instructor
 										});
 									},
@@ -1030,9 +1039,9 @@ module.exports = function (loginState, routerElement) {
 		nckuhubDetailWindow,
 	);
 
-	routerElement.addEventListener('scroll', function () {
+	router.element.addEventListener('scroll', function () {
 		if (courseRenderResultDisplay.length > showResultLastIndex &&
-			courseRenderResultDisplay[showResultLastIndex][0].offsetTop - tHead.offsetTop < routerElement.offsetHeight) {
+			courseRenderResultDisplay[showResultLastIndex][0].offsetTop - tHead.offsetTop < router.element.offsetHeight) {
 			const pShowResultLastIndex = showResultLastIndex;
 			showResultLastIndex += showResultIndexStep;
 			for (let i = pShowResultLastIndex + 1; i < courseRenderResultDisplay.length; i++) {

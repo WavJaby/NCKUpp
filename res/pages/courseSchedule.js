@@ -1,9 +1,6 @@
 'use strict';
 
-/*ExcludeStart*/
-const module = {};
-const {checkboxWithName, div, button, table, Signal, text, span, ShowIf, linkStylesheet} = require('../domHelper');
-/*ExcludeEnd*/
+import {checkboxWithName, div, button, table, Signal, text, span, ShowIf, mountableStylesheet} from '../domHelper.js';
 
 // static
 const weekTable = ['#', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -48,10 +45,15 @@ function CourseInfoWindow(showCourseInfoWindow) {
 	return courseInfoWindow;
 }
 
-module.exports = function (loginState) {
+/**
+ * @param {QueryRouter} router
+ * @param loginState
+ * @return {HTMLDivElement}
+ */
+export default function (router, loginState) {
 	console.log('Course schedule Init');
 	// static element
-	const styles = linkStylesheet('./res/pages/courseSchedule.css');
+	const styles = mountableStylesheet('./res/pages/courseSchedule.css');
 	const showCourseInfoWindow = new Signal(false);
 	const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
 	const showClassroomCheckbox = checkboxWithName(null, '顯示教室', false);

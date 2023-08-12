@@ -33,7 +33,7 @@ const {
 	img, svg,
 	footer,
 	linkStylesheet,
-} = require('https://wavjaby.github.io/NCKUpp/res/domHelper.js');
+} = require('./res/domHelper');
 
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'

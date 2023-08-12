@@ -1,14 +1,15 @@
 'use strict';
 
-/*ExcludeStart*/
-const module = {};
-const {div, linkStylesheet, span, p, a, h1, img, text, br} = require('../domHelper');
-/*ExcludeEnd*/
+import {div, mountableStylesheet, span, p, a, h1, img, text, br} from '../domHelper.js';
 
-module.exports = function (routerElement) {
+/**
+ * @param {QueryRouter} router
+ * @return {HTMLDivElement}
+ */
+export default function (router) {
 	console.log('Home Init');
 	const titleAnimation = span(null, 'slideOut', span('++'));
-	const styles = linkStylesheet('./res/pages/home.css');
+	const styles = mountableStylesheet('./res/pages/home.css');
 	const newsPanel = div('newsPanel',
 		h1('最新消息', 'title'),
 		div('splitLine'),
@@ -63,7 +64,7 @@ module.exports = function (routerElement) {
 				titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px'
 			, 700);
 
-		routerElement.addEventListener('scroll', onscroll);
+		router.element.addEventListener('scroll', onscroll);
 	}
 
 	function onPageClose() {
@@ -71,11 +72,11 @@ module.exports = function (routerElement) {
 		styles.disable();
 		titleAnimation.style.width = null;
 
-		routerElement.removeEventListener('scroll', onscroll);
+		router.element.removeEventListener('scroll', onscroll);
 	}
 
 	function onscroll() {
-		const percent = 1 - routerElement.scrollTop / siteInfo.offsetHeight;
+		const percent = 1 - router.element.scrollTop / siteInfo.offsetHeight;
 		siteInfo.style.opacity = percent.toString();
 	}
 

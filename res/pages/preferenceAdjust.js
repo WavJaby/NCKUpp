@@ -1,12 +1,16 @@
-/*ExcludeStart*/
-const module = {};
-const {div, span, linkStylesheet, h1, button} = require('../domHelper');
-/*ExcludeEnd*/
+'use strict';
 
-module.exports = function (loginState) {
+import {div, span, mountableStylesheet, h1, button} from '../domHelper.js';
+
+/**
+ * @param {QueryRouter} router
+ * @param loginState
+ * @return {HTMLDivElement}
+ */
+export default function (router, loginState) {
 	console.log('Preference adjust Init');
 	// static element
-	const styles = linkStylesheet('./res/pages/preferenceAdjust.css');
+	const styles = mountableStylesheet('./res/pages/preferenceAdjust.css');
 	const adjustList = new AdjustList();
 	const saveItemOrderButton = button('saveOrderBtn');
 	const saveItemOrderDelayTime = 5000;

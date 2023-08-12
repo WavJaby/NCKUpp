@@ -1,6 +1,37 @@
 'use strict';
 
+const havePushState = typeof window.history.pushState === 'function';
 let /**@type {Console}*/ debug = null;
+
+String.prototype.toUnicode = function () {
+	return this.replace(/[^\x00-\xFF]/g, function (ch) {
+		return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
+	});
+};
+
+let urlSearchData = new URLSearchParams(window.location.search);
+window.urlHashData = null;
+urlHashDataUpdate();
+window.pushHistory = function () {
+	const newUrl = new URL(window.location);
+	const hashStr = JSON.stringify(window.urlHashData);
+	newUrl.hash = hashStr === '{}' ? '' : btoa(hashStr.toUnicode());
+	newUrl.search = urlSearchData.toString();
+	if (debug)
+		debug.log('Append history', window.urlHashData, Object.fromEntries(urlSearchData));
+	if (havePushState)
+		window.history.pushState({}, document.title, newUrl);
+	else
+		window.location = newUrl;
+};
+
+function urlHashDataUpdate() {
+	window.urlHashData = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
+}
+
+function urlSearchDataUpdate() {
+	urlSearchData = new URLSearchParams(window.location.search);
+}
 
 function addOption(element, options) {
 	for (let i = 0; i < options.length; i++) {
@@ -31,7 +62,7 @@ function parseTextInput(text, element) {
 		element.textContent = new TextStateChanger(text).init(element);
 	else if (text instanceof TextStateChanger)
 		element.textContent = text.init(element);
-	else if (typeof text === 'string')
+	else if (typeof text === 'string' || typeof text === 'number')
 		element.textContent = text;
 	else if (debug)
 		debug.warn(element, 'text type error: ', text);
@@ -53,7 +84,7 @@ function parseClassInput(className, element) {
 /**
  * @constructor
  * @param {string | boolean | number | object} [initState] Init state data
- * */
+ */
 function Signal(initState) {
 	const thisListener = [];
 	this.state = initState !== undefined ? initState : null;
@@ -87,17 +118,17 @@ function Signal(initState) {
 /**
  * @param {Signal} signal
  * @param {function(state: any): Element} [renderState]
- * */
+ */
 function State(signal, renderState) {
 	if (signal === null || signal === undefined) throw new TypeError('State signal not given');
 	return new StateChanger(signal, renderState);
 }
 
 /**
- * @constructor
  * @param {Signal} signal
  * @param {function(state: any): Element} [renderState]
- * */
+ * @constructor
+ */
 function StateChanger(signal, renderState) {
 	let lastElement;
 	let thisParent;
@@ -118,17 +149,17 @@ function StateChanger(signal, renderState) {
 /**
  * @param {Signal} signal
  * @param {function(state: any): string} [toString]
- * */
+ */
 function TextState(signal, toString) {
 	if (signal === null || signal === undefined) throw new TypeError('State signal not given');
 	return new TextStateChanger(signal, toString);
 }
 
 /**
- * @constructor
  * @param {Signal} signal
  * @param {function(state: any): string} [toString]
- * */
+ * @constructor
+ */
 function TextStateChanger(signal, toString) {
 	let element = null;
 	signal.addListener(updateText);
@@ -145,7 +176,8 @@ function TextStateChanger(signal, toString) {
 
 /**
  * @param {string} className
- * */
+ * @constructor
+ */
 function ClassList(...className) {
 	const classList = className;
 	this.add = this.remove = this.toggle = this.contains = function () {
@@ -208,101 +240,118 @@ function ClassList(...className) {
 }
 
 /**
+ * @param url
+ * @param parameter
+ * @constructor
+ */
+function RouterLazyLoad(url, ...parameter) {
+	this.url = url;
+	this.parameters = parameter;
+}
+
+/**
  * @param {string} titlePrefix
  * @param {Object.<string, string>} pageSuffix
  * @param {string} defaultPageId
- * @param {Object<string, function()|HTMLElement>} routs
- * @param {HTMLElement} [footer]
- * */
+ * @param {Object<string, RouterLazyLoad|HTMLElement>} routs
+ * @param {HTMLElement} footer
+ * @constructor
+ */
 function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 					 routs, footer) {
-	const routerRoot = document.createElement('div');
+	const thisI = this;
+	const routerRoot = this.element = document.createElement('div');
 	routerRoot.className = 'router';
-	const loadPageCache = {};
+	const loadedPage = {};
 	const pageScrollSave = {};
 	let lastPage, lastPageId = null;
+	let lazyIsLoading = false;
 
 	window.addEventListener('popstate', function () {
 		urlSearchDataUpdate();
 		urlHashDataUpdate();
-		routerRoot.openPage(null, true);
+		openPage(null, true);
 	});
+	this.openPage = openPage;
+	this.init = function () {
+		urlSearchDataUpdate();
+		urlHashDataUpdate();
+		openPage(null, true);
+	}
 
-	routerRoot.openPage = function (pageId, isHistory) {
+	function openPage(pageId, isHistory) {
 		if (!pageId)
-			pageId = urlSearchData.get('page');
+			pageId = urlSearchData.get('page') || defaultPageId;
+
+		// If user open same page (not from history), skip
+		if (lastPageId === pageId && !isHistory)
+			return;
 
 		// If page not found, load default page
-		if (!pageId || !pageSuffix[pageId] || !routs[pageId])
+		if (!pageSuffix[pageId] || !routs[pageId])
 			pageId = defaultPageId;
 
-		// If same page
-		if (lastPageId === pageId) {
-			// If from history
-			if (isHistory) {
-				const page = getPage(pageId);
-				if (page.onPageOpen) page.onPageOpen(!!isHistory);
-				if (routerRoot.onPageOpen) routerRoot.onPageOpen(lastPageId, pageId, page);
-			}
+		// Get page
+		getAndLoadPage(pageId, isHistory);
+	}
+
+	function getAndLoadPage(pageId, isHistory) {
+		let page = loadedPage[pageId];
+		// Page is loaded
+		if (page) {
+			pageReadyOpen(page, pageId, isHistory);
 			return;
 		}
-		document.title = titlePrefix + ' ' + pageSuffix[pageId];
-		urlSearchData.set('page', pageId);
-		if (!isHistory)
-			window.pushHistory();
 
-		// Get page
-		const page = getPage(pageId);
+		// Load page
+		page = routs[pageId];
 
-		// Switch page element
-		if (lastPage) {
-			pageScrollSave[lastPageId] = routerRoot.scrollTop;
-			if (lastPage.onPageClose) lastPage.onPageClose();
-			routerRoot.replaceChild(page, lastPage);
-		}
-		// append page element on first open
-		else {
-			routerRoot.appendChild(page);
-			if (footer)
-				routerRoot.appendChild(footer);
+		// Lazy load
+		if (page instanceof RouterLazyLoad) {
+			lazyIsLoading = true;
+			import(page.url).then(function (i) {
+				pageReadyOpen(loadedPage[pageId] = i.default(thisI, ...page.parameters), pageId, isHistory);
+				lazyIsLoading = false;
+			});
+		} else
+			pageReadyOpen(loadedPage[pageId] = page, pageId, isHistory);
+	}
+
+	function pageReadyOpen(page, pageId, isHistory) {
+		// Page change
+		if (lastPageId !== pageId) {
+			// Update title
+			document.title = titlePrefix + ' ' + pageSuffix[pageId];
+			// Add history
+			urlSearchData.set('page', pageId);
+			if (!isHistory)
+				window.pushHistory();
+
+			// Switch page element
+			if (lastPage) {
+				pageScrollSave[lastPageId] = routerRoot.scrollTop;
+				if (lastPage.onPageClose) lastPage.onPageClose();
+				routerRoot.replaceChild(page, lastPage);
+			}
+			// append page element on first open
+			else {
+				routerRoot.appendChild(page);
+				if (footer)
+					routerRoot.appendChild(footer);
+			}
+			lastPage = page;
 		}
 		// Render page if not render yet
 		if (!page.render) {
 			page.render = true;
 			page.onRender();
 		}
+
+		// Restore last scroll position
 		routerRoot.scrollTop = pageScrollSave[pageId] || 0;
 		if (page.onPageOpen) page.onPageOpen(!!isHistory);
-		if (routerRoot.onPageOpen) routerRoot.onPageOpen(lastPageId, pageId, page);
-
+		if (thisI.onPageOpen) thisI.onPageOpen(lastPageId, pageId, page);
 		lastPageId = pageId;
-		lastPage = page;
-	}
-
-	function getPage(pageId) {
-		const loadedPage = loadPageCache[pageId];
-		if (loadedPage)
-			return loadedPage;
-
-		// Load page
-		const page = routs[pageId];
-		if (!page) return null;
-
-		// lazy
-		if (page instanceof Function)
-			return loadPageCache[pageId] = page();
-		return loadPageCache[pageId] = page;
-	}
-
-	routerRoot.getPageIds = function () {
-		return Object.keys(routs);
-	};
-
-	// open default page
-	routerRoot.init = function () {
-		urlSearchDataUpdate();
-		urlHashDataUpdate();
-		routerRoot.openPage(null, true);
 	}
 
 	/**
@@ -310,15 +359,13 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	 * @param lastPageId
 	 * @param page
 	 */
-	routerRoot.onPageOpen = null;
-
-	return routerRoot;
+	this.onPageOpen = null;
 }
 
 /**
  * @param {Signal} signal
  * @param {HTMLElement} element
- * */
+ */
 function ShowIf(signal, element) {
 	if (signal === null || signal === undefined) throw new TypeError('State signal not given');
 	return new ShowIfStateChanger(signal, element);
@@ -328,7 +375,7 @@ function ShowIf(signal, element) {
  * @constructor
  * @param {Signal} signal
  * @param {HTMLElement} element
- * */
+ */
 function ShowIfStateChanger(signal, element) {
 	const emptyDiv = document.createElement('div');
 	let showState = signal.state;
@@ -357,515 +404,520 @@ function ShowIfStateChanger(signal, element) {
 	};
 }
 
-String.prototype.toUnicode = function () {
-	return this.replace(/[^\x00-\xFF]/g, function (ch) {
-		return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
-	});
-};
-
-let urlSearchData = new URLSearchParams(window.location.search);
-const havePushState = typeof window.history.pushState === 'function';
-window.urlHashData = null;
-urlHashDataUpdate();
-window.pushHistory = function () {
-	const newUrl = new URL(window.location);
-	const hashStr = JSON.stringify(window.urlHashData);
-	newUrl.hash = hashStr === '{}' ? '' : btoa(hashStr.toUnicode());
-	newUrl.search = urlSearchData.toString();
-	if (debug)
-		debug.log('Append history', window.urlHashData, Object.fromEntries(urlSearchData));
-	if (havePushState)
-		window.history.pushState({}, document.title, newUrl);
-	else
-		window.location = newUrl;
-};
-
-function urlHashDataUpdate() {
-	window.urlHashData = window.location.hash.length > 1 ? JSON.parse(atob(window.location.hash.slice(1))) : {};
+// Export
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLDivElement}
+ */
+function div(classN, ...options) {
+	const element = document.createElement('div');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
 }
 
-function urlSearchDataUpdate() {
-	urlSearchData = new URLSearchParams(window.location.search);
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLElement}
+ */
+function nav(classN, ...options) {
+	const element = document.createElement('nav');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
 }
 
-module.exports = {
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLUListElement}
+ */
+function ul(classN, ...options) {
+	const element = document.createElement('ul');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLLIElement}
+ */
+function li(classN, ...options) {
+	const element = document.createElement('li');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param {string} [placeholder]
+ * @param {string} [id]
+ * @param [options] Options for element
+ * @return {HTMLInputElement}
+ */
+function input(classN, placeholder, id, ...options) {
+	const element = document.createElement('input');
+	if (classN) parseClassInput(classN, element);
+	if (placeholder) element.placeholder = placeholder;
+	if (id) element.id = id;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param {string | Signal | TextStateChanger} text
+ * @param {HTMLInputElement} inputElement
+ * @param [options] Options for element
+ * @return {HTMLLabelElement}
+ */
+function label(classN, text, inputElement, ...options) {
+	const element = document.createElement('label');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (inputElement) {
+		if (!inputElement.id)
+			inputElement.id = Math.random().toString(16).substring(2);
+		element.htmlFor = inputElement.id;
+	}
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param {function(this: GlobalEventHandlers, ev: Event)} [onchange]
+ * @param {string} [id]
+ * @param [options] Options for element
+ * @return {HTMLInputElement}
+ */
+function checkbox(classN, onchange, id, ...options) {
+	const element = document.createElement('input');
+	element.type = 'checkbox';
+	if (classN) parseClassInput(classN, element);
+	element.onchange = onchange;
+	if (id) element.id = id;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param {string} title
+ * @param {boolean} [defaultState]
+ * @param {function(ev: Event): any} [onchange]
+ * @param [options] Options for element
+ * @return {HTMLLabelElement & {input: HTMLInputElement}}
+ */
+function checkboxWithName(classN, title, defaultState, onchange, ...options) {
+	const input = document.createElement('input');
+	input.type = 'checkbox';
+	input.onchange = onchange;
+	input.checked = !!defaultState;
+	const checkmark = document.createElement('div');
+	checkmark.className = 'checkmark';
+
+	const element = document.createElement('label');
+	element.className = 'checkboxWithName noSelect';
+	if (classN) parseClassInput(classN, element);
+	element.appendChild(input);
+	element.appendChild(checkmark);
+	element.appendChild(document.createTextNode(title));
+	element.input = input;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {function(MouseEvent)} [onClick]
+ * @param [options] Options for element
+ * @return {HTMLButtonElement}
+ */
+function button(classN, text, onClick, ...options) {
+	const element = document.createElement('button');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (onClick) element.onclick = onClick;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableElement}
+ */
+function table(classN, ...options) {
+	const element = document.createElement('table');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableSectionElement}
+ */
+function thead(classN, ...options) {
+	const element = document.createElement('thead');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableSectionElement}
+ */
+function tbody(classN, ...options) {
+	const element = document.createElement('tbody');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableColElement}
+ */
+function colgroup(classN, ...options) {
+	const element = document.createElement('colgroup');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableColElement}
+ */
+function col(classN, ...options) {
+	const element = document.createElement('col');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableRowElement}
+ */
+function tr(classN, ...options) {
+	const element = document.createElement('tr');
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableCellElement}
+ */
+function th(text, classN, ...options) {
+	const element = document.createElement('th');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLTableCellElement}
+ */
+function td(text, classN, ...options) {
+	const element = document.createElement('td');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLHeadingElement}
+ */
+function h1(text, classN, ...options) {
+	const element = document.createElement('h1');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLHeadingElement}
+ */
+function h2(text, classN, ...options) {
+	const element = document.createElement('h2');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLHeadingElement}
+ */
+function h3(text, classN, ...options) {
+	const element = document.createElement('h3');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLHeadingElement}
+ */
+function h4(text, classN, ...options) {
+	const element = document.createElement('h4');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLHeadingElement}
+ */
+function h5(text, classN, ...options) {
+	const element = document.createElement('h5');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLHeadingElement}
+ */
+function h6(text, classN, ...options) {
+	const element = document.createElement('h6');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string} [href]
+ * @param {string | ClassList} [classN] Class Name
+ * @param {function(MouseEvent)} [onClick]
+ * @param [options] Options for element
+ * @return {HTMLAnchorElement}
+ */
+function a(text, href, classN, onClick, ...options) {
+	const element = document.createElement('a');
+	if (classN) parseClassInput(classN, element);
+	if (href) element.href = href;
+	if (text) parseTextInput(text, element);
+	if (onClick) element.onclick = onClick;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLParagraphElement}
+ */
+function p(text, classN, ...options) {
+	const element = document.createElement('p');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | Signal | TextStateChanger} [text]
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLSpanElement}
+ */
+function span(text, classN, ...options) {
+	const element = document.createElement('span');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string} text
+ * @return {Text}
+ */
+function text(text) {
+	if (debug && typeof text !== 'string') {
+		const element = document.createTextNode(text);
+		debug.warn(element, 'text type error: ', text);
+		return element;
+	}
+
+	return document.createTextNode(text);
+}
+
+/**
+ * @return {HTMLBRElement}
+ */
+function br() {
+	return document.createElement('br');
+}
+
+/**
+ * @param {string} url
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLImageElement}
+ */
+function img(url, classN, ...options) {
+	const element = document.createElement('img');
+	if (classN) parseClassInput(classN, element);
+	if (url) element.src = url;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string} svgText
+ * @param {string} [viewBox]
+ * @param {string} [classN] Class Name
+ * @param [options] Options for element
+ * @return {SVGSVGElement}
+ */
+function svg(svgText, viewBox, classN, ...options) {
+	const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	element.innerHTML = svgText;
+	if (classN) element.setAttributeNS(null, 'class', classN);
+	if (viewBox) element.setAttributeNS(null, 'viewBox', viewBox);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @typedef {Object} StylesheetMethods
+ * @property {function()} mount Add style to header
+ * @property {function()} unmount Remove style from header
+ * @property {function()} enable Enable style
+ * @property {function()} disable Disable style
+ */
+/**
+ * @param {string} url stylesheet url
+ * @return {HTMLLinkElement & StylesheetMethods}
+ */
+function mountableStylesheet(url) {
+	const element = document.createElement('link');
+	element.rel = 'stylesheet';
+	element.href = url;
+	element.mount = function () {document.head.appendChild(element);};
+	element.unmount = function () {document.head.removeChild(element);};
+	element.enable = function () {element.disabled = false;};
+	element.disable = function () {element.disabled = true;};
+	return element;
+}
+
+/**
+ * @param [options] Options for element
+ * @return {HTMLElement}
+ */
+function footer(...options) {
+	const element = document.createElement('footer');
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string} url Url
+ * @param {string | ClassList} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLIFrameElement}
+ */
+function iframe(url, classN, ...options) {
+	const element = document.createElement('iframe');
+	if (classN) parseClassInput(classN, element);
+	if (url) element.src = url;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string} tagN
+ * @param {string} [classN] Class Name
+ * @param [options] Options for element
+ * @return {HTMLElement}
+ */
+function dom(tagN, classN, ...options) {
+	const element = document.createElement(tagN);
+	if (classN) parseClassInput(classN, element);
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+function doomHelperDebug() {
+	debug = console;
+}
+
+export {
 	Signal,
 	ShowIf,
 	State,
 	TextState,
 	ClassList,
-	QueryRouter,
+	QueryRouter, RouterLazyLoad,
 
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param {string} title
-	 * @param {boolean} [defaultState]
-	 * @param {function(ev: Event): any} [onchange]
-	 * @param [options] Options for element
-	 * @return {HTMLLabelElement & {input: HTMLInputElement}}
-	 * */
-	checkboxWithName(classN, title, defaultState, onchange, ...options) {
-		const input = document.createElement('input');
-		input.type = 'checkbox';
-		input.onchange = onchange;
-		input.checked = !!defaultState;
-		const checkmark = document.createElement('div');
-		checkmark.className = 'checkmark';
+	doomHelperDebug,
 
-		const element = document.createElement('label');
-		element.className = 'checkboxWithName noSelect';
-		if (classN) parseClassInput(classN, element);
-		element.appendChild(input);
-		element.appendChild(checkmark);
-		element.appendChild(document.createTextNode(title));
-		element.input = input;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLDivElement}
-	 * */
-	div(classN, ...options) {
-		const element = document.createElement('div');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLElement}
-	 * */
-	nav(classN, ...options) {
-		const element = document.createElement('nav');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLUListElement}
-	 * */
-	ul(classN, ...options) {
-		const element = document.createElement('ul');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLLIElement}
-	 * */
-	li(classN, ...options) {
-		const element = document.createElement('li');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param {string} [placeholder]
-	 * @param {string} [id]
-	 * @param [options] Options for element
-	 * @return {HTMLInputElement}
-	 * */
-	input(classN, placeholder, id, ...options) {
-		const element = document.createElement('input');
-		if (classN) parseClassInput(classN, element);
-		if (placeholder) element.placeholder = placeholder;
-		if (id) element.id = id;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param {function(this: GlobalEventHandlers, ev: Event)} [onchange]
-	 * @param {string} [id]
-	 * @param [options] Options for element
-	 * @return {HTMLInputElement}
-	 * */
-	checkbox(classN, onchange, id, ...options) {
-		const element = document.createElement('input');
-		element.type = 'checkbox';
-		if (classN) parseClassInput(classN, element);
-		element.onchange = onchange;
-		if (id) element.id = id;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param {string | Signal | TextStateChanger} text
-	 * @param {HTMLInputElement} inputElement
-	 * @param [options] Options for element
-	 * @return {HTMLLabelElement}
-	 * */
-	label(classN, text, inputElement, ...options) {
-		const element = document.createElement('label');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (inputElement) {
-			if (!inputElement.id)
-				inputElement.id = Math.random().toString(16).substring(2);
-			element.htmlFor = inputElement.id;
-		}
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {function(MouseEvent)} [onClick]
-	 * @param [options] Options for element
-	 * @return {HTMLButtonElement}
-	 * */
-	button(classN, text, onClick, ...options) {
-		const element = document.createElement('button');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (onClick) element.onclick = onClick;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLTableElement}
-	 * */
-	table(classN, ...options) {
-		const element = document.createElement('table');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLTableColElement}
-	 * */
-	colgroup(classN, ...options) {
-		const element = document.createElement('colgroup');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLTableColElement}
-	 * */
-	col(classN, ...options) {
-		const element = document.createElement('col');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLTableSectionElement}
-	 * */
-	thead(classN, ...options) {
-		const element = document.createElement('thead');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	tr(classN, ...options) {
-		const element = document.createElement('tr');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	th(text, classN, ...options) {
-		const element = document.createElement('th');
-		if (classN) parseClassInput(classN, element);
-		if (text) element.textContent = text;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	td(text, classN, ...options) {
-		const element = document.createElement('td');
-		if (classN) parseClassInput(classN, element);
-		if (text) element.textContent = text;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLTableSectionElement}
-	 * */
-	tbody(classN, ...options) {
-		const element = document.createElement('tbody');
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string} url Url
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLIFrameElement}
-	 * */
-	iframe(url, classN, ...options) {
-		const element = document.createElement('iframe');
-		if (classN) parseClassInput(classN, element);
-		if (url) element.src = url;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLParagraphElement}
-	 * */
-	p(text, classN, ...options) {
-		const element = document.createElement('p');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLSpanElement}
-	 * */
-	span(text, classN, ...options) {
-		const element = document.createElement('span');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLHeadingElement}
-	 * */
-	h1(text, classN, ...options) {
-		const element = document.createElement('h1');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLHeadingElement}
-	 * */
-	h2(text, classN, ...options) {
-		const element = document.createElement('h2');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLHeadingElement}
-	 * */
-	h3(text, classN, ...options) {
-		const element = document.createElement('h3');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLHeadingElement}
-	 * */
-	h4(text, classN, ...options) {
-		const element = document.createElement('h4');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLHeadingElement}
-	 * */
-	h5(text, classN, ...options) {
-		const element = document.createElement('h5');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLHeadingElement}
-	 * */
-	h6(text, classN, ...options) {
-		const element = document.createElement('h6');
-		if (classN) parseClassInput(classN, element);
-		if (text) parseTextInput(text, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string | Signal | TextStateChanger} [text]
-	 * @param {string} [href]
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param {function(MouseEvent)} [onClick]
-	 * @param [options] Options for element
-	 * @return {HTMLAnchorElement}
-	 * */
-	a(text, href, classN, onClick, ...options) {
-		const element = document.createElement('a');
-		if (classN) parseClassInput(classN, element);
-		if (href) element.href = href;
-		if (text) parseTextInput(text, element);
-		if (onClick) element.onclick = onClick;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string} text
-	 * @return {Text}
-	 */
-	text(text) {
-		if (debug && typeof text !== 'string') {
-			const element = document.createTextNode(text);
-			debug.warn(element, 'text type error: ', text);
-			return element;
-		}
-
-		return document.createTextNode(text);
-	},
-
-	/**
-	 * @return {HTMLBRElement}
-	 */
-	br() {
-		return document.createElement('br')
-	},
-
-	/**
-	 * @param {string} url
-	 * @param {string | ClassList} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLImageElement}
-	 * */
-	img(url, classN, ...options) {
-		const element = document.createElement('img');
-		if (classN) parseClassInput(classN, element);
-		if (url) element.src = url;
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string} svgText
-	 * @param {string} [viewBox]
-	 * @param {string} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {SVGSVGElement}
-	 * */
-	svg(svgText, viewBox, classN, ...options) {
-		const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-		element.innerHTML = svgText;
-		if (classN) element.setAttributeNS(null, 'class', classN);
-		if (viewBox) element.setAttributeNS(null, 'viewBox', viewBox);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @typedef {Object} StylesheetMethods
-	 * @property {function()} mount Add style to header
-	 * @property {function()} unmount Remove style from header
-	 * @property {function()} enable Enable style
-	 * @property {function()} disable Disable style
-	 *
-	 * @typedef {HTMLLinkElement & StylesheetMethods} LinkStylesheet
-	 */
-	/**
-	 * @param {string} url stylesheet url
-	 * @return {LinkStylesheet}
-	 * */
-	linkStylesheet(url) {
-		const element = document.createElement('link');
-		element.rel = 'stylesheet';
-		element.href = url;
-		element.mount = function () {document.head.appendChild(element);};
-		element.unmount = function () {document.head.removeChild(element);};
-		element.enable = function () {element.disabled = false;};
-		element.disable = function () {element.disabled = true;};
-		return /**@type{LinkStylesheet}*/element;
-	},
-
-	/**
-	 * @param [options] Options for element
-	 * @return {HTMLElement}
-	 * */
-	footer(...options) {
-		const element = document.createElement('footer');
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	/**
-	 * @param {string} tagN
-	 * @param {string} [classN] Class Name
-	 * @param [options] Options for element
-	 * @return {HTMLElement}
-	 * */
-	any(tagN, classN, ...options) {
-		const element = document.createElement(tagN);
-		if (classN) parseClassInput(classN, element);
-		if (options.length) addOption(element, options);
-		return element;
-	},
-
-	doomHelperDebug() {
-		debug = console;
-	}
+	div,
+	// Nav, list
+	nav, ul, li,
+	// Input
+	label, input, checkbox, checkboxWithName, button,
+	// Table
+	table, thead, tbody, colgroup, col, th, tr, td,
+	// Text
+	h1, h2, h3, h4, h5, h6,
+	a, p, span, text, br,
+	// Image
+	img, svg,
+	// Other
+	mountableStylesheet,
+	footer,
+	iframe,
+	dom,
 };

@@ -87,13 +87,17 @@ function fetchSync(url, init, onError) {
 	};
 }
 
+var requireCache = {};
+
 /**
  * @param url {string}
  * @return any
  */
 function require(url) {
-	// if (url.startsWith('.//'))
-	// 	return {};
+	var parsedUrl = new URL(url);
+	var cache = requireCache[parsedUrl];
+	if (cache)
+		return cache;
 
 	var pathEnd = url.lastIndexOf('/');
 	if (url.indexOf('.', pathEnd) === -1)
@@ -127,7 +131,7 @@ function require(url) {
 		return style;
 	} else if (contentType.startsWith('application/javascript')) {
 		// noinspection JSUnusedLocalSymbols
-		return eval('(function(){var module={};' + parseScript(result.body, url, pathEnd) + 'return module.exports;})')();
+		return requireCache[parsedUrl] = eval('(function(){var exports={};' + parseScript(result.body, url, pathEnd) + 'return exports;})')();
 	} else
 		console.error(contentType);
 }
@@ -137,6 +141,14 @@ function require(url) {
  * @return {Promise<any>}
  */
 function async_require(url) {
+	var parsedUrl = new URL(url);
+	var cache = requireCache[parsedUrl];
+	if (cache)
+		return new Promise(function (resolve) {
+			console.log(cache)
+			resolve(cache);
+		});
+
 	if (imagesExtension.some(function (i) {
 		return url.endsWith(i);
 	})) {
@@ -177,7 +189,7 @@ function async_require(url) {
 		} else if (contentType.startsWith('application/javascript')) {
 			return i.text().then(function (i) {
 				// noinspection JSUnusedLocalSymbols
-				return eval('(function(){var module={};' + parseScript(i, url, pathEnd) + 'return module.exports;})')();
+				return requireCache[parsedUrl] = eval('(function(){var exports={};' + parseScript(i, url, pathEnd) + 'return exports;})')();
 			});
 		} else
 			console.error(contentType);
@@ -186,7 +198,13 @@ function async_require(url) {
 
 // For IE
 function parseScript(script, url, pathEnd) {
-	script = script.replace(/\/\*ExcludeStart\*\//g, '/*').replace(/require\('\.\//g, 'require(\'' + url.slice(0, pathEnd + 1));
+	// console.log(url);
+	// console.log(url.slice(0, pathEnd + 1));
+	// script = script.replace(/\/\*ExcludeStart\*\//g, '/*').replace(/require\('\.\//g, 'require(\'' + url.slice(0, pathEnd + 1));
+	var path = url.slice(0, pathEnd + 1);
+	script = script
+		.replace(/import\(/g, 'async_require(\'' + path + '\'+');
+
 	if (ieVersion === null || ieVersion === undefined || !window.Babel)
 		return script;
 
@@ -197,11 +215,14 @@ function parseScript(script, url, pathEnd) {
 				'targets': {'browsers': ['ie 6']},
 				'forceAllTransforms': false,
 				'shippedProposals': false,
-				'useBuiltIns': false
-			}]
+				'useBuiltIns': false,
+				'modules': 'commonjs',
+			}],
 		]
 	});
-	// if (script.indexOf('search') !== -1)
-	// 	document.body.innerText = result.code;
-	return result.code;
+
+	// document.body.innerText = result.code;
+
+	return result.code
+		.replace(/= ?require\(/g, '=require(\'' + path + '\'+');
 }

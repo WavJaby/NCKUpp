@@ -1,9 +1,6 @@
 'use strict';
 
-/*ExcludeStart*/
-const module = {};
-const {div, button, Signal, span, State, img, linkStylesheet, h1, text, ShowIf} = require('../domHelper');
-/*ExcludeEnd*/
+import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, ShowIf} from '../domHelper.js';
 
 /**
  * - SemesterGrade: /stuIdSys?m=g&s=[SemID]
@@ -42,10 +39,15 @@ const {div, button, Signal, span, State, img, linkStylesheet, h1, text, ShowIf} 
  * @property {int} deptRankingTotal
  */
 
-module.exports = function (loginState) {
+/**
+ * @param {QueryRouter} router
+ * @param loginState
+ * @return {HTMLDivElement}
+ */
+export default function (router,loginState) {
 	console.log('StuIdSys grades Init');
 	// static element
-	const styles = linkStylesheet('./res/pages/stuIdSysGrades.css');
+	const styles = mountableStylesheet('./res/pages/stuIdSysGrades.css');
 	const loadingState = new Signal(false);
 	const currentSemestersInfo = new Signal();
 	const semestersInfo = new Signal();
