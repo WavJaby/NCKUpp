@@ -5,29 +5,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-	<!-- IE version check -->
-	<!--[if !IE]> -->
-	<script>window.ieVersion = null;</script>
-	<!-- <![endif]-->
-	<!--[if lte IE 9]>
-	<script>window.ieVersion = 8;</script>
-	<![endif]-->
-	<!--[if IE 9]>
-	<script>window.ieVersion = 9;</script>
-	<![endif]-->
-	<script>
-		var SystemStartTime = (window.ieVersion !== null && window.ieVersion < 10 ? Date.now() : performance.now());
-		if (window.ieVersion === null)
-			try {
-				// noinspection JSUnusedLocalSymbols
-				eval('const __ignore=1;');
-			} catch (e) {
-				window.ieVersion = 10;
-			}
-		if (window.ieVersion === null && (!!window.ActiveXObject || "ActiveXObject" in window))
-			window.ieVersion = 11;
-	</script>
-
 	<!-- Main head -->
 	<link href="res/assets/icon.svg" rel="icon">
 	<title>NCKU++ 成功大學課程資訊及選課系統</title>
@@ -60,9 +37,7 @@
 	<!--Make the og:image larger -->
 	<meta name="twitter:card" content="summary_large_image"/>
 
-	<script src="./res/require.js"></script>
-	<script src="./res/selectMenu.js"></script>
-	<script src="./index.js"></script>
+	<script type="module" src="./index.js"></script>
 
 	<link href="./res/loading.css" rel="stylesheet"/>
 	<link href="./res/static.css" rel="stylesheet"/>
@@ -75,53 +50,30 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"/>
 
-	<!--Script for IE-->
-	<script>
-		if (ieVersion) {
+	<!-- IE version check -->
+	<!--[if lt IE 5]>
+	<script>window.ieVersion = 4;</script><![endif]-->
+	<!--[if IE 5]>
+	<script>window.ieVersion = 5;</script><![endif]-->
+	<!--[if IE 6]>
+	<script>window.ieVersion = 6;</script><![endif]-->
+	<!--[if IE 7]>
+	<script>window.ieVersion = 7;</script><![endif]-->
+	<!--[if IE 8]>
+	<script>window.ieVersion = 8;</script><![endif]-->
+	<!--[if IE 9]>
+	<script>window.ieVersion = 9;</script><![endif]-->
+	<!--[if !IE]> -->
+	<script>window.ieVersion = window.msCrypto ? 11 : (/*@cc_on!@*/0 ? 10 : null); </script><!-- <![endif]-->
 
-			var requireToLoad = 3;
-
-			loadScript('https://unpkg.com/@babel/polyfill@7/dist/polyfill.min.js', onScriptLoad);
-			loadScript('https://unpkg.com/babel-standalone@6/babel.min.js', function () {
-				loadScript('https://unpkg.com/babel-preset-env-standalone@1.6.2/babel-preset-env.min.js', onScriptLoad);
-			});
-			loadScript('https://inexorabletash.github.io/polyfill/url.js', onScriptLoad);
-
-			if (ieVersion < 10) {
-				requireToLoad += 2;
-				loadScript('https://inexorabletash.github.io/polyfill/html.js', onScriptLoad);
-				loadScript('https://inexorabletash.github.io/polyfill/dom.js', onScriptLoad);
-			}
-
-			function onScriptLoad() {
-				if (--requireToLoad > 0)
-					return;
-
-				window.SelectMenu =
-					eval('(function(){' + parseScript(fetchSync('./res/selectMenu.js').body, './res/selectMenu.js', 1) + 'return SelectMenu;})')();
-
-				// Load index.js
-				Object.assign(window,
-					eval('(function(){' + parseScript(fetchSync('./index.js').body, './index.js', 1) + 'return _require;})')()
-				);
-
-				if (ieVersion === 9)
-					window.onload();
-			}
-
-			function loadScript(src, onload) {
-				var script = document.createElement('script');
-				script.src = src;
-				script.onload = onload;
-				document.head.appendChild(script);
-			}
-		}
-	</script>
+	<!--For old browser-->
+	<script nomodule src="./res/oldBrowser.js"></script>
+	<script src="./res/polyfill.js"></script>
 </head>
 <body>
 <!--Loading-->
 <svg class="loaderCircle" viewBox="0 0 50 50" style="display: block; margin: auto;">
-	<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>
+	<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"></circle>
 </svg>
 <noscript>請啟用JavaScript來使用NCKU++.<br>Please enable JavaScript to use NCKU++</noscript>
 </body>

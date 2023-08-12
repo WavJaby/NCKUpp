@@ -1,39 +1,29 @@
 'use strict';
 
-// noinspection JSUnusedLocalSymbols
-const {
-	doomHelperDebug,
-	QueryRouter,
-	Signal,
-	ShowIf,
-	State,
-	TextState,
-	ClassList,
-	iframe,
-	div,
-	label,
-	input,
-	button,
-	checkbox,
-	checkboxWithName,
-	nav,
-	table,
-	thead,
-	tbody,
-	colgroup,
-	col,
-	ul,
-	li,
-	tr,
-	th,
-	td,
-	text, p, span, h1, h2, h3,
+import {
 	a,
-	br,
-	img, svg,
+	button,
+	ClassList,
+	div,
+	doomHelperDebug,
 	footer,
-	linkStylesheet,
-} = require('./res/domHelper');
+	h1,
+	h2,
+	h3,
+	img,
+	input,
+	li,
+	nav,
+	QueryRouter,
+	RouterLazyLoad,
+	ShowIf,
+	Signal,
+	span,
+	svg,
+	text,
+	TextState,
+	ul
+} from './res/domHelper.js';
 
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'
@@ -151,13 +141,13 @@ window.pageLoading = new Signal(false);
 	const defaultPage = 'Home';
 	const userLoginData = new Signal();
 	const showLoginWindow = new Signal(false);
-	const queryRouter = QueryRouter('NCKU++', pageIdName, defaultPage,
+	const queryRouter = new QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
-			Home: () => require('./res/pages/home')(queryRouter),
-			CourseSearch: () => require('./res/pages/courseSearch')(userLoginData, queryRouter),
-			Schedule: () => require('./res/pages/courseSchedule')(userLoginData),
-			GradeInquiry: () => require('./res/pages/stuIdSysGrades')(userLoginData),
-			CourseSelectionPreference: () => require('./res/pages/preferenceAdjust')(userLoginData),
+			Home: new RouterLazyLoad('./pages/home.js'),
+			CourseSearch: new RouterLazyLoad('./pages/courseSearch.js', userLoginData),
+			Schedule: new RouterLazyLoad('./pages/courseSchedule.js', userLoginData),
+			GradeInquiry: new RouterLazyLoad('./pages/stuIdSysGrades.js', userLoginData),
+			CourseSelectionPreference: new RouterLazyLoad('./pages/preferenceAdjust.js', userLoginData),
 		},
 		footer(
 			div('borderLine'),
@@ -234,7 +224,7 @@ window.pageLoading = new Signal(false);
 			)
 		),
 		// Pages
-		queryRouter,
+		queryRouter.element,
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert,
