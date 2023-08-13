@@ -90,6 +90,7 @@ public class Main {
         registerModule(new ExtractUrl(proxyManager), "/api/extract");
         registerModule(new PreferenceAdjust(proxyManager), "/api/preferenceAdjust");
         registerModule(new StudentIdentificationSystem(), "/api/stuIdSys");
+        registerModule(new ClientDebugLog(), "/api/clientDebugLog");
 
         server.start();
         logger.log("Server started, " + server.hostname + ':' + server.port);
