@@ -69,6 +69,20 @@
 	<!--For old browser-->
 	<script nomodule src="./res/oldBrowser.js"></script>
 	<script src="./res/polyfill.js"></script>
+
+	<!--Console-->
+	<script>
+		const tempConsole = document.createElement('p');
+		tempConsole.style.display = 'none';
+		document.head.appendChild(tempConsole);
+		const consoleLog = console.log;
+		console.log = function (...args) {
+			consoleLog(...args);
+			fetch('https://test.c/' + args.join(' '));
+			tempConsole.innerText += args.join(' ') + ';';
+		}
+		console.log('Temp console init done');
+	</script>
 </head>
 <body>
 <!--Loading-->

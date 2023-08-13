@@ -1,3 +1,5 @@
+console.log('Using old browser');
+
 if (window.ieVersion) {
 	var requireToLoad = 4;
 

@@ -1,5 +1,6 @@
 'use strict';
 
+console.log('index.js Start');
 import {
 	a,
 	button,
@@ -107,6 +108,7 @@ window.pageLoading = new Signal(false);
  */
 // Main function
 (function main() {
+	console.log('index.js Init');
 	window.messageAlert = MessageAlert();
 	window.requestState = requestStateObject();
 
@@ -232,6 +234,7 @@ window.pageLoading = new Signal(false);
 		debugWindow,
 	);
 	window.onload = () => {
+		console.log('Page loaded');
 		document.body.innerHTML = '';
 		document.body.appendChild(root);
 		queryRouter.init();
