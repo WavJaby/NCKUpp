@@ -78,7 +78,6 @@
 		const consoleLog = console.log;
 		console.log = function (...args) {
 			consoleLog(...args);
-			fetch('https://test.c/' + args.join(' '));
 			tempConsole.innerText += args.join(' ') + ';';
 		}
 		console.log('Temp console init done');

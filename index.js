@@ -1,6 +1,7 @@
 'use strict';
 
 console.log('index.js Start');
+
 import {
 	a,
 	button,
@@ -127,7 +128,8 @@ window.pageLoading = new Signal(false);
 				null,
 				{style: 'position: absolute; top: 0; z-index: 100; background: black; font-size: 10px; opacity: 0.5;'});
 		}
-	}
+	} else
+		console.log('Debug disable');
 
 	// main code
 	const pageIdName = {
@@ -174,6 +176,8 @@ window.pageLoading = new Signal(false);
 			),
 		)
 	);
+	console.log('QueryRouter ready');
+
 	const pageButtons = {};
 	for (const pageId in pageIdName) {
 		if (pageId === 'Home')
@@ -188,9 +192,11 @@ window.pageLoading = new Signal(false);
 		if (nextPageButton)
 			nextPageButton.classList.add('opened');
 	}
+	console.log('PageButtons ready');
 
 	// check login
 	window.fetchApi('/login', 'Check login').then(onLoginStateChange);
+	console.log('Check login state');
 
 	const root = div('root',
 		// Navbar
@@ -233,6 +239,8 @@ window.pageLoading = new Signal(false);
 		requestState,
 		debugWindow,
 	);
+	console.log('RootElement ready');
+
 	window.onload = () => {
 		console.log('Page loaded');
 		document.body.innerHTML = '';
