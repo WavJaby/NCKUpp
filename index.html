@@ -39,20 +39,26 @@
 
 	<!--Console-->
 	<script>
-		const tempConsole = document.createElement('p');
+		var tempConsole = document.createElement('p');
 		tempConsole.style.whiteSpace = 'pre-wrap';
 		tempConsole.style.display = 'none';
 		document.head.appendChild(tempConsole);
-		const consoleLog = console.log;
-		console.log = function (...args) {
-			consoleLog(...args);
-			const logText = '\n[Log] ' + args.join(' ');
+		var consoleLog = console.log;
+		console.log = function (arg0, arg1, arg2, arg3, arg4) {
+			var text = '';
+			if(arg0 !== undefined) text += arg0 + ' ';
+			if(arg1 !== undefined) text += arg1 + ' ';
+			if(arg2 !== undefined) text += arg2 + ' ';
+			if(arg3 !== undefined) text += arg3 + ' ';
+			if(arg4 !== undefined) text += arg4 + ' ';
+			consoleLog(text);
+			var logText = '\n[Log] ' + text;
 			tempConsole.textContent += logText;
 			// remoteLog(logText);
 		}
 
 		window.addEventListener('error', function (e) {
-			let errorText = [
+			var errorText = [
 				e.message,
 				'URL: ' + e.filename,
 				'Line: ' + e.lineno + ', Column: ' + e.colno,
@@ -64,11 +70,12 @@
 			remoteLog(errorText);
 		});
 
-		const apiEndPoint = window.location.hostname === 'localhost'
+		var apiEndPoint = window.location.hostname === 'localhost'
 			? 'https://localhost/api'
 			: 'https://api.simon.chummydns.com/api';
+
 		function remoteLog(text) {
-			const client = new XMLHttpRequest();
+			var client = new XMLHttpRequest();
 			client.open('POST', apiEndPoint + '/clientDebugLog');
 			client.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
 			if (window.navigator && window.navigator.userAgent)
