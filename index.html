@@ -37,6 +37,46 @@
 	<!--Make the og:image larger -->
 	<meta name="twitter:card" content="summary_large_image"/>
 
+	<!--Console-->
+	<script>
+		const tempConsole = document.createElement('p');
+		tempConsole.style.whiteSpace = 'pre-wrap';
+		tempConsole.style.display = 'none';
+		document.head.appendChild(tempConsole);
+		const consoleLog = console.log;
+		console.log = function (...args) {
+			consoleLog(...args);
+			const logText = '\n[Log] ' + args.join(' ');
+			tempConsole.textContent += logText;
+			remoteLog(logText);
+		}
+
+		window.addEventListener('error', function (e) {
+			let errorText = [
+				e.message,
+				'URL: ' + e.filename,
+				'Line: ' + e.lineno + ', Column: ' + e.colno,
+				'Stack: ' + (e.error && e.error.stack || '(no stack trace)')
+			].join('\n');
+
+			errorText = '\n[Err] ' + errorText + '\n'
+			tempConsole.textContent += errorText;
+			remoteLog(errorText);
+		});
+
+		function remoteLog(text) {
+			const client = new XMLHttpRequest();
+			client.open('POST', 'api.simon.chummydns.com/api/clientDebugLog');
+			client.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
+			if (window.navigator && window.navigator.userAgent)
+				text = '\n' + window.navigator.userAgent + text;
+			client.send(text);
+		}
+
+		console.log('Temp console init done');
+	</script>
+
+	<!--Main resources-->
 	<script type="module" src="./index.js"></script>
 
 	<link href="./res/loading.css" rel="stylesheet"/>
@@ -69,19 +109,6 @@
 	<!--For old browser-->
 	<script nomodule src="./res/oldBrowser.js"></script>
 	<script src="./res/polyfill.js"></script>
-
-	<!--Console-->
-	<script>
-		const tempConsole = document.createElement('p');
-		tempConsole.style.display = 'none';
-		document.head.appendChild(tempConsole);
-		const consoleLog = console.log;
-		console.log = function (...args) {
-			consoleLog(...args);
-			tempConsole.innerText += args.join(' ') + ';';
-		}
-		console.log('Temp console init done');
-	</script>
 </head>
 <body>
 <!--Loading-->

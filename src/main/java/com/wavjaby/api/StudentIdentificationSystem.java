@@ -252,7 +252,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             req.close();
         } catch (IOException e) {
             req.close();
-            logger.err(e);
+            logger.errTrace(e);
         }
         logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };
@@ -343,7 +343,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 return null;
             tbody = tbodyElements.get(3);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
         }
         if (tbody == null)
             return null;
@@ -376,7 +376,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             }
             tbody = tbodyElements.get(3);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
         }
         if (tbody == null) {
             apiResponse.addError(TAG + "Cant get IdSys homepage tbody");
@@ -412,7 +412,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             }
             tbody = tbodyElements.get(3);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
         }
         if (tbody == null) {
             apiResponse.addError(TAG + "Cant get current semester grade tbody");
@@ -474,7 +474,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 return null;
             tbody = tbodyElements.get(3);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
         }
         if (tbody == null)
             return null;
@@ -505,7 +505,7 @@ public class StudentIdentificationSystem implements EndpointModule {
 
 
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
             return new HttpResponseData(HttpResponseData.ResponseState.NETWORK_ERROR);
         }
         int imageWidth = image.getWidth();

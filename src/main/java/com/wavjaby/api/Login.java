@@ -350,7 +350,7 @@ public class Login implements EndpointModule {
             );
         } catch (IOException e) {
             response.addError(TAG + "Network error");
-            logger.err(e);
+            logger.errTrace(e);
         }
     }
 

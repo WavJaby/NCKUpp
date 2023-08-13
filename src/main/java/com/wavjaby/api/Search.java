@@ -1233,7 +1233,7 @@ public class Search implements EndpointModule {
                 logger.log("CosPreCheck waiting");
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
-            logger.err(e);
+            logger.errTrace(e);
         }
         // Submit cos pre check
         cosPreCheckPool.submit(() -> {

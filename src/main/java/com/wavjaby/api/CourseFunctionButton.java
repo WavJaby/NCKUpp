@@ -111,7 +111,7 @@ public class CourseFunctionButton implements EndpointModule {
             } else
                 apiResponse.addError(msg);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
             apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
     }
@@ -179,7 +179,7 @@ public class CourseFunctionButton implements EndpointModule {
             else
                 apiResponse.addError(msg);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
             apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
         }
     }
