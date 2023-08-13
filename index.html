@@ -48,7 +48,7 @@
 			consoleLog(...args);
 			const logText = '\n[Log] ' + args.join(' ');
 			tempConsole.textContent += logText;
-			remoteLog(logText);
+			// remoteLog(logText);
 		}
 
 		window.addEventListener('error', function (e) {
@@ -64,12 +64,15 @@
 			remoteLog(errorText);
 		});
 
+		const apiEndPoint = window.location.hostname === 'localhost'
+			? 'https://localhost/api'
+			: 'https://api.simon.chummydns.com/api';
 		function remoteLog(text) {
 			const client = new XMLHttpRequest();
-			client.open('POST', 'https://api.simon.chummydns.com/api/clientDebugLog');
+			client.open('POST', apiEndPoint + '/clientDebugLog');
 			client.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
 			if (window.navigator && window.navigator.userAgent)
-				text = '\n' + window.navigator.userAgent + text;
+				text = window.navigator.userAgent + text;
 			client.send(text);
 		}
 

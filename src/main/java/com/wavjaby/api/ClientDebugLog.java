@@ -4,25 +4,32 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.Lib;
 import com.wavjaby.logger.Logger;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.CookieManager;
-import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-import static com.wavjaby.lib.Cookie.getDefaultCookie;
-import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class ClientDebugLog implements EndpointModule {
-    private static final String TAG = "[Template]";
+    private static final String TAG = "[ClientDebugLog]";
     private static final Logger logger = new Logger(TAG);
 
+    FileOutputStream logFileOut;
 
     @Override
     public void start() {
+        try {
+            logFileOut = new FileOutputStream("clientLog.txt", true);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -36,16 +43,19 @@ public class ClientDebugLog implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
-        String loginState = getDefaultCookie(requestHeaders, cookieStore);
 
         try {
             ApiResponse apiResponse = new ApiResponse();
 
+            if (req.getRequestMethod().equalsIgnoreCase("POST")) {
+                String time = DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now());
+                String log = time + ":  " + Lib.readRequestBody(req).trim() + "\n\n";
+                logFileOut.write(log.getBytes(StandardCharsets.UTF_8));
+                logFileOut.flush();
+            }
+
             Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -60,7 +70,7 @@ public class ClientDebugLog implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("ClientDebugLog " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
