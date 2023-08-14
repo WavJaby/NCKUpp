@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, img, input, label, li, span, text, ul} from "./domHelper.js";
+import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v0.min.js';
 
 /**
  * @typedef {[string|number, string|number]|[string|number, ItemData[]]} ItemData
