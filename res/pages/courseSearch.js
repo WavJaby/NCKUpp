@@ -184,7 +184,7 @@ import {
 	tbody,
 	text,
 	mountableStylesheet
-} from '../domHelper.js';
+} from '../domHelper_v0.min.js';
 
 import SelectMenu from '../selectMenu.js';
 

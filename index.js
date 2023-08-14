@@ -25,7 +25,7 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/domHelper.js';
+} from './res/domHelper_v0.min.js';
 
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'

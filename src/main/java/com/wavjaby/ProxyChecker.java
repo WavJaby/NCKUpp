@@ -13,7 +13,8 @@ import java.net.Proxy;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
@@ -184,14 +185,14 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
 
         long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
-        testProxy(proxyDataList, 60, 700, 2, -1, true);
+        testProxy(proxyDataList, 150, 700, 1, -1, true);
         proxyDataList.keySet().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("\nDone");
         readLocalProxyList(proxyDataList);
         System.out.println(proxyDataList.size());
 
         System.out.println("Ping...");
-        testProxy(proxyDataList, 2, 1200, -1, 4, false);
+        testProxy(proxyDataList, 4, 1000, -1, 6, false);
         proxyDataList.keySet().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("\nAvailable: " + proxyDataList.size());
         System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
@@ -222,7 +223,8 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
             String ip = proxyData.ip;
             int port = proxyData.port;
             try {
-                Thread.sleep(timeoutTime / threadCount);
+                if (fetchPoolLock.availablePermits() > 10)
+                    Thread.sleep(timeoutTime / threadCount);
                 fetchPoolLock.acquire();
             } catch (InterruptedException ignored) {
             }
@@ -234,9 +236,9 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                 int maxTryCount = Math.max(maxTry, conformTry);
                 for (int tryCount = 0; tryCount < maxTryCount; tryCount++) {
                     String testUrl = conforming
-                            ? "https://course.ncku.edu.tw/index.php?c=qry_all"
-//                            : "https://api.simon.chummydns.com/api/ip";
-                            : "https://ifconfig.me/ip";
+                            ? "https://course.ncku.edu.tw/index.php"
+                            : "https://api.simon.chummydns.com/api/ip";
+//                            : "https://ifconfig.me/ip";
                     ProxyTestResult result = null;
                     latency = -1;
                     timeout = false;
@@ -275,6 +277,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                 try {
                     String progress = strLenLimit(String.format("%.1f%%", (1 - (float) taskLeft.getCount() / proxyDataList.size()) * 100), 6, 6);
                     String left = strLenLimit(String.valueOf(taskLeft.getCount()), 6, 6);
+                    String checkCount = strLenLimit(String.valueOf(checkConnectionPool.getActiveCount()), 5, 5);
                     String type = strLenLimit(proxyData.protocol, 7, 7);
                     String ipStr = strLenLimit(ip, 16, 16);
                     String portStr = strLenLimit(String.valueOf(port), 8, 8);
@@ -298,7 +301,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                     // Progress
                     else {
                         if (errorSameLine) {
-                            System.out.print('\r' + progress + left + type + ipStr + portStr + messageStr);
+                            System.out.print('\r' + progress + left + checkCount + type + ipStr + portStr + messageStr);
                         } else
                             System.out.println(left + type + ipStr + portStr + messageStr);
                     }
@@ -353,7 +356,8 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
                 HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection(proxy);
                 conn.setConnectTimeout(timeoutTime);
                 conn.setReadTimeout(timeoutTime);
-//                conn.setRequestProperty("Connection", "keep-alive");
+                conn.setUseCaches(false);
+                conn.setRequestProperty("Connection", "close");
 
                 if (conn.getResponseCode() == 200) {
                     InputStream in = conn.getInputStream();
@@ -448,7 +452,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
 
     private void getCheckerProxy(Map<ProxyManager.ProxyData, Object> proxyDataList) {
         final String[] protocols = {"http", "https", "socks4", "socks5"};
-        String proxyUrl = "https://checkerproxy.net/api/archive/" + LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+        String proxyUrl = "https://checkerproxy.net/api/archive/" + OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_DATE);
         JsonArray data;
         try {
             String proxyGet = HttpConnection.connect(proxyUrl)

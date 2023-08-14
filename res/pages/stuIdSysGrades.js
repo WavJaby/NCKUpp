@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, ShowIf} from '../domHelper.js';
+import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, ShowIf} from '../domHelper_v0.min.js';
 
 /**
  * - SemesterGrade: /stuIdSys?m=g&s=[SemID]
