@@ -1,7 +1,5 @@
 'use strict';
 
-console.log('polyfill.js Start');
-
 if (!Object.fromEntries) {
 	Object.fromEntries = function (entries) {
 		var obj = {};

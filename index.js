@@ -1,7 +1,5 @@
 'use strict';
 
-console.log('index.js Start');
-
 import {
 	a,
 	button,
@@ -25,7 +23,7 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/domHelper_v0.min.js';
+} from './res/domHelper_v01.min.js';
 
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'
@@ -176,7 +174,6 @@ window.pageLoading = new Signal(false);
 			),
 		)
 	);
-	console.log('QueryRouter ready');
 
 	const pageButtons = {};
 	for (const pageId in pageIdName) {
@@ -192,11 +189,9 @@ window.pageLoading = new Signal(false);
 		if (nextPageButton)
 			nextPageButton.classList.add('opened');
 	}
-	console.log('PageButtons ready');
 
 	// check login
 	window.fetchApi('/login', 'Check login').then(onLoginStateChange);
-	console.log('Check login state');
 
 	const root = div('root',
 		// Navbar
@@ -239,10 +234,9 @@ window.pageLoading = new Signal(false);
 		requestState,
 		debugWindow,
 	);
-	console.log('RootElement ready');
 
 	window.onload = () => {
-		console.log('Page loaded');
+		console.log('Window onload');
 		document.body.innerHTML = '';
 		document.body.appendChild(root);
 		queryRouter.init();

@@ -247,6 +247,7 @@ function ClassList(...className) {
 function RouterLazyLoad(url, ...parameter) {
 	this.url = url;
 	this.parameters = parameter;
+	this.loding = false;
 }
 
 /**
@@ -265,7 +266,6 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	const loadedPage = {};
 	const pageScrollSave = {};
 	let lastPage, lastPageId = null;
-	let lazyIsLoading = false;
 
 	window.addEventListener('popstate', function () {
 		urlSearchDataUpdate();
@@ -308,11 +308,13 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 
 		// Lazy load
 		if (page instanceof RouterLazyLoad) {
-			lazyIsLoading = true;
-			import(page.url).then(function (i) {
-				pageReadyOpen(loadedPage[pageId] = i.default(thisI, ...page.parameters), pageId, isHistory);
-				lazyIsLoading = false;
-			});
+			if (!page.loding) {
+				page.loding = true;
+				import(page.url).then(function (i) {
+					pageReadyOpen(loadedPage[pageId] = i.default(thisI, ...page.parameters), pageId, isHistory);
+					page.loding = false;
+				});
+			}
 		} else
 			pageReadyOpen(loadedPage[pageId] = page, pageId, isHistory);
 	}

@@ -184,7 +184,7 @@ import {
 	tbody,
 	text,
 	mountableStylesheet
-} from '../domHelper_v0.min.js';
+} from '../domHelper_v01.min.js';
 
 import SelectMenu from '../selectMenu.js';
 
@@ -847,21 +847,23 @@ export default function (router, loginState) {
 
 						// Instructor
 						span('Instructor: ', 'instructor'),
-						data.instructors === null ? null : data.instructors.map(/**@param{UrSchoolInstructorSimple|string}instructor*/instructor =>
-							button('instructorBtn',
-								instructor instanceof Object ? instructor.name : instructor,
-								instructor instanceof Object ? () => openInstructorDetailWindow(instructor) : null,
-								instructor instanceof Object ? {
-									onmouseenter: e => {
-										instructorInfoBubble.set({
-											target: e.target,
-											offsetY: router.element.scrollTop,
-											data: instructor
-										});
-									},
-									onmouseleave: instructorInfoBubble.hide
-								} : null
-							)
+						data.instructors === null ? null : data.instructors.map(instructor =>
+							!(instructor instanceof Object)
+								? button('instructorBtn', instructor)
+								: button('instructorBtn',
+									instructor.name,
+									() => openInstructorDetailWindow(instructor),
+									{
+										onmouseenter: e => {
+											instructorInfoBubble.set({
+												target: e.target,
+												offsetY: router.element.scrollTop,
+												data: instructor
+											});
+										},
+										onmouseleave: instructorInfoBubble.hide
+									}
+								)
 						)
 					))
 				);

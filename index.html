@@ -44,15 +44,13 @@
 		tempConsole.style.display = 'none';
 		document.head.appendChild(tempConsole);
 		var consoleLog = console.log;
-		console.log = function (arg0, arg1, arg2, arg3, arg4) {
-			var text = '';
-			if(arg0 !== undefined) text += arg0 + ' ';
-			if(arg1 !== undefined) text += arg1 + ' ';
-			if(arg2 !== undefined) text += arg2 + ' ';
-			if(arg3 !== undefined) text += arg3 + ' ';
-			if(arg4 !== undefined) text += arg4 + ' ';
-			consoleLog(text);
-			var logText = '\n[Log] ' + text;
+		console.log = function () {
+			consoleLog.apply(console, arguments);
+			var params = new Array(arguments.length);
+			for (var i = 0; i < arguments.length; i++)
+				params[i] = arguments[i];
+
+			var logText = '\n[Log] ' + params.join(' ');
 			tempConsole.textContent += logText;
 			// remoteLog(logText);
 		}

@@ -89,7 +89,7 @@ public class ProxyManager {
 
     public static abstract class ProxyInfo {
         private int ping = -1;
-        private boolean alive = false;
+        private boolean available = false;
 
         public void setPing(int ping) {
             this.ping = ping;
@@ -99,16 +99,16 @@ public class ProxyManager {
             return ping;
         }
 
-        public void setAlive(boolean alive) {
-            this.alive = alive;
+        public void setAvailable(boolean available) {
+            this.available = available;
         }
 
-        public boolean isAlive() {
-            return alive;
+        public boolean isAvailable() {
+            return available;
         }
 
         public boolean isUnavailable() {
-            return !alive;
+            return !available;
         }
     }
 

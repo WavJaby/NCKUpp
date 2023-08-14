@@ -1197,7 +1197,7 @@ public class Search implements EndpointModule {
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .timeout(5000)
+                .timeout(7000)
                 .maxBodySize(20 * 1024 * 1024);
         HttpResponseData httpResponseData = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
         if (httpResponseData.state != ResponseState.SUCCESS)

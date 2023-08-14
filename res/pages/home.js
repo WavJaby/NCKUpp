@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, mountableStylesheet, span, p, a, h1, img, text, br} from '../domHelper_v0.min.js';
+import {div, mountableStylesheet, span, p, a, h1, img, text, br} from '../domHelper_v01.min.js';
 
 /**
  * @param {QueryRouter} router
