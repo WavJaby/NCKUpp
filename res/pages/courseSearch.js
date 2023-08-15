@@ -334,7 +334,7 @@ export default function (router, loginState) {
 		const result = (await window.fetchApi('/search?' + queryString, 'Searching', {timeout: 10000}));
 
 		if (!result || !result.success || !result.data) {
-			searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null});
+			searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null, failed: true});
 			searching = false;
 			return;
 		}
@@ -704,8 +704,12 @@ export default function (router, loginState) {
 		}
 
 		// No result
-		if (!state.courseResult) {
-			courseSearchResultCount.textContent = 'No result';
+		if (!state.courseResult || state.courseResult.length === 0 || state.failed) {
+			if (state.failed)
+				courseSearchResultCount.textContent = 'Failed to search';
+			else if (state.courseResult && state.courseResult.length === 0)
+				courseSearchResultCount.textContent = 'No result';
+
 			return div();
 		}
 
