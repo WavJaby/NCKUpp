@@ -25,8 +25,6 @@ import {
 	ul
 } from './res/domHelper_v001.min.js';
 
-import {metaSet, metaType} from './res/metaTag.js';
-
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'
 	: 'https://api.simon.chummydns.com/api';
@@ -190,7 +188,6 @@ window.pageLoading = new Signal(false);
 		const nextPageButton = pageButtons[pageId];
 		if (nextPageButton)
 			nextPageButton.classList.add('opened');
-		metaSet(metaType.TITLE, document.title);
 	}
 
 	// check login
