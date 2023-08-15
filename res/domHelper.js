@@ -478,7 +478,7 @@ function input(classN, placeholder, id, ...options) {
  * @param [options] Options for element
  * @return {HTMLLabelElement}
  */
-function label(classN, text, inputElement, ...options) {
+function labelFor(classN, text, inputElement, ...options) {
 	const element = document.createElement('label');
 	if (classN) parseClassInput(classN, element);
 	if (text) parseTextInput(text, element);
@@ -487,6 +487,20 @@ function label(classN, text, inputElement, ...options) {
 			inputElement.id = Math.random().toString(16).substring(2);
 		element.htmlFor = inputElement.id;
 	}
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
+ * @param {string | Signal | TextStateChanger} text
+ * @param [options] Options for element
+ * @return {HTMLLabelElement}
+ */
+function label(classN, text, ...options) {
+	const element = document.createElement('label');
+	if (classN) parseClassInput(classN, element);
+	if (text) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -804,14 +818,17 @@ function br() {
 
 /**
  * @param {string} url
+ * @param {string} [alt]
  * @param {string | ClassList} [classN] Class Name
  * @param [options] Options for element
  * @return {HTMLImageElement}
  */
-function img(url, classN, ...options) {
+function img(url, alt, classN, ...options) {
 	const element = document.createElement('img');
 	if (classN) parseClassInput(classN, element);
 	if (url) element.src = url;
+	if (alt !== null && alt !== undefined) element.alt = alt;
+	else if (debug) debug.warn(element, 'Image alt not given');
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -909,7 +926,7 @@ export {
 	// Nav, list
 	nav, ul, li,
 	// Input
-	label, input, checkbox, checkboxWithName, button,
+	labelFor, label, input, checkbox, checkboxWithName, button,
 	// Table
 	table, thead, tbody, colgroup, col, th, tr, td,
 	// Text

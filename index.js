@@ -23,7 +23,9 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/domHelper_v01.min.js';
+} from './res/domHelper_v001.min.js';
+
+import {metaSet, metaType} from './res/metaTag.js';
 
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'
@@ -156,20 +158,20 @@ window.pageLoading = new Signal(false);
 			div('source',
 				h2('資料來源'),
 				a(null, 'https://course.ncku.edu.tw/', 'noSelect', null, {target: '_blank'},
-					img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', 'noDrag', {alt: 'NCKUCourse logo'})
+					img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', '國立成功大學課程資訊及選課系統', 'noDrag')
 				),
 				a(null, 'https://nckuhub.com/', 'noSelect', null, {target: '_blank'},
-					img('https://nckuhub.com/dist/images/table/nav_logo.svg', 'noDrag', {alt: 'NCKUHub logo'})
+					img('https://nckuhub.com/dist/images/table/nav_logo.svg', 'NCKUHub', 'noDrag')
 				),
 				a(null, 'https://urschool.org/', 'noSelect', null, {target: '_blank'},
-					img('res/assets/UrSchool_logo.png', 'noDrag', {alt: 'UrSchool logo'})
+					img('res/assets/UrSchool_logo.png', 'UrSchool', 'noDrag')
 				),
 			),
 			div('splitLine'),
 			h3('By WavJaby'),
 			h3('Email: WavJaby@gmail.com'),
 			a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null, {target: '_blank'},
-				img('./res/assets/github_icon.svg', 'githubIcon noDrag', {alt: 'GitHub icon'}),
+				img('./res/assets/github_icon.svg', 'GitHub icon', 'githubIcon noDrag'),
 				span('GitHub repo'),
 			),
 		)
@@ -188,6 +190,7 @@ window.pageLoading = new Signal(false);
 		const nextPageButton = pageButtons[pageId];
 		if (nextPageButton)
 			nextPageButton.classList.add('opened');
+		metaSet(metaType.TITLE, document.title);
 	}
 
 	// check login
@@ -215,7 +218,7 @@ window.pageLoading = new Signal(false);
 				}
 			),
 			ul('hamburgerMenu', li(null,
-				img('./res/assets/burger_menu_icon.svg', 'noDrag', {alt: 'mobile menu button', onclick: () => window.navMenu.toggle('open')})
+				img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: () => window.navMenu.toggle('open')})
 			)),
 			ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
 			ul(window.navMenu,

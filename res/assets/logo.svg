@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64" viewBox="-2 -2 178 89">
+    <g fill="white" font-family="Microsoft YaHei" font-size="10" transform="translate(90 36)">
+        <text>更優質的選課系統</text>
+    </g>
+    <g transform="rotate(90 20 20)">
+        <path fill="white" d="
+        M0 10 Q0 0,10 0
+        H35 Q40 0,40 5
+        V15 H24 Q16 15,16 20 Q16 25,24 25 H40
+        V35 Q40 40,35 40
+        H10 Q0 40,0 30
+        Z"/>
+    </g>
+    <g transform="translate(45 0)">
+        <path fill="white" d="
+        M0 10 Q0 0,10 0
+        H35 Q40 0,40 5
+        V15 H24 Q16 15,16 20 Q16 25,24 25 H40
+        V35 Q40 40,35 40
+        H10 Q0 40,0 30
+        Z"/>
+    </g>
+    <g transform="translate(0 45)">
+        <path fill="white" d="
+        M0 5 Q0 0,5 0
+        H15 V10 Q15 15,20 15 Q25 15,25 10 V0
+        H35 Q40 0,40 5
+        V15 H32 Q27 15,27 20 Q27 25,32 25 H40
+        V35 Q40 40,35 40
+        H25 V30 Q25 25,20 25 Q15 25,15 30 V40
+        H5 Q0 40,0 35
+        Z"/>
+    </g>
+    <g transform="translate(45 45) rotate(-90 20 20)">
+        <path fill="white" d="
+        M0 10 Q0 0,10 0
+        H35 Q40 0,40 5
+        V15 H24 Q16 15,16 20 Q16 25,24 25 H40
+        V35 Q40 40,35 40
+        H10 Q0 40,0 30
+        Z"/>
+    </g>
+    <g transform="translate(90 45)">
+        <path fill="white" d="
+        M15 0 H25 V15 H40 V25 H25 V40 H15 V25 H0 V15 H15 Z
+        "/>
+    </g>
+    <g transform="translate(135 45)">
+        <path fill="white" d="
+        M15 0 H25 V15 H40 V25 H25 V40 H15 V25 H0 V15 H15 Z
+        "/>
+    </g>
+</svg>

@@ -77,29 +77,31 @@ $instructor-info-fade-time: 200ms;
 
             > tr {
                 // Course search result filter
-                > .textSearch {
-                    text-align: left;
-
-                    > img {
-                        float: left;
-                    }
-
-                    > .searchBar {
-                        height: 100%;
-                        display: block;
-                        overflow: hidden;
-                    }
-
-                    > .searchBar > input {
-                        width: 100%;
-                        background: none;
-                        box-shadow: none;
-                    }
-                }
-
                 > .filterOptions {
                     text-align: left;
                     padding-left: 5px;
+
+                    > .searchBar {
+                        width: 100%;
+                        display: block;
+                        position: relative;
+
+                        > img {
+                            width: 1.4em;
+                            height: 1.4em;
+                            top: 0;
+                            bottom: 0;
+                            margin: auto;
+                            position: absolute;
+                        }
+
+                        > input {
+                            background: none;
+                            width: 100%;
+                            padding-left: 1.4em;
+                            box-shadow: none;
+                        }
+                    }
 
                     > .checkboxWithName {
                         display: inline-block;
@@ -118,11 +120,11 @@ $instructor-info-fade-time: 200ms;
 
                     > .sortArrow {
                         position: absolute;
-                        bottom: 1em;
+                        top: -2px;
                         left: 0;
                         right: 0;
                         margin: 0 auto;
-                        height: 0.8em;
+                        height: 0.7em;
                         pointer-events: none;
                         @include transition(0.1s transform);
                     }
@@ -370,7 +372,7 @@ $instructor-info-fade-time: 200ms;
 
     @media only screen and ($small-screen) {
         > .popupWindow .closeButton > .icon {
-            content: $icon-down-arrow;
+            background: $icon-down-arrow no-repeat 0 0/24px;;
             @include transform(rotate(90deg));
         }
     }

@@ -22,6 +22,7 @@ import java.util.concurrent.*;
 
 public class ProxyChecker {
     ProxyChecker() {
+        long start = System.currentTimeMillis();
         Map<String, ProxyManager.ProxyData> proxyDataList = new ConcurrentHashMap<>();
 
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
@@ -53,21 +54,21 @@ public class ProxyChecker {
             String proxyUrl = "https://api.proxyscrape.com/v2/?" +
                     "protocol=socks4&" +
                     "request=displayproxies&" +
-                    "timeout=700";
+                    "timeout=800";
             getTextTypeProxyList(proxyUrl, "socks4", proxyDataList);
         });
         pool.submit(() -> {
             String proxyUrl = "https://api.proxyscrape.com/v2/?" +
                     "protocol=socks5&" +
                     "request=displayproxies&" +
-                    "timeout=700";
+                    "timeout=800";
             getTextTypeProxyList(proxyUrl, "socks5", proxyDataList);
         });
         pool.submit(() -> {
             String proxyUrl = "https://api.proxyscrape.com/v2/?" +
                     "protocol=https&" +
                     "request=displayproxies&" +
-                    "timeout=700";
+                    "timeout=800";
             getTextTypeProxyList(proxyUrl, "https", proxyDataList);
         });
 
@@ -182,17 +183,18 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&i[1].firs
             e.printStackTrace();
         }
 
-        long start = System.currentTimeMillis();
         System.out.println(proxyDataList.size());
+
+        long filter1= System.currentTimeMillis();
         testProxy(proxyDataList, 300, 700, true, 1, -1, true);
         proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println(proxyDataList.size());
-        System.out.println("Filter use: " + ((System.currentTimeMillis() - start) / 1000) + "s");
+        System.out.println("Filter use: " + ((System.currentTimeMillis() - filter1) / 1000) + "s");
 
-        long start1 = System.currentTimeMillis();
+        long filter2= System.currentTimeMillis();
         testProxy(proxyDataList, 150, 700, false, 1, -1, true);
         proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
-        System.out.println("Filter2 use: " + ((System.currentTimeMillis() - start1) / 1000) + "s");
+        System.out.println("Filter2 use: " + ((System.currentTimeMillis() - filter2) / 1000) + "s");
         System.out.println("Done");
         readLocalProxyList(proxyDataList);
         System.out.println(proxyDataList.size());

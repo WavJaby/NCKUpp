@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, ShowIf} from '../domHelper_v01.min.js';
+import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, ShowIf} from '../domHelper_v001.min.js';
 
 /**
  * - SemesterGrade: /stuIdSys?m=g&s=[SemID]
@@ -185,7 +185,7 @@ export default function (router,loginState) {
 				button('closeButton', null, () => normalDestImg.set(null),
 					div('icon')
 				),
-				img('data:image/svg+xml;base64,' + btoa(state.graph))
+				img('data:image/svg+xml;base64,' + btoa(state.graph), '')
 			))
 		)),
 

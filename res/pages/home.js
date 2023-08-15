@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, mountableStylesheet, span, p, a, h1, img, text, br} from '../domHelper_v01.min.js';
+import {div, mountableStylesheet, span, p, a, h1, img, text, br} from '../domHelper_v001.min.js';
 
 /**
  * @param {QueryRouter} router
@@ -22,13 +22,13 @@ export default function (router) {
 	);
 	const siteInfo = div('siteInfo',
 		h1(null, 'title',
-			img('res/assets/icon.svg', null, {alt: 'NCKU++ logo'}), span('NCKU'), titleAnimation
+			img('res/assets/icon.svg', ''), span('NCKU'), titleAnimation
 		),
 		p(null, 'description',
 			text('集合'),
-			img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', null, {alt: 'NCKUCourse logo'}),
-			img('https://nckuhub.com/dist/images/table/nav_logo.svg', null, {alt: 'NCKUHub logo'}),
-			img('res/assets/UrSchool_logo.png', null, {alt: 'UrSchool logo'}),
+			img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', '國立成功大學課程資訊及選課系統'),
+			img('https://nckuhub.com/dist/images/table/nav_logo.svg', 'NCKUHub'),
+			img('res/assets/UrSchool_logo.png', 'UrSchool'),
 			br(),
 			text('眾多功能，提供更好的選課環境')
 		)

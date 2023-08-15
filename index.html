@@ -6,22 +6,22 @@
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
 
 	<!-- Main head -->
+	<meta name="google-site-verification" content="hu_LHlM6wd1Oy4KvF1dtN_qRmFmUgMQ3jARg-MdiwGk"/>
 	<link href="res/assets/icon.svg" rel="icon">
 	<title>NCKU++ 成功大學課程資訊及選課系統</title>
 	<meta itemprop="name" content="NCKU++ 成功大學課程資訊及選課系統">
 	<meta property="og:title" content="NCKU++ 成功大學課程資訊及選課系統"/>
 	<meta name="twitter:title" content="NCKU++ 成功大學課程資訊及選課系統">
-	<meta property="og:site_name" content="NCKU++ 更好的成功大學選課系統"/>
-	<meta name="twitter:site" content="NCKU++ 更好的成功大學選課系統"/>
+	<meta property="og:site_name" content="NCKU++ 更優質的選課網站"/>
 
 	<meta property="og:locale" content="zh-TW"/>
 	<meta property="og:type" content="website"/>
 	<meta property="og:url" content="https://wavjaby.github.io/NCKUpp"/>
 	<meta name="author" content="WavJaby"/>
-	<meta name="google-site-verification" content="hu_LHlM6wd1Oy4KvF1dtN_qRmFmUgMQ3jARg-MdiwGk"/>
+	<meta name="twitter:site" content="@WavJaby"/>
 
-	<meta property="og:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
 	<meta itemprop="image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
+	<meta property="og:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
 	<meta name="twitter:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
 
 	<meta name="description"
@@ -30,11 +30,10 @@
 		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
 	<meta property="og:description"
 		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
-	<meta itemprop="description"
+	<meta name="twitter:description"
 		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
 
 	<meta name="theme-color" content="#A31F34"/>
-	<!--Make the og:image larger -->
 	<meta name="twitter:card" content="summary_large_image"/>
 
 	<!--Console-->
@@ -85,7 +84,9 @@
 	</script>
 
 	<!--Main resources-->
-	<script type="module" src="index_v01.min.js"></script>
+	<link rel="modulepreload" href="res/domHelper_v001.min.js">
+	<link rel="modulepreload" href="./res/metaTag.js">
+	<script type="module" src="index_v001.min.js"></script>
 
 	<link href="./res/loading.css" rel="stylesheet"/>
 	<link href="./res/static.css" rel="stylesheet"/>

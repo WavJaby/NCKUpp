@@ -183,8 +183,8 @@ import {
 	thead,
 	tbody,
 	text,
-	mountableStylesheet
-} from '../domHelper_v01.min.js';
+	mountableStylesheet, label
+} from '../domHelper_v001.min.js';
 
 import SelectMenu from '../selectMenu.js';
 
@@ -206,7 +206,7 @@ const courseDataTagColor = [
 export default function (router, loginState) {
 	console.log('Course search Init');
 	const styles = mountableStylesheet('./res/pages/courseSearch.css');
-	const expandArrowImage = img('./res/assets/down_arrow_icon.svg');
+	const expandArrowImage = img('./res/assets/down_arrow_icon.svg', 'Expand button');
 	expandArrowImage.className = 'noSelect noDrag';
 
 	const searchResultSignal = new Signal({loading: false, courseResult: null, nckuhubResult: null});
@@ -572,8 +572,8 @@ export default function (router, loginState) {
 
 	// Render result
 	const courseRenderResult = [];
+	let courseRenderResultFilter = [];
 	const courseRenderResultDisplay = [];
-	const courseRenderResultFilter = [];
 	const expandButtons = [];
 	let waitingResult = false;
 
@@ -660,144 +660,34 @@ export default function (router, loginState) {
 
 
 	// Filter
+	const filter = new Filter();
+	/**@type {FilterOption[]}*/
 	const filterOptions = [
-		checkboxWithName(null, '隱藏衝堂', false, hideConflictFilterChange, {condition: hideConflictFilter})
+		textSearchFilter(updateFilter),
+		hideConflictCourseFilter(updateFilter, loginState),
 	];
-	let textSearchFilterKeys = [];
-	let lastTextSearchFilterKey = null;
+	filter.setOptions(filterOptions);
 
+	/**
+	 * @param {boolean} [firstRender]
+	 */
 	function updateFilter(firstRender) {
+		if (courseRenderResult.length === 0)
+			return;
+
 		console.log('Update Filter');
 		resetSortArrow();
-		courseRenderResultFilter.length = 0;
+		courseRenderResultFilter = filter.updateFilter(courseRenderResult);
 		courseRenderResultDisplay.length = 0;
-		for (/**@type{[CourseData, HTMLElement]}*/const i of courseRenderResult) {
-			if (!textSearchFilter(i[0]))
-				continue;
-			let pass = true;
-			for (const j of filterOptions) {
-				if (j.condition && !j.condition(i[0])) {
-					pass = false;
-					break;
-				}
-			}
-			if (!pass)
-				continue;
-
-			courseRenderResultFilter.push(i);
+		for (/**@type{[CourseData, HTMLElement]}*/const i of courseRenderResultFilter)
 			courseRenderResultDisplay.push(i[1]);
-		}
 		if (!firstRender)
 			searchResultSignal.update();
-	}
-
-	function textSearchFilterChange() {
-		if (courseRenderResult.length === 0) return;
-		const key = this.value.trim();
-		// if word not finish
-		if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w -]+$/g))
-			return;
-
-		// if same
-		if (lastTextSearchFilterKey === key)
-			return;
-		lastTextSearchFilterKey = key;
-		textSearchFilterKeys = key.length === 0 ? [] : key.split(' ');
-		updateFilter();
-	}
-
-	/**
-	 * @param {CourseData} courseData
-	 */
-	function textSearchFilter(courseData) {
-		if (textSearchFilterKeys.length === 0)
-			return true;
-		return findIfContains(courseData.courseName, textSearchFilterKeys) ||
-			findIfContains(courseData.serialNumber, textSearchFilterKeys) ||
-			findIfContains(courseData.classInfo, textSearchFilterKeys) ||
-			courseData.instructors && courseData.instructors.find(i =>
-				findIfContains(i instanceof Object ? i.name : i, textSearchFilterKeys))
-	}
-
-	function findIfContains(data, keys) {
-		if (!data) return false;
-		for (const key of keys)
-			if (key.length === 0 || data.indexOf(key) !== -1) return true;
-		return false;
-	}
-
-	/**
-	 * @param {CourseData} courseData
-	 */
-	function hideConflictFilter(courseData) {
-		const checkBox = this.input;
-		if (!checkBox.checked)
-			return true;
-		if (!courseData.time)
-			return true;
-
-		for (const cosTime of courseData.time) {
-			if (!cosTime.sectionStart)
-				continue;
-			const sectionStart = window.timeParseSection(cosTime.sectionStart);
-			const sectionEnd = cosTime.sectionEnd ? window.timeParseSection(cosTime.sectionEnd) : sectionStart;
-
-			for (const usedCosTime of checkBox.timeData) {
-				if (cosTime.dayOfWeek !== usedCosTime[0])
-					continue;
-
-				if (sectionStart >= usedCosTime[1] && sectionStart <= usedCosTime[2] ||
-					sectionEnd >= usedCosTime[1] && sectionEnd <= usedCosTime[2] ||
-					sectionStart <= usedCosTime[1] && sectionEnd >= usedCosTime[2])
-					return false;
-			}
-		}
-
-		return true;
-	}
-
-	function hideConflictFilterChange() {
-		const checkBox = this;
-		// If no data
-		if (checkBox.checked) {
-			// If not login
-			if (!loginState.state || !loginState.state.login) {
-				checkBox.checked = false;
-				window.askForLoginAlert();
-			} else if (!checkBox.fetchingData) {
-				checkBox.fetchingData = true;
-				window.fetchApi('/courseSchedule', 'Get schedule').then(response => {
-					checkBox.fetchingData = false;
-
-					if (!response || !response.success || !response.data) {
-						checkBox.checked = false;
-						checkBox.timeData = null;
-						return;
-					}
-
-					// Parse time data
-					const usedTime = [];
-					for (const i of response.data.schedule) {
-						for (const info of i.info) {
-							const time = window.timeParse(info.time);
-							usedTime.push(time);
-						}
-					}
-					checkBox.timeData = usedTime;
-
-					updateFilter();
-				});
-			}
-		}
-
-		if (checkBox.timeData)
-			updateFilter();
 	}
 
 	function onkeyup(e) {
 		if (e.key === 'Enter') search();
 	}
-
 
 	// Search result render
 	let showResultLastIndex = 0;
@@ -854,13 +744,11 @@ export default function (router, loginState) {
 									instructor.name,
 									() => openInstructorDetailWindow(instructor),
 									{
-										onmouseenter: e => {
-											instructorInfoBubble.set({
-												target: e.target,
-												offsetY: router.element.scrollTop,
-												data: instructor
-											});
-										},
+										onmouseenter: e => instructorInfoBubble.set({
+											target: e.target,
+											offsetY: router.element.scrollTop,
+											data: instructor
+										}),
 										onmouseleave: instructorInfoBubble.hide
 									}
 								)
@@ -998,17 +886,7 @@ export default function (router, loginState) {
 			),
 			State(searchResultSignal, renderSearchResult),
 			tHead = thead('noSelect',
-				tr(null, th(null, 'textSearch', {colSpan: 15},
-					// Filter options
-					img('./res/assets/funnel_icon.svg'),
-					div('searchBar', input(null, 'Teacher, Course name, Serial number', null, {
-						oninput: textSearchFilterChange,
-						onpropertychange: textSearchFilterChange
-					})),
-				)),
-				tr(null, th(null, 'filterOptions', {colSpan: 15},
-					filterOptions
-				)),
+				filter.createElement(),
 				tr(null, th(null, 'resultCount', {colSpan: 15},
 					span('Result count: '),
 					courseSearchResultCount = span()
@@ -1057,17 +935,23 @@ export default function (router, loginState) {
 	return courseSearch;
 };
 
-function InstructorInfoElement(/**@param{UrSchoolInstructorSimple}*/{
-	recommend, reward, articulate, pressure, sweet,
-	averageScore, note, nickname, department, jobTitle, rollCallMethod, qualifications
-}) {
+/**
+ * @param {UrSchoolInstructorSimple}instructor
+ */
+function instructorInfoElement(instructor) {
 	return div('instructorInfo',
 		div('rate',
-			recommend !== -1 && reward !== -1 && articulate !== -1 && pressure !== -1 && sweet !== -1
+			instructor.recommend !== -1 && instructor.reward !== -1 && instructor.articulate !== -1 && instructor.pressure !== -1 && instructor.sweet !== -1
 				? table(null,
 					// tr(null, th('Recommend'), th('Reward'), th('Articulate'), th('Pressure'), th('Sweet')),
 					tr(null, th('推薦'), th('收穫'), th('口條'), th('壓力'), th('分數甜度')),
-					tr(null, td(recommend, getColor(recommend)), td(reward, getColor(reward)), td(articulate, getColor(articulate)), th(pressure, getColor(5 - pressure)), td(sweet, getColor(sweet))),
+					tr(null,
+						td(instructor.recommend, getColor(instructor.recommend)),
+						td(instructor.reward, getColor(instructor.reward)),
+						td(instructor.articulate, getColor(instructor.articulate)),
+						th(instructor.pressure, getColor(5 - instructor.pressure)),
+						td(instructor.sweet, getColor(instructor.sweet))
+					),
 				)
 				: null,
 		),
@@ -1080,13 +964,13 @@ function InstructorInfoElement(/**@param{UrSchoolInstructorSimple}*/{
 				// tr(null, th('Job title'), td(jobTitle)),
 				// tr(null, th('Roll call method'), td(rollCallMethod)),
 				// tr(null, th('Academic qualifications'), td(qualifications)),
-				tr(null, th('平均成績'), td(averageScore)),
-				tr(null, th('值得一提'), td(note)),
-				tr(null, th('綽號'), td(nickname)),
-				tr(null, th('系所'), td(department)),
-				tr(null, th('職稱'), td(jobTitle)),
-				tr(null, th('點名方式'), td(rollCallMethod)),
-				tr(null, th('最高學歷'), td(qualifications)),
+				tr(null, th('平均成績'), td(instructor.averageScore)),
+				tr(null, th('值得一提'), td(instructor.note)),
+				tr(null, th('綽號'), td(instructor.nickname)),
+				tr(null, th('系所'), td(instructor.department)),
+				tr(null, th('職稱'), td(instructor.jobTitle)),
+				tr(null, th('點名方式'), td(instructor.rollCallMethod)),
+				tr(null, th('最高學歷'), td(instructor.qualifications)),
 			),
 		)
 	);
@@ -1102,7 +986,7 @@ function InstructorInfoBubble() {
 			const bound = state.target.getBoundingClientRect();
 			/**@type UrSchoolInstructorSimple*/
 			const instructor = state.data;
-			const element = InstructorInfoElement(instructor);
+			const element = instructorInfoElement(instructor);
 			element.insertBefore(span(instructor.name), element.firstChild);
 
 			offsetElement.style.left = bound.left + 'px';
@@ -1118,7 +1002,7 @@ function InstructorInfoBubble() {
 
 function InstructorDetailWindow() {
 	return PopupWindow(/**@param{UrSchoolInstructor}instructor*/instructor => {
-		const instructorInfo = InstructorInfoElement(instructor.info);
+		const instructorInfo = instructorInfoElement(instructor.info);
 		return div('instructorDetailWindow',
 			div('title',
 				span(instructor.info.department),
@@ -1138,7 +1022,7 @@ function InstructorDetailWindow() {
 			div('comments',
 				instructor.comments.map(i => {
 					return div('item',
-						img(`https://graph.facebook.com/v2.8/${i.profile}/picture?type=square`, 'profile'),
+						img(`https://graph.facebook.com/v2.8/${i.profile}/picture?type=square`, '', 'profile'),
 						div('body',
 							span(i.created_at, 'createDate'),
 							span(i.body, 'message'),
@@ -1210,4 +1094,202 @@ function PopupWindow(onDataChange) {
 
 function sortToEnd(data) {
 	return data === null || data === undefined || data.length === 0;
+}
+
+/**
+ * @typedef FilterOption
+ * @property {function(item: any): boolean} condition Check item to show
+ * @property {HTMLElement|HTMLElement[]} element
+ * @property {boolean} [fullLine]
+ */
+
+/**
+ * Filter tool bar
+ */
+function Filter() {
+	let /**@type{FilterOption[]}*/options = null;
+
+	this.setOptions = function (filterOptions) {
+		options = filterOptions;
+	};
+
+	this.createElement = function () {
+		const rows = [];
+		let row = null;
+		for (const option of options) {
+			if (!row)
+				row = tr(null, th(null, 'filterOptions', {colSpan: 15}));
+			if (option.element instanceof Array)
+				for (const element of option.element)
+					row.firstElementChild.appendChild(element);
+			else
+				row.firstElementChild.appendChild(option.element);
+
+			if (option.fullLine) {
+				rows.push(row);
+				row = null;
+			}
+		}
+		if (row)
+			rows.push(row);
+		return rows;
+	}
+
+	/**
+	 * Apply filter
+	 * @param {any[]} items
+	 * @return {any[]}
+	 */
+	this.updateFilter = function (items) {
+		const courseRenderResultFilter = [];
+		for (const i of items) {
+			let pass = true;
+			for (const j of options) {
+				if (j.condition && !j.condition(i)) {
+					pass = false;
+					break;
+				}
+			}
+			if (pass)
+				courseRenderResultFilter.push(i);
+		}
+		return courseRenderResultFilter;
+	}
+}
+
+
+/**
+ * @param {function()} onFilterUpdate
+ * @return {FilterOption}
+ */
+function textSearchFilter(onFilterUpdate) {
+	const searchInput = input(null, 'Teacher, Course name, Serial number', null, {
+		type: 'search',
+		oninput: textSearchFilterChange,
+		onpropertychange: textSearchFilterChange
+	});
+	let textSearchFilterKeys = [];
+	let lastTextSearchFilterKey = null;
+
+	function textSearchFilterChange() {
+		const key = searchInput.value.trim();
+		// if word not finish
+		if (key.length > 0 && !key.match(/^[\u4E00-\u9FFF（）\w -]+$/g))
+			return;
+
+		// if same
+		if (lastTextSearchFilterKey === key)
+			return;
+		lastTextSearchFilterKey = key;
+		textSearchFilterKeys = key.length === 0 ? [] : key.split(' ');
+		onFilterUpdate();
+	}
+
+	function condition(data) {
+		const /**@type{CourseData}*/ courseData = data[0];
+		if (textSearchFilterKeys.length === 0)
+			return true;
+		return findIfContains(courseData.courseName, textSearchFilterKeys) ||
+			findIfContains(courseData.serialNumber, textSearchFilterKeys) ||
+			findIfContains(courseData.classInfo, textSearchFilterKeys) ||
+			courseData.instructors && courseData.instructors.find(i =>
+				findIfContains(i instanceof Object ? i.name : i, textSearchFilterKeys))
+	}
+
+	function findIfContains(data, keys) {
+		if (!data) return false;
+		for (const key of keys)
+			if (key.length === 0 || data.indexOf(key) !== -1) return true;
+		return false;
+	}
+
+	return {
+		condition: condition,
+		element: label('searchBar', null,
+			img('./res/assets/funnel_icon.svg', ''),
+			searchInput,
+		),
+		fullLine: true,
+	};
+}
+
+/**
+ * @param {function()} onFilterUpdate
+ * @param {Signal} loginState
+ * @return {FilterOption}
+ */
+function hideConflictCourseFilter(onFilterUpdate, loginState) {
+	const checkBoxOuter = checkboxWithName(null, '隱藏衝堂', false, hideConflictFilterChange);
+	const checkBox = checkBoxOuter.input;
+	let fetchingData = false;
+	let timeData = null;
+
+	function condition(data) {
+		const /**@type{CourseData}*/ courseData = data[0];
+		if (!checkBox.checked)
+			return true;
+		if (!courseData.time)
+			return true;
+
+		for (const cosTime of courseData.time) {
+			if (!cosTime.sectionStart)
+				continue;
+			const sectionStart = window.timeParseSection(cosTime.sectionStart);
+			const sectionEnd = cosTime.sectionEnd ? window.timeParseSection(cosTime.sectionEnd) : sectionStart;
+
+			for (const usedCosTime of timeData) {
+				if (cosTime.dayOfWeek !== usedCosTime[0])
+					continue;
+
+				if (sectionStart >= usedCosTime[1] && sectionStart <= usedCosTime[2] ||
+					sectionEnd >= usedCosTime[1] && sectionEnd <= usedCosTime[2] ||
+					sectionStart <= usedCosTime[1] && sectionEnd >= usedCosTime[2])
+					return false;
+			}
+		}
+
+		return true;
+	}
+
+	function hideConflictFilterChange() {
+		// If no data
+		if (checkBox.checked) {
+			// If not login
+			if (!loginState.state || !loginState.state.login) {
+				checkBox.checked = false;
+				window.askForLoginAlert();
+			} else if (!fetchingData) {
+				fetchingData = true;
+				window.fetchApi('/courseSchedule', 'Get schedule').then(response => {
+
+					if (!response || !response.success || !response.data) {
+						checkBox.checked = false;
+						timeData = null;
+						return;
+					}
+
+					// Parse time data
+					const usedTime = [];
+					for (const i of response.data.schedule) {
+						for (const info of i.info) {
+							const time = window.timeParse(info.time);
+							usedTime.push(time);
+						}
+					}
+					timeData = usedTime;
+					fetchingData = false;
+
+					onFilterUpdate();
+				});
+			}
+		}
+
+		if (timeData)
+			onFilterUpdate();
+	}
+
+	return {
+		condition: condition,
+		element: checkBoxOuter,
+	};
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, button, table, Signal, text, span, ShowIf, mountableStylesheet} from '../domHelper_v01.min.js';
+import {checkboxWithName, div, button, table, Signal, text, span, ShowIf, mountableStylesheet} from '../domHelper_v001.min.js';
 
 // static
 const weekTable = ['#', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v01.min.js';
+import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v001.min.js';
 
 /**
  * @typedef {[string|number, string|number]|[string|number, ItemData[]]} ItemData
@@ -38,11 +38,11 @@ export default function SelectMenu(placeholder, id, items, options) {
 	);
 
 	const resultBox = input(null, placeholder, id, {readOnly: true});
-	const clearButton = img('./res/assets/close_icon.svg', 'clearBtn');
+	const clearButton = img('./res/assets/close_icon.svg', 'clear_button', 'clearBtn');
 	clearButton.style.display = 'none';
 
 	// Select menu body
-	const selectMenu = label('selectMenu noSelect', null, null,
+	const selectMenu = label('selectMenu noSelect', null,
 		resultBox, clearButton,
 		searchBox,
 	);
