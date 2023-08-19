@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, span, mountableStylesheet, h1, button} from '../domHelper_v001.min.js';
+import {button, div, h1, mountableStylesheet, span} from '../domHelper_v001.min.js';
 
 /**
  * @param {QueryRouter} router
@@ -46,6 +46,8 @@ export default function (router, loginState) {
 			window.fetchApi('/preferenceAdjust', 'Get preference').then(i => {
 				if (i.success)
 					renderAdjustList(i.data);
+				else
+					window.messageAlert.addError('Error', i.msg, 3000);
 			});
 		} else {
 			if (state)

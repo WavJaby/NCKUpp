@@ -14,7 +14,6 @@ import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Map;
 
 import static com.wavjaby.Main.courseNckuOrg;
@@ -54,16 +53,13 @@ public class ExtractUrl implements EndpointModule {
         try {
             ApiResponse apiResponse = new ApiResponse();
             String queryString = req.getRequestURI().getRawQuery();
-            boolean success = false;
-            if (queryString == null)
-                apiResponse.addError(TAG + "No query string found");
-            else {
-                Map<String, String> query = parseUrlEncodedForm(queryString);
-                if (query.containsKey("m"))
-                    success = getMoodle(query.get("m"), cookieStore, apiResponse);
-                else if (query.containsKey("l"))
-                    success = getLocation(query.get("l"), cookieStore, apiResponse);
-            }
+            Map<String, String> query = parseUrlEncodedForm(queryString);
+            if (query.containsKey("moodle"))
+                getMoodle(query.get("moodle"), cookieStore, apiResponse);
+            else if (query.containsKey("location"))
+                getLocation(query.get("location"), cookieStore, apiResponse);
+            else
+                apiResponse.errorBadQuery("Query require one of \"moodle\" or \"location\"");
 
             Headers responseHeader = req.getResponseHeaders();
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
@@ -71,7 +67,7 @@ public class ExtractUrl implements EndpointModule {
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -88,11 +84,11 @@ public class ExtractUrl implements EndpointModule {
         return httpHandler;
     }
 
-    private boolean getMoodle(String requestData, CookieStore cookieStore, ApiResponse response) {
+    private void getMoodle(String requestData, CookieStore cookieStore, ApiResponse response) {
         String[] query = requestData.split(",");
         if (query.length != 3) {
-            response.addError(TAG + "Invalid query data");
-            return false;
+            response.errorParse("Invalid query data");
+            return;
         }
 
         try {
@@ -102,24 +98,21 @@ public class ExtractUrl implements EndpointModule {
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
                     .method(Connection.Method.POST)
-                    .requestBody((System.currentTimeMillis() / 1000) +
-                            "&syear=" + query[0] + "&sem=" + query[1] + "&course=" + query[2])
+                    .requestBody("time=" + (System.currentTimeMillis() / 1000) + "&syear=" + query[0] + "&sem=" + query[1] + "&course=" + query[2])
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .execute().body();
             response.setData(body);
-            return true;
         } catch (IOException e) {
-            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+            logger.errTrace(e);
+            response.errorNetwork(e);
         }
-        return false;
     }
 
-    private boolean getLocation(String requestData, CookieStore cookieStore, ApiResponse response) {
+    private void getLocation(String requestData, CookieStore cookieStore, ApiResponse response) {
         String[] query = requestData.split(",");
         if (query.length != 2) {
-            response.addError(TAG + "Invalid query data");
-            return false;
+            response.errorParse("Invalid query data");
+            return;
         }
 
         try {
@@ -129,16 +122,13 @@ public class ExtractUrl implements EndpointModule {
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
                     .method(Connection.Method.POST)
-                    .requestBody((System.currentTimeMillis() / 1000) +
-                            "&location=" + query[0] + "&room_no=" + query[1])
+                    .requestBody("time=" + (System.currentTimeMillis() / 1000) + "&location=" + query[0] + "&room_no=" + query[1])
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                     .execute().body();
             response.setData(body);
-            return true;
         } catch (IOException e) {
-            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+            logger.errTrace(e);
+            response.errorNetwork(e);
         }
-        return false;
     }
 }

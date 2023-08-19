@@ -355,18 +355,14 @@ public class GetCourseDataUpdate implements Runnable {
 
     private Search.DeptToken renewDeptToken(String deptNo, CookieStore cookieStore) {
         logger.log("Renew dept token " + deptNo);
-        Search.AllDeptData allDeptData = search.getAllDeptData(cookieStore);
+        Search.AllDeptData allDeptData = search.getAllDeptData(cookieStore, null);
         if (allDeptData == null) {
             logger.err("Can not get allDeptData");
             return null;
         }
-        Search.DeptToken deptToken = search.createDeptToken(deptNo, allDeptData);
+        Search.DeptToken deptToken = search.createDeptToken(deptNo, allDeptData, null);
         if (deptToken == null)
             return null;
-        if (deptToken.getError() != null) {
-            logger.err(deptToken.getError());
-            return null;
-        }
         logger.log(deptToken.getID());
         return deptToken;
     }

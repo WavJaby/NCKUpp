@@ -68,7 +68,7 @@ window.fetchApi = function (endpoint, showState, option) {
 		.then(i => {
 			if (abortTimeout)
 				clearTimeout(abortTimeout);
-			if (!i.success)
+			if (!i.success && !i.msg)
 				window.messageAlert.addError(
 					'Api response error',
 					i.err.join('\n'), 2000);
@@ -110,7 +110,7 @@ window.pageLoading = new Signal(false);
 // Main function
 (function main() {
 	console.log('index.js Init');
-	window.messageAlert = MessageAlert();
+	window.messageAlert = new MessageAlert();
 	window.requestState = requestStateObject();
 
 	// debug
@@ -194,7 +194,7 @@ window.pageLoading = new Signal(false);
 	}
 
 	// check login
-	window.fetchApi('/login', 'Check login').then(onLoginStateChange);
+	window.fetchApi('/login?mode=course', 'Check login').then(onLoginStateChange);
 
 	const root = div('root',
 		// Navbar
@@ -233,7 +233,7 @@ window.pageLoading = new Signal(false);
 		queryRouter.element,
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
-		window.messageAlert,
+		window.messageAlert.element,
 		requestState,
 		debugWindow,
 	);
@@ -326,20 +326,25 @@ window.pageLoading = new Signal(false);
 		return list;
 	}
 
+	/**
+	 * @constructor
+	 */
 	function MessageAlert() {
 		const messageBoxRoot = div('messageBox');
 
-		messageBoxRoot.addInfo = function (title, description, removeTimeout) {
+		this.addInfo = function (title, description, removeTimeout) {
 			createMessageBox('info', title, description, removeTimeout);
 		}
 
-		messageBoxRoot.addError = function (title, description, removeTimeout) {
+		this.addError = function (title, description, removeTimeout) {
 			createMessageBox('error', title, description, removeTimeout);
 		}
 
-		messageBoxRoot.addSuccess = function (title, description, removeTimeout) {
+		this.addSuccess = function (title, description, removeTimeout) {
 			createMessageBox('success', title, description, removeTimeout);
 		}
+
+		this.element = messageBoxRoot;
 
 		function onCloseBtn() {
 			removeMessageBox(this.parentElement);
@@ -362,7 +367,7 @@ window.pageLoading = new Signal(false);
 				messageBoxRoot.appendChild(messageBox);
 			messageBox.style.marginTop = -messageBox.offsetHeight + 'px';
 
-			setTimeout(() => messageBox.classList.add('animation'));
+			setTimeout(() => messageBox.classList.add('animation'), 10);
 		}
 
 		function removeMessageBox(messageBox) {
@@ -373,8 +378,6 @@ window.pageLoading = new Signal(false);
 				messageBoxRoot.removeChild(messageBox);
 			}, 500);
 		}
-
-		return messageBoxRoot;
 	}
 
 	function requestStateObject() {
@@ -408,7 +411,7 @@ window.pageLoading = new Signal(false);
 				loading = true;
 				window.pageLoading.set(true);
 				const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-				window.fetchApi('/login', 'login', {
+				window.fetchApi('/login?mode=course', 'login', {
 					method: 'POST',
 					body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
 					timeout: 10000,

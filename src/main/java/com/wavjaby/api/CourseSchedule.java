@@ -11,7 +11,6 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
@@ -27,6 +26,7 @@ import java.util.List;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
+import static com.wavjaby.lib.Lib.checkCourseNckuLoginRequiredPage;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class CourseSchedule implements EndpointModule {
@@ -110,46 +110,31 @@ public class CourseSchedule implements EndpointModule {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
+                .followRedirects(false)
                 .proxy(proxyManager.getProxy());
-        Document document = null;
-        try {
-            document = conn.get();
-        } catch (IOException ignore) {
-        }
-        if (document == null) {
-            response.addError(TAG + "Can not fetch schedule");
+        Element body = checkCourseNckuLoginRequiredPage(conn, response);
+        if (body == null)
             return;
-        }
-        Element body = document.body();
-
 
         // Get year, semester
-        Elements pagePath = body.getElementsByClass("breadcrumb");
-        if (pagePath.size() == 0) {
-            response.addWarn(TAG + "Year and Semester not found");
-        } else {
-            pagePath = pagePath.first().getElementsByTag("a");
-            if (pagePath.size() < 2) {
-                response.addWarn(TAG + "Year and Semester not found");
-            }
-        }
-        String pageName = pagePath.get(1).text();
         int year = -1, semester = -1;
-        int start = 0, end;
-        char c;
-        while (start < pageName.length() && ((c = pageName.charAt(start)) < '0' || c > '9')) start++;
-        end = start;
-        if (start < pageName.length()) {
-            while (end < pageName.length() && ((c = pageName.charAt(end)) >= '0' && c <= '9')) end++;
-            year = Integer.parseInt(pageName.substring(start, end));
-        }
+        Element title = body.getElementsByClass("apName").first();
+        if (title != null) {
+            String result = title.text();
+            int start = 0, end;
+            char c;
+            while ((c = result.charAt(start)) < '0' || c > '9') start++;
+            end = start;
+            while ((c = result.charAt(end)) >= '0' && c <= '9') end++;
+            year = Integer.parseInt(result.substring(start, end));
 
-        start = end;
-        while (start < pageName.length() && ((c = pageName.charAt(start)) < '0' || c > '9')) start++;
-        end = start;
-        if (start < pageName.length()) {
-            while (end < pageName.length() && ((c = pageName.charAt(end)) >= '0' && c <= '9')) end++;
-            semester = Integer.parseInt(pageName.substring(start, end));
+            start = end;
+            while ((c = result.charAt(start)) < '0' || c > '9') start++;
+            end = start;
+            while ((c = result.charAt(end)) >= '0' && c <= '9') end++;
+            semester = Integer.parseInt(result.substring(start, end));
+        } else {
+            response.addWarn("Year and Semester not found");
         }
 
         // Get student ID
@@ -158,7 +143,7 @@ public class CourseSchedule implements EndpointModule {
         if (userIdEle == null ||
                 userIdEle.childNodeSize() != 3 ||
                 (textNodes = userIdEle.textNodes()).size() != 2) {
-            response.addError(TAG + "Student ID not found");
+            response.errorParse("Student ID not found");
             return;
         }
         String studentID = textNodes.get(1).toString();
@@ -169,7 +154,7 @@ public class CourseSchedule implements EndpointModule {
         // Get credits
         Element creditsEle = userIdEle.parent();
         if (creditsEle == null || creditsEle.childrenSize() != 2) {
-            response.addError(TAG + "Credits not found");
+            response.errorParse("Credits not found");
             return;
         }
         String creditsStr = creditsEle.child(1).text();
@@ -185,21 +170,21 @@ public class CourseSchedule implements EndpointModule {
             }
         }
         if (creditsStart == -1) {
-            response.addError(TAG + "Credits parse error");
+            response.errorParse("Credits parse error");
             return;
         }
         float credits = Float.parseFloat(creditsEnd == -1 ? creditsStr.substring(creditsStart) : creditsStr.substring(creditsStart, creditsEnd));
 
         // get table
         JsonArray courseScheduleData = new JsonArray();
-        Elements tables = document.getElementsByTag("table");
+        Elements tables = body.getElementsByTag("table");
         if (tables.size() == 0) {
-            response.addError(TAG + "Table not found");
+            response.errorParse("Table not found");
             return;
         }
         Elements tbody = tables.get(0).getElementsByTag("tbody");
         if (tbody.size() == 0) {
-            response.addError(TAG + "Table body not found");
+            response.errorParse("Table body not found");
             return;
         }
         Elements eachCourse = tbody.get(0).getElementsByTag("tr");
@@ -208,7 +193,7 @@ public class CourseSchedule implements EndpointModule {
 
         for (Element row : eachCourse) {
             if (row.childNodeSize() < 10) {
-                response.addError(TAG + "Course info not found");
+                response.errorParse("Course info not found");
                 return;
             }
             Elements rowElements = row.children();
@@ -274,7 +259,7 @@ public class CourseSchedule implements EndpointModule {
             String room = rowElements.get(8).text();
             int roomIdEnd = room.indexOf(' ');
             if (room.length() > 0 && roomIdEnd == -1) {
-                response.addError(TAG + "Course room id not found: " + room);
+                response.errorParse("Course room id not found: " + room);
                 return;
             }
             String roomID = roomIdEnd == -1 ? null : room.substring(0, roomIdEnd);

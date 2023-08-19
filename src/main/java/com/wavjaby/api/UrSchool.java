@@ -7,6 +7,7 @@ import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.ProgressBar;
@@ -22,17 +23,18 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
-import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Lib.*;
 
 public class UrSchool implements EndpointModule {
     private static final String TAG = "[UrSchool]";
     private static final Logger logger = new Logger(TAG);
     private static final long updateInterval = 2 * 60 * 60 * 1000;
-    private static final long cacheUpdateInterval = 5 * 60 * 1000;
+    private static final long cacheUpdateInterval = 10 * 60 * 1000;
     private static final int UPDATE_THREAD_COUNT = 8;
     private final ExecutorService pool = Executors.newFixedThreadPool(4, new ThreadFactory("UrSchool-"));
 
@@ -42,7 +44,7 @@ public class UrSchool implements EndpointModule {
     private List<ProfessorSummary> urSchoolData;
     private long lastFileUpdateTime;
 
-    private final Map<String, Object[]> instructorCache = new HashMap<>();
+    private final Map<String, Object[]> instructorCache = new ConcurrentHashMap<>();
 
     private static class ProfessorSummary {
         final String id, method;
@@ -129,7 +131,7 @@ public class UrSchool implements EndpointModule {
             lastFileUpdateTime = file.lastModified();
         }
 
-        if (updateUrSchoolData())
+        if (checkTimeUpdateUrSchoolData())
             logger.log("Up to date");
     }
 
@@ -155,39 +157,35 @@ public class UrSchool implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
         Headers requestHeaders = req.getRequestHeaders();
-        getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
         try {
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
+            ApiResponse apiResponse = new ApiResponse();
 
             String queryString = req.getRequestURI().getRawQuery();
-            boolean success = true;
             if (queryString == null) {
-                updateUrSchoolData();
-                data.appendRaw("data", urSchoolDataJson);
+                checkTimeUpdateUrSchoolData();
+                apiResponse.setData(urSchoolDataJson);
             } else {
                 Map<String, String> query = parseUrlEncodedForm(queryString);
                 String instructorID = query.get("id");
                 String getMode = query.get("mode");
                 if (instructorID == null || getMode == null) {
-                    if (instructorID == null)
-                        data.append("err", TAG + "Query id not found");
-                    if (getMode == null)
-                        data.append("err", TAG + "Query mode not found");
+                    String err = "Query require";
+                    if (instructorID == null) err += " \"id\"";
+                    if (getMode == null) err += " \"mode\"";
+                    apiResponse.errorBadQuery(err);
                 } else
-                    success = getInstructorInfo(instructorID, getMode, data);
+                    getInstructorInfo(instructorID, getMode, apiResponse);
             }
-            data.append("success", success);
 
             Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -203,13 +201,13 @@ public class UrSchool implements EndpointModule {
         return httpHandler;
     }
 
-    private boolean getInstructorInfo(String id, String mode, JsonObjectStringBuilder outData) {
+    private boolean getInstructorInfo(String id, String mode, ApiResponse response) {
         // check if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
 //            logger.log(id + " use cache");
-            if (outData != null)
-                outData.appendRaw("data", (String) cacheData[1]);
+            if (response != null)
+                response.setData((String) cacheData[1]);
             return true;
         }
 //        logger.log(id + " fetch data");
@@ -236,7 +234,8 @@ public class UrSchool implements EndpointModule {
             if ((tagsStart = resultBody.indexOf("<div class='col-md-12'>")) == -1 ||
                     (tagsEnd = resultBody.indexOf("</div>", tagsStart += 23)) == -1
             ) {
-                if (outData != null) outData.append("err", TAG + "Tags not found");
+                if (response != null)
+                    response.errorParse("Tags not found");
                 return false;
             }
 
@@ -248,22 +247,24 @@ public class UrSchool implements EndpointModule {
                 if ((urlStart = resultBody.indexOf("href='", urlEnd + 1)) == -1 ||
                         (urlEnd = resultBody.indexOf('\'', urlStart += 6)) == -1
                 ) {
-                    if (outData != null) outData.append("err", TAG + "Tag url not found");
+                    if (response != null)
+                        response.errorParse("Tag url not found");
                     return false;
                 }
                 String url = resultBody.substring(urlStart, urlEnd);
-                if (url.startsWith("/shop") || urlStart > tagsEnd) break;
+                if (url.startsWith("/shop") || urlStart > tagsEnd)
+                    break;
 
                 // Get tag name
                 int tagNameStart, tagNameEnd;
                 if ((tagNameStart = resultBody.indexOf('>', urlEnd + 1)) == -1 ||
                         (tagNameEnd = resultBody.indexOf('<', tagNameStart += 1)) == -1
                 ) {
-                    if (outData != null) outData.append("err", TAG + "Tag name not found");
+                    if (response != null)
+                        response.errorParse("Tag name not found");
                     return false;
                 }
-                String tagName = resultBody.substring(tagNameStart, tagNameEnd).trim()
-                        .replace("&amp;", "&");
+                String tagName = Parser.unescapeEntities(resultBody.substring(tagNameStart, tagNameEnd).trim(), true);
 
                 JsonArrayStringBuilder tagData = new JsonArrayStringBuilder();
                 tagData.append(url).append(tagName);
@@ -287,7 +288,8 @@ public class UrSchool implements EndpointModule {
                     (countStart = resultBody.indexOf('=', countStart + 11)) == -1 ||
                     (countEnd = resultBody.indexOf(';', countStart += 1)) == -1
             ) {
-                if (outData != null) outData.append("err", TAG + "Visitors not found");
+                if (response != null)
+                    response.errorParse("Visitors not found");
                 return false;
             }
             JsonArrayStringBuilder visitors = new JsonArrayStringBuilder();
@@ -297,13 +299,15 @@ public class UrSchool implements EndpointModule {
                 // Get profile url
                 if ((visitorStart = resultBody.indexOf("store.visits.push(", visitorEnd + 1)) == -1
                 ) {
-                    if (outData != null) outData.append("err", TAG + "Profile url not found");
+                    if (response != null)
+                        response.errorParse("Profile url not found");
                     return false;
                 }
                 if (resultBody.startsWith("store", visitorStart += 18)) break;
                 if ((visitorStart = resultBody.indexOf('\'', visitorStart)) == -1 ||
                         (visitorEnd = resultBody.indexOf('\'', visitorStart += 1)) == -1) {
-                    if (outData != null) outData.append("err", TAG + "Profile url string not found");
+                    if (response != null)
+                        response.errorParse("Profile url string not found");
                     return false;
                 }
                 String url = resultBody.substring(visitorStart, visitorEnd);
@@ -311,7 +315,8 @@ public class UrSchool implements EndpointModule {
                 int subStart, subEnd;
                 if ((subEnd = url.lastIndexOf('/')) == -1 ||
                         (subStart = url.lastIndexOf('/', subEnd -= 1)) == -1) {
-                    if (outData != null) outData.append("err", TAG + "Profile url parse error");
+                    if (response != null)
+                        response.errorParse("Profile url parse error");
                     return false;
                 }
                 url = url.substring(subStart + 1, subEnd + 1);
@@ -327,7 +332,8 @@ public class UrSchool implements EndpointModule {
                     (commentStart = resultBody.indexOf('{', commentStart + 7)) != -1) {
 
                 if ((commentEnd = resultBody.indexOf('}', commentStart + 1)) == -1) {
-                    if (outData != null) outData.append("err", TAG + "Comment data not found");
+                    if (response != null)
+                        response.errorParse("Comment data not found");
                     return false;
                 }
                 JsonObject commentData = new JsonObject(resultBody.substring(commentStart, commentEnd + 1));
@@ -341,7 +347,8 @@ public class UrSchool implements EndpointModule {
                         (avatarStart = resultBody.indexOf('\'', avatarStart + 6)) == -1 ||
                         (avatarEnd = resultBody.indexOf('\'', avatarStart += 1)) == -1 ||
                         avatarEnd > limit) {
-                    if (outData != null) outData.append("err", TAG + "Profile url string not found");
+                    if (response != null)
+                        response.errorParse("Profile url string not found");
                     return false;
                 }
                 String url = resultBody.substring(avatarStart, avatarEnd);
@@ -351,7 +358,8 @@ public class UrSchool implements EndpointModule {
                     int subStart, subEnd;
                     if ((subEnd = url.lastIndexOf('/')) == -1 ||
                             (subStart = url.lastIndexOf('/', subEnd -= 1)) == -1) {
-                        if (outData != null) outData.append("err", TAG + "Profile url parse error");
+                        if (response != null)
+                            response.errorParse("Profile url parse error");
                         return false;
                     }
                     url = url.substring(subStart + 1, subEnd + 1);
@@ -364,7 +372,8 @@ public class UrSchool implements EndpointModule {
                         (timestampStart = resultBody.indexOf('\'', timestampStart + 9)) == -1 ||
                         (timestampEnd = resultBody.indexOf('\'', timestampStart += 1)) == -1 ||
                         timestampEnd > limit) {
-                    if (outData != null) outData.append("err", TAG + "Profile url string not found");
+                    if (response != null)
+                        response.errorParse("Profile url string not found");
                     return false;
                 }
                 String timestamp = resultBody.substring(timestampStart, timestampEnd);
@@ -381,25 +390,26 @@ public class UrSchool implements EndpointModule {
             jsonBuilder.append("takeCourseCount", takeCourseCount);
             jsonBuilder.append("takeCourseUser", visitors);
             jsonBuilder.append("comments", comments);
-            if (outData != null)
-                outData.append("data", jsonBuilder);
-            instructorCache.put(id + '-' + mode, new Object[]{System.currentTimeMillis(), jsonBuilder.toString()});
+            String instructorInfo = jsonBuilder.toString();
+            if (response != null)
+                response.setData(instructorInfo);
+            instructorCache.put(id + '-' + mode, new Object[]{System.currentTimeMillis(), instructorInfo});
 //            logger.log(id + " done");
             return true;
         } catch (Exception e) {
-            if (outData != null)
-                outData.append("err", TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+            logger.errTrace(e);
+            if (response != null)
+                response.errorParse(e.getMessage());
             return false;
         }
     }
 
-    private synchronized boolean updateUrSchoolData() {
+    private synchronized boolean checkTimeUpdateUrSchoolData() {
         final long start = System.currentTimeMillis();
-        if (start - lastFileUpdateTime <= updateInterval) return true;
+        if (start - lastFileUpdateTime <= updateInterval)
+            return true;
         lastFileUpdateTime = start;
         pool.submit(() -> {
-
             // Get first page
             ProgressBar progressBar = new ProgressBar(TAG + "Update data ");
             Logger.addProgressBar(progressBar);
@@ -497,7 +507,7 @@ public class UrSchool implements EndpointModule {
                 try {
                     resultBody = pageFetch.execute().body();
                     break;
-                } catch (IOException ignore) {
+                } catch (IOException | UncheckedIOException ignore) {
                 }
             }
 

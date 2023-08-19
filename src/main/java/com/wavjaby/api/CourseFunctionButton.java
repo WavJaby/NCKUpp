@@ -15,7 +15,6 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Map;
 
 import static com.wavjaby.Main.courseNckuOrg;
@@ -66,7 +65,7 @@ public class CourseFunctionButton implements EndpointModule {
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -75,7 +74,7 @@ public class CourseFunctionButton implements EndpointModule {
             req.close();
             e.printStackTrace();
         }
-        logger.log("Send cosdata " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Course function button " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -83,17 +82,17 @@ public class CourseFunctionButton implements EndpointModule {
         return httpHandler;
     }
 
-    private void processData(Map<String, String> query, ApiResponse apiResponse, CookieStore cookieStore) {
+    private void processData(Map<String, String> query, ApiResponse response, CookieStore cookieStore) {
         String key;
         if ((key = query.get("cosdata")) != null) {
-            postCosData(key, cookieStore, apiResponse);
+            postCosData(key, cookieStore, response);
         } else if ((key = query.get("prekey")) != null) {
-            postPreKey(key, cookieStore, apiResponse);
+            postPreKey(key, cookieStore, response);
         } else
-            apiResponse.addError(TAG + "Key not found");
+            response.errorBadQuery("Query require one of \"cosdata\" or \"prekey\"");
     }
 
-    private void postPreKey(String key, CookieStore cookieStore, ApiResponse apiResponse) {
+    private void postPreKey(String key, CookieStore cookieStore, ApiResponse response) {
         try {
             Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=add_presub")
                     .header("Connection", "keep-alive")
@@ -106,24 +105,23 @@ public class CourseFunctionButton implements EndpointModule {
                     .execute();
             JsonObject postResult = new JsonObject(post.body());
             String msg = postResult.getString("msg");
-            if (postResult.getBoolean("result")) {
-                apiResponse.setMessage(msg);
-            } else
-                apiResponse.addError(msg);
+            response.setMessageDisplay(msg);
+
+            if (!postResult.getBoolean("result"))
+                response.errorCourseNcku();
         } catch (IOException e) {
             logger.errTrace(e);
-            apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            response.errorNetwork(e);
         }
     }
 
-    private void postCosData(String key, CookieStore cookieStore, ApiResponse apiResponse) {
+    private void postCosData(String key, CookieStore cookieStore, ApiResponse response) {
         try {
-            JsonObject resultData = null;
-            String postData;
-            int i;
             boolean success = false;
-            for (i = 0; i < 10; i++) {
+            String message = null;
+            for (int i = 0; i < 10; i++) {
                 // Get ticket
+                String postData;
                 postData = "time=" + (System.currentTimeMillis() / 1000) + "&cosdata=" + URLEncoder.encode(key, "UTF-8");
                 Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21112")
                         .header("Connection", "keep-alive")
@@ -136,8 +134,8 @@ public class CourseFunctionButton implements EndpointModule {
                         .execute();
                 JsonObject postResult = new JsonObject(post.body());
                 if (!postResult.getBoolean("status")) {
-                    apiResponse.addError(postResult.getString("msg"));
-                    return;
+                    message = postResult.getString("msg");
+                    break;
                 }
 
                 // Post request
@@ -161,26 +159,28 @@ public class CourseFunctionButton implements EndpointModule {
                         .header("X-Requested-With", "XMLHttpRequest")
                         .execute();
 
-                resultData = new JsonObject(result.body());
-                String msg = resultData.getString("msg");
+                JsonObject resultData = new JsonObject(result.body());
+                message = resultData.getString("msg");
                 if (resultData.getBoolean("status")) {
                     success = true;
                     break;
                 }
-                if (!msg.contains("CAPTCHA") && !msg.contains("驗證碼"))
+                if (!message.contains("CAPTCHA") && !message.contains("驗證碼"))
                     break;
             }
-            String msg = resultData.getString("msg");
-            msg = msg.replace("<br>", "\\n");
-            int start = msg.indexOf('>'), end = msg.lastIndexOf('<');
-            if (start != -1 && end != -1) msg = msg.substring(start + 1, end);
-            if (success)
-                apiResponse.setMessage(msg);
-            else
-                apiResponse.addError(msg);
+            if (!success)
+                response.errorCourseNcku();
+            if (message == null || message.length() == 0)
+                message = "Unknown error";
+            else {
+                message = message.replace("<br>", "\\n");
+                int start = message.indexOf('>'), end = message.lastIndexOf('<');
+                if (start != -1 && end != -1) message = message.substring(start + 1, end);
+            }
+            response.setMessageDisplay(message);
         } catch (IOException e) {
             logger.errTrace(e);
-            apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+            response.errorNetwork(e);
         }
     }
 }

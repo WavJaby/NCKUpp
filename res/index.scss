@@ -315,7 +315,7 @@ footer {
         pointer-events: none;
     }
 
-    &:hover >.checkmark {
+    &:hover > .checkmark {
         background-color: $button-hover-color;
     }
 

@@ -1,8 +1,9 @@
-# NCKUpp
+# ![Logo](https://wavjaby.github.io/NCKUpp/res/assets/icon.svg) NCKU++
 
-A new site for NCKU course enrollment system
+更優質的選課網站<br>
+A new site for NCKU course enrollment
 
-[To NCKU++](https://wavjaby.github.io/NCKUpp)
+### [To NCKU++](https://wavjaby.github.io/NCKUpp)
 
 ## API usage
 
@@ -13,6 +14,7 @@ A new site for NCKU course enrollment system
     "success": boolean
     "data": {}|null
     "msg": string
+    "code": int
     "err": [string]
     "warn": [string]
 }
@@ -62,14 +64,14 @@ No parameter provide, will return NCKUHUB_ID corresponding to the CourseSerialID
 
 ##### Parameters
 
-> | name | type     | data type | description                   |
-> |------|----------|-----------|-------------------------------|
-> | `m`  | optional | string    | Login mode, legal value: c, i |
+> | name   | type    | data type | description                            |
+> |--------|---------|-----------|----------------------------------------|
+> | `mode` | require | string    | Login mode, legal value: course, stuId |
 
 ##### Login mode
 
-* c: Course
-* i: StudentIdentification
+* course: Course NCKU
+* stuId: StudentIdentification
 
 </details>
 
@@ -79,14 +81,14 @@ No parameter provide, will return NCKUHUB_ID corresponding to the CourseSerialID
 
 ##### Parameters
 
-> | name | type     | data type | description                   |
-> |------|----------|-----------|-------------------------------|
-> | `m`  | optional | string    | Login mode, legal value: c, i |
+> | name   | type     | data type | description                            |
+> |--------|----------|-----------|----------------------------------------|
+> | `mode` | require  | string    | Login mode, legal value: course, stuId |
 
 ##### Login mode
 
-* c: Course
-* i: StudentIdentification
+* course: Course NCKU
+* stuId: StudentIdentification
 
 ##### Content
 

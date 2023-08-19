@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, button, table, Signal, text, span, ShowIf, mountableStylesheet} from '../domHelper_v001.min.js';
+import {button, checkboxWithName, div, mountableStylesheet, ShowIf, Signal, span, table, text} from '../domHelper_v001.min.js';
 
 // static
 const weekTable = ['#', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -162,7 +162,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 			courseInfoWindow.add(
 				button(null, 'moodle',
 					() => {
-						window.fetchApi('/extract?m=' + info.m).then(i => {
+						window.fetchApi('/extract?moodle=' + info.m).then(i => {
 							if (i.data && i.data.status)
 								window.open(i.data.url, '_blank');
 						});
@@ -174,7 +174,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 				courseInfoWindow.add(
 					button(null, time[0] + ' ' + time[1] + ' ' + time[4],
 						() => {
-							window.fetchApi('/extract?l=' + time[2] + ',' + time[3]).then(i => {
+							window.fetchApi('/extract?location=' + time[2] + ',' + time[3]).then(i => {
 								if (i.data && i.data.status)
 									window.open(i.data.url, '_blank');
 							});

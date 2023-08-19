@@ -80,7 +80,7 @@ public class HomeInfo implements EndpointModule {
         logger.log("Get homeInfo " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
-    private void getHomepageInfo(CookieStore cookieStore, ApiResponse apiResponse) {
+    private void getHomepageInfo(CookieStore cookieStore, ApiResponse response) {
         Connection request = HttpConnection.connect(courseNckuOrg + "/index.php")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
@@ -89,8 +89,8 @@ public class HomeInfo implements EndpointModule {
         try {
             document = request.get();
         } catch (IOException e) {
-            e.printStackTrace();
-            apiResponse.addError(TAG + "Network error");
+            logger.errTrace(e);
+            response.errorNetwork(e);
             return;
         }
         Element body = document.body();
@@ -99,12 +99,12 @@ public class HomeInfo implements EndpointModule {
         // Get mews table
         Element newsTable = body.getElementsByTag("table").first();
         if (newsTable == null) {
-            apiResponse.addError(TAG + "Can not get news table");
+            response.errorParse("Can not get news table");
             return;
         }
         Element newsTbody = newsTable.getElementsByTag("tbody").first();
         if (newsTbody == null) {
-            apiResponse.addError(TAG + "Can not get news tbody");
+            response.errorParse("Can not get news tbody");
             return;
         }
         Elements newsRows = newsTbody.children();
@@ -112,28 +112,22 @@ public class HomeInfo implements EndpointModule {
         for (int i = 1; i < newsRows.size(); i++) {
             Elements cols = newsRows.get(i).children();
             if (cols.size() < 3) {
-                apiResponse.addError(TAG + "Can not parse news rows");
+                response.errorParse("Can not parse news rows");
                 return;
             }
             Element contentsElements = cols.get(1).firstElementChild();
             if (contentsElements == null) {
-                apiResponse.addError(TAG + "Can not parse news content");
+                response.errorParse("Can not parse news content");
                 return;
             }
             // Get contents
             JsonArrayStringBuilder contents = new JsonArrayStringBuilder();
-            for (Element j : contentsElements.children()) {
+            for (Element phraseElement : contentsElements.children()) {
                 StringBuilder contentText = new StringBuilder();
                 // content
-                for (Node node : j.childNodes()) {
+                for (Node node : phraseElement.childNodes()) {
                     if (node instanceof TextNode) {
-                        // Append content text
-                        if (contentText.length() > 0)
-                            contents.append(contentText.toString().trim());
-                        contentText.setLength(0);
-
-                        // Get normal text
-                        contents.append(((TextNode) node).text().trim());
+                        contentText.append(((TextNode) node).text());
                     } else if (node instanceof Element) {
                         if (((Element) node).tagName().equals("a")) {
                             // Append content text
@@ -150,7 +144,7 @@ public class HomeInfo implements EndpointModule {
                             contentText.append(((Element) node).text());
                         }
                     } else {
-                        apiResponse.addError(TAG + "Can not parse news content text");
+                        response.errorParse("Can not parse news content text");
                         return;
                     }
                 }
@@ -169,7 +163,7 @@ public class HomeInfo implements EndpointModule {
         // Get announcement
         Elements panels = body.getElementsByClass("panel");
         if (panels.size() < 2) {
-            apiResponse.addError(TAG + "Can not get announcement");
+            response.errorParse("Can not get announcement");
             return;
         }
 
@@ -211,7 +205,7 @@ public class HomeInfo implements EndpointModule {
         }
         data.append("bulletin", announcement);
 
-        apiResponse.setData(data.toString());
+        response.setData(data.toString());
     }
 
     @Override

@@ -70,11 +70,10 @@ public class ProxyManager {
         @Override
         public int hashCode() {
             String[] ips = ip.split("\\.");
-            return (Integer.parseInt(ips[0]) << 23) +
-                    (Integer.parseInt(ips[1]) << 15) +
-                    (Integer.parseInt(ips[2]) << 7) +
-                    (Integer.parseInt(ips[3]) >> 1) +
-                    port;
+            return (Integer.parseInt(ips[0]) << 24) +
+                    (Integer.parseInt(ips[1]) << 16) +
+                    (Integer.parseInt(ips[2]) << 8) +
+                    Integer.parseInt(ips[3]) | port;
         }
 
         @Override

@@ -166,24 +166,25 @@
 import {
 	a,
 	button,
-	ClassList,
 	checkboxWithName,
+	ClassList,
 	colgroup,
 	div,
 	img,
 	input,
+	label,
+	mountableStylesheet,
 	p,
-	span,
 	Signal,
+	span,
 	State,
 	table,
-	tr,
-	th,
-	td,
-	thead,
 	tbody,
+	td,
 	text,
-	mountableStylesheet, label
+	th,
+	thead,
+	tr
 } from '../domHelper_v001.min.js';
 
 import SelectMenu from '../selectMenu.js';
@@ -865,7 +866,7 @@ export default function (router, loginState) {
 	}
 
 	// Search page
-	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', null, {searchValue: true});
+	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', 'dept', null, {searchValue: true});
 	let tHead;
 	const courseSearch = div('courseSearch',
 		{onRender, onPageClose, onPageOpen},
@@ -874,9 +875,9 @@ export default function (router, loginState) {
 			input(null, 'Course name', 'courseName', {onkeyup}),
 			deptNameSelectMenu,
 			input(null, 'Instructor', 'instructor', {onkeyup}),
-			new SelectMenu('Grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
-			new SelectMenu('DayOfWeek', 'dayOfWeek', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
-			new SelectMenu('Section', 'section', [
+			new SelectMenu('Grade', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
+			new SelectMenu('DayOfWeek', 'dayOfWeek', 'dayOfWeek', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
+			new SelectMenu('Section', 'section', 'section', [
 				['1', '0'], ['2', '1'], ['3', '2'], ['4', '3'], ['5', '4'], ['6', 'N'], ['7', '5'], ['8', '6'], ['9', '7'], ['10', '8'], ['11', '9'],
 				['12', 'A'], ['13', 'B'], ['14', 'C'], ['15', 'D'], ['16', 'E']
 			], {multiple: true}),

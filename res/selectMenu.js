@@ -17,13 +17,14 @@ import {checkboxWithName, div, img, input, label, li, span, text, ul} from './do
 
 /**
  * @param {string} placeholder
- * @param {string} id
+ * @param {string} inputId
+ * @param {string} className
  * @param {ItemData[]} [items]
  * @param {SelectMenuOption} [options]
  * @return {HTMLElement}
  * @constructor
  */
-export default function SelectMenu(placeholder, id, items, options) {
+export default function SelectMenu(placeholder, inputId, className, items, options) {
 	if (!options)
 		options = {};
 	if (options.searchBar === null || options.searchBar === undefined)
@@ -37,12 +38,12 @@ export default function SelectMenu(placeholder, id, items, options) {
 		itemsContainer,
 	);
 
-	const resultBox = input(null, placeholder, id, {readOnly: true});
+	const resultBox = input(null, placeholder, inputId, {readOnly: true});
 	const clearButton = img('./res/assets/close_icon.svg', 'clear_button', 'clearBtn');
 	clearButton.style.display = 'none';
 
 	// Select menu body
-	const selectMenu = label('selectMenu noSelect', null,
+	const selectMenu = label('selectMenu noSelect ' + className, null,
 		resultBox, clearButton,
 		searchBox,
 	);

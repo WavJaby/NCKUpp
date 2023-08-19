@@ -1,8 +1,10 @@
 package com.wavjaby.lib;
 
+import com.wavjaby.Main;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObjectStringBuilder;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,18 +13,14 @@ public class ApiResponse {
     private final List<String> err = new ArrayList<>();
     private final List<String> warn = new ArrayList<>();
     private String msg;
+    private ApiCode responseCode = ApiCode.SUCCESS;
     private String data;
-
-    public void addError(String error) {
-        err.add(error);
-        success = false;
-    }
 
     public void addWarn(String warning) {
         warn.add(warning);
     }
 
-    public void setMessage(String message) {
+    public void setMessageDisplay(String message) {
         msg = message;
     }
 
@@ -51,9 +49,89 @@ public class ApiResponse {
         if (msg != null)
             builder.append("msg", msg);
 
+        builder.append("code", responseCode.code);
+
         builder.append("success", success);
         builder.appendRaw("data", data);
 
         return builder.toString();
+    }
+
+    public void errorUnsupportedHttpMethod(String method) {
+        responseCode = ApiCode.UNSUPPORTED_HTTP_METHOD;
+        success = false;
+        err.add("Unsupported HTTP Method: " + method);
+    }
+
+    public void errorBadQuery(String message) {
+        responseCode = ApiCode.BAD_QUERY;
+        success = false;
+        err.add("Bad query: " + message);
+    }
+
+    public void errorBadPayload(String message) {
+        responseCode = ApiCode.BAD_PAYLOAD;
+        success = false;
+        err.add("Bad payload: " + message);
+    }
+
+    public void errorNetwork(IOException e) {
+        errorNetwork(e.getMessage());
+    }
+
+    public void errorNetwork(String message) {
+        if (responseCode.code < 1999)
+            responseCode = ApiCode.SERVER_NETWORK_ERROR;
+        success = false;
+        err.add("Server Network error: " + message);
+    }
+
+    public void errorFetch(String message) {
+        if (responseCode.code < 1999)
+            responseCode = ApiCode.SERVER_DATA_FETCH_ERROR;
+        success = false;
+        err.add("Server fetch error: " + message);
+    }
+
+    public void errorServerDatabase(String message) {
+        responseCode = ApiCode.SERVER_DATABASE_ERROR;
+        success = false;
+        err.add("Server database error: " + message);
+    }
+
+    public void errorParse(String message) {
+        if (responseCode.code < 1999)
+            responseCode = ApiCode.SERVER_DATA_PARSE_ERROR;
+        success = false;
+        err.add("Server parse error: " + message);
+    }
+
+    public void errorCookie(String message) {
+        responseCode = ApiCode.COOKIE_ERROR;
+        success = false;
+        err.add("Cookie format error: " + message);
+    }
+
+    public void errorLoginRequire() {
+        responseCode = ApiCode.LOGIN_REQUIRE;
+        success = false;
+        err.add("Login required");
+    }
+
+    public void errorCourseNcku() {
+        responseCode = ApiCode.COURSE_NCKU_ERROR;
+        success = false;
+        err.add("Error from " + Main.courseNcku);
+    }
+
+    public int getResponseCode() {
+        if (responseCode == ApiCode.UNSUPPORTED_HTTP_METHOD)
+            return 405; // Method Not Allowed
+        if (responseCode == ApiCode.LOGIN_REQUIRE)
+            return 403; // Forbidden
+
+        return responseCode.code <= ApiCode.NORMAL.code ? 200
+                : responseCode.code <= ApiCode.SERVER_ERROR.code ? 500
+                : 400;
     }
 }

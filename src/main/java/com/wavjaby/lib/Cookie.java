@@ -26,6 +26,13 @@ public class Cookie {
         return null;
     }
 
+    public static String getCookie(String name, String[] cookies) {
+        for (String httpCookie : cookies)
+            if (httpCookie.startsWith(name + '='))
+                return httpCookie.substring(name.length() + 1);
+        return null;
+    }
+
     public static String unpackAuthCookie(String[] cookieIn, CookieStore cookieStore) {
         if (cookieIn == null) return null;
         String originalCookie = null;

@@ -1,7 +1,6 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
@@ -11,6 +10,7 @@ import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.svgbuilder.*;
 import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -34,6 +34,7 @@ import static com.wavjaby.lib.Lib.*;
 public class StudentIdentificationSystem implements EndpointModule {
     private static final String TAG = "[StuIdSys]";
     private static final Logger logger = new Logger(TAG);
+    private static final String loginCheckString = ".asp?oauth=";
 
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
@@ -96,18 +97,34 @@ public class StudentIdentificationSystem implements EndpointModule {
             if (classRankingStr.equals("　"))
                 classRanking = classRankingTotal = -1;
             else {
-                String[] classRankingArr = classRankingStr.split("／");
-                classRanking = Integer.parseInt(classRankingArr[0]);
-                classRankingTotal = Integer.parseInt(classRankingArr[1]);
+                String[] classRankingArr = classRankingStr.split("／", 2);
+                int classRanking = -1, classRankingTotal = -1;
+                try {
+                    classRanking = Integer.parseInt(classRankingArr[0]);
+                    classRankingTotal = Integer.parseInt(classRankingArr[1]);
+                } catch (NumberFormatException e) {
+                    logger.err(classRankingStr);
+                    logger.errTrace(e);
+                }
+                this.classRanking = classRanking;
+                this.classRankingTotal = classRankingTotal;
             }
 
             String deptRankingStr = row.get(12).text().trim();
             if (classRankingStr.equals("　"))
                 deptRanking = deptRankingTotal = -1;
             else {
-                String[] deptRankingArr = deptRankingStr.split("／");
-                deptRanking = Integer.parseInt(deptRankingArr[0]);
-                deptRankingTotal = Integer.parseInt(deptRankingArr[1]);
+                String[] deptRankingArr = deptRankingStr.split("／", 2);
+                int deptRanking = -1, deptRankingTotal = -1;
+                try {
+                    deptRanking = Integer.parseInt(deptRankingArr[0]);
+                    deptRankingTotal = Integer.parseInt(deptRankingArr[1]);
+                } catch (NumberFormatException e) {
+                    logger.err(classRankingStr);
+                    logger.errTrace(e);
+                }
+                this.deptRanking = deptRanking;
+                this.deptRankingTotal = deptRankingTotal;
             }
         }
 
@@ -233,19 +250,23 @@ public class StudentIdentificationSystem implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
+        CookieManager cookieManager = new CookieManager();
+        CookieStore cookieStore = cookieManager.getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
 
         try {
             ApiResponse apiResponse = new ApiResponse();
-            studentIdSysGet(req, apiResponse);
+            String loginState = unpackStudentIdSysLoginStateCookie(splitCookie(requestHeaders), cookieStore);
+            studentIdSysGet(req.getRequestURI().getRawQuery(), cookieStore, apiResponse);
 
             Headers responseHeader = req.getResponseHeaders();
+            packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
             byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
@@ -262,124 +283,123 @@ public class StudentIdentificationSystem implements EndpointModule {
         return httpHandler;
     }
 
-    private void studentIdSysGet(HttpExchange req, ApiResponse apiResponse) {
-        // Setup cookies
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        Headers responseHeader = req.getResponseHeaders();
-        String[] cookies = splitCookie(requestHeaders);
-        String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
+    private void studentIdSysGet(String rawQuery, CookieStore cookieStore, ApiResponse response) {
 
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-        String mode = query.get("m");
-        // Get semesters info
-        if (mode == null || mode.equals("s")) {
-            List<SemesterOverview> data = getSemestersOverview(cookieStore);
-            if (data == null)
-                apiResponse.addError(TAG + "Cant get semesters table");
-            else
-                apiResponse.setData(data.toString());
+        Map<String, String> query = parseUrlEncodedForm(rawQuery);
+        String mode = query.get("mode");
+        if (mode == null) {
+            response.errorBadQuery("Query require \"mode\"");
         }
-        // Get current semesters info
-        else if (mode.equals("c")) {
-            getCurrentSemesterGradeTable(cookieStore, apiResponse);
+        // Get semester info
+        else if (mode.equals("semInfo")) {
+            getSemestersOverview(cookieStore, response);
+        }
+        // Get current semester info
+        else if (mode.equals("currentSemInfo")) {
+            getCurrentSemesterGradeTable(cookieStore, response);
         }
         // Get semester course grade
-        else if (mode.equals("g")) {
-            String semId = query.get("s");
-            if (semId == null)
-                apiResponse.addError(TAG + "Semester not given");
-            else {
-                List<CourseGrade> data = getSemesterGradeTable(semId, cookieStore);
-                if (data == null)
-                    apiResponse.addError(TAG + "Cant get semester course grade");
-                else
-                    apiResponse.setData(data.toString());
+        else if (mode.equals("semCourse")) {
+            String semId = query.get("semId");
+            if (semId == null) {
+                response.errorBadQuery("Query \"semCourse\" mode require \"semId\"");
+                return;
             }
+            getSemesterGradeTable(semId, cookieStore, response);
         }
         // Get semester course grade normal distribution
-        else if (mode.equals("i")) {
-            String imageQuery = null;
-            String imageQueryRaw = query.get("q");
-            if (imageQueryRaw == null)
-                apiResponse.addError(TAG + "Image query not given");
-            else {
-                String[] values;
-                values = imageQueryRaw.split(",", 4);
-                if (values.length != 4)
-                    apiResponse.addError(TAG + "Image query format error");
-                else
-                    imageQuery = "syear=" + values[0] + "&sem=" + values[1] + "&co_no=" + values[2] + "&class_code=" + values[3];
+        else if (mode.equals("courseNormalDist")) {
+            String imageQueryRaw = query.get("imgQuery");
+            if (imageQueryRaw == null) {
+                response.errorBadQuery("Query \"courseNormalDist\" mode require \"imgQuery\"");
+                return;
             }
 
+            String[] cache = imageQueryRaw.split(",", 4);
+            if (cache.length != 4) {
+                int len = cache.length == 1 && cache[0].length() == 0 ? 0 : cache.length;
+                response.errorBadQuery("\"" + imageQueryRaw + "\" (Only give " + len + " value instead of 4)");
+                return;
+            }
+            String imageQuery = "syear=" + cache[0] + "&sem=" + cache[1] + "&co_no=" + cache[2] + "&class_code=" + cache[3];
+
             // Get image
-            if (imageQuery != null) {
-                HttpResponseData responseData = getDistributionGraph(imageQuery, cookieStore);
-                if (responseData.state == HttpResponseData.ResponseState.SUCCESS)
-                    apiResponse.setData(new JsonArray().add(responseData.data).toString());
-                else {
-                    if (responseData.state == HttpResponseData.ResponseState.DATA_PARSE_ERROR)
-                        apiResponse.setMessage("Normal distribution graph not exist");
-                    apiResponse.addError(TAG + "Cant get semester course grade normal distribution");
-                }
+            HttpResponseData responseData = getDistributionGraph(imageQuery, cookieStore);
+            if (responseData.state == HttpResponseData.ResponseState.SUCCESS)
+                response.setData(new JsonArray().add(responseData.data).toString());
+            else {
+                if (responseData.state == HttpResponseData.ResponseState.DATA_PARSE_ERROR)
+                    response.setMessageDisplay("Normal distribution graph not exist");
+                response.errorParse(TAG + "Cant get semester course grade normal distribution");
             }
         }
         // Unknown mode
         else
-            apiResponse.addError(TAG + "Unknown mode: " + mode);
-
-        packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
+            response.errorBadQuery("Unknown mode: " + mode);
     }
 
-    private List<SemesterOverview> getSemestersOverview(CookieStore cookieStore) {
-        Element tbody = null;
+    private void getSemestersOverview(CookieStore cookieStore, ApiResponse response) {
+        Element tbody;
         try {
-            Connection conn = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
+            Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
                     .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore);
-            Elements tbodyElements = conn.get().getElementsByTag("tbody");
-            if (tbodyElements.size() < 4)
-                return null;
-            tbody = tbodyElements.get(3);
+                    .followRedirects(false)
+                    .cookieStore(cookieStore).execute();
+            String body = res.body();
+            if (body.contains(loginCheckString)) {
+                response.errorLoginRequire();
+                return;
+            }
+            Elements tbodyElements = Jsoup.parse(body).body().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4 || (tbody = tbodyElements.get(3)) == null) {
+                response.errorParse("Semester overview table not found");
+                return;
+            }
         } catch (IOException e) {
             logger.errTrace(e);
+            response.errorNetwork(e);
+            return;
         }
-        if (tbody == null)
-            return null;
 
         Elements tableRows = tbody.children();
-        if (tableRows.size() < 3)
-            return null;
+        if (tableRows.size() < 3) {
+            response.errorParse("Semester overview table row not found");
+            return;
+        }
+
         // Parse semester overview
         List<SemesterOverview> semesterOverviewList = new ArrayList<>(tableRows.size() - 3);
         for (int i = 2; i < tableRows.size() - 1; i++) {
             Element row = tableRows.get(i);
-            if (row.childrenSize() < 13)
-                return null;
+            if (row.childrenSize() < 13) {
+                response.errorParse("Semester overview table row parse error");
+                return;
+            }
             semesterOverviewList.add(new SemesterOverview(row.children()));
         }
 
-        return semesterOverviewList;
+        response.setData(semesterOverviewList.toString());
     }
 
-    private void getCurrentSemesterGradeTable(CookieStore cookieStore, ApiResponse apiResponse) {
-        Element tbody = null;
+    private void getCurrentSemesterGradeTable(CookieStore cookieStore, ApiResponse response) {
+        Element tbody;
         try {
-            Connection conn = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp")
+            Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp")
                     .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore);
-            Elements tbodyElements = conn.get().getElementsByTag("tbody");
-            if (tbodyElements.size() < 4) {
-                apiResponse.addError(TAG + "Cant get IdSys homepage");
+                    .cookieStore(cookieStore).execute();
+            String body = res.body();
+            if (body.contains(loginCheckString)) {
+                response.errorLoginRequire();
                 return;
             }
-            tbody = tbodyElements.get(3);
+            Elements tbodyElements = Jsoup.parse(body).body().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4 || (tbody = tbodyElements.get(3)) == null) {
+                response.errorParse("IdSys table not found");
+                return;
+            }
         } catch (IOException e) {
             logger.errTrace(e);
-        }
-        if (tbody == null) {
-            apiResponse.addError(TAG + "Cant get IdSys homepage tbody");
+            response.errorNetwork(e);
             return;
         }
 
@@ -395,7 +415,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             }
         }
         if (url == null) {
-            apiResponse.addError(TAG + "Cant find current semester data url");
+            response.errorParse("current semester url not found");
             return;
         }
 
@@ -406,22 +426,19 @@ public class StudentIdentificationSystem implements EndpointModule {
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore);
             Elements tbodyElements = conn.get().getElementsByTag("tbody");
-            if (tbodyElements.size() < 4) {
-                apiResponse.addError(TAG + "Cant get current semester page");
+            if (tbodyElements.size() < 4 || (tbody = tbodyElements.get(3)) == null) {
+                response.errorParse("Current semester table not found");
                 return;
             }
-            tbody = tbodyElements.get(3);
         } catch (IOException e) {
             logger.errTrace(e);
-        }
-        if (tbody == null) {
-            apiResponse.addError(TAG + "Cant get current semester grade tbody");
+            response.errorNetwork(e);
             return;
         }
 
         Elements tableRows = tbody.children();
         if (tableRows.size() < 4) {
-            apiResponse.addError(TAG + "Cant get current semester grade table");
+            response.errorParse("Current semester table row not found");
             return;
         }
 
@@ -441,7 +458,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             while ((c = semesterRaw.charAt(i)) >= '0' && c <= '9') i++;
             forthIndex = i;
             if (thirdIndex + 1 != forthIndex) {
-                apiResponse.addError(TAG + "Current semester parse error");
+                response.errorParse("Current semester time parse error");
                 return;
             }
             semester = semesterRaw.substring(firstIndex, secondIndex) +
@@ -457,42 +474,51 @@ public class StudentIdentificationSystem implements EndpointModule {
         JsonObjectStringBuilder out = new JsonObjectStringBuilder();
         out.append("semester", semester);
         out.appendRaw("courseGrades", courseGradeList.toString());
-        apiResponse.setData(out.toString());
+        response.setData(out.toString());
     }
 
-    private List<CourseGrade> getSemesterGradeTable(String semesterID, CookieStore cookieStore) {
-        Element tbody = null;
+    private void getSemesterGradeTable(String semesterID, CookieStore cookieStore, ApiResponse response) {
+        Element tbody;
         try {
-            Connection gradesListPage = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
+            Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .method(Connection.Method.POST)
                     .requestBody("submit1=" + semesterID)
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            Elements tbodyElements = gradesListPage.post().body().getElementsByTag("tbody");
-            if (tbodyElements.size() < 4)
-                return null;
-            tbody = tbodyElements.get(3);
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8").execute();
+            String body = res.body();
+            if (body.contains(loginCheckString)) {
+                response.errorLoginRequire();
+                return;
+            }
+            Elements tbodyElements = Jsoup.parse(body).body().getElementsByTag("tbody");
+            if (tbodyElements.size() < 4 || (tbody = tbodyElements.get(3)) == null) {
+                response.errorParse("Semester grade table not found");
+                return;
+            }
         } catch (IOException e) {
             logger.errTrace(e);
+            response.errorNetwork(e);
+            return;
         }
-        if (tbody == null)
-            return null;
 
         Elements tableRows = tbody.children();
-        if (tableRows.size() < 4)
-            return null;
+        if (tableRows.size() < 4) {
+            response.errorParse("Semester grade table row not found");
+            return;
+        }
+
         List<CourseGrade> courseGradeList = new ArrayList<>(tableRows.size() - 4);
         for (int i = 2; i < tableRows.size() - 2; i++) {
             Element row = tableRows.get(i);
-            if (row.childrenSize() < 10)
-                return null;
+            if (row.childrenSize() < 10) {
+                response.errorParse("Semester grade table row not found");
+                return;
+            }
             courseGradeList.add(new CourseGrade(row.children()));
         }
-
-        return courseGradeList;
+        response.setData(courseGradeList.toString());
     }
-
 
     private HttpResponseData getDistributionGraph(String query, CookieStore cookieStore) {
         BufferedImage image;

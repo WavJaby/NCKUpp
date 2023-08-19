@@ -23,4 +23,7 @@ public class HttpResponseData {
         this.data = null;
     }
 
+    public boolean isSuccess() {
+        return this.state == ResponseState.SUCCESS && this.data != null;
+    }
 }

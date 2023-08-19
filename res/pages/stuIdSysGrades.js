@@ -1,10 +1,10 @@
 'use strict';
 
-import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, ShowIf} from '../domHelper_v001.min.js';
+import {button, div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../domHelper_v001.min.js';
 
 /**
- * - SemesterGrade: /stuIdSys?m=g&s=[SemID]
- * - CurrentSemesterGrade: /stuIdSys?m=c
+ * - SemesterGrade: /stuIdSys?mode=semCourse&semId=SemID
+ * - CurrentSemesterGrade: /stuIdSys?mode=currentSemInfo
  * @typedef CourseGrade
  * @property {string} serialNumber
  * @property {string} systemNumber
@@ -20,7 +20,7 @@ import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, Sh
  */
 
 /**
- * /stuIdSys?m=s
+ * /stuIdSys?mode=semInfo
  * @typedef SemesterInfo
  * @property {string} semester
  * @property {string} semID
@@ -44,7 +44,7 @@ import {div, button, Signal, span, State, img, mountableStylesheet, h1, text, Sh
  * @param loginState
  * @return {HTMLDivElement}
  */
-export default function (router,loginState) {
+export default function (router, loginState) {
 	console.log('StuIdSys grades Init');
 	// static element
 	const styles = mountableStylesheet('./res/pages/stuIdSysGrades.css');
@@ -83,7 +83,7 @@ export default function (router,loginState) {
 		// Login
 		if (state && state.login) {
 			loadingState.set(true);
-			window.fetchApi('/login?m=i', 'Login identification system').then(i => {
+			window.fetchApi('/login?mode=stuId', 'Login identification system').then(i => {
 				// Student Identification System login success
 				if (i.success && i.data && i.data.login) {
 					semesterLoadingStateCount = 2;
@@ -109,7 +109,7 @@ export default function (router,loginState) {
 	}
 
 	function getSemestersInfo() {
-		window.fetchApi('/stuIdSys?m=s').then(i => {
+		window.fetchApi('/stuIdSys?mode=semInfo').then(i => {
 			semestersInfo.set(i.data);
 			if (--semesterLoadingStateCount === 0)
 				loadingState.set(false);
@@ -117,7 +117,7 @@ export default function (router,loginState) {
 	}
 
 	function CurrentSemesterGrade() {
-		window.fetchApi('/stuIdSys?m=c').then(i => {
+		window.fetchApi('/stuIdSys?mode=currentSemInfo').then(i => {
 			currentSemestersInfo.set(i.data);
 			if (--semesterLoadingStateCount === 0)
 				loadingState.set(false);
@@ -126,7 +126,7 @@ export default function (router,loginState) {
 
 	function getSemesterGrade() {
 		semesterGrades.set(null);
-		window.fetchApi('/stuIdSys?m=g&s=' + this.semID).then(i => {
+		window.fetchApi('/stuIdSys?mode=semCourse&semId=' + this.semID).then(i => {
 			semesterGrades.set(i.data);
 		});
 	}
@@ -138,7 +138,7 @@ export default function (router,loginState) {
 		const courseInfo = this && this.courseInfo || inCourseInfo;
 		if (!courseInfo.imgQuery)
 			return;
-		window.fetchApi('/stuIdSys?m=i&q=' + courseInfo.imgQuery).then(i => {
+		window.fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(i => {
 			if (i.success) {
 				normalDestImg.set({graph: i.data[0], courseInfo: courseInfo})
 			} else {

@@ -5,6 +5,7 @@
     width: 100%;
     height: 0;
     z-index: 999;
+    top: $navbar-height;
 
     > .info {
         background: rgba(30, 30, 30, 0.7);

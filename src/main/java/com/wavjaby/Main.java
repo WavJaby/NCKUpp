@@ -27,13 +27,13 @@ public class Main {
     public static final String courseQueryNckuOrg = "https://" + courseQueryNcku;
 
     public static final URI courseNckuOrgUri;
-    public static final URI courseQueryNckuUri;
+    public static final URI courseQueryNckuOrgUri;
     public static final URI portalNckuOrgUri;
     public static final URI stuIdSysNckuOrgUri;
 
     static {
         courseNckuOrgUri = URI.create(courseNckuOrg);
-        courseQueryNckuUri = URI.create(courseQueryNckuOrg);
+        courseQueryNckuOrgUri = URI.create(courseQueryNckuOrg);
         portalNckuOrgUri = URI.create(portalNckuOrg);
         stuIdSysNckuOrgUri = URI.create(stuIdSysNckuOrg);
     }

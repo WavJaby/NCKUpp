@@ -6,6 +6,7 @@ import com.wavjaby.ProxyManager;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
+import org.jsoup.nodes.Element;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,6 +37,7 @@ public class Lib {
         if (cosPreCheckKey == null) {
             if (response != null)
                 response.addWarn(TAG + "CosPreCheck key not found");
+            logger.warn("CosPreCheck key not found");
             return;
         }
 //        logger.log("Make CosPreCheck " + cookieStore.getCookies().toString());
@@ -66,6 +68,25 @@ public class Lib {
             response.addWarn(TAG + "Network error");
     }
 
+    public static Element checkCourseNckuLoginRequiredPage(Connection connection, ApiResponse response) {
+        try {
+            Connection.Response res = connection.execute();
+            if (res.statusCode() == 301) {
+                String location = res.header("location");
+                if (location != null && location.endsWith("index.php?auth"))
+                    response.errorLoginRequire();
+                else
+                    response.errorParse("Redirect but unknown location");
+                return null;
+            }
+            return res.parse().body();
+        } catch (IOException e) {
+            logger.errTrace(e);
+            response.errorNetwork(e);
+            return null;
+        }
+    }
+
     public static String readRequestBody(HttpExchange req) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -91,27 +112,30 @@ public class Lib {
         String key = null;
         try {
             for (int i = 0; i < arr.length; i++) {
-                if (arr[i] == '=') {
+                if (key == null && arr[i] == '=') {
                     key = data.substring(start, i);
                     start = i + 1;
-                } else if (arr[i] == '&') {
-                    if (key != null)
-                        query.put(
-                                URLDecoder.decode(key, "UTF-8"),
-                                start == i ? null : URLDecoder.decode(data.substring(start, i), "UTF-8")
+                }
+
+                if (arr[i] == '&') {
+                    if (key != null) {
+                        query.put(URLDecoder.decode(key, "UTF-8"),
+                                start == i ? "" : URLDecoder.decode(data.substring(start, i), "UTF-8")
                         );
+                        key = null;
+                    }
                     start = i + 1;
                 }
-                // Last
-                if (i + 1 == arr.length)
-                    if (key != null)
-                        query.put(
-                                URLDecoder.decode(key, "UTF-8"),
-                                start == i + 1 ? null : URLDecoder.decode(data.substring(start), "UTF-8")
-                        );
             }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            // Last key
+            if (key != null)
+                query.put(URLDecoder.decode(key, "UTF-8"),
+                        start == arr.length ? "" : URLDecoder.decode(data.substring(start), "UTF-8")
+                );
+            else if (start != arr.length)
+                query.put(URLDecoder.decode(data.substring(start), "UTF-8"), null);
+        } catch (IllegalArgumentException | UnsupportedEncodingException e) {
+            logger.errTrace(e);
         }
         return query;
     }

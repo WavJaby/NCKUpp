@@ -13,13 +13,19 @@ $instructor-info-fade-time: 200ms;
 
         > input, > label, > .selectMenu {
             width: 350px;
-            margin-bottom: 5px;
+            margin: 2px;
             display: block;
+            float: left;
         }
 
         > button {
             border-radius: 20px;
-            margin-bottom: 5px;
+            margin: 2px;
+            clear: both;
+        }
+
+        > .grade, > .dayOfWeek, .section {
+            width: 8em;
         }
     }
 

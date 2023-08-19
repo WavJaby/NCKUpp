@@ -176,27 +176,24 @@ public class DeptWatchDog implements EndpointModule {
             String method = req.getRequestMethod();
             String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
             if (PHPSESSID == null) {
-                apiResponse.addError(TAG + "Cookie \"PHPSESSID\" not found");
+                apiResponse.errorCookie("Cookie \"PHPSESSID\" not found");
             } else {
                 if (method.equalsIgnoreCase("POST")) {
                     Map<String, String> query = parseUrlEncodedForm(readRequestBody(req));
                     String studentID = query.get("studentID");
-                    String courseSerial = query.get("courseSerial");
-                    if (courseSerial != null) {
+                    String courseSerial;
+                    if (studentID == null) {
+                        apiResponse.errorBadPayload("Form require \"studentID\"");
+                    } else if ((courseSerial = query.get("courseSerial")) != null) {
                         addWatchDog(courseSerial, studentID, PHPSESSID, apiResponse);
-                    } else {
-                        String removeCourseSerial = query.get("removeCourseSerial");
-                        if (removeCourseSerial != null) {
-                            removeWatchDog(removeCourseSerial, studentID, PHPSESSID, apiResponse);
-                        } else
-                            apiResponse.addError(TAG + "Posted data \"courseSerial\" not found");
-
-                    }
+                    } else if ((courseSerial = query.get("removeCourseSerial")) != null) {
+                        removeWatchDog(courseSerial, studentID, PHPSESSID, apiResponse);
+                    } else
+                        apiResponse.errorBadPayload("Form require one of \"courseSerial\" or \"removeCourseSerial\"");
                 } else if (method.equalsIgnoreCase("GET")) {
-                    Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-                    String studentID = query.get("studentID");
-                    getWatchDog(studentID, PHPSESSID, apiResponse);
-                }
+                    getWatchDog(req.getRequestURI().getRawQuery(), PHPSESSID, apiResponse);
+                } else
+                    apiResponse.errorUnsupportedHttpMethod(method);
             }
 
             Headers responseHeader = req.getResponseHeaders();
@@ -219,18 +216,14 @@ public class DeptWatchDog implements EndpointModule {
     };
 
     private void addWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse apiResponse) {
-        if (studentID == null) {
-            apiResponse.addError(TAG + "Posted data \"studentID\" not found");
-            return;
-        }
         boolean login = getUserLoginData(studentID, PHPSESSID);
         if (!login) {
-            apiResponse.addError(TAG + "Not login");
+            apiResponse.errorLoginRequire();
             return;
         }
         int index = courseSerial.indexOf('-');
         if (index == -1) {
-            apiResponse.addError(TAG + "Posted data \"courseSerial\" syntax error");
+            apiResponse.errorBadPayload("Form \"courseSerial\" syntax error: " + courseSerial);
             return;
         }
         synchronized (newDeptData) {
@@ -240,32 +233,30 @@ public class DeptWatchDog implements EndpointModule {
     }
 
     private void removeWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse apiResponse) {
-        if (studentID == null) {
-            apiResponse.addError(TAG + "Posted data \"studentID\" not found");
-            return;
-        }
         boolean login = getUserLoginData(studentID, PHPSESSID);
         if (!login) {
-            apiResponse.addError(TAG + "Not login");
+            apiResponse.errorLoginRequire();
             return;
         }
         watchListRemove(studentID, courseSerial);
     }
 
 
-    private void getWatchDog(String studentID, String PHPSESSID, ApiResponse apiResponse) {
+    private void getWatchDog(String rawQuery, String PHPSESSID, ApiResponse apiResponse) {
+        Map<String, String> query = parseUrlEncodedForm(rawQuery);
+        String studentID = query.get("studentID");
         if (studentID == null) {
-            apiResponse.addError(TAG + "Posted data \"studentID\" not found");
+            apiResponse.errorBadQuery("Query \"studentID\" not found");
             return;
         }
         boolean login = getUserLoginData(studentID, PHPSESSID);
         if (!login) {
-            apiResponse.addError(TAG + "Not login");
+            apiResponse.errorLoginRequire();
             return;
         }
         Set<String> watchedCourse = getWatchedCourse(studentID);
         if (watchedCourse == null) {
-            apiResponse.addError(TAG + "Can not find watched course");
+            apiResponse.errorServerDatabase("Can not find watched course");
             return;
         }
 

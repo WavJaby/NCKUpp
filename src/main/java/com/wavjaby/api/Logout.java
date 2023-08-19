@@ -15,7 +15,6 @@ import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
@@ -54,7 +53,7 @@ public class Logout implements EndpointModule {
         try {
             // Logout
             ApiResponse apiResponse = new ApiResponse();
-            logout(apiResponse, cookieStore);
+            logout(cookieStore, apiResponse);
 
             Headers responseHeader = req.getResponseHeaders();
             packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
@@ -83,7 +82,7 @@ public class Logout implements EndpointModule {
         return httpHandler;
     }
 
-    private void logout(ApiResponse apiResponse, CookieStore cookieStore) {
+    private void logout(CookieStore cookieStore, ApiResponse response) {
         try {
             Connection.Response toLogin = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=logout")
                     .header("Connection", "keep-alive")
@@ -92,12 +91,13 @@ public class Logout implements EndpointModule {
                     .proxy(proxyManager.getProxy())
                     .execute();
 
-            apiResponse.setData(new JsonObjectStringBuilder()
+            response.setData(new JsonObjectStringBuilder()
                     .append("login", toLogin.body().contains("/index.php?c=auth&m=logout"))
                     .toString()
             );
-        } catch (Exception e) {
-            apiResponse.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
+        } catch (IOException e) {
+            logger.errTrace(e);
+            response.errorNetwork(e);
         }
     }
 }

@@ -11,14 +11,15 @@ import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
+import org.jsoup.parser.Parser;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -63,7 +64,7 @@ public class Login implements EndpointModule {
         keepLoginUpdater.scheduleAtFixedRate(() -> {
             try {
                 for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
-                    search.getAllDeptData(entry.getValue());
+                    search.getAllDeptData(entry.getValue(), null);
 
                     Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
                             .header("Connection", "keep-alive")
@@ -196,19 +197,19 @@ public class Login implements EndpointModule {
 
             // send response
             setAllowOrigin(req.getRequestHeaders(), responseHeader);
-            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
-            e.printStackTrace();
         }
         logger.log("Login " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
-    private void login(HttpExchange req, ApiResponse apiResponse) {
+    private void login(HttpExchange req, ApiResponse response) {
         // Setup cookies
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
@@ -218,32 +219,33 @@ public class Login implements EndpointModule {
         String authState = unpackAuthCookie(cookies, cookieStore);
 
         Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-        String mode = query.get("m");
+        String mode = query.get("mode");
         String method = req.getRequestMethod();
         boolean post = method.equalsIgnoreCase("POST");
         boolean get = method.equalsIgnoreCase("GET");
-        // Unknown mode
+        // Unknown http method
         if (!post && !get) {
-            apiResponse.addError(TAG + "Unknown method: " + mode);
+            response.errorUnsupportedHttpMethod(method);
+        } else if (mode == null) {
+            response.errorBadQuery("Query require \"mode\", value should be one of \"course\" or \"stuId\"");
         }
         // Login course ncku
-        else if (mode == null || mode.equals("c")) {
+        else if (mode.equals("course")) {
             String loginState = unpackCourseLoginStateCookie(cookies, cookieStore);
             String postData = post ? readRequestBody(req) : null;
-            loginCourseNcku(get, postData, apiResponse, cookieStore);
+            loginCourseNcku(get, postData, response, cookieStore);
             packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
         }
         // Login student identification system
-        else if (mode.equals("i")) {
+        else if (mode.equals("stuId")) {
             String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
             String postData = post ? readRequestBody(req) : null;
-            loginNckuStudentIdSystem(get, postData, apiResponse, cookieStore);
+            loginNckuStudentIdSystem(get, postData, response, cookieStore);
             packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
         }
         // Unknown mode
         else
-            apiResponse.addError(TAG + "Unknown mode: " + mode);
-
+            response.errorBadQuery("Unknown login mode: " + mode);
 
         packAuthCookie(responseHeader, authState, cookieStore);
     }
@@ -283,7 +285,7 @@ public class Login implements EndpointModule {
                     (loginState = checkResult.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
                 // POST and already login
                 if (!get)
-                    response.addWarn(TAG + "Already login");
+                    response.addWarn("Already login");
                 packUserLoginResponse(checkResult, loginState + loginCheckString.length(), cookieStore, response);
                 return;
             }
@@ -296,8 +298,8 @@ public class Login implements EndpointModule {
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
                     .execute();
+            // If redirect to portal (portal not auto login)
             if (!portalPage.url().getHost().equals(courseNcku)) {
-                // Portal cant auto login
                 if (get) {
                     // GET
                     response.setData("{\"login\":false}");
@@ -326,7 +328,7 @@ public class Login implements EndpointModule {
             // check if force login
             if (result.contains("/index.php?c=auth&m=force_login")) {
                 logger.log("Force login");
-                response.addWarn(TAG + "Force login");
+                response.addWarn("Force login");
                 result = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=force_login")
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
@@ -346,11 +348,11 @@ public class Login implements EndpointModule {
 
             String finalResult = result;
             loginCosPreCheckPool.execute(() ->
-                    cosPreCheck(courseNckuOrg, finalResult, cookieStore, response, proxyManager)
+                    cosPreCheck(courseNckuOrg, finalResult, cookieStore, null, proxyManager)
             );
         } catch (IOException e) {
-            response.addError(TAG + "Network error");
             logger.errTrace(e);
+            response.errorNetwork(e);
         }
     }
 
@@ -379,7 +381,7 @@ public class Login implements EndpointModule {
             if (checkResult.lastIndexOf("logouts.asp") != -1) {
                 // POST and already login
                 if (!get)
-                    response.addWarn(TAG + "Already login");
+                    response.addWarn("Already login");
                 response.setData("{\"login\":true}");
                 return;
             }
@@ -394,8 +396,8 @@ public class Login implements EndpointModule {
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .execute();
+            // If redirect to portal (portal not auto login)
             if (!portalPage.url().getHost().equals(stuIdSysNcku)) {
-                // Portal cant auto login
                 if (get) {
                     // GET
                     response.setData("{\"login\":false}");
@@ -422,9 +424,9 @@ public class Login implements EndpointModule {
                 response.setData("{\"login\":true}");
             else
                 response.setData("{\"login\":false}");
-        } catch (Exception e) {
-            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            e.printStackTrace();
+        } catch (IOException e) {
+            logger.errTrace(e);
+            response.errorNetwork(e);
         }
     }
 
@@ -432,43 +434,30 @@ public class Login implements EndpointModule {
         // check if portal login error
         if (portalPage.url().getHost().equals(portalNcku)) {
             String loginPage = portalPage.body();
-            int errorStart = loginPage.indexOf("id=\"errorText\"");
-            if (errorStart != -1) {
-                String errorMessage = null;
-                errorStart = loginPage.indexOf('>', errorStart + 14);
-                if (errorStart != -1) {
-                    int errorEnd = loginPage.indexOf('<', errorStart + 1);
-                    if (errorEnd != -1)
-                        errorMessage = loginPage.substring(errorStart + 1, errorEnd);
-                }
-                if (errorMessage != null)
-                    response.setMessage(errorMessage
-                            .replace("\\", "\\\\")
-                            .replace("&quot;", "\\\""));
-                else
-                    response.setMessage(TAG + "Unknown error");
+            int errorStart = loginPage.indexOf("id=\"errorText\""), errorEnd;
+            if (errorStart != -1 &&
+                    (errorStart = loginPage.indexOf('>', errorStart + 14)) != -1 &&
+                    (errorEnd = loginPage.indexOf('<', errorStart + 1)) != -1) {
+                response.setMessageDisplay(Parser.unescapeEntities(loginPage.substring(errorStart + 1, errorEnd), true).replace("\\", "\\\\"));
                 return null;
             }
         }
 
         // Redirect
         String redirect = portalPage.header("refresh");
-        if (redirect != null) {
-            int redirectUrlStart = redirect.indexOf("url=");
-            if (redirectUrlStart != -1) {
-                redirect = redirect.substring(redirectUrlStart + 4);
-                try {
-                    return HttpConnection.connect(redirect)
-                            .header("Connection", "keep-alive")
-                            .cookieStore(cookieStore)
-                            .ignoreContentType(true)
-                            .proxy(proxy)
-                            .execute();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-                    return null;
-                }
+        int redirectUrlStart;
+        if (redirect != null && (redirectUrlStart = redirect.indexOf("url=")) != -1) {
+            try {
+                return HttpConnection.connect(redirect.substring(redirectUrlStart + 4))
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .proxy(proxy)
+                        .execute();
+            } catch (IOException e) {
+                logger.errTrace(e);
+                response.errorNetwork(e);
+                return null;
             }
         }
         return portalPage;
@@ -480,19 +469,19 @@ public class Login implements EndpointModule {
         String username = loginForm.get("username");
         String password = loginForm.get("password");
         if (username == null || password == null) {
-            response.addError(TAG + "Login data not send");
+            response.errorBadPayload("Login data not send");
             return null;
         }
 
         // login use portal
         int loginFormIndex = portalBody.indexOf("id=\"loginForm\"");
         if (loginFormIndex == -1) {
-            response.addError(TAG + "Login form not found");
+            response.errorParse("Login form not found");
             return null;
         }
         int actionLink = portalBody.indexOf("action=\"", loginFormIndex + 14);
         if (actionLink == -1) {
-            response.addError(TAG + "Login form action link not found");
+            response.errorParse("Login form action link not found");
             return null;
         }
         actionLink += 8;
@@ -518,7 +507,7 @@ public class Login implements EndpointModule {
             while (portalResponse.statusCode() == 302) {
                 String location = portalResponse.header("Location");
                 if (location == null) {
-                    response.addError(TAG + "Redirect location not found");
+                    response.errorParse("Redirect location not found");
                     return null;
                 }
                 Connection redirect = HttpConnection.connect(location)
@@ -532,11 +521,14 @@ public class Login implements EndpointModule {
             }
 
             return portalResponse;
+        } catch (UnsupportedEncodingException e) {
+            logger.errTrace(e);
+            response.errorParse("Unsupported encoding");
         } catch (IOException e) {
-            e.printStackTrace();
-            response.addError(TAG + "Unknown error: " + Arrays.toString(e.getStackTrace()));
-            return null;
+            logger.errTrace(e);
+            response.errorNetwork(e);
         }
+        return null;
     }
 
     private void packUserLoginResponse(String result, int infoStart, CookieStore cookie, ApiResponse response) {
@@ -549,7 +541,7 @@ public class Login implements EndpointModule {
                 (end = result.indexOf('<', ++start)) != -1) {
             builder.append("dept", deptGradeInfo = result.substring(start, end++).trim());
         } else
-            response.addError(TAG + "Student dept/grade info not found");
+            response.errorParse("Student dept/grade info not found");
 
         // name
         String name = null;
@@ -557,7 +549,7 @@ public class Login implements EndpointModule {
                 (end = result.indexOf('<', ++start)) != -1)
             builder.append("name", name = result.substring(start, end++));
         else
-            response.addError(TAG + "Student name not found");
+            response.errorParse("Student name not found");
 
         // student ID
         String studentID = null;
@@ -569,7 +561,7 @@ public class Login implements EndpointModule {
             if (cache != -1 && cache > start) end = cache;
             builder.append("studentID", studentID = result.substring(start, end));
         } else
-            response.addError(TAG + "Student id not found");
+            response.errorParse("Student id not found");
 
         // year/semester
         if ((start = result.indexOf("\"apName")) != -1 &&
@@ -590,7 +582,7 @@ public class Login implements EndpointModule {
         // PHPSESSID
         String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookie);
         if (PHPSESSID == null)
-            response.addError(TAG + "User PHPSESSID id not found");
+            response.errorParse("PHPSESSID id not found");
         loginDataEdit(studentID, name, deptGradeInfo, PHPSESSID);
 
         loginUserCookie.put(PHPSESSID, cookie);
