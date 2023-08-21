@@ -4,6 +4,7 @@ import com.sun.istack.internal.Nullable;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Main;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
@@ -195,13 +196,13 @@ public class Search implements EndpointModule {
             if (courseData.timeList != null) {
                 for (CourseData.TimeData time : courseData.timeList) {
                     if (time.section == null) continue;
-                    dayOfWeek = String.valueOf(time.dayOfWeek);
+                    dayOfWeek = String.valueOf(time.dayOfWeek + 1);
                     sectionOfDay = String.valueOf(time.getSectionAsInt());
                     break;
                 }
                 // if no section
                 if (dayOfWeek == null)
-                    dayOfWeek = String.valueOf(courseData.timeList[0].dayOfWeek);
+                    dayOfWeek = String.valueOf(courseData.timeList[0].dayOfWeek + 1);
             }
             this.dayOfWeek = dayOfWeek;
             this.sectionOfDay = sectionOfDay;
@@ -828,6 +829,7 @@ public class Search implements EndpointModule {
     public CookieStore createCookieStore() {
         CookieManager cookieManager = new CookieManager();
         CookieStore cookieStore = cookieManager.getCookieStore();
+        cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
         for (int i = 0; i < 3; i++) {
             try {
                 HttpConnection.connect(courseNckuOrg + "/index.php")
@@ -862,8 +864,9 @@ public class Search implements EndpointModule {
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
-                .proxy(proxyManager.getProxy());
-        HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, cookieStore);
+                .proxy(proxyManager.getProxy())
+                .userAgent(Main.USER_AGENT);
+        HttpResponseData httpResponseData = checkRobot(courseNckuOrgUri, request, cookieStore);
         if (!httpResponseData.isSuccess()) {
             if (response != null)
                 response.errorFetch("Failed to fetch all dept data");
@@ -894,8 +897,9 @@ public class Search implements EndpointModule {
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
-                .proxy(proxyManager.getProxy());
-        HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, cookieStore);
+                .proxy(proxyManager.getProxy())
+                .userAgent(USER_AGENT);
+        HttpResponseData httpResponseData = checkRobot(courseNckuOrgUri, request, cookieStore);
         if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
         String body = httpResponseData.data;
@@ -964,6 +968,7 @@ public class Search implements EndpointModule {
                     .cookieStore(allDeptData.cookieStore)
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
+                    .userAgent(Main.USER_AGENT)
                     .method(Connection.Method.POST)
                     .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(allDeptData.crypt, "UTF-8"))
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
@@ -1013,9 +1018,10 @@ public class Search implements EndpointModule {
                 .cookieStore(deptToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
+                .userAgent(Main.USER_AGENT)
                 .timeout(10000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, deptToken.cookieStore);
+        HttpResponseData httpResponseData = checkRobot(courseNckuOrgUri, request, deptToken.cookieStore);
 
         if (httpResponseData.isSuccess())
             cosPreCheckCookie(courseNckuOrgUri, httpResponseData.data, deptToken.cookieStore);
@@ -1236,7 +1242,7 @@ public class Search implements EndpointModule {
         String body;
         try {
             body = request.execute().body();
-            logger.log(body);
+//            logger.log(body);
 
         } catch (IOException e) {
             logger.errTrace(e);
@@ -1272,7 +1278,7 @@ public class Search implements EndpointModule {
                 .proxy(proxyManager.getProxy())
                 .timeout(7000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = checkRobot(saveQueryToken.urlOrigin.toString(), request, saveQueryToken.cookieStore);
+        HttpResponseData httpResponseData = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
 
         if (httpResponseData.state == ResponseState.SUCCESS)
             cosPreCheckCookie(saveQueryToken.urlOrigin, httpResponseData.data, saveQueryToken.cookieStore);
@@ -1734,7 +1740,7 @@ public class Search implements EndpointModule {
         return body.substring(idStart + 1, idEnd);
     }
 
-    public HttpResponseData checkRobot(String urlOrigin, Connection request, CookieStore cookieStore) {
+    public HttpResponseData checkRobot(URI urlOriginUri, Connection request, CookieStore cookieStore) {
         boolean networkError = false;
         for (int i = 0; i < MAX_ROBOT_CHECK_TRY; i++) {
             String response;
@@ -1762,10 +1768,10 @@ public class Search implements EndpointModule {
             // Crack robot
             logger.warn("Crack robot code");
             for (; i < MAX_ROBOT_CHECK_TRY; i++) {
-                String code = robotCode.getCode(urlOrigin + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
+                String code = robotCode.getCode(urlOriginUri + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
                 logger.warn("Crack code: " + code);
                 try {
-                    String result = HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=robot")
+                    String result = HttpConnection.connect(urlOriginUri + "/index.php?c=portal&m=robot")
                             .header("Connection", "keep-alive")
                             .cookieStore(cookieStore)
                             .ignoreContentType(true)

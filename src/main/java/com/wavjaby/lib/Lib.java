@@ -2,6 +2,7 @@ package com.wavjaby.lib;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Main;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -52,6 +53,7 @@ public class Lib {
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
                         .method(Connection.Method.POST)
                         .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                         .header("X-Requested-With", "XMLHttpRequest")

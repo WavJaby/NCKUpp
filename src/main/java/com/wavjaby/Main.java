@@ -14,6 +14,7 @@ import java.util.Scanner;
 
 
 public class Main {
+    public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36";
     private static final String TAG = "[Main]";
     private static final Logger logger = new Logger(TAG);
     public static final String courseNcku = "course.ncku.edu.tw";
@@ -71,17 +72,20 @@ public class Main {
         registerModule(new WebSocket(), "/api/v0/socket");
 
         // API
-        DeptWatchDog watchDog = new DeptWatchDog(sqLite);
-        registerModule(watchDog, "/api/watchdog");
         UrSchool urSchool = new UrSchool();
         registerModule(urSchool, "/api/urschool");
         RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
         registerModule(robotCode, "/api/robotCode");
         Search search = new Search(urSchool, robotCode, proxyManager);
         registerModule(search, "/api/search");
+        Login login = new Login(search, sqLite, proxyManager);
+        registerModule(login, "/api/login");
+        DeptWatchDog watchDog = new DeptWatchDog(login, sqLite);
+        registerModule(watchDog, "/api/watchdog");
+
+        registerModule(new Profile(login, sqLite), "/api/profile");
         registerModule(new AllDept(search), "/api/alldept");
         registerModule(new HomeInfo(proxyManager), "/api/homeInfo");
-        registerModule(new Login(search, sqLite, proxyManager), "/api/login");
         registerModule(new CourseFunctionButton(robotCode), "/api/courseFuncBtn");
         registerModule(new NCKUHub(), "/api/nckuhub");
         registerModule(new Logout(proxyManager), "/api/logout");

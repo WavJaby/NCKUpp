@@ -5,6 +5,7 @@ import com.wavjaby.api.DeptWatchDog;
 import com.wavjaby.api.Search;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.lib.Cookie;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -14,6 +15,8 @@ import java.net.CookieStore;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.wavjaby.Main.*;
 
 public class GetCourseDataUpdate implements Runnable {
     private static final String TAG = "[CourseListener]";
@@ -72,15 +75,17 @@ public class GetCourseDataUpdate implements Runnable {
         botToken = serverSettings.getProperty("botToken");
 
         baseCookieStore = search.createCookieStore();
-        addListenDept("A1");
-        addListenDept("A2");
-        addListenDept("A6");
-        addListenDept("A7");
-        addListenDept("A9");
-        addListenDept("AF");
+//        addListenDept("A1");
+//        addListenDept("A2");
+//        addListenDept("A6");
+//        addListenDept("A7");
+//        addListenDept("A9");
+//        addListenDept("AF");
+//        addListenDept("F7");
+//        addListenDept("J0");
+//        addListenDept("M0");
         addListenDept("F7");
-        addListenDept("J0");
-        addListenDept("M0");
+        addListenDept("A9");
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
     }
 
@@ -135,7 +140,7 @@ public class GetCourseDataUpdate implements Runnable {
                     .ignoreContentType(true)
                     .ignoreHttpErrors(true)
                     .execute().body();
-            logger.log(new JsonObject(result).toStringBeauty());
+//            logger.log(new JsonObject(result).toStringBeauty());
         } catch (IOException e) {
             logger.errTrace(e);
         }
@@ -181,19 +186,17 @@ public class GetCourseDataUpdate implements Runnable {
                 Search.DeptToken deptToken = deptTokenMap.get(dept);
                 if (deptToken == null) {
                     deptToken = renewDeptToken(dept, cookieStore);
-                    if (!done.get())
-                        deptTokenMap.put(dept, deptToken);
+                    deptTokenMap.put(dept, deptToken);
                 }
                 // Have dept token
-                if (!done.get() && deptToken != null) {
+                if (deptToken != null) {
                     // Get dept course data
                     List<Search.CourseData> newCourseDataList = new ArrayList<>();
                     if (!search.getDeptCourseData(deptToken, false, null, newCourseDataList) ||
-                            newCourseDataList.size() == 0) {
-                        if (!done.get()) {
-                            logger.log("Dept " + dept + " failed");
+                            newCourseDataList.isEmpty()) {
+                        logger.log("Dept " + dept + " failed");
+                        if (!done.get())
                             deptTokenMap.put(dept, null);
-                        }
                     } else if (!done.get()) {
                         List<Search.CourseData> lastCourseDataList = deptCourseDataList.get(dept);
                         total[0] += newCourseDataList.size();
@@ -216,7 +219,7 @@ public class GetCourseDataUpdate implements Runnable {
         done.set(true);
 
         // Build notification
-        if (diff.size() > 0)
+        if (!diff.isEmpty())
             messageSendPool.submit(() -> buildAndSendNotification(diff));
         if (timeout) {
             logger.log(count + ", Time out, " + (System.currentTimeMillis() - start) + "ms");
@@ -255,7 +258,7 @@ public class GetCourseDataUpdate implements Runnable {
                         logger.errTrace(e);
                     }
 
-                    int courseAvailable = cosData.getAvailable() != null ? -1 : cosData.getAvailable();
+                    int courseAvailable = cosData.getAvailable() == null ? -1 : cosData.getAvailable();
                     int embedColor = i.availableDiff > 0
                             ? (courseAvailable == 1 ? 0x00FF00 : 0x00FFFF)
                             : courseAvailable > 0 ? 0xFFFF00 : 0xFF0000;
@@ -284,7 +287,7 @@ public class GetCourseDataUpdate implements Runnable {
                                     )
                                     .add(new JsonObject()
                                             .put("name", "時間")
-                                            .put("value", String.valueOf(cosData.getTimeString()))
+                                            .put("value", cosData.getTimeString() == null ? "未定" : String.valueOf(cosData.getTimeString()))
                                             .put("inline", true)
                                     )
                                     .add(new JsonObject()
@@ -313,7 +316,7 @@ public class GetCourseDataUpdate implements Runnable {
 //            messageSendPool.submit(() -> postToChannel(getDmChannel(userNotificationData.getKey()), userNotificationData.getValue()));
         if (mainChannelNotificationEmbeds.length > 0) {
             logger.log("Post to channel");
-            messageSendPool.submit(() -> postToChannel("1018382309197623366", mainChannelNotification));
+            messageSendPool.submit(() -> postToChannel("1018756061911601224", mainChannelNotification));
         }
     }
 
@@ -355,6 +358,7 @@ public class GetCourseDataUpdate implements Runnable {
 
     private Search.DeptToken renewDeptToken(String deptNo, CookieStore cookieStore) {
         logger.log("Renew dept token " + deptNo);
+        cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
         Search.AllDeptData allDeptData = search.getAllDeptData(cookieStore, null);
         if (allDeptData == null) {
             logger.err("Can not get allDeptData");

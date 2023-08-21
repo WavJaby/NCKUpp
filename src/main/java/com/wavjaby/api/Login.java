@@ -19,6 +19,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -36,7 +37,7 @@ public class Login implements EndpointModule {
     private final SQLite sqLite;
     private final Search search;
     private final ProxyManager proxyManager;
-    private PreparedStatement loginDataAddPre, loginDataEditPre;
+    private PreparedStatement addUserLoginData, updateUserLoginData, getUserLoginState;
 
     private final Map<String, CookieStore> loginUserCookie = new ConcurrentHashMap<>();
     private final ScheduledExecutorService keepLoginUpdater = Executors.newSingleThreadScheduledExecutor();
@@ -51,11 +52,14 @@ public class Login implements EndpointModule {
     @Override
     public void start() {
         try {
-            loginDataAddPre = sqLite.getDatabase().prepareStatement(
+            addUserLoginData = sqLite.getDatabase().prepareStatement(
                     "INSERT INTO login_data (student_id, name,dept_grade_info, PHPSESSID) VALUES (?, ?, ?, ?)"
             );
-            loginDataEditPre = sqLite.getDatabase().prepareStatement(
+            updateUserLoginData = sqLite.getDatabase().prepareStatement(
                     "UPDATE login_data SET student_id=?, name=?, dept_grade_info=?, PHPSESSID=? WHERE student_id=?"
+            );
+            getUserLoginState = sqLite.getDatabase().prepareStatement(
+                    "SELECT student_id FROM login_data WHERE student_id=? AND PHPSESSID=?"
             );
         } catch (SQLException e) {
             SQLite.printSqlError(e);
@@ -152,19 +156,19 @@ public class Login implements EndpointModule {
 
     private void loginDataEdit(String studentID, String studentName, String deptGradeInfo, String PHPSESSID) {
         try {
-            loginDataEditPre.setString(1, studentID);
-            loginDataEditPre.setString(2, studentName);
-            loginDataEditPre.setString(3, deptGradeInfo);
-            loginDataEditPre.setString(4, PHPSESSID);
-            loginDataEditPre.setString(5, studentID);
-            int returnValue = loginDataEditPre.executeUpdate();
+            updateUserLoginData.setString(1, studentID);
+            updateUserLoginData.setString(2, studentName);
+            updateUserLoginData.setString(3, deptGradeInfo);
+            updateUserLoginData.setString(4, PHPSESSID);
+            updateUserLoginData.setString(5, studentID);
+            int returnValue = updateUserLoginData.executeUpdate();
 
             // Value not exist
             if (returnValue == 0) {
                 logger.log("New user login: " + studentID);
                 loginDataAdd(studentID, studentName, deptGradeInfo, PHPSESSID);
             }
-            loginDataEditPre.clearParameters();
+            updateUserLoginData.clearParameters();
         } catch (SQLException e) {
             SQLite.printSqlError(e);
         }
@@ -172,15 +176,30 @@ public class Login implements EndpointModule {
 
     private void loginDataAdd(String studentID, String studentName, String deptGradeInfo, String PHPSESSID) {
         try {
-            loginDataAddPre.setString(1, studentID);
-            loginDataAddPre.setString(2, studentName);
-            loginDataAddPre.setString(3, deptGradeInfo);
-            loginDataAddPre.setString(4, PHPSESSID);
-            loginDataAddPre.executeUpdate();
-            loginDataAddPre.clearParameters();
+            addUserLoginData.setString(1, studentID);
+            addUserLoginData.setString(2, studentName);
+            addUserLoginData.setString(3, deptGradeInfo);
+            addUserLoginData.setString(4, PHPSESSID);
+            addUserLoginData.executeUpdate();
+            addUserLoginData.clearParameters();
         } catch (SQLException e) {
             SQLite.printSqlError(e);
         }
+    }
+
+    public boolean getUserLoginState(String studentID, String PHPSESSID) {
+        try {
+            getUserLoginState.setString(1, studentID);
+            getUserLoginState.setString(2, PHPSESSID);
+            ResultSet result = getUserLoginState.executeQuery();
+            boolean login = result.next() && result.getString("student_id") != null;
+            getUserLoginState.clearParameters();
+            result.close();
+            return login;
+        } catch (SQLException e) {
+            SQLite.printSqlError(e);
+        }
+        return false;
     }
 
     private final HttpHandler httpHandler = req -> {

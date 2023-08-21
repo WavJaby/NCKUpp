@@ -27,6 +27,8 @@ public class Cookie {
     }
 
     public static String getCookie(String name, String[] cookies) {
+        if (cookies == null)
+            return null;
         for (String httpCookie : cookies)
             if (httpCookie.startsWith(name + '='))
                 return httpCookie.substring(name.length() + 1);

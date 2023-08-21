@@ -77,7 +77,9 @@ window.pageLoading = new Signal(false);
 		Schedule: '課表',
 		GradeInquiry: '成績查詢',
 		CourseSelectionPreference: '志願排序',
+		Profile: '使用者資料',
 	};
+	const navBarBtnPageId = ['CourseSearch', 'Schedule', 'GradeInquiry', 'CourseSelectionPreference'];
 	const defaultPage = 'Home';
 	const userLoginData = new Signal();
 	const showLoginWindow = new Signal(false);
@@ -88,6 +90,7 @@ window.pageLoading = new Signal(false);
 			Schedule: new RouterLazyLoad('./pages/courseSchedule.js', userLoginData),
 			GradeInquiry: new RouterLazyLoad('./pages/stuIdSysGrades.js', userLoginData),
 			CourseSelectionPreference: new RouterLazyLoad('./pages/preferenceAdjust.js', userLoginData),
+			Profile: new RouterLazyLoad('./pages/profile.js', userLoginData),
 		},
 		footer(
 			div('borderLine'),
@@ -114,9 +117,7 @@ window.pageLoading = new Signal(false);
 	);
 
 	const pageButtons = {};
-	for (const pageId in pageIdName) {
-		if (pageId === 'Home')
-			continue;
+	for (const pageId of navBarBtnPageId) {
 		pageButtons[pageId] = li(null, a(pageIdName[pageId], './?page=' + pageId, null, pageButtonClick, {pageId: pageId}));
 	}
 	queryRouter.onPageOpen = function (lastPageId, pageId) {
@@ -140,7 +141,7 @@ window.pageLoading = new Signal(false);
 					state && state.login ? state.studentID : 'Login'
 				)),
 				[
-					['Profile', null],
+					['Profile', () => queryRouter.openPage('Profile')],
 					['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
 				],
 				false,
@@ -185,7 +186,7 @@ window.pageLoading = new Signal(false);
 	// functions
 	function pageButtonClick(e) {
 		e.preventDefault();
-		const pageId = this['pageId'];
+		const pageId = this.pageId;
 		queryRouter.openPage(pageId);
 		return false;
 	}
@@ -268,29 +269,32 @@ window.pageLoading = new Signal(false);
 	 */
 	function MessageAlert() {
 		const messageBoxRoot = div('messageBox');
+		this.element = messageBoxRoot;
 
 		this.addInfo = function (title, description, removeTimeout) {
-			createMessageBox('info', title, description, removeTimeout);
+			createMessageBox('info', title, description, null, removeTimeout);
 		}
 
 		this.addError = function (title, description, removeTimeout) {
-			createMessageBox('error', title, description, removeTimeout);
+			createMessageBox('error', title, description, null, removeTimeout);
+		}
+
+		this.addErrorElement = function (title, htmlElement, removeTimeout) {
+			createMessageBox('error', title, null, htmlElement, removeTimeout);
 		}
 
 		this.addSuccess = function (title, description, removeTimeout) {
-			createMessageBox('success', title, description, removeTimeout);
+			createMessageBox('success', title, description, null, removeTimeout);
 		}
-
-		this.element = messageBoxRoot;
 
 		function onCloseBtn() {
 			removeMessageBox(this.parentElement);
 		}
 
-		function createMessageBox(classname, title, description, removeTimeout) {
+		function createMessageBox(classname, title, description, htmlElement, removeTimeout) {
 			const messageBox = div(classname,
 				span(title, 'title'),
-				span(description, 'description'),
+				span(description, 'description', htmlElement),
 				div('closeButton', {onclick: onCloseBtn})
 			);
 			// height += messageBox.offsetHeight + 10;

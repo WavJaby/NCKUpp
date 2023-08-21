@@ -172,11 +172,11 @@ public class CourseFunctionButton implements EndpointModule {
                 response.errorCourseNcku();
             if (message == null || message.isEmpty())
                 message = "Unknown error";
-            else {
-                message = message.replace("<br>", "\\n");
-                int start = message.indexOf('>'), end = message.lastIndexOf('<');
-                if (start != -1 && end != -1) message = message.substring(start + 1, end);
-            }
+//            else {
+//                message = message.replace("<br>", "\\n");
+//                int start = message.indexOf('>'), end = message.lastIndexOf('<');
+//                if (start != -1 && end != -1) message = message.substring(start + 1, end);
+//            }
             response.setMessageDisplay(message);
         } catch (IOException e) {
             logger.errTrace(e);

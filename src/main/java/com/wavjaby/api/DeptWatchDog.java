@@ -26,11 +26,13 @@ public class DeptWatchDog implements EndpointModule {
     private static final String TAG = "[DeptWatchDog]";
     private static final Logger logger = new Logger(TAG);
     private final SQLite sqLite;
-    private PreparedStatement watchListAdd, watchListRemove, getWatchedUser, getUserLoginData, getWatchedCourse, getAllCourse;
+    private final Login login;
+    private PreparedStatement watchListAdd, watchListRemove, getWatchedUser, getUserWatchedCourse, getAllCourse;
 
     private final Set<String> newDeptData = new HashSet<>();
 
-    public DeptWatchDog(SQLite sqLite) {
+    public DeptWatchDog(Login login, SQLite sqLite) {
+        this.login = login;
         this.sqLite = sqLite;
     }
 
@@ -44,13 +46,10 @@ public class DeptWatchDog implements EndpointModule {
                     "DELETE FROM watch_list WHERE student_id=? AND watched_serial_id=?"
             );
             getWatchedUser = sqLite.getDatabase().prepareStatement(
-                    "SELECT login_data.student_id, login_data.discord_id, watch_list.watched_serial_id FROM watch_list" +
-                            " JOIN login_data on watch_list.student_id=login_data.student_id WHERE watch_list.watched_serial_id=?"
+                    "SELECT login_data.student_id, user_data.discord_id, watch_list.watched_serial_id FROM watch_list, user_data" +
+                            " JOIN login_data on user_data.student_id=login_data.student_id WHERE watch_list.watched_serial_id=?"
             );
-            getUserLoginData = sqLite.getDatabase().prepareStatement(
-                    "SELECT student_id FROM login_data WHERE student_id=? AND PHPSESSID=?"
-            );
-            getWatchedCourse = sqLite.getDatabase().prepareStatement(
+            getUserWatchedCourse = sqLite.getDatabase().prepareStatement(
                     "SELECT watched_serial_id FROM watch_list WHERE student_id=?"
             );
             getAllCourse = sqLite.getDatabase().prepareStatement(
@@ -70,8 +69,6 @@ public class DeptWatchDog implements EndpointModule {
         } catch (SQLException e) {
             SQLite.printSqlError(e);
         }
-//        loginDataEdit("F74114760", "F7-109");
-//        List<String> discordIDs = getWatchedUserDiscordID("F7-109");
     }
 
     @Override
@@ -124,29 +121,14 @@ public class DeptWatchDog implements EndpointModule {
         return null;
     }
 
-    private boolean getUserLoginData(String studentID, String PHPSESSID) {
+    private Set<String> getUserWatchedCourse(String studentID) {
         try {
-            getUserLoginData.setString(1, studentID);
-            getUserLoginData.setString(2, PHPSESSID);
-            ResultSet result = getUserLoginData.executeQuery();
-            boolean login = result.next() && result.getString("student_id") != null;
-            getUserLoginData.clearParameters();
-            result.close();
-            return login;
-        } catch (SQLException e) {
-            SQLite.printSqlError(e);
-        }
-        return false;
-    }
-
-    private Set<String> getWatchedCourse(String studentID) {
-        try {
-            getWatchedCourse.setString(1, studentID);
-            ResultSet result = getWatchedCourse.executeQuery();
+            getUserWatchedCourse.setString(1, studentID);
+            ResultSet result = getUserWatchedCourse.executeQuery();
             Set<String> watchedCurse = new HashSet<>();
             while (result.next())
                 watchedCurse.add(result.getString("watched_serial_id"));
-            getWatchedCourse.clearParameters();
+            getUserWatchedCourse.clearParameters();
             result.close();
             return watchedCurse;
         } catch (SQLException e) {
@@ -156,11 +138,13 @@ public class DeptWatchDog implements EndpointModule {
     }
 
     public String[] getNewDept() {
-        if (newDeptData.size() == 0)
-            return null;
-        String[] copy = newDeptData.toArray(new String[0]);
-        newDeptData.clear();
-        return copy;
+        synchronized (newDeptData) {
+            if (newDeptData.isEmpty())
+                return null;
+            String[] copy = newDeptData.toArray(new String[0]);
+            newDeptData.clear();
+            return copy;
+        }
     }
 
     private final HttpHandler httpHandler = req -> {
@@ -215,15 +199,14 @@ public class DeptWatchDog implements EndpointModule {
         logger.log("Done in " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
-    private void addWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse apiResponse) {
-        boolean login = getUserLoginData(studentID, PHPSESSID);
-        if (!login) {
-            apiResponse.errorLoginRequire();
+    private void addWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse response) {
+        if (!login.getUserLoginState(studentID, PHPSESSID)) {
+            response.errorLoginRequire();
             return;
         }
         int index = courseSerial.indexOf('-');
         if (index == -1) {
-            apiResponse.errorBadPayload("Form \"courseSerial\" syntax error: " + courseSerial);
+            response.errorBadPayload("Form \"courseSerial\" syntax error: " + courseSerial);
             return;
         }
         synchronized (newDeptData) {
@@ -232,31 +215,29 @@ public class DeptWatchDog implements EndpointModule {
         watchListAdd(studentID, courseSerial);
     }
 
-    private void removeWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse apiResponse) {
-        boolean login = getUserLoginData(studentID, PHPSESSID);
-        if (!login) {
-            apiResponse.errorLoginRequire();
+    private void removeWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse response) {
+        if (!login.getUserLoginState(studentID, PHPSESSID)) {
+            response.errorLoginRequire();
             return;
         }
         watchListRemove(studentID, courseSerial);
     }
 
 
-    private void getWatchDog(String rawQuery, String PHPSESSID, ApiResponse apiResponse) {
+    private void getWatchDog(String rawQuery, String PHPSESSID, ApiResponse response) {
         Map<String, String> query = parseUrlEncodedForm(rawQuery);
         String studentID = query.get("studentID");
         if (studentID == null) {
-            apiResponse.errorBadQuery("Query \"studentID\" not found");
+            response.errorBadQuery("Query \"studentID\" not found");
             return;
         }
-        boolean login = getUserLoginData(studentID, PHPSESSID);
-        if (!login) {
-            apiResponse.errorLoginRequire();
+        if (!login.getUserLoginState(studentID, PHPSESSID)) {
+            response.errorLoginRequire();
             return;
         }
-        Set<String> watchedCourse = getWatchedCourse(studentID);
+        Set<String> watchedCourse = getUserWatchedCourse(studentID);
         if (watchedCourse == null) {
-            apiResponse.errorServerDatabase("Can not find watched course");
+            response.errorServerDatabase("Can not find watched course");
             return;
         }
 
@@ -267,7 +248,7 @@ public class DeptWatchDog implements EndpointModule {
             dept.add(serial[1]);
         }
 
-        apiResponse.setData(new JsonObject(data).toString());
+        response.setData(new JsonObject(data).toString());
     }
 
     @Override

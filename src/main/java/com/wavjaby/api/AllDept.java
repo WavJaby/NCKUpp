@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.Cookie;
 import com.wavjaby.logger.Logger;
 
 import java.io.IOException;
@@ -12,6 +13,8 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
 
+import static com.wavjaby.Main.courseNcku;
+import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
@@ -28,7 +31,9 @@ public class AllDept implements EndpointModule {
 
     @Override
     public void start() {
-        Search.AllDeptGroupData allDept = search.getAllDeptGroupData(new CookieManager().getCookieStore());
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
+        Search.AllDeptGroupData allDept = search.getAllDeptGroupData(cookieStore);
         deptGroup = allDept.toString();
         logger.log("Get " + allDept.getDeptCount() + " dept");
     }

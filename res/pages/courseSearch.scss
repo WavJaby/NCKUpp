@@ -226,8 +226,9 @@ $instructor-info-fade-time: 200ms;
                     padding: 3px 2px;
 
                     > button {
+                        background-color: #303A47;
                         height: 100%;
-                        background-color: #303C46;
+                        max-height: 2em;
                         display: inline-block;
                         cursor: pointer;
                         border-radius: 10px;
@@ -237,9 +238,21 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 // Option button
-                > .options > button {
-                    padding: 2px;
-                    font-size: 18px;
+                > .options {
+                    border-left: 1px gray solid;
+
+                    > button {
+                        background-color: #303A47;
+                        margin-bottom: 2px;
+                        padding: 2px;
+                        font-size: 18px;
+                        border-radius: 10px;
+                        cursor: pointer;
+
+                        &:hover {
+                            background-color: #304C47;
+                        }
+                    }
                 }
             }
 

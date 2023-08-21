@@ -423,7 +423,7 @@ export default function (router, loginState) {
 				method: 'POST',
 				body: `studentID=${loginState.state.studentID}&courseSerial=${courseData.serialNumber}`
 			});
-			this.textContent = 'remove watch';
+			this.textContent = '移除關注';
 			watchList.push(courseData.serialNumber);
 		} else {
 			console.log('remove watch');
@@ -431,7 +431,7 @@ export default function (router, loginState) {
 				method: 'POST',
 				body: `studentID=${loginState.state.studentID}&removeCourseSerial=${courseData.serialNumber}`
 			});
-			this.textContent = '移除關注';
+			this.textContent = '加入關注';
 			watchList.splice(serialIndex, 1);
 		}
 		result.then(i => {
@@ -454,9 +454,15 @@ export default function (router, loginState) {
 	 * @this {{cosdata: string}}
 	 */
 	function sendCosData() {
-		fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.cosdata)}`, 'Send course data').then(i => {
+		const title = this.courseData.courseName + ' 加入';
+		fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.key)}`, 'Send course data').then(i => {
 			if (i.success)
-				window.messageAlert.addSuccess('Message', i.msg, 5000);
+				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
+			else {
+				const d = div();
+				d.innerHTML = i.msg;
+				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
+			}
 		});
 	}
 
@@ -464,9 +470,15 @@ export default function (router, loginState) {
 	 * @this {{prekey: string}}
 	 */
 	function sendPreKey() {
-		fetchApi(`/courseFuncBtn?prekey=${encodeURIComponent(this.prekey)}`, 'Send key data').then(i => {
+		const title = this.courseData.courseName + ' 加入預排';
+		fetchApi(`/courseFuncBtn?prekey=${encodeURIComponent(this.key)}`, 'Send key data').then(i => {
 			if (i.success)
-				window.messageAlert.addSuccess('Message', i.msg, 5000);
+				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
+			else {
+				const d = div();
+				d.innerHTML = i.msg;
+				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
+			}
 		});
 	}
 
@@ -541,21 +553,30 @@ export default function (router, loginState) {
 			const key = this.key;
 			const keys = ['sweet', 'cold', 'got'];
 			keys.splice(keys.indexOf(key), 1);
+			keys.unshift(key);
 
-			sortResultItem(key, this, (a, b) =>
-				sortToEnd(a && (a = a[0]) && (a = a.nckuhub) && a[key]) ? 1 : sortToEnd(b && (b = b[0]) && (b = b.nckuhub) && b[key]) ? -1 : (
-					Math.abs(b[key] - a[key]) < 1e-10 ? (
-						sortToEnd(a[keys[0]]) ? 1 : sortToEnd(b[keys[0]]) ? -1 : (
-							Math.abs(b[keys[0]] - a[keys[0]]) < 1e-10 ? (
-								sortToEnd(a[keys[1]]) ? 1 : sortToEnd(b[keys[1]]) ? -1 : (
-									Math.abs(b[keys[1]] - a[keys[1]]) < 1e-10 ? 0 : b[keys[1]] - a[keys[1]]
-								)
-							) : b[keys[0]] - a[keys[0]]
-						)
-					) : b[key] - a[key]
-				)
-			);
+			sortResultItem(key, this, ([a], [b]) => {
+				return sortNumberKeyOrder(a.nckuhub, b.nckuhub, keys);
+			});
 		}
+	}
+
+	/**
+	 * @param {Object.<string,number>} a
+	 * @param {Object.<string,number>} b
+	 * @param {string[]} keys
+	 * @return {number}
+	 */
+	function sortNumberKeyOrder(a, b, keys) {
+		for (let key of keys) {
+			if (sortToEnd(a && a[key]))
+				return 1;
+			if (sortToEnd(b && b[key]))
+				return -1;
+			if (a[key].toFixed(1) !== b[key].toFixed(1))
+				return b[key] - a[key];
+		}
+		return 0;
 	}
 
 
@@ -721,11 +742,11 @@ export default function (router, loginState) {
 							!data.serialNumber || !loginState.state || !loginState.state.login ? null :
 								button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
 							!data.preRegister ? null :
-								button(null, '加入預排', sendPreKey, {prekey: data.preRegister}),
+								button(null, '加入預排', sendPreKey, {courseData: data, key: data.preRegister}),
 							!data.preferenceEnter ? null :
-								button(null, '加入志願', sendCosData, {cosdata: data.preferenceEnter}),
+								button(null, '加入志願', sendCosData, {courseData: data, key: data.preferenceEnter}),
 							!data.addCourse ? null :
-								button(null, '單科加選', sendCosData, {cosdata: data.addCourse}),
+								button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
 						),
 					),
 					tr('courseDetail',
