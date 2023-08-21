@@ -133,7 +133,7 @@ public class HttpServer {
             sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
         } catch (KeyManagementException | NoSuchAlgorithmException | IOException | KeyStoreException |
                  UnrecoverableKeyException | CertificateException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             return false;
         }
         httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
@@ -149,8 +149,8 @@ public class HttpServer {
                     // Get the default parameters
                     SSLParameters defaultSSLParameters = c.getDefaultSSLParameters();
                     params.setSSLParameters(defaultSSLParameters);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+                } catch (Exception e) {
+                    logger.errTrace(e);
                     logger.err("Failed to create HTTPS server");
                 }
             }

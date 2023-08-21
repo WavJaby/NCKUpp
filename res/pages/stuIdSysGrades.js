@@ -1,6 +1,7 @@
 'use strict';
 
 import {button, div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../domHelper_v001.min.js';
+import {fetchApi} from '../lib.js';
 
 /**
  * - SemesterGrade: /stuIdSys?mode=semCourse&semId=SemID
@@ -53,7 +54,8 @@ export default function (router, loginState) {
 	const semestersInfo = new Signal();
 	const semesterGrades = new Signal();
 	const normalDestImg = new Signal();
-	let semesterLoadingStateCount = 0;
+	let stuIdLoadingCount = 0;
+	let stuIdLoading = false;
 
 	function onRender() {
 		console.log('StuIdSys grades Render');
@@ -83,10 +85,13 @@ export default function (router, loginState) {
 		// Login
 		if (state && state.login) {
 			loadingState.set(true);
-			window.fetchApi('/login?mode=stuId', 'Login identification system').then(i => {
+			if (stuIdLoading)
+				return;
+			stuIdLoading = true;
+			fetchApi('/login?mode=stuId', 'Login identification system').then(i => {
 				// Student Identification System login success
 				if (i.success && i.data && i.data.login) {
-					semesterLoadingStateCount = 2;
+					stuIdLoadingCount = 2;
 					getSemestersInfo();
 					CurrentSemesterGrade();
 				}
@@ -94,6 +99,7 @@ export default function (router, loginState) {
 				else {
 					window.messageAlert.addError('Identification system login failed', 'Refresh to try again', 3000);
 					loadingState.set(false);
+					stuIdLoading = false;
 				}
 			});
 		}
@@ -109,24 +115,28 @@ export default function (router, loginState) {
 	}
 
 	function getSemestersInfo() {
-		window.fetchApi('/stuIdSys?mode=semInfo').then(i => {
+		fetchApi('/stuIdSys?mode=semInfo').then(i => {
 			semestersInfo.set(i.data);
-			if (--semesterLoadingStateCount === 0)
+			if (--stuIdLoadingCount === 0) {
 				loadingState.set(false);
+				stuIdLoading = false;
+			}
 		});
 	}
 
 	function CurrentSemesterGrade() {
-		window.fetchApi('/stuIdSys?mode=currentSemInfo').then(i => {
+		fetchApi('/stuIdSys?mode=currentSemInfo').then(i => {
 			currentSemestersInfo.set(i.data);
-			if (--semesterLoadingStateCount === 0)
+			if (--stuIdLoadingCount === 0) {
 				loadingState.set(false);
+				stuIdLoading = false;
+			}
 		});
 	}
 
 	function getSemesterGrade() {
 		semesterGrades.set(null);
-		window.fetchApi('/stuIdSys?mode=semCourse&semId=' + this.semID).then(i => {
+		fetchApi('/stuIdSys?mode=semCourse&semId=' + this.semID).then(i => {
 			semesterGrades.set(i.data);
 		});
 	}
@@ -138,7 +148,7 @@ export default function (router, loginState) {
 		const courseInfo = this && this.courseInfo || inCourseInfo;
 		if (!courseInfo.imgQuery)
 			return;
-		window.fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(i => {
+		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(i => {
 			if (i.success) {
 				normalDestImg.set({graph: i.data[0], courseInfo: courseInfo})
 			} else {

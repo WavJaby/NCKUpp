@@ -68,7 +68,7 @@ public class DeptWatchDog implements EndpointModule {
             result.close();
 
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
 //        loginDataEdit("F74114760", "F7-109");
 //        List<String> discordIDs = getWatchedUserDiscordID("F7-109");
@@ -90,7 +90,7 @@ public class DeptWatchDog implements EndpointModule {
             int returnValue = watchListAdd.executeUpdate();
             watchListAdd.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
     }
 
@@ -101,7 +101,7 @@ public class DeptWatchDog implements EndpointModule {
             int returnValue = watchListRemove.executeUpdate();
             watchListRemove.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
     }
 
@@ -119,7 +119,7 @@ public class DeptWatchDog implements EndpointModule {
             result.close();
             return discordIDs;
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
         return null;
     }
@@ -134,7 +134,7 @@ public class DeptWatchDog implements EndpointModule {
             result.close();
             return login;
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
         return false;
     }
@@ -150,7 +150,7 @@ public class DeptWatchDog implements EndpointModule {
             result.close();
             return watchedCurse;
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
         return null;
     }
@@ -203,14 +203,14 @@ public class DeptWatchDog implements EndpointModule {
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
-            e.printStackTrace();
         }
         logger.log("Done in " + (System.currentTimeMillis() - startTime) + "ms");
     };

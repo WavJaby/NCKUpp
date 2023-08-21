@@ -76,7 +76,7 @@ public class NCKUHub implements EndpointModule {
                 sorted.sort(NckuHubCourseData::compare);
 
                 // Remove cache
-                while (cacheSize > maxCacheSize && sorted.size() > 0) {
+                while (cacheSize > maxCacheSize && !sorted.isEmpty()) {
                     NckuHubCourseData i = sorted.removeFirst();
                     cacheSize -= i.size;
                     courseInfoCache.remove(i.id);
@@ -97,7 +97,7 @@ public class NCKUHub implements EndpointModule {
                 cacheCleaner.shutdownNow();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             logger.warn("CacheCleaner close error");
             cacheCleaner.shutdownNow();
         }
@@ -135,12 +135,13 @@ public class NCKUHub implements EndpointModule {
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
         }
         logger.log("Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");

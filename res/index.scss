@@ -14,6 +14,7 @@ $navbar-bg-color: #161b22;
         width: 100%;
         height: 100%;
         position: relative;
+        z-index: 100;
 
         > .loaderCircle {
             position: absolute;

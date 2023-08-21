@@ -49,15 +49,11 @@ public class FileHost implements EndpointModule {
                     String resFilePath = path.substring(8);
                     if (!resFilePath.startsWith("res/") &&
                             !resFilePath.startsWith("quizlet/") &&
-                            !resFilePath.startsWith("GameOfLife/") &&
-                            !resFilePath.equals("index.js")) {
+                            !resFilePath.startsWith("index")) {
                         req.sendResponseHeaders(404, 0);
                         req.close();
                         return;
                     }
-                    if (resFilePath.startsWith("GameOfLife/"))
-                        resFilePath = "../GameOfLife/GameOfLife/src/com/java/Web/" +
-                                resFilePath.substring(11);
                     if (resFilePath.lastIndexOf('.') == -1)
                         resFilePath += ".html";
 
@@ -101,7 +97,7 @@ public class FileHost implements EndpointModule {
                 req.close();
             } catch (Exception e) {
                 req.close();
-                e.printStackTrace();
+                logger.errTrace(e);
             }
         };
     }

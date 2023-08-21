@@ -21,7 +21,7 @@ public class SQLite implements Module {
     private static final Logger logger = new Logger(TAG);
     private java.sql.Connection sqlite;
 
-    public static void printSqlError(SQLException e, String tag) {
+    public static void printSqlError(SQLException e) {
         logger.err(e.getClass().getName() + ": " + e.getMessage() + '\n' +
                 "\tat " + Arrays.stream(e.getStackTrace())
                 .filter(i -> !i.getClassName().startsWith("org.sqlite"))
@@ -67,11 +67,9 @@ public class SQLite implements Module {
             // Connect to database
             sqlite = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getAbsolutePath(), props);
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
-            return;
+            SQLite.printSqlError(e);
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IOException e) {
-            e.printStackTrace();
-            return;
+            logger.errTrace(e);
         }
     }
 

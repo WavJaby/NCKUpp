@@ -76,7 +76,7 @@ public class RobotCode implements EndpointModule {
             // Start read thread
             stdoutRead.start();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
         }
         if (startMessage == null)
             logger.err("Start error");
@@ -122,6 +122,7 @@ public class RobotCode implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
         }
         logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
@@ -140,7 +141,7 @@ public class RobotCode implements EndpointModule {
             result = process.waitFor();
             stdoutRead.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             process.destroy();
         }
         process = null;

@@ -100,44 +100,6 @@ public class Main {
 
 //        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
 
-//        long start = System.currentTimeMillis();
-//        Thread t1 = new Thread(() ->
-//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
-//        );
-//        Thread t2 = new Thread(() ->
-//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
-//        );
-//        Thread t3 =  new Thread(() ->
-//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
-//        );
-//        Thread t4 =  new Thread(() ->
-//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
-//        );
-//        Thread t5 =  new Thread(() ->
-//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
-//        );
-//        Thread t6 =  new Thread(() ->
-//                logger.log(robotCode.getCode(courseNckuOrg + "/index.php?c=portal&m=robot", null, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA))
-//        );
-//        t1.start();
-//        t2.start();
-//        t3.start();
-//        t4.start();
-//        t5.start();
-//        t6.start();
-//        try {
-//            t1.join();
-//            t2.join();
-//            t3.join();
-//            t4.join();
-//            t5.join();
-//            t6.join();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//        logger.log(System.currentTimeMillis() - start);
-
-
         // Stop
         new Scanner(System.in).nextLine();
         stopAll();

@@ -96,7 +96,7 @@ public class Search implements EndpointModule {
                 cosPreCheckPool.shutdownNow();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             logger.warn("CosPreCheck pool close error");
             cosPreCheckPool.shutdownNow();
         }
@@ -153,7 +153,7 @@ public class Search implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             req.close();
         }
         logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
@@ -217,13 +217,38 @@ public class Search implements EndpointModule {
             this.yearBegin = this.semBegin = this.yearEnd = this.semEnd = -1;
         }
 
+        public SearchQuery(SearchQuery searchQuery) {
+            this.searchID = searchQuery.searchID;
+            this.historySearchID = searchQuery.historySearchID;
+            this.deptNo = searchQuery.deptNo;
+            this.courseName = searchQuery.courseName;
+            this.instructor = searchQuery.instructor;
+            this.grade = searchQuery.grade;
+            this.dayOfWeek = searchQuery.dayOfWeek;
+            this.sectionOfDay = searchQuery.sectionOfDay;
+
+            this.getAll = searchQuery.getAll;
+            this.getSerial = searchQuery.getSerial;
+            this.getSerialError = searchQuery.getSerialError;
+
+            this.serialIdNumber = searchQuery.serialIdNumber;
+
+            this.historySearch = searchQuery.historySearch;
+            this.historySearchError = searchQuery.historySearchError;
+
+            this.yearBegin = searchQuery.yearBegin;
+            this.semBegin = searchQuery.semBegin;
+            this.yearEnd = searchQuery.yearEnd;
+            this.semEnd = searchQuery.semEnd;
+        }
+
         private SearchQuery(String queryString, String[] cookieIn) {
             // Get search ID
             String searchIDs = Cookie.getCookie("searchID", cookieIn);
             if (searchIDs != null) {
                 int split = searchIDs.indexOf('|');
                 if (split == -1) {
-                    this.searchID = searchIDs.length() == 0 ? null : searchIDs;
+                    this.searchID = searchIDs.isEmpty() ? null : searchIDs;
                     this.historySearchID = null;
                 } else {
                     this.searchID = split == 0 ? null : searchIDs.substring(0, split);
@@ -245,7 +270,7 @@ public class Search implements EndpointModule {
             if (this.historySearch) {
                 String[] cache = queryTime.split(",");
                 if (cache.length != 4) {
-                    int len = cache.length == 1 && cache[0].length() == 0 ? 0 : cache.length;
+                    int len = cache.length == 1 && cache[0].isEmpty() ? 0 : cache.length;
                     historySearchError = "\"" + queryTime + "\" (Only give " + len + " value instead of 4)";
                 } else {
                     int pos = 0;
@@ -319,7 +344,7 @@ public class Search implements EndpointModule {
         }
 
         public boolean serialNumberEmpty() {
-            return getSerial && serialIdNumber != null && serialIdNumber.size() == 0;
+            return getSerial && serialIdNumber != null && serialIdNumber.isEmpty();
         }
 
         public boolean serialNumberInvalid() {
@@ -735,7 +760,7 @@ public class Search implements EndpointModule {
                                     allSuccess.set(false);
                                 logger.log(Thread.currentThread().getName() + " " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                logger.errTrace(e);
                             }
                             fetchPoolLock.release();
                             taskLeft.countDown();
@@ -769,7 +794,9 @@ public class Search implements EndpointModule {
                     fetchPoolLock.acquire();
                     fetchPool.submit(() -> {
                         List<CourseData> courseDataList = new ArrayList<>();
-                        if (allSuccess.get() && !getQueryCourseData(searchQuery, i, cookieStore, response, courseDataList)) {
+                        SearchQuery finalSearchQuery = new SearchQuery(searchQuery);
+                        finalSearchQuery.deptNo = i.getKey();
+                        if (allSuccess.get() && !getQueryCourseData(finalSearchQuery, i.getValue(), cookieStore, response, courseDataList)) {
                             allSuccess.set(false);
                         }
                         result.appendRaw(i.getKey(), courseDataList.toString());
@@ -945,13 +972,13 @@ public class Search implements EndpointModule {
             JsonObject idData = new JsonObject(res.body());
             String error = idData.getString("err");
 
-            if (error.length() > 0) {
+            if (!error.isEmpty()) {
                 if (response != null)
                     response.errorFetch("Create dept token failed: " + error);
                 return null;
             }
             String id = idData.getString("id");
-            if (id == null || id.length() == 0) {
+            if (id == null || id.isEmpty()) {
                 if (response != null)
                     response.errorFetch("Create dept token failed: id not found");
                 return null;
@@ -996,22 +1023,17 @@ public class Search implements EndpointModule {
         return httpResponseData;
     }
 
-    private boolean getQueryCourseData(SearchQuery searchQuery, Map.Entry<String, Set<String>> getSerialNum,
+    private boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum,
                                        CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
-        // If getSerialNum is given, set query dept to get courses
-        if (getSerialNum != null)
-            searchQuery.deptNo = getSerialNum.getKey();
-
         // Create save query token
         SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, response);
         if (saveQueryToken == null)
             return false;
 
-        return getQueryCourseData(searchQuery, saveQueryToken, getSerialNum,
-                response, courseDataList);
+        return getQueryCourseData(searchQuery, saveQueryToken, getSerialNum, response, courseDataList);
     }
 
-    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, Map.Entry<String, Set<String>> getSerialNum,
+    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, Set<String> getSerialNum,
                                       @Nullable ApiResponse response, List<CourseData> courseDataList) {
         // Get search result
         HttpResponseData searchResult = getCourseNCKU(saveQueryToken);
@@ -1048,7 +1070,7 @@ public class Search implements EndpointModule {
         parseCourseTable(
                 table,
                 searchResultBody,
-                getSerialNum == null ? null : getSerialNum.getValue(),
+                getSerialNum,
                 true,
                 searchQuery.historySearch,
                 courseDataList
@@ -1399,7 +1421,7 @@ public class Search implements EndpointModule {
                     continue;
             }
             // Get serial number
-            String courseData_serialNumber = serialNumber.length() == 0 ? null : serialNumber;
+            String courseData_serialNumber = serialNumber.isEmpty() ? null : serialNumber;
 
             // Get system number
             String courseData_courseSystemNumber = ((TextNode) section1.get(1)).text().trim();
@@ -1407,7 +1429,7 @@ public class Search implements EndpointModule {
             // Get attribute code
             String courseData_courseAttributeCode = null;
             String courseAttributeCode = ((TextNode) section1.get(3)).text().trim();
-            if (courseAttributeCode.length() > 0) {
+            if (!courseAttributeCode.isEmpty()) {
                 int courseAttributeCodeStart, courseAttributeCodeEnd;
                 if ((courseAttributeCodeStart = courseAttributeCode.indexOf('[')) != -1 &&
                         (courseAttributeCodeEnd = courseAttributeCode.lastIndexOf(']')) != -1)
@@ -1419,7 +1441,7 @@ public class Search implements EndpointModule {
 
             // Get department name
             String courseData_departmentName = section.get(sectionOffset).ownText();
-            if (courseData_departmentName.length() == 0) courseData_departmentName = null;
+            if (courseData_departmentName.isEmpty()) courseData_departmentName = null;
 
             // Get course type
             String courseData_courseType = section.get(sectionOffset + 3).text();
@@ -1437,7 +1459,7 @@ public class Search implements EndpointModule {
                 else {
                     // text
                     String cache = ((TextNode) node).text().trim();
-                    if (cache.length() == 0) continue;
+                    if (cache.isEmpty()) continue;
                     if (section2c == 0)
                         courseData_forGrade = Integer.parseInt(cache);
                     else if (section2c == 1)
@@ -1452,11 +1474,11 @@ public class Search implements EndpointModule {
 
             // Get course note
             String courseData_courseNote = section.get(sectionOffset + 4).ownText().trim().replace("\"", "\\\"");
-            if (courseData_courseNote.length() == 0) courseData_courseNote = null;
+            if (courseData_courseNote.isEmpty()) courseData_courseNote = null;
 
             // Get course limit
             String courseData_courseLimit = section.get(sectionOffset + 4).getElementsByClass("cond").text().trim().replace("\"", "\\\"");
-            if (courseData_courseLimit.length() == 0) courseData_courseLimit = null;
+            if (courseData_courseLimit.isEmpty()) courseData_courseLimit = null;
 
             // Get course tags
             CourseData.TagData[] courseData_tags = null;
@@ -1627,7 +1649,7 @@ public class Search implements EndpointModule {
                     countBuilder.append(((TextNode) n).text());
             }
             count = countBuilder.toString().split("/");
-            Integer courseData_selected = count[0].length() == 0 ? null : Integer.parseInt(count[0]);
+            Integer courseData_selected = count[0].isEmpty() ? null : Integer.parseInt(count[0]);
             Integer courseData_available = count.length < 2 ? null :
                     (count[1].equals("額滿") || count[1].equals("full")) ? 0 :
                             (count[1].equals("不限") || count[1].equals("unlimited")) ? -1 :

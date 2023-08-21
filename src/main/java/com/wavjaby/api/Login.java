@@ -58,7 +58,7 @@ public class Login implements EndpointModule {
                     "UPDATE login_data SET student_id=?, name=?, dept_grade_info=?, PHPSESSID=? WHERE student_id=?"
             );
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
 
         keepLoginUpdater.scheduleAtFixedRate(() -> {
@@ -113,7 +113,7 @@ public class Login implements EndpointModule {
                 }
 
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.errTrace(e);
             }
         }, 0, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
     }
@@ -127,7 +127,7 @@ public class Login implements EndpointModule {
                 keepLoginUpdater.shutdownNow();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             logger.warn("KeepLoginUpdater pool close error");
             keepLoginUpdater.shutdownNow();
         }
@@ -139,7 +139,7 @@ public class Login implements EndpointModule {
                 loginCosPreCheckPool.shutdownNow();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             logger.warn("loginCosPreCheckPool pool close error");
             loginCosPreCheckPool.shutdownNow();
         }
@@ -166,7 +166,7 @@ public class Login implements EndpointModule {
             }
             loginDataEditPre.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
     }
 
@@ -179,7 +179,7 @@ public class Login implements EndpointModule {
             loginDataAddPre.executeUpdate();
             loginDataAddPre.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e, TAG);
+            SQLite.printSqlError(e);
         }
     }
 

@@ -85,8 +85,8 @@ public class PreCourseSchedule implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
-            e.printStackTrace();
         }
         logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };
@@ -216,7 +216,7 @@ public class PreCourseSchedule implements EndpointModule {
         try {
             JsonObject postResult = new JsonObject(conn.execute().body());
             String msg = postResult.getString("msg");
-            if (!postResult.getBoolean("success"))
+            if (!postResult.containsKey("result") || !postResult.getBoolean("result"))
                 response.errorCourseNcku();
             response.setMessageDisplay(msg);
         } catch (JsonException e) {

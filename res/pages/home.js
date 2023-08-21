@@ -1,6 +1,7 @@
 'use strict';
 
 import {a, br, div, h1, img, mountableStylesheet, p, span, text} from '../domHelper_v001.min.js';
+import {fetchApi} from '../lib.js';
 
 /**
  * @param {QueryRouter} router
@@ -26,8 +27,8 @@ export default function (router) {
 		),
 		p(null, 'description',
 			text('集合'),
-			img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', '國立成功大學課程資訊及選課系統'),
-			img('https://nckuhub.com/dist/images/table/nav_logo.svg', 'NCKUHub'),
+			img('res/assets/courseNcku_logo.png', '國立成功大學課程資訊及選課系統'),
+			img('res/assets/nckuHub_logo.svg', 'NCKUHub'),
 			img('res/assets/UrSchool_logo.png', 'UrSchool'),
 			br(),
 			text('眾多功能，提供更好的選課環境')
@@ -41,21 +42,23 @@ export default function (router) {
 		serviceRecommended: '服務學習推薦專區',
 		contactInformation: '課程資訊服務聯絡窗口',
 	};
+	const linkCanonical = document.createElement('link');
+	linkCanonical.rel = 'canonical';
+	linkCanonical.href = 'https://wavjaby.github.io/NCKUpp/';
 
 	function onRender() {
 		console.log('Home Render');
 		styles.mount();
 
 		// Get home info
-		window.fetchApi('/homeInfo').then(response => {
+		fetchApi('/homeInfo').then(response => {
 			if (response == null || !response.success || !response.data)
 				return;
 			renderHomeInfo(response.data);
 		});
-
 	}
 
-	function onPageOpen(isHistory) {
+	function onPageOpen() {
 		console.log('Home Open');
 		// close navLinks when using mobile devices
 		window.navMenu.remove('open');
@@ -63,6 +66,7 @@ export default function (router) {
 		setTimeout(() =>
 				titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px'
 			, 700);
+		document.head.appendChild(linkCanonical);
 
 		router.element.addEventListener('scroll', onscroll);
 	}
@@ -71,6 +75,7 @@ export default function (router) {
 		console.log('Home Close');
 		styles.disable();
 		titleAnimation.style.width = null;
+		document.head.removeChild(linkCanonical);
 
 		router.element.removeEventListener('scroll', onscroll);
 	}

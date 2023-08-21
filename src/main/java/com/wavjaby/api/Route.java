@@ -139,7 +139,7 @@ public class Route implements EndpointModule {
             }
         } catch (Exception e) {
             req.close();
-            e.printStackTrace();
+            logger.errTrace(e);
         }
     };
 

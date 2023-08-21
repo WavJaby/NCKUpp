@@ -1,0 +1,61 @@
+@import './variables';
+
+$popupWindow-bg-color: #15181D;
+
+.popupWindow {
+    background: $overlay-transparent-bg-color;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: fixed;
+    z-index: 100;
+
+    > .popupWindowBody {
+        background: $popupWindow-bg-color;
+        max-width: 1200px;
+        overflow: auto;
+        border-radius: 10px;
+        padding: 5px;
+        top: 100px;
+        bottom: 100px;
+        left: 40px;
+        right: 40px;
+        position: absolute;
+        margin: auto;
+
+        > .closeButton {
+            background: none;
+            padding: 2px;
+            top: 0;
+            position: sticky;
+            cursor: pointer;
+
+            &:focus {
+                box-shadow: none;
+            }
+
+            > .icon {
+                content: '';
+                background: $icon-close no-repeat 0 0 / 24px;
+                width: 24px;
+                height: 24px;
+            }
+        }
+
+        @media only screen and ($small-screen) {
+            width: 100%;
+            height: 100%;
+            position: static;
+            border-radius: 0;
+            box-sizing: border-box;
+            padding: 2px;
+
+            > .closeButton > .icon {
+                background: $icon-down-arrow no-repeat 0 0/24px;;
+                @include transform(rotate(90deg));
+            }
+        }
+    }
+
+}

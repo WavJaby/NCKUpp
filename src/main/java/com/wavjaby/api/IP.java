@@ -51,9 +51,8 @@ public class IP implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
-            e.printStackTrace();
-            remoteIp = null;
         }
 //        logger.log(remoteIp);
     };

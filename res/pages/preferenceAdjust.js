@@ -1,6 +1,7 @@
 'use strict';
 
 import {button, div, h1, mountableStylesheet, span} from '../domHelper_v001.min.js';
+import {fetchApi} from '../lib.js';
 
 /**
  * @param {QueryRouter} router
@@ -15,6 +16,7 @@ export default function (router, loginState) {
 	const saveItemOrderButton = button('saveOrderBtn');
 	const saveItemOrderDelayTime = 5000;
 	let saveItemOrderTimeout = null, saveItemOrderTimeLeft = 0;
+	let preferenceAdjustLoading = false;
 
 	function onRender() {
 		console.log('Course schedule Render');
@@ -43,11 +45,15 @@ export default function (router, loginState) {
 	 */
 	function onLoginState(state) {
 		if (state && state.login) {
-			window.fetchApi('/preferenceAdjust', 'Get preference').then(i => {
+			if (preferenceAdjustLoading)
+				return;
+			preferenceAdjustLoading = true;
+			fetchApi('/preferenceAdjust', 'Get preference').then(i => {
 				if (i.success)
 					renderAdjustList(i.data);
 				else
 					window.messageAlert.addError('Error', i.msg, 3000);
+				preferenceAdjustLoading = false;
 			});
 		} else {
 			if (state)

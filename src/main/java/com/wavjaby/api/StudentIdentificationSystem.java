@@ -272,8 +272,8 @@ public class StudentIdentificationSystem implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
-            req.close();
             logger.errTrace(e);
+            req.close();
         }
         logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
     };

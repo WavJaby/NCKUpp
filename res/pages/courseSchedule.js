@@ -1,6 +1,8 @@
 'use strict';
 
-import {button, checkboxWithName, div, mountableStylesheet, ShowIf, Signal, span, table, text} from '../domHelper_v001.min.js';
+import {button, checkboxWithName, div, h2, mountableStylesheet, p, span, table} from '../domHelper_v001.min.js';
+import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';
+import PopupWindow from '../popupWindow.js';
 
 // static
 const weekTable = ['#', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -25,26 +27,6 @@ const timeTable = [
 ];
 const nightTimeStart = 10;
 
-function CourseInfoWindow(showCourseInfoWindow) {
-	const body = div();
-	const courseInfoWindow = div('courseInfoWindow',
-		button('closeButton', 'x', () => {
-			showCourseInfoWindow.set(false);
-		}),
-		body
-	);
-
-	courseInfoWindow.clear = function () {
-		body.innerHTML = '';
-	}
-
-	courseInfoWindow.add = function (element) {
-		body.appendChild(element);
-	}
-
-	return courseInfoWindow;
-}
-
 /**
  * @param {QueryRouter} router
  * @param loginState
@@ -54,11 +36,11 @@ export default function (router, loginState) {
 	console.log('Course schedule Init');
 	// static element
 	const styles = mountableStylesheet('./res/pages/courseSchedule.css');
-	const showCourseInfoWindow = new Signal(false);
-	const courseInfoWindow = CourseInfoWindow(showCourseInfoWindow);
 	const showClassroomCheckbox = checkboxWithName(null, '顯示教室', false);
 	const showPreScheduleCheckbox = checkboxWithName(null, '顯示預排科目', false);
-	const scheduleTable = new ScheduleTable(showCourseInfoWindow, courseInfoWindow);
+	const windowRoot = div();
+	const scheduleTable = new ScheduleTable(windowRoot);
+	let scheduleLoading = false, scheduleLoadingQueue = false;
 
 	showClassroomCheckbox.input.onchange = () => scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
 	showPreScheduleCheckbox.input.onchange = () => scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
@@ -90,20 +72,48 @@ export default function (router, loginState) {
 	 */
 	function onLoginState(state) {
 		if (state && state.login) {
-			window.fetchApi('/courseSchedule', 'Get schedule').then(response => {
+			// Loading, add queue
+			if (scheduleLoading) {
+				scheduleLoadingQueue = true;
+				return;
+			}
+			// Update data
+			scheduleLoading = true;
+			scheduleLoadingQueue = false;
+			scheduleTable.dataReset();
+			fetchApi('/courseSchedule', 'Get schedule').then(response => {
 				// Parse normal schedule
-				scheduleTable.init(response);
-				// Parse pre schedule
-				window.fetchApi('/preCourseSchedule', 'Get pre schedule').then(response => {
-					scheduleTable.initPreSchedule(response);
-					scheduleTable.fetchCourseInfo();
-				});
+				scheduleTable.setScheduleData(response);
+				if (scheduleTable.dataReady()) {
+					scheduleTable.renderTable();
+					updateCourseInfo();
+				}
+			});
+			fetchApi('/preCourseSchedule', 'Get pre schedule').then(response => {
+				// Parse normal schedule
+				scheduleTable.setPreScheduleData(response);
+				if (scheduleTable.dataReady()) {
+					scheduleTable.renderTable();
+					updateCourseInfo();
+				}
 			});
 		} else {
 			if (state)
 				window.askForLoginAlert();
 			scheduleTable.clear();
 		}
+	}
+
+	function updateCourseInfo() {
+		scheduleTable.fetchCourseInfo().then(() => {
+			// Reset loading
+			scheduleLoading = false;
+			// Fetch again if queue
+			if (scheduleLoadingQueue) {
+				scheduleLoadingQueue = false;
+				onLoginState(loginState.state);
+			}
+		});
 	}
 
 	return div('courseSchedule',
@@ -114,100 +124,149 @@ export default function (router, loginState) {
 			showPreScheduleCheckbox,
 		),
 		scheduleTable.table,
-		ShowIf(showCourseInfoWindow, courseInfoWindow),
+		windowRoot,
 	);
 };
 
 /**
- * @typedef ScheduleDataInfo
+ * @typedef ScheduleCourseTimeInfo
  * @property {string} type
  * @property {string} time
  * @property {string} roomID
  * @property {string} room
  * @property {int[]} time
  */
+
+/**
+ * @typedef ScheduleCourse
+ * @property {string} deptID
+ * @property {string} sn
+ * @property {string} name
+ * @property {boolean} required
+ * @property {float} credits
+ * @property {string} [delete] Delete action key
+ */
+
 /**
  * @typedef ScheduleData
  * @property {string} studentId
  * @property {int} year
  * @property {int} semester
  * @property {float} credits
- * @property {{
- *     deptID: string,
- *     sn: string,
- *     name: string,
- *     required: boolean,
- *     credits: float,
- *     info: ScheduleDataInfo[],
- * }[]} schedule
+ * @property {ScheduleCourse[]} schedule
  */
-function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
-	const roomNameElements = [];
+
+function ScheduleTable(windowRoot) {
+	const courseInfoWindow = new PopupWindow({root: windowRoot});
 	const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
 	const preScheduleTable = table('courseScheduleTable pre', {'cellPadding': 0});
 	preScheduleTable.style.display = 'none';
 	this.table = div(null, scheduleTable, preScheduleTable);
 
-	let courseInfo = {};
-	let savedScheduleData = null;
-	let savedScheduleTableWidth = 0;
-	let savedScheduleTableHeight = 0;
+	let /**@type ?ScheduleData*/ scheduleData = null;
+	let /**@type ?ScheduleData*/ preScheduleData = null;
+
+	const roomNameElements = [];
+	let /**@type{Object.<string, CourseData>}*/courseDetail = {};
+	let courseSameCell = {};
+	let preCourseRemoveKey = {};
 	let showClassRoom = false;
 
+	this.setScheduleData = function (response) {
+		scheduleData = response.data;
+	};
 
-	function cellClick() {
-		const info = courseInfo[this.serialID];
-		if (info) {
-			courseInfoWindow.clear();
-			courseInfoWindow.add(
-				button(null, 'moodle',
-					() => {
-						window.fetchApi('/extract?moodle=' + info.m).then(i => {
-							if (i.data && i.data.status)
-								window.open(i.data.url, '_blank');
-						});
-					}
-				)
-			);
-			for (let time of info.t) {
-				time = time.split(',');
-				courseInfoWindow.add(
-					button(null, time[0] + ' ' + time[1] + ' ' + time[4],
-						() => {
-							window.fetchApi('/extract?location=' + time[2] + ',' + time[3]).then(i => {
-								if (i.data && i.data.status)
-									window.open(i.data.url, '_blank');
-							});
-						}
-					)
-				);
-			}
-			courseInfoWindow.add(text(JSON.stringify(info, null, 4)));
-			showCourseInfoWindow.set(true);
-		}
-	}
+	this.setPreScheduleData = function (response) {
+		preScheduleData = response.data;
+	};
 
-	/**
-	 * @param {ApiResponse} response
-	 */
-	this.init = function (response) {
-		if (!response.success) return;
-		/**@type ScheduleData*/
-		const scheduleData = response.data;
-		initTable(scheduleTable);
-		scheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
+	this.dataReady = function () {
+		return scheduleData != null && preScheduleData != null;
+	};
+
+	this.dataReset = function () {
+		scheduleData = null;
+		preScheduleData = null;
 		roomNameElements.length = 0;
-		courseInfo = {};
+		courseDetail = {};
+		courseSameCell = {};
+		preCourseRemoveKey = {};
+	};
 
+	this.renderTable = function () {
 		// Get table size
 		const [tableWidth, tableHeight] = timeTxt2IntAndGetTableSize(scheduleData);
-		savedScheduleData = scheduleData;
-		savedScheduleTableWidth = tableWidth;
-		savedScheduleTableHeight = tableHeight;
+		initScheduleTable(tableWidth, tableHeight);
+		initPreScheduleTable(tableWidth, tableHeight);
+
+		for (const course of preScheduleData.schedule)
+			if (course.delete)
+				preCourseRemoveKey[course.deptID + '-' + course.sn] = course.delete;
+	};
+
+	function cellClick() {
+		const detail = courseDetail[this.serialID];
+		if (!detail)
+			return;
+
+		const locationButtons = [];
+		if (detail.time)
+			for (let time of detail.time) {
+				let timeStr = courseDataTimeToString(time);
+				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
+			}
+		courseInfoWindow.setWindowContent(div('courseInfo',
+			preCourseRemoveKey[this.serialID] && button('delete', '刪除', removePreCourse, {serialID: this.serialID}),
+			h2(detail.serialNumber + ' ' + detail.courseName),
+			detail.instructors.map(i => span(i + ' ')),
+			p(detail.courseNote),
+			button(null, 'moodle', openCourseMoodle, {moodleQuery: detail.m}),
+			locationButtons,
+		));
+		courseInfoWindow.windowOpen();
+	}
+
+	function openCourseLocation() {
+		fetchApi('/extract?location=' + this.locationQuery).then(i => {
+			if (i.data && i.success)
+				window.open(i.data.url, '_blank');
+		});
+	}
+
+	function openCourseMoodle() {
+		fetchApi('/extract?moodle=' + this.moodleQuery).then(i => {
+			if (i.data && i.success)
+				window.open(i.data.url, '_blank');
+		});
+	}
+
+	function removePreCourse() {
+		const key = preCourseRemoveKey[this.serialID];
+		const detail = courseDetail[this.serialID];
+		console.log(detail)
+
+		const deleteConform = confirm('是否要刪除 ' + detail.sn + detail.cn);
+		if (!deleteConform)
+			return;
+
+		const title = '預排刪除 ' + detail.sn + detail.cn;
+		fetchApi('/preCourseSchedule', 'Delete pre schedule',
+			{method: 'post', body: 'action=delete&info=' + key}
+		).then(response => {
+			if (response.success)
+				window.messageAlert.addSuccess(title, response.msg, 5000);
+			else
+				window.messageAlert.addError(title, response.msg, 5000);
+		});
+	}
+
+	function initScheduleTable(tableWidth, tableHeight) {
 		// Parse data
 		const {dayTable, dayUndecided} = parseData2DayTable(tableWidth, tableHeight, scheduleData);
 
-		// Create table header
+		// Create table
+		initTable(scheduleTable);
+		scheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
 		const rows = createScheduleTable(scheduleTable, tableWidth, tableHeight);
 
 		// Add course cell
@@ -222,7 +281,8 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 					rows[j].insertCell().colSpan = i - rowSize[j];
 
 				// Build cell
-				const cell = createCourseCell(rows[j], course);
+				const cell = rows[j].insertCell();
+				createCourseCell(cell, course);
 
 				// Add space
 				if (course[1].time.length === 3) {
@@ -274,24 +334,20 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 		for (let i = 0; i < tableHeight; i++) {
 			rows[i].appendChild(div('splitLine'));
 		}
-	};
+	}
 
-	this.initPreSchedule = function (response) {
-		const scheduleData = savedScheduleData;
-		/**@type ScheduleData*/
-		const preScheduleData = response.data;
-		initTable(preScheduleTable);
-		preScheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
-
+	function initPreScheduleTable(tableWidth, tableHeight) {
 		// Get table size
-		const [tableWidth0, tableHeight0] = timeTxt2IntAndGetTableSize(preScheduleData);
-		const tableWidth = Math.max(savedScheduleTableWidth, tableWidth0);
-		const tableHeight = Math.max(savedScheduleTableHeight, tableHeight0);
+		const [preTableWidth, preTableHeight] = timeTxt2IntAndGetTableSize(preScheduleData);
+		tableWidth = Math.max(tableWidth, preTableWidth);
+		tableHeight = Math.max(tableHeight, preTableHeight);
 		// Parse data
 		const {dayTable, dayUndecided} = parseData2DayTable(tableWidth, tableHeight, scheduleData);
 		const {dayTable: dayTablePre, dayUndecided: dayUndecidedPre} = parseData2DayTable(tableWidth, tableHeight, preScheduleData);
 
-		// Create table header
+		// Create table
+		initTable(preScheduleTable);
+		preScheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
 		const rows = createScheduleTable(preScheduleTable, tableWidth, tableHeight);
 		const cellTable = new Array(tableHeight);
 
@@ -308,43 +364,28 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 		for (let i = 0; i < tableWidth; i++) {
 			for (let j = 0; j < tableHeight; j++) {
 				const dayCourse = dayTable[i][j];
-				if (dayCourse) {
-					const course = Object.values(dayCourse)[0];
-					// Add section
-					if (course[1].time.length === 3) {
-						const length = course[1].time[2] - course[1].time[1] + 1;
-						for (let k = 0; k < length; k++) {
-							createCourseCellSingle(cellTable[j + k][i], course, false);
-						}
-					}
-				}
+				if (dayCourse)
+					createCourseCellSingleList(cellTable, Object.values(dayCourse), false);
 				const dayPreCourse = dayTablePre[i][j];
-				if (dayPreCourse) {
-					// Multi pre course in section
-					for (const preCourse of Object.values(dayPreCourse)) {
-						// Add section
-						if (preCourse[1].time.length === 3) {
-							const length = preCourse[1].time[2] - preCourse[1].time[1] + 1;
-							for (let k = 0; k < length; k++) {
-								createCourseCellSingle(cellTable[j + k][i], preCourse, true);
-							}
-						}
-					}
-				}
+				if (dayPreCourse)
+					createCourseCellSingleList(cellTable, Object.values(dayPreCourse), true);
 			}
 		}
-
 
 		// Row background
 		for (let i = 0; i < tableHeight; i++) {
 			rows[i].appendChild(div('splitLine'));
+
+			for (let j = 0; j < tableWidth; j++)
+				if (cellTable[i][j].childElementCount === 1)
+					cellTable[i][j].firstElementChild.classList.add('fullHeight');
 		}
-	};
+	}
 
 	this.fetchCourseInfo = function () {
 		// get course info
 		const courseDept = {};
-		for (const serialID in courseInfo) {
+		for (const serialID in courseDetail) {
 			const dept = serialID.split('-');
 			let deptData = courseDept[dept[0]];
 			if (deptData)
@@ -358,10 +399,10 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 		const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
 
 		// fetch data
-		window.fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
+		return fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
 			for (const entry of Object.entries(i.data))
 				for (const course of entry[1])
-					courseInfo[course.sn] = course;
+					courseDetail[course.sn] = parseRawCourseData(course, null);
 		});
 	};
 
@@ -369,6 +410,26 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 		initTable(scheduleTable);
 		initTable(preScheduleTable);
 	};
+
+	function courseCellHoverStart() {
+		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialID];
+		if (!cells)
+			return;
+		for (let cell of cells) {
+			cell.parentElement.classList.add('hover');
+			cell.classList.add('hover');
+		}
+	}
+
+	function courseCellHoverEnd() {
+		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialID];
+		if (!cells)
+			return;
+		for (let cell of cells) {
+			cell.parentElement.classList.remove('hover');
+			cell.classList.remove('hover');
+		}
+	}
 
 	/**
 	 * @param {HTMLTableElement} table
@@ -391,7 +452,7 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 		let holiday = false;
 		for (const i of scheduleData.schedule) for (const j of i.info) {
 			// parse time
-			const parsedTime = window.timeParse(j.time);
+			const parsedTime = timeParse(j.time);
 
 			// Find table width
 			if (parsedTime[0] > 4)
@@ -424,9 +485,9 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 				if (!section)
 					section = daySectionTable[timeLocInfo.time[0]][timeLocInfo.time[1]] = {};
 
-				let sectionCourse = section[eachCourse.deptID + eachCourse.sn];
+				let sectionCourse = section[eachCourse.deptID + '-' + eachCourse.sn];
 				if (!sectionCourse)
-					sectionCourse = section[eachCourse.deptID + eachCourse.sn] = [eachCourse, timeLocInfo];
+					sectionCourse = section[eachCourse.deptID + '-' + eachCourse.sn] = [eachCourse, timeLocInfo];
 				else
 					sectionCourse.push(timeLocInfo);
 			}
@@ -465,53 +526,85 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 	}
 
 	/**
-	 * @param row Table row
-	 * @param {[ScheduleDataInfo, ...time]} course
+	 * @param {HTMLTableCellElement} parentCell
+	 * @param {[ScheduleCourse, ...time]} courseWithTime
 	 * @return {HTMLTableCellElement}
 	 */
-	function createCourseCell(row, course) {
-		const cell = row.insertCell();
-		const info = course[0];
-		cell.className = 'activateCell';
-		cell.serialID = info.deptID + '-' + info.sn;
-		cell.onclick = cellClick;
-		courseInfo[cell.serialID] = null;
+	function createCourseCell(parentCell, courseWithTime) {
+		parentCell.className = 'activate';
+		const courseInfo = courseWithTime[0];
+		const serialID = courseInfo.deptID + '-' + courseInfo.sn;
+		courseDetail[serialID] = null;
 
-		cell.appendChild(span(info.name));
-		for (let k = 1; k < course.length; k++) {
-			const roomNameElement = span(course[k].room);
-			// Show roomName or not
-			if (!showClassRoom)
-				roomNameElement.style.display = 'none';
-			cell.appendChild(roomNameElement);
-			roomNameElements.push(roomNameElement);
-		}
-		return cell;
-	}
-
-	function createCourseCellSingle(cell, course, pre) {
-		cell.className = 'activate';
-		const info = course[0];
-		const serialID = info.deptID + '-' + info.sn;
-		const subCell = div(pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
-			span('[' + info.deptID + ']' + info.sn + ' '),
-			span(info.name),
+		const courseCell = div('sure', {serialID: serialID, onclick: cellClick},
+			// span('[' + courseInfo.deptID + ']' + courseInfo.sn + ' '),
+			span(courseInfo.name),
 		);
-		if (courseInfo[serialID] === undefined)
-			courseInfo[serialID] = null;
 
 		// Add room
-		for (let k = 1; k < course.length; k++) {
-			if (!course[k].room) continue;
-			const roomNameElement = span(course[k].room, 'room');
+		for (let k = 1; k < courseWithTime.length; k++) {
+			if (!courseWithTime[k].room) continue;
+			const roomNameElement = span(courseWithTime[k].room, 'room');
 			// Show roomName or not
 			if (!showClassRoom)
 				roomNameElement.style.display = 'none';
-			subCell.appendChild(roomNameElement);
+			courseCell.appendChild(roomNameElement);
+			roomNameElements.push(roomNameElement);
+		}
+		parentCell.appendChild(courseCell);
+		return courseCell;
+	}
+
+	/**
+	 * @param {HTMLTableCellElement[][]} cellTable
+	 * @param {[ScheduleCourse, ...time][]} courseWithTimeList
+	 * @param {boolean} pre
+	 */
+	function createCourseCellSingleList(cellTable, courseWithTimeList, pre) {
+		for (const courseWithTime of courseWithTimeList) {
+			if (courseWithTime[1].time.length === 3) {
+				const courseTime = courseWithTime[1].time;
+				const length = courseTime[2] - courseTime[1] + 1;
+				for (let k = 0; k < length; k++) {
+					createCourseCellSingle(cellTable[courseTime[1] + k][courseTime[0]], courseWithTime, pre);
+				}
+			} else
+				console.warn(courseWithTime);
+		}
+	}
+
+	/**
+	 * @param {HTMLTableCellElement} parentCell
+	 * @param {[ScheduleCourse, ...time]} courseWithTime
+	 * @param {boolean} pre
+	 * @return {HTMLDivElement}
+	 */
+	function createCourseCellSingle(parentCell, courseWithTime, pre) {
+		parentCell.className = 'activate';
+		const courseInfo = courseWithTime[0];
+		const serialID = courseInfo.deptID + '-' + courseInfo.sn;
+		const courseCell = div(pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
+			span('[' + courseInfo.deptID + ']' + courseInfo.sn + ' '),
+			span(courseInfo.name),
+		);
+		courseDetail[serialID] = null;
+		(courseSameCell[serialID] || (courseSameCell[serialID] = [])).push(courseCell);
+		courseCell.onmouseenter = courseCellHoverStart;
+		courseCell.onmouseleave = courseCellHoverEnd;
+
+		// Add room
+		for (let k = 1; k < courseWithTime.length; k++) {
+			if (!courseWithTime[k].room) continue;
+			const roomNameElement = span(courseWithTime[k].room, 'room');
+			// Show roomName or not
+			if (!showClassRoom)
+				roomNameElement.style.display = 'none';
+			courseCell.appendChild(roomNameElement);
 			roomNameElements.push(roomNameElement);
 		}
 
-		cell.appendChild(subCell);
+		parentCell.appendChild(courseCell);
+		return courseCell;
 	}
 
 	this.showRoomName = function (show) {
@@ -523,9 +616,9 @@ function ScheduleTable(showCourseInfoWindow, courseInfoWindow) {
 	this.setTableShow = function (showPre) {
 		if (showPre) {
 			scheduleTable.style.display = 'none';
-			preScheduleTable.style.display = 'block';
+			preScheduleTable.style.display = null;
 		} else {
-			scheduleTable.style.display = 'block';
+			scheduleTable.style.display = null;
 			preScheduleTable.style.display = 'none';
 		}
 	}

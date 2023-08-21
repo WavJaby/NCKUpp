@@ -28,7 +28,7 @@ public class ClientDebugLog implements EndpointModule {
         try {
             logFileOut = new FileOutputStream("clientLog.txt", true);
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
         }
     }
 
@@ -61,14 +61,14 @@ public class ClientDebugLog implements EndpointModule {
 
             // send response
             setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.isSuccess() ? 200 : 400, dataByte.length);
+            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
             OutputStream response = req.getResponseBody();
             response.write(dataByte);
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
-            e.printStackTrace();
         }
         logger.log("ClientDebugLog " + (System.currentTimeMillis() - startTime) + "ms");
     };

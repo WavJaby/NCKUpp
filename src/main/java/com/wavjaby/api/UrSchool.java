@@ -126,7 +126,7 @@ public class UrSchool implements EndpointModule {
                     urSchoolData.add(new ProfessorSummary((JsonArray) i));
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.errTrace(e);
             }
             lastFileUpdateTime = file.lastModified();
         }
@@ -144,7 +144,7 @@ public class UrSchool implements EndpointModule {
                 pool.shutdownNow();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             logger.warn("Data update pool close error");
             pool.shutdownNow();
         }
@@ -191,6 +191,7 @@ public class UrSchool implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
         }
         logger.log("Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
@@ -201,14 +202,14 @@ public class UrSchool implements EndpointModule {
         return httpHandler;
     }
 
-    private boolean getInstructorInfo(String id, String mode, ApiResponse response) {
+    private void getInstructorInfo(String id, String mode, ApiResponse response) {
         // check if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
 //            logger.log(id + " use cache");
             if (response != null)
                 response.setData((String) cacheData[1]);
-            return true;
+            return;
         }
 //        logger.log(id + " fetch data");
 
@@ -236,7 +237,7 @@ public class UrSchool implements EndpointModule {
             ) {
                 if (response != null)
                     response.errorParse("Tags not found");
-                return false;
+                return;
             }
 
             // Get tags
@@ -249,7 +250,7 @@ public class UrSchool implements EndpointModule {
                 ) {
                     if (response != null)
                         response.errorParse("Tag url not found");
-                    return false;
+                    return;
                 }
                 String url = resultBody.substring(urlStart, urlEnd);
                 if (url.startsWith("/shop") || urlStart > tagsEnd)
@@ -262,7 +263,7 @@ public class UrSchool implements EndpointModule {
                 ) {
                     if (response != null)
                         response.errorParse("Tag name not found");
-                    return false;
+                    return;
                 }
                 String tagName = Parser.unescapeEntities(resultBody.substring(tagNameStart, tagNameEnd).trim(), true);
 
@@ -290,7 +291,7 @@ public class UrSchool implements EndpointModule {
             ) {
                 if (response != null)
                     response.errorParse("Visitors not found");
-                return false;
+                return;
             }
             JsonArrayStringBuilder visitors = new JsonArrayStringBuilder();
             int takeCourseCount = Integer.parseInt(resultBody.substring(countStart, countEnd).trim());
@@ -301,14 +302,14 @@ public class UrSchool implements EndpointModule {
                 ) {
                     if (response != null)
                         response.errorParse("Profile url not found");
-                    return false;
+                    return;
                 }
                 if (resultBody.startsWith("store", visitorStart += 18)) break;
                 if ((visitorStart = resultBody.indexOf('\'', visitorStart)) == -1 ||
                         (visitorEnd = resultBody.indexOf('\'', visitorStart += 1)) == -1) {
                     if (response != null)
                         response.errorParse("Profile url string not found");
-                    return false;
+                    return;
                 }
                 String url = resultBody.substring(visitorStart, visitorEnd);
 
@@ -317,7 +318,7 @@ public class UrSchool implements EndpointModule {
                         (subStart = url.lastIndexOf('/', subEnd -= 1)) == -1) {
                     if (response != null)
                         response.errorParse("Profile url parse error");
-                    return false;
+                    return;
                 }
                 url = url.substring(subStart + 1, subEnd + 1);
 
@@ -334,7 +335,7 @@ public class UrSchool implements EndpointModule {
                 if ((commentEnd = resultBody.indexOf('}', commentStart + 1)) == -1) {
                     if (response != null)
                         response.errorParse("Comment data not found");
-                    return false;
+                    return;
                 }
                 JsonObject commentData = new JsonObject(resultBody.substring(commentStart, commentEnd + 1));
                 commentData.remove("cafe_id");
@@ -349,7 +350,7 @@ public class UrSchool implements EndpointModule {
                         avatarEnd > limit) {
                     if (response != null)
                         response.errorParse("Profile url string not found");
-                    return false;
+                    return;
                 }
                 String url = resultBody.substring(avatarStart, avatarEnd);
                 if (url.contains("anonymous"))
@@ -360,7 +361,7 @@ public class UrSchool implements EndpointModule {
                             (subStart = url.lastIndexOf('/', subEnd -= 1)) == -1) {
                         if (response != null)
                             response.errorParse("Profile url parse error");
-                        return false;
+                        return;
                     }
                     url = url.substring(subStart + 1, subEnd + 1);
                 }
@@ -374,7 +375,7 @@ public class UrSchool implements EndpointModule {
                         timestampEnd > limit) {
                     if (response != null)
                         response.errorParse("Profile url string not found");
-                    return false;
+                    return;
                 }
                 String timestamp = resultBody.substring(timestampStart, timestampEnd);
                 commentData.put("timestamp", Long.parseLong(timestamp));
@@ -395,12 +396,10 @@ public class UrSchool implements EndpointModule {
                 response.setData(instructorInfo);
             instructorCache.put(id + '-' + mode, new Object[]{System.currentTimeMillis(), instructorInfo});
 //            logger.log(id + " done");
-            return true;
         } catch (Exception e) {
             logger.errTrace(e);
             if (response != null)
                 response.errorParse(e.getMessage());
-            return false;
         }
     }
 
@@ -456,7 +455,7 @@ public class UrSchool implements EndpointModule {
             try {
                 fetchLeft.await();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.errTrace(e);
                 return;
             }
             shutdownFetchPool(1000, fetchPool);
@@ -473,7 +472,7 @@ public class UrSchool implements EndpointModule {
                 fileWriter.write(resultString);
                 fileWriter.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.errTrace(e);
             }
 
             logger.log("Used " + (System.currentTimeMillis() - start) + "ms");
@@ -631,7 +630,7 @@ public class UrSchool implements EndpointModule {
             }
             return professorSummaries;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.errTrace(e);
             return null;
         }
     }

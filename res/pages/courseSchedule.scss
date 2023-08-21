@@ -4,6 +4,7 @@ $schedule-head-bg-color: #282B2C;
 .courseSchedule {
     > .options {
         margin: 10px 10px 0 10px;
+        display: inline-block;
 
         > .checkboxWithName {
             margin-bottom: 5px;
@@ -11,6 +12,7 @@ $schedule-head-bg-color: #282B2C;
     }
 
     .courseScheduleTable {
+        height: 100%;
         margin: 10px;
         border-spacing: 3px;
 
@@ -47,30 +49,41 @@ $schedule-head-bg-color: #282B2C;
                 position: relative;
 
                 > td {
-                    padding: 5px;
-                    border: none;
-                    text-align: center;
+                    height: 100%;
+
+                    &:nth-child(1) {
+                        padding: 5px;
+                    }
 
                     // Time split line
                     &:nth-child(2) {
-                        border-right: white 1px solid;
                         width: 0;
-                    }
-
-                    // Course data
-                    &.activateCell {
-                        background: $course-block-bg-color;
-                        min-width: 8em;
-                        border-radius: 10px;
-                        vertical-align: top;
-                        cursor: pointer;
-
-                        > span {
-                            display: block;
-                        }
+                        border-right: white 1px solid;
+                        white-space: pre-wrap;
+                        padding: 5px;
                     }
                 }
 
+                // Course block
+                > td.activate > div {
+                    padding: 5px;
+                    text-align: center;
+                    box-sizing: border-box;
+                    border-radius: 10px;
+                    cursor: pointer;
+
+                    // Course data
+                    &.sure {
+                        height: 100%;
+                        background: $course-block-bg-color;
+                    }
+
+                    > span.room {
+                        display: block;
+                    }
+                }
+
+                // Row background
                 > .splitLine {
                     background-color: #1C1E1F;
                     width: 100%;
@@ -112,60 +125,54 @@ $schedule-head-bg-color: #282B2C;
 
     // PreScheduleTable
     .courseScheduleTable.pre {
-
         > tbody {
             // Schedule section row
-            > tr > td {
-                &.activate {
-                    vertical-align: top;
-                    border: 1px #666 solid;
-                    border-radius: 15px;
+            > tr > td.activate {
+                vertical-align: top;
+                border: 1px #666 solid;
+                border-radius: 13px;
+                padding: 3px;
+
+                &.hover {
+                    box-shadow: 0 0 2px 2px white;
                 }
 
                 > div {
-                    min-width: 8em;
-                    padding: 5px;
-                    border-radius: 10px;
-                    vertical-align: top;
-                    cursor: pointer;
+                    padding: 3px 5px;
 
                     &:nth-child(n+2) {
                         margin-top: 5px;
                     }
 
                     &.sure {
-                        background: $course-block-bg-color;
+                        height: auto;
+                        border: 2px #00000000 solid;
                     }
 
                     &.pre {
                         border: 2px gray dashed;
                     }
 
-                    & > span {
-                        white-space: nowrap;
-                        //display: block;
+                    &.hover {
+                        border-color: greenyellow;
                     }
 
-                    & > span.room {
-                        display: block;
+                    &.fullHeight {
+                        height: 100%;
+                        vertical-align: center;
                     }
                 }
-
-
             }
         }
     }
 
-    > .courseInfoWindow {
-        background: rgba(0, 0, 0, 0.9);
-        width: 70%;
-        height: 70%;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        margin: auto;
-        white-space: pre-wrap;
+    .courseInfo {
+        > .delete {
+            background-color: indianred;
+            position: absolute;
+            top: 0;
+            right: 0;
+            cursor: pointer;
+        }
     }
 }

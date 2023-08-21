@@ -13,6 +13,7 @@ import {
 	img,
 	input,
 	li,
+	mountableStylesheet,
 	nav,
 	QueryRouter,
 	RouterLazyLoad,
@@ -26,74 +27,8 @@ import {
 } from './res/domHelper_v001.min.js';
 
 import {metaSet, metaType} from './res/metaTag.js';
+import {fetchApi, mobileWidth} from './res/lib.js';
 
-const apiEndPoint = window.location.hostname === 'localhost'
-	? 'https://localhost/api'
-	: 'https://api.simon.chummydns.com/api';
-const mobileWidth = 700;
-/**
- * @typedef {Object} ApiResponse
- * @property {string} success
- * @property {string[]} err
- * @property {string[]} warn
- * @property {string} msg
- * @property {any} data
- */
-/**
- * @typedef {Object} CustomApiFetch
- * @property {int} [timeout] Fetch timeout time millisecond
- *
- * @typedef {RequestInit & CustomApiFetch} ApiFetch
- */
-/**
- * @param {string} endpoint
- * @param {string | null} [showState]
- * @param {ApiFetch} [option]
- * @return Promise<ApiResponse>
- */
-window.fetchApi = function (endpoint, showState, option) {
-	if (option) option.credentials = 'include';
-	else option = {credentials: 'include'};
-	let abortTimeout;
-	if (window.AbortController && option.timeout) {
-		const controller = new AbortController();
-		option.signal = controller.signal;
-		abortTimeout = setTimeout(() => controller.abort(), option.timeout);
-	}
-	const stateElement = showState ? requestState.addState(showState) : null;
-
-	return fetch(apiEndPoint + endpoint, option)
-		.then(i => i.json())
-		// Handle self defined error
-		.then(i => {
-			if (abortTimeout)
-				clearTimeout(abortTimeout);
-			if (!i.success && !i.msg)
-				window.messageAlert.addError(
-					'Api response error',
-					i.err.join('\n'), 2000);
-			if (stateElement)
-				requestState.removeState(stateElement);
-			return i;
-		})
-		.catch(e => {
-			// Timeout error
-			if (e.name === 'AbortError') {
-				window.messageAlert.addError(
-					'Api response timeout',
-					'Try again later', 3000);
-			}
-			// Other error
-			else {
-				window.messageAlert.addError(
-					'Network error',
-					e instanceof Error ? e.stack || e || 'Unknown error!' : e, 2000);
-			}
-			if (stateElement)
-				requestState.removeState(stateElement);
-			return null;
-		});
-};
 window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.navMenu = new ClassList('links');
@@ -112,6 +47,7 @@ window.pageLoading = new Signal(false);
 	console.log('index.js Init');
 	window.messageAlert = new MessageAlert();
 	window.requestState = requestStateObject();
+	const font = mountableStylesheet('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
 
 	// debug
 	let debugWindow = null;
@@ -158,10 +94,10 @@ window.pageLoading = new Signal(false);
 			div('source',
 				h2('資料來源'),
 				a(null, 'https://course.ncku.edu.tw/', 'noSelect', null, {target: '_blank'},
-					img('https://course.ncku.edu.tw/acadcdn/images/Logo_course.png', '國立成功大學課程資訊及選課系統', 'noDrag')
+					img('res/assets/courseNcku_logo.png', '國立成功大學課程資訊及選課系統', 'noDrag')
 				),
 				a(null, 'https://nckuhub.com/', 'noSelect', null, {target: '_blank'},
-					img('https://nckuhub.com/dist/images/table/nav_logo.svg', 'NCKUHub', 'noDrag')
+					img('res/assets/nckuHub_logo.svg', 'NCKUHub', 'noDrag')
 				),
 				a(null, 'https://urschool.org/', 'noSelect', null, {target: '_blank'},
 					img('res/assets/UrSchool_logo.png', 'UrSchool', 'noDrag')
@@ -194,7 +130,7 @@ window.pageLoading = new Signal(false);
 	}
 
 	// check login
-	window.fetchApi('/login?mode=course', 'Check login').then(onLoginStateChange);
+	fetchApi('/login?mode=course', 'Check login').then(onLoginStateChange);
 
 	const root = div('root',
 		// Navbar
@@ -205,7 +141,7 @@ window.pageLoading = new Signal(false);
 				)),
 				[
 					['Profile', null],
-					['Logout', () => window.fetchApi('/logout').then(onLoginStateChange)],
+					['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
 				],
 				false,
 				() => {
@@ -240,10 +176,11 @@ window.pageLoading = new Signal(false);
 
 	window.onload = () => {
 		console.log('Window onload');
+		font.mount();
 		document.body.innerHTML = '';
 		document.body.appendChild(root);
-		queryRouter.init();
 	};
+	queryRouter.init();
 
 	// functions
 	function pageButtonClick(e) {
@@ -411,7 +348,7 @@ window.pageLoading = new Signal(false);
 				loading = true;
 				window.pageLoading.set(true);
 				const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-				window.fetchApi('/login?mode=course', 'login', {
+				fetchApi('/login?mode=course', 'login', {
 					method: 'POST',
 					body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
 					timeout: 10000,
@@ -431,33 +368,3 @@ window.pageLoading = new Signal(false);
 		);
 	}
 })();
-
-window.timeParseSection = function (sectionText) {
-	let section;
-	if (sectionText === 'N')
-		section = 5;
-	else {
-		section = parseInt(sectionText, 16);
-		// Skip 5
-		if (section > 4)
-			++section;
-	}
-	return section;
-};
-
-window.timeParse = function (timeStr) {
-	const time = timeStr.split(',');
-	const parsedTime = new Int8Array(3);
-
-	parsedTime[0] = parseInt(time[0]);
-	if (time.length > 1) {
-		parsedTime[1] = window.timeParseSection(time[1]);
-	}
-	if (time.length > 2) {
-		parsedTime[2] = window.timeParseSection(time[2]);
-	}
-	// Make section end equals to section start
-	else if (time.length > 1)
-		parsedTime[2] = parsedTime[1];
-	return parsedTime;
-};

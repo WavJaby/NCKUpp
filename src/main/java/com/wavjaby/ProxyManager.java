@@ -121,7 +121,7 @@ public class ProxyManager {
             if (proxyTxtFile.exists())
                 proxiesString = new String(Files.readAllBytes(proxyTxtFile.toPath()));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
         }
         ProxyData proxyData;
         if (proxiesString != null) {

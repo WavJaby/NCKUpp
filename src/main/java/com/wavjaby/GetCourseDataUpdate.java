@@ -117,7 +117,7 @@ public class GetCourseDataUpdate implements Runnable {
             userDmChannelCache.put(userID, dmChannelID = new JsonObject(result).getString("id"));
             return dmChannelID;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
         }
         return null;
     }
@@ -137,7 +137,7 @@ public class GetCourseDataUpdate implements Runnable {
                     .execute().body();
             logger.log(new JsonObject(result).toStringBeauty());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.errTrace(e);
         }
     }
 

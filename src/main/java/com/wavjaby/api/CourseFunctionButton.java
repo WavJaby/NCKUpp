@@ -71,8 +71,8 @@ public class CourseFunctionButton implements EndpointModule {
             response.flush();
             req.close();
         } catch (IOException e) {
+            logger.errTrace(e);
             req.close();
-            e.printStackTrace();
         }
         logger.log("Course function button " + (System.currentTimeMillis() - startTime) + "ms");
     };
@@ -170,7 +170,7 @@ public class CourseFunctionButton implements EndpointModule {
             }
             if (!success)
                 response.errorCourseNcku();
-            if (message == null || message.length() == 0)
+            if (message == null || message.isEmpty())
                 message = "Unknown error";
             else {
                 message = message.replace("<br>", "\\n");
