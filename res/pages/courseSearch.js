@@ -206,7 +206,7 @@ export default function (router, loginState) {
 	const instructorInfoBubble = InstructorInfoBubble();
 
 	// Element
-	let courseSearchResultCount;
+	const courseSearchResultInfo = span();
 	// Static data
 	let nckuHubCourseID = null;
 	let urSchoolData = null;
@@ -597,6 +597,7 @@ export default function (router, loginState) {
 		textSearchFilter(updateFilter),
 		hideConflictCourseFilter(updateFilter, loginState),
 		insureSectionRangeFilter(updateFilter, sectionSelectMenu),
+		hidePracticeFilter(updateFilter)
 	];
 	filter.setOptions(filterOptions);
 
@@ -621,9 +622,6 @@ export default function (router, loginState) {
 			searchResultSignal.update();
 	}
 
-	function onkeyup(e) {
-		if (e.key === 'Enter') search();
-	}
 
 	// Search result render
 	let showResultLastIndex = 0;
@@ -635,16 +633,16 @@ export default function (router, loginState) {
 			courseRenderResult.length = 0;
 			courseRenderResultDisplay.length = 0;
 			expandButtons.length = 0;
-			courseSearchResultCount.textContent = 'Loading...';
+			courseSearchResultInfo.textContent = '搜尋中...';
 			return window.loadingElement.cloneNode(true);
 		}
 
 		// No result
 		if (!state.courseResult || state.courseResult.length === 0 || state.failed) {
 			if (state.failed)
-				courseSearchResultCount.textContent = 'Failed to search';
+				courseSearchResultInfo.textContent = '搜尋失敗';
 			else if (state.courseResult && state.courseResult.length === 0)
-				courseSearchResultCount.textContent = 'No result';
+				courseSearchResultInfo.textContent = '沒有結果';
 
 			return div();
 		}
@@ -778,7 +776,7 @@ export default function (router, loginState) {
 		}
 
 		// Update display element
-		courseSearchResultCount.textContent = courseRenderResultDisplay.length;
+		courseSearchResultInfo.textContent = '搜尋到 ' + courseRenderResultDisplay.length + ' 個結果';
 		showResultLastIndex = showResultIndexStep - 1;
 		for (let i = 0; i < courseRenderResultDisplay.length; i++) {
 			const item = courseRenderResultDisplay[i];
@@ -788,7 +786,6 @@ export default function (router, loginState) {
 
 		return tbody(null, courseRenderResultDisplay);
 	}
-
 
 	function openInstructorDetailWindow(info) {
 		window.pageLoading.set(true);
@@ -830,10 +827,7 @@ export default function (router, loginState) {
 			State(searchResultSignal, renderSearchResult),
 			tHead = thead('noSelect',
 				filter.createElement(),
-				tr(null, th(null, 'resultCount', {colSpan: 15},
-					span('Result count: '),
-					courseSearchResultCount = span()
-				)),
+				tr(null, th(null, 'resultCount', {colSpan: 15}, courseSearchResultInfo)),
 				tr(null,
 					th(null, null,
 						div('expandDownArrow', expandArrowImage.cloneNode()),
@@ -1048,13 +1042,14 @@ function sortToEnd(data) {
 
 /**
  * @typedef FilterOption
- * @property {function(firstRenderAfterSearch: boolean): void} onFilterStart Call before filter start
+ * @property {function(firstRenderAfterSearch: boolean): void} [onFilterStart] Call before filter start
  * @property {function(item: any): boolean} condition Check item to show
  * @property {HTMLElement|HTMLElement[]} element
  * @property {boolean} [fullLine]
  */
 /**
  * Filter tool bar
+ * @constructor
  */
 function Filter() {
 	let /**@type{FilterOption[]}*/options = null;
@@ -1134,8 +1129,8 @@ function textSearchFilter(onFilterUpdate) {
 		onFilterUpdate();
 	}
 
-	function condition(data) {
-		const /**@type{CourseData}*/ courseData = data[0];
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
 		if (textSearchFilterKeys.length === 0)
 			return true;
 		return findIfContains(courseData.courseName, textSearchFilterKeys) ||
@@ -1173,11 +1168,9 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 	let fetchingData = false;
 	let timeData = null;
 
-	function condition(data) {
-		const /**@type{CourseData}*/ courseData = data[0];
-		if (!checkBox.checked)
-			return true;
-		if (!courseData.time)
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
+		if (!checkBox.checked || !courseData.time)
 			return true;
 
 		for (const cosTime of courseData.time) {
@@ -1259,15 +1252,14 @@ function insureSectionRangeFilter(onFilterUpdate, sectionSelectMenu) {
 			updateSearchSection();
 	}
 
-	function condition(data) {
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
 		if (!checkBox.checked || searchSectionStart === -1)
 			return true;
 
-		const /**@type{CourseData}*/ courseData = data[0];
 		for (const cosTime of courseData.time) {
 			if (!cosTime.sectionStart)
 				continue;
-
 			const sectionStart = timeParseSection(cosTime.sectionStart);
 			const sectionEnd = cosTime.sectionEnd ? timeParseSection(cosTime.sectionEnd) : sectionStart;
 			if (sectionStart < searchSectionStart || sectionEnd > searchSectionEnd)
@@ -1278,8 +1270,10 @@ function insureSectionRangeFilter(onFilterUpdate, sectionSelectMenu) {
 
 	function updateSearchSection() {
 		let searchSection = sectionSelectMenu.getSelectedValue();
-		if (searchSection.length === 0)
+		if (searchSection.length === 0) {
 			searchSectionStart = -1;
+			return;
+		}
 
 		searchSectionStart = searchSectionEnd = parseInt(searchSection[0]);
 		for (let i of searchSection) {
@@ -1294,11 +1288,34 @@ function insureSectionRangeFilter(onFilterUpdate, sectionSelectMenu) {
 
 	function onchange() {
 		updateSearchSection();
-		onFilterUpdate();
+		if (searchSectionStart !== -1)
+			onFilterUpdate();
 	}
 
 	return {
 		onFilterStart: onFilterStart,
+		condition: condition,
+		element: checkBoxOuter,
+	}
+}
+
+
+/**
+ * @param {function()} onFilterUpdate
+ * @return {FilterOption}
+ */
+function hidePracticeFilter(onFilterUpdate) {
+	const checkBoxOuter = checkboxWithName(null, '隱藏實習', true, () => onFilterUpdate());
+	const checkBox = checkBoxOuter.input;
+
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
+		if (!checkBox.checked)
+			return true;
+		return courseData.courseType !== '實習' && courseData.courseType !== 'Practice' || courseData.courseName.length > 0;
+	}
+
+	return {
 		condition: condition,
 		element: checkBoxOuter,
 	}

@@ -213,18 +213,7 @@ public class CourseSchedule implements EndpointModule {
             }
 
             JsonObject info = new JsonObject();
-            String type = rowElements.get(6).text();
-            switch (type) {
-                case "講義":
-                case "Lecture":
-                    type = "lecture";
-                    break;
-                case "實習":
-                case "Lab":
-                    type = "lab";
-                    break;
-            }
-            info.put("type", type);
+            info.put("type", rowElements.get(6).text());
 
             // parse time
             Element timeElement = rowElements.get(7);

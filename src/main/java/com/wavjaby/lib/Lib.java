@@ -44,7 +44,7 @@ public class Lib {
 //        logger.log("Make CosPreCheck " + cookieStore.getCookies().toString());
 
         // 3 try
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) {
             long now = System.currentTimeMillis() / 1000;
             try {
                 String postData = "time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8");
@@ -58,11 +58,12 @@ public class Lib {
                         .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                         .header("X-Requested-With", "XMLHttpRequest")
                         .requestBody(postData)
-                        .timeout(4000)
+                        .timeout(5000)
                         .execute();
                 return;
             } catch (IOException e) {
-                logger.errTrace(e);
+//                logger.errTrace(e);
+                logger.warn("CosPreCheck timeout");
             }
         }
         // Failed

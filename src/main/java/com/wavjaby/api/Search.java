@@ -48,7 +48,8 @@ public class Search implements EndpointModule {
     private static final String TAG = "[Search]";
     private static final Logger logger = new Logger(TAG);
 
-    private static final int MAX_ROBOT_CHECK_TRY = 5;
+    private static final int MAX_ROBOT_CHECK_REQUEST_TRY = 3;
+    private static final int MAX_ROBOT_CHECK_TRY = 2;
     private static final int COS_PRE_CHECK_COOKIE_LOCK = 2;
     private static final int MULTITHREADING_SEARCH_THREAD_COUNT = 4;
     private final ThreadPoolExecutor cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("CosPreT-"));
@@ -830,9 +831,10 @@ public class Search implements EndpointModule {
                 success = allSuccess.get();
                 response.setData(result.toString());
             } else if (searchQuery.dayOfWeek != null && searchQuery.dayOfWeek.length > 1) {
-                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+                final int threadCount = 2;
+                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount, new ThreadFactory("SearchT-"));
                 CountDownLatch taskLeft = new CountDownLatch(searchQuery.dayOfWeek.length);
-                Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
+                Semaphore fetchPoolLock = new Semaphore(threadCount, true);
                 AtomicBoolean allSuccess = new AtomicBoolean(true);
 
                 List<CourseData> courseDataList = new CopyOnWriteArrayList<>();
@@ -856,7 +858,8 @@ public class Search implements EndpointModule {
                     logger.warn("FetchPool shutdown timeout");
                 }
                 success = allSuccess.get();
-                response.setData(courseDataList.toString());
+                if (success)
+                    response.setData(courseDataList.toString());
             } else {
                 List<CourseData> courseDataList = new ArrayList<>();
                 success = getQueryCourseData(searchQuery, null, cookieStore, response, courseDataList);
@@ -910,7 +913,7 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .userAgent(Main.USER_AGENT);
-        HttpResponseData httpResponseData = checkRobot(courseNckuOrgUri, request, cookieStore);
+        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
         if (!httpResponseData.isSuccess()) {
             if (response != null)
                 response.errorFetch("Failed to fetch all dept data");
@@ -943,7 +946,7 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .userAgent(USER_AGENT);
-        HttpResponseData httpResponseData = checkRobot(courseNckuOrgUri, request, cookieStore);
+        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
         if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
         String body = httpResponseData.data;
@@ -1063,9 +1066,9 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .userAgent(Main.USER_AGENT)
-                .timeout(10000)
+                .timeout(8000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = checkRobot(courseNckuOrgUri, request, deptToken.cookieStore);
+        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, deptToken.cookieStore);
 
         if (httpResponseData.isSuccess())
             cosPreCheckCookie(courseNckuOrgUri, httpResponseData.data, deptToken.cookieStore);
@@ -1332,9 +1335,9 @@ public class Search implements EndpointModule {
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .timeout(7000)
+                .timeout(8000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = checkRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
+        HttpResponseData httpResponseData = sendRequestAndCheckRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
 
         if (httpResponseData.state == ResponseState.SUCCESS)
             cosPreCheckCookie(saveQueryToken.urlOrigin, httpResponseData.data, saveQueryToken.cookieStore);
@@ -1374,6 +1377,7 @@ public class Search implements EndpointModule {
             } finally {
                 // TODO: Find problem
                 finalCookieLock.semaphore.release();
+//                logger.log(finalCookieLock.semaphore);
                 if (finalCookieLock.semaphore.availablePermits() == COS_PRE_CHECK_COOKIE_LOCK)
                     cosPreCheckCookieLock.remove(PHPSESSID);
                 cosPreCheckPoolLock.release();
@@ -1796,19 +1800,20 @@ public class Search implements EndpointModule {
         return body.substring(idStart + 1, idEnd);
     }
 
-    public HttpResponseData checkRobot(URI urlOriginUri, Connection request, CookieStore cookieStore) {
+    public HttpResponseData sendRequestAndCheckRobot(URI urlOriginUri, Connection request, CookieStore cookieStore) {
         boolean networkError = false;
-        for (int i = 0; i < MAX_ROBOT_CHECK_TRY; i++) {
+        for (int i = 0; i < MAX_ROBOT_CHECK_REQUEST_TRY; i++) {
             String response;
             try {
                 response = request.execute().body();
                 networkError = false;
+            } catch (SocketTimeoutException e) {
+                networkError = true;
+                logger.warn("CheckRobot timeout retry");
+                continue;
             } catch (IOException | UncheckedIOException e) {
                 logger.errTrace(e);
-                networkError = true;
-                // Retry
-                continue;
-//                return new HttpResponseData(ResponseState.NETWORK_ERROR);
+                return new HttpResponseData(ResponseState.NETWORK_ERROR);
             }
 
             // Check if no robot
@@ -1823,7 +1828,7 @@ public class Search implements EndpointModule {
 
             // Crack robot
             logger.warn("Crack robot code");
-            for (; i < MAX_ROBOT_CHECK_TRY; i++) {
+            for (int j = 0; j < MAX_ROBOT_CHECK_TRY; j++) {
                 String code = robotCode.getCode(urlOriginUri + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
                 logger.warn("Crack code: " + code);
                 if (code == null || code.isEmpty())
@@ -1841,6 +1846,7 @@ public class Search implements EndpointModule {
                                     "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
                                     "&code=" + code)
                             .execute().body();
+//                    logger.log(result);
                     if (new JsonObject(result).getBoolean("status"))
                         break;
                 } catch (JsonException e) {
