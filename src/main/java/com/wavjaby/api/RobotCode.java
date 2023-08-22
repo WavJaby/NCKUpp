@@ -47,15 +47,19 @@ public class RobotCode implements EndpointModule {
 
     public RobotCode(PropertiesReader serverSettings, ProxyManager proxyManager) {
         this.proxyManager = proxyManager;
-        String workDir = serverSettings.getProperty("ocrWorkDir", "./");
+        String workDirPath = serverSettings.getProperty("ocrWorkDir", "./");
 
         String venvPath = serverSettings.getProperty("ocrVenvPath", "./venv/bin/activate");
 
         String mainPyPath = serverSettings.getProperty("ocrMainPyPath", "./main.py");
 
         // Create process
+        File workDir = new File(workDirPath);
+        logger.log("Work dir: " + workDir.getAbsolutePath());
         processBuilder = new ProcessBuilder(venvPath, mainPyPath);
-        processBuilder.directory(new File(workDir));
+//        processBuilder = new ProcessBuilder("/bin/bash", "-c",
+//                "cd " + workDir.getAbsolutePath() + " && source " + venvPath + " && python3 " + mainPyPath);
+        processBuilder.directory(workDir);
         processBuilder.redirectErrorStream(true);
     }
 

@@ -1,6 +1,6 @@
 export const mobileWidth = 700;
 const apiEndPoint = window.location.hostname === 'localhost'
-	? 'https://localhost/api'
+	? window.location.origin + '/api'
 	: 'https://api.simon.chummydns.com/api';
 /**
  * @typedef {Object} ApiResponse
@@ -120,9 +120,9 @@ export function courseDataTimeToString(time) {
 			section = time.sectionStart + '~' + time.sectionEnd;
 		} else
 			section = time.sectionStart;
-		return '[' + (time.dayOfWeek + 1) + ']' + section;
+		return '[' + (time.dayOfWeek) + ']' + section;
 	}
-	return '[' + (time.dayOfWeek + 1) + ']';
+	return '[' + (time.dayOfWeek) + ']';
 }
 
 /**

@@ -251,15 +251,25 @@ public class Login implements EndpointModule {
         // Login course ncku
         else if (mode.equals("course")) {
             String loginState = unpackCourseLoginStateCookie(cookies, cookieStore);
-            String postData = post ? readRequestBody(req) : null;
-            loginCourseNcku(get, postData, response, cookieStore);
+            try {
+                String postData = post ? readRequestBody(req) : null;
+                loginCourseNcku(get, postData, response, cookieStore);
+            } catch (IOException e) {
+                response.errorBadPayload("Read payload error");
+                logger.errTrace(e);
+            }
             packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
         }
         // Login student identification system
         else if (mode.equals("stuId")) {
             String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
-            String postData = post ? readRequestBody(req) : null;
-            loginNckuStudentIdSystem(get, postData, response, cookieStore);
+            try {
+                String postData = post ? readRequestBody(req) : null;
+                loginNckuStudentIdSystem(get, postData, response, cookieStore);
+            } catch (IOException e) {
+                response.errorBadPayload("Read payload error");
+                logger.errTrace(e);
+            }
             packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
         }
         // Unknown mode

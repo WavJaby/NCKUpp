@@ -206,7 +206,7 @@ export default function (router, loginState) {
 	const instructorInfoBubble = InstructorInfoBubble();
 
 	// Element
-	let courseSearchForm, courseSearchResultCount;
+	let courseSearchResultCount;
 	// Static data
 	let nckuHubCourseID = null;
 	let urSchoolData = null;
@@ -265,6 +265,27 @@ export default function (router, loginState) {
 		if (rawQuery && rawQuery.length > 0)
 			search(rawQuery, false);
 	}
+
+	// Search form
+	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', 'dept', null, {searchValue: true});
+	const sectionSelectMenu = new SelectMenu('Section', 'section', 'section', [
+		['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', 'N'], ['6', '5'], ['7', '6'], ['8', '7'], ['9', '8'], ['10', '9'],
+		['11', 'A'], ['12', 'B'], ['13', 'C'], ['14', 'D'], ['15', 'E']
+	], {multiple: true});
+	const courseSearchForm = div('form',
+		// input(null, 'Serial number', 'serial', {onkeyup}),
+		input(null, 'Course name', 'courseName', {onkeyup}),
+		deptNameSelectMenu,
+		input(null, 'Instructor', 'instructor', {onkeyup}),
+		new SelectMenu('Grade', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
+		new SelectMenu('DayOfWeek', 'dayOfWeek', 'dayOfWeek', [['1', '一'], ['2', '二'], ['3', '三'], ['4', '四'], ['5', '五'], ['6', '六'], ['7', '日']], {
+			searchBar: false,
+			multiple: true
+		}),
+		sectionSelectMenu,
+		button(null, 'search', search),
+		button(null, 'get watched course', getWatchCourse),
+	);
 
 	/**
 	 * @param {string[][]} [rawQuery] [key, value][]
@@ -393,17 +414,6 @@ export default function (router, loginState) {
 		console.log(courseResult);
 		searchResultSignal.set({loading: false, courseResult, nckuhubResult});
 		searching = false;
-	}
-
-	function openInstructorDetailWindow(info) {
-		window.pageLoading.set(true);
-		fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
-			/**@type UrSchoolInstructor*/
-			const instructor = response.data;
-			instructor.info = info;
-			instructorDetailWindow.set(instructor);
-			window.pageLoading.set(false);
-		});
 	}
 
 	// Watched list
@@ -586,23 +596,28 @@ export default function (router, loginState) {
 	const filterOptions = [
 		textSearchFilter(updateFilter),
 		hideConflictCourseFilter(updateFilter, loginState),
+		insureSectionRangeFilter(updateFilter, sectionSelectMenu),
 	];
 	filter.setOptions(filterOptions);
 
 	/**
-	 * @param {boolean} [firstRender]
+	 * @param {boolean} [firstRenderAfterSearch]
 	 */
-	function updateFilter(firstRender) {
+	function updateFilter(firstRenderAfterSearch) {
 		if (courseRenderResult.length === 0)
 			return;
 
 		console.log('Update Filter');
 		resetSortArrow();
+		for (let i of filterOptions) {
+			if (i.onFilterStart)
+				i.onFilterStart(firstRenderAfterSearch);
+		}
 		courseRenderResultFilter = filter.updateFilter(courseRenderResult);
 		courseRenderResultDisplay.length = 0;
 		for (/**@type{[CourseData, HTMLElement]}*/const i of courseRenderResultFilter)
 			courseRenderResultDisplay.push(i[1]);
-		if (!firstRender)
+		if (!firstRenderAfterSearch)
 			searchResultSignal.update();
 	}
 
@@ -651,7 +666,10 @@ export default function (router, loginState) {
 						// Course tags
 						data.tags === null ? null : div('tags',
 							data.tags.map(i => i.link
-								? a(i.name, i.link, null, null, {style: 'background-color:' + i.color, target: '_blank'})
+								? a(i.name, i.link, null, null, {
+									style: 'background-color:' + i.color,
+									target: '_blank'
+								})
 								: div(null, text(i.name), {style: 'background-color:' + i.color})
 							)
 						),
@@ -771,6 +789,18 @@ export default function (router, loginState) {
 		return tbody(null, courseRenderResultDisplay);
 	}
 
+
+	function openInstructorDetailWindow(info) {
+		window.pageLoading.set(true);
+		fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
+			/**@type UrSchoolInstructor*/
+			const instructor = response.data;
+			instructor.info = info;
+			instructorDetailWindow.set(instructor);
+			window.pageLoading.set(false);
+		});
+	}
+
 	function createSyllabusUrl(yearSem, sysNumClassCode) {
 		const year = yearSem.substring(0, yearSem.length - 1).padStart(4, '0');
 		const sem = yearSem.charAt(yearSem.length - 1) === '0' ? '1' : '2';
@@ -788,24 +818,10 @@ export default function (router, loginState) {
 	}
 
 	// Search page
-	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', 'dept', null, {searchValue: true});
 	let tHead;
 	const courseSearch = div('courseSearch',
 		{onRender, onPageClose, onPageOpen},
-		courseSearchForm = div('form',
-			// input(null, 'Serial number', 'serial', {onkeyup}),
-			input(null, 'Course name', 'courseName', {onkeyup}),
-			deptNameSelectMenu,
-			input(null, 'Instructor', 'instructor', {onkeyup}),
-			new SelectMenu('Grade', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
-			new SelectMenu('DayOfWeek', 'dayOfWeek', 'dayOfWeek', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
-			new SelectMenu('Section', 'section', 'section', [
-				['1', '0'], ['2', '1'], ['3', '2'], ['4', '3'], ['5', '4'], ['6', 'N'], ['7', '5'], ['8', '6'], ['9', '7'], ['10', '8'], ['11', '9'],
-				['12', 'A'], ['13', 'B'], ['14', 'C'], ['15', 'D'], ['16', 'E']
-			], {multiple: true}),
-			button(null, 'search', search),
-			button(null, 'get watched course', getWatchCourse),
-		),
+		courseSearchForm,
 		table('result', {cellPadding: 0},
 			colgroup(null,
 				// col(null),
@@ -1032,11 +1048,11 @@ function sortToEnd(data) {
 
 /**
  * @typedef FilterOption
+ * @property {function(firstRenderAfterSearch: boolean): void} onFilterStart Call before filter start
  * @property {function(item: any): boolean} condition Check item to show
  * @property {HTMLElement|HTMLElement[]} element
  * @property {boolean} [fullLine]
  */
-
 /**
  * Filter tool bar
  */
@@ -1090,7 +1106,6 @@ function Filter() {
 		return courseRenderResultFilter;
 	}
 }
-
 
 /**
  * @param {function()} onFilterUpdate
@@ -1226,4 +1241,65 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 		condition: condition,
 		element: checkBoxOuter,
 	};
+}
+
+/**
+ * @param {function()} onFilterUpdate
+ * @param {SelectMenu} sectionSelectMenu
+ * @return {FilterOption}
+ */
+function insureSectionRangeFilter(onFilterUpdate, sectionSelectMenu) {
+	const checkBoxOuter = checkboxWithName(null, '確保節次範圍', true, onchange);
+	const checkBox = checkBoxOuter.input;
+
+	let searchSectionStart = -1, searchSectionEnd = -1;
+
+	function onFilterStart(firstRenderAfterSearch) {
+		if (firstRenderAfterSearch)
+			updateSearchSection();
+	}
+
+	function condition(data) {
+		if (!checkBox.checked || searchSectionStart === -1)
+			return true;
+
+		const /**@type{CourseData}*/ courseData = data[0];
+		for (const cosTime of courseData.time) {
+			if (!cosTime.sectionStart)
+				continue;
+
+			const sectionStart = timeParseSection(cosTime.sectionStart);
+			const sectionEnd = cosTime.sectionEnd ? timeParseSection(cosTime.sectionEnd) : sectionStart;
+			if (sectionStart < searchSectionStart || sectionEnd > searchSectionEnd)
+				return false;
+		}
+		return true;
+	}
+
+	function updateSearchSection() {
+		let searchSection = sectionSelectMenu.getSelectedValue();
+		if (searchSection.length === 0)
+			searchSectionStart = -1;
+
+		searchSectionStart = searchSectionEnd = parseInt(searchSection[0]);
+		for (let i of searchSection) {
+			i = parseInt(i);
+			if (i < searchSectionStart)
+				searchSectionStart = i;
+			else if (i > searchSectionEnd)
+				searchSectionEnd = i;
+		}
+		// console.log(searchSectionStart, searchSectionEnd);
+	}
+
+	function onchange() {
+		updateSearchSection();
+		onFilterUpdate();
+	}
+
+	return {
+		onFilterStart: onFilterStart,
+		condition: condition,
+		element: checkBoxOuter,
+	}
 }

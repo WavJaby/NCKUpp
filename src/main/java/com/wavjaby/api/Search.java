@@ -50,6 +50,7 @@ public class Search implements EndpointModule {
 
     private static final int MAX_ROBOT_CHECK_TRY = 5;
     private static final int COS_PRE_CHECK_COOKIE_LOCK = 2;
+    private static final int MULTITHREADING_SEARCH_THREAD_COUNT = 4;
     private final ThreadPoolExecutor cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("CosPreT-"));
     private final Semaphore cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize(), true);
     private final Map<String, CookieLock> cosPreCheckCookieLock = new ConcurrentHashMap<>();
@@ -172,8 +173,8 @@ public class Search implements EndpointModule {
         final String courseName;        // 課程名稱
         final String instructor;        // 教師姓名
         final String grade;             // 年級 1 ~ 4
-        final String dayOfWeek;         // 星期 1 ~ 7
-        final String sectionOfDay;      // 節次 [1 ~ 16]
+        final String[] dayOfWeek;         // 星期 [1 ~ 7]
+        final String[] sectionOfDay;      // 節次 [0 ~ 15]
 
         final boolean getAll;
 
@@ -196,16 +197,17 @@ public class Search implements EndpointModule {
             if (courseData.timeList != null) {
                 for (CourseData.TimeData time : courseData.timeList) {
                     if (time.section == null) continue;
-                    dayOfWeek = String.valueOf(time.dayOfWeek + 1);
-                    sectionOfDay = String.valueOf(time.getSectionAsInt());
+                    dayOfWeek = String.valueOf(time.dayOfWeek);
+                    Integer s = time.getSectionAsInt();
+                    sectionOfDay = s == null ? null : String.valueOf(s + 1);
                     break;
                 }
                 // if no section
                 if (dayOfWeek == null)
-                    dayOfWeek = String.valueOf(courseData.timeList[0].dayOfWeek + 1);
+                    dayOfWeek = String.valueOf(courseData.timeList[0].dayOfWeek);
             }
-            this.dayOfWeek = dayOfWeek;
-            this.sectionOfDay = sectionOfDay;
+            this.dayOfWeek = new String[]{dayOfWeek};
+            this.sectionOfDay = new String[]{sectionOfDay};
 
             this.getAll = false;
             this.getSerial = false;
@@ -225,14 +227,15 @@ public class Search implements EndpointModule {
             this.courseName = searchQuery.courseName;
             this.instructor = searchQuery.instructor;
             this.grade = searchQuery.grade;
-            this.dayOfWeek = searchQuery.dayOfWeek;
-            this.sectionOfDay = searchQuery.sectionOfDay;
+            this.dayOfWeek = searchQuery.dayOfWeek == null ? null : searchQuery.dayOfWeek.clone();
+            this.sectionOfDay = searchQuery.sectionOfDay == null ? null : searchQuery.sectionOfDay.clone();
 
             this.getAll = searchQuery.getAll;
             this.getSerial = searchQuery.getSerial;
             this.getSerialError = searchQuery.getSerialError;
 
-            this.serialIdNumber = searchQuery.serialIdNumber;
+            this.serialIdNumber = searchQuery.serialIdNumber == null ? null
+                    : new HashMap<>(searchQuery.serialIdNumber);
 
             this.historySearch = searchQuery.historySearch;
             this.historySearchError = searchQuery.historySearchError;
@@ -329,8 +332,23 @@ public class Search implements EndpointModule {
             this.courseName = query.get("courseName");      // 課程名稱
             this.instructor = query.get("instructor");      // 教師姓名
             this.grade = query.get("grade");                // 年級 1 ~ 4
-            this.dayOfWeek = query.get("dayOfWeek");        // 星期 1 ~ 7
-            this.sectionOfDay = query.get("section");       // 節次 [1 ~ 16]
+            String dayOfWeek = query.get("dayOfWeek");        // 星期 [1 ~ 7]
+            String sectionOfDay = query.get("section");       // 節次 [0 ~ 15]
+            if (dayOfWeek == null && sectionOfDay != null)
+                this.dayOfWeek = new String[]{"1", "2", "3", "4", "5", "6", "7"};
+            else if (dayOfWeek != null)
+                this.dayOfWeek = dayOfWeek.split(",");
+            else
+                this.dayOfWeek = null;
+
+            String[] sectionOfDayArr = null;
+            if (sectionOfDay != null) {
+                sectionOfDayArr = sectionOfDay.split(",");
+                for (int i = 0; i < sectionOfDayArr.length; i++)
+                    sectionOfDayArr[i] = String.valueOf(Integer.parseInt(sectionOfDayArr[i]) + 1);
+            }
+            this.sectionOfDay = sectionOfDayArr;
+
         }
 
         boolean noQuery() {
@@ -473,11 +491,11 @@ public class Search implements EndpointModule {
 
             public Integer getSectionAsInt() {
                 if (section == null) return null;
-                if (section <= '4') return section - '0' + 1;
-                if (section == 'N') return 6;
-                if (section <= '9') return section - '5' + 7;
-                if (section >= 'A' && section <= 'E') return section - 'A' + 12;
-                if (section >= 'a' && section <= 'e') return section - 'a' + 12;
+                if (section <= '4') return section - '0';
+                if (section == 'N') return 5;
+                if (section <= '9') return section - '5' + 6;
+                if (section >= 'A' && section <= 'E') return section - 'A' + 11;
+                if (section >= 'a' && section <= 'e') return section - 'a' + 11;
                 throw new RuntimeException(new NumberFormatException());
             }
 
@@ -723,12 +741,13 @@ public class Search implements EndpointModule {
                 // start getting dept
                 else {
                     CountDownLatch taskLeft = new CountDownLatch(allDeptData.deptCount);
-                    final int poolSize = 4;
-                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(poolSize, new ThreadFactory("SearchT-"));
+                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
+                            Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+                    Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
                     // Get cookie fragments
-                    AllDeptData[] fragments = new AllDeptData[poolSize];
-                    CountDownLatch fragmentsLeft = new CountDownLatch(poolSize);
-                    for (int i = 0; i < poolSize; i++) {
+                    AllDeptData[] fragments = new AllDeptData[MULTITHREADING_SEARCH_THREAD_COUNT];
+                    CountDownLatch fragmentsLeft = new CountDownLatch(MULTITHREADING_SEARCH_THREAD_COUNT);
+                    for (int i = 0; i < MULTITHREADING_SEARCH_THREAD_COUNT; i++) {
                         int finalI = i;
                         fetchPool.submit(() -> {
                             fragments[finalI] = getAllDeptData(createCookieStore(), null);
@@ -740,7 +759,6 @@ public class Search implements EndpointModule {
                     // Fetch data
                     int i = 0;
                     List<CourseData> courseDataList = new ArrayList<>();
-                    Semaphore fetchPoolLock = new Semaphore(poolSize, true);
                     AtomicBoolean allSuccess = new AtomicBoolean(true);
                     for (String dept : allDeptData.allDept) {
                         fetchPoolLock.acquire();
@@ -783,13 +801,11 @@ public class Search implements EndpointModule {
             // get listed serial
             else if (searchQuery.getSerial) {
                 assert searchQuery.serialIdNumber != null;
-
-                final int poolSize = 4;
-                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(poolSize, new ThreadFactory("SearchT-"));
+                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
                 CountDownLatch taskLeft = new CountDownLatch(searchQuery.serialIdNumber.size());
+                Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
 
                 JsonObjectStringBuilder result = new JsonObjectStringBuilder();
-                Semaphore fetchPoolLock = new Semaphore(poolSize, true);
                 AtomicBoolean allSuccess = new AtomicBoolean(true);
                 for (Map.Entry<String, Set<String>> i : searchQuery.serialIdNumber.entrySet()) {
                     fetchPoolLock.acquire();
@@ -813,6 +829,34 @@ public class Search implements EndpointModule {
                 }
                 success = allSuccess.get();
                 response.setData(result.toString());
+            } else if (searchQuery.dayOfWeek != null && searchQuery.dayOfWeek.length > 1) {
+                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+                CountDownLatch taskLeft = new CountDownLatch(searchQuery.dayOfWeek.length);
+                Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
+                AtomicBoolean allSuccess = new AtomicBoolean(true);
+
+                List<CourseData> courseDataList = new CopyOnWriteArrayList<>();
+                for (int i = 0; i < searchQuery.dayOfWeek.length; i++) {
+                    fetchPoolLock.acquire();
+                    final int finalI = i;
+                    fetchPool.submit(() -> {
+                        List<CourseData> eachCourseDataList = new ArrayList<>();
+                        if (allSuccess.get() && !getQueryCourseData(searchQuery, null, finalI, cookieStore, response, eachCourseDataList)) {
+                            allSuccess.set(false);
+                        }
+                        courseDataList.addAll(eachCourseDataList);
+                        fetchPoolLock.release();
+                        taskLeft.countDown();
+                    });
+                }
+                taskLeft.await();
+                fetchPool.shutdown();
+                if (!fetchPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+                    fetchPool.shutdownNow();
+                    logger.warn("FetchPool shutdown timeout");
+                }
+                success = allSuccess.get();
+                response.setData(courseDataList.toString());
             } else {
                 List<CourseData> courseDataList = new ArrayList<>();
                 success = getQueryCourseData(searchQuery, null, cookieStore, response, courseDataList);
@@ -1031,8 +1075,13 @@ public class Search implements EndpointModule {
 
     private boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum,
                                        CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
+        return getQueryCourseData(searchQuery, getSerialNum, 0, cookieStore, response, courseDataList);
+    }
+
+    private boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum, int dayOfWeekIndex,
+                                       CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
         // Create save query token
-        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, response);
+        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, dayOfWeekIndex, cookieStore, response);
         if (saveQueryToken == null)
             return false;
 
@@ -1085,7 +1134,7 @@ public class Search implements EndpointModule {
         return true;
     }
 
-    public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, CookieStore cookieStore, ApiResponse response) {
+    public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, int dayOfWeekIndex, CookieStore cookieStore, ApiResponse response) {
         StringBuilder postData = new StringBuilder();
         URI urlOrigin;
         CookieStore postCookieStore;
@@ -1138,8 +1187,10 @@ public class Search implements EndpointModule {
                 postData.append("&syear_e=").append(searchQuery.yearEnd);
                 postData.append("&sem_b=").append(searchQuery.semBegin);
                 postData.append("&sem_e=").append(searchQuery.semEnd);
-                if (searchQuery.courseName != null) postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.instructor != null) postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+                if (searchQuery.courseName != null)
+                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+                if (searchQuery.instructor != null)
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
 
 //                Connection request = HttpConnection.connect(courseQueryNckuOrg + "/index.php?c=qry11215&m=en_query")
@@ -1215,12 +1266,16 @@ public class Search implements EndpointModule {
                 // Write post data
                 postData.append("id=");
                 if (searchQuery.searchID != null) postData.append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
-                if (searchQuery.courseName != null) postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.instructor != null) postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
-                if (searchQuery.dayOfWeek != null) postData.append("&wk=").append(searchQuery.dayOfWeek);
+                if (searchQuery.courseName != null)
+                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+                if (searchQuery.instructor != null)
+                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+                if (searchQuery.dayOfWeek != null)
+                    postData.append("&wk=").append(searchQuery.dayOfWeek[dayOfWeekIndex]);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
-                if (searchQuery.sectionOfDay != null) postData.append("&cl=").append(URLEncoder.encode(searchQuery.sectionOfDay, "UTF-8"));
+                if (searchQuery.sectionOfDay != null)
+                    postData.append("&cl=").append(URLEncoder.encode(String.join(",", searchQuery.sectionOfDay), "UTF-8"));
             }
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);
@@ -1242,7 +1297,8 @@ public class Search implements EndpointModule {
         String body;
         try {
             body = request.execute().body();
-//            logger.log(body);
+//            logger.log(postData.toString());
+            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
 
         } catch (IOException e) {
             logger.errTrace(e);
@@ -1574,7 +1630,7 @@ public class Search implements EndpointModule {
                     if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
                         // Get dayOfWeek, format: [1]2~3
                         if (text.length() > 2 && text.charAt(2) == ']') {
-                            timeCacheDayOfWeek = (byte) ((text.charAt(1) - '0') - 1);
+                            timeCacheDayOfWeek = (byte) (text.charAt(1) - '0');
                             // Get section
                             if (text.length() > 3) {
                                 timeCacheSection = text.charAt(3);
@@ -1770,6 +1826,8 @@ public class Search implements EndpointModule {
             for (; i < MAX_ROBOT_CHECK_TRY; i++) {
                 String code = robotCode.getCode(urlOriginUri + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
                 logger.warn("Crack code: " + code);
+                if (code == null || code.isEmpty())
+                    continue;
                 try {
                     String result = HttpConnection.connect(urlOriginUri + "/index.php?c=portal&m=robot")
                             .header("Connection", "keep-alive")

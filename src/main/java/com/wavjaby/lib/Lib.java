@@ -89,19 +89,15 @@ public class Lib {
         }
     }
 
-    public static String readRequestBody(HttpExchange req) {
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            InputStream in = req.getRequestBody();
-            byte[] buff = new byte[1024];
-            int len;
-            while ((len = in.read(buff, 0, buff.length)) > 0)
-                out.write(buff, 0, len);
-            in.close();
-            return out.toString("UTF-8");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    public static String readRequestBody(HttpExchange req) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        InputStream in = req.getRequestBody();
+        byte[] buff = new byte[1024];
+        int len;
+        while ((len = in.read(buff, 0, buff.length)) > 0)
+            out.write(buff, 0, len);
+        in.close();
+        return out.toString("UTF-8");
     }
 
     public static Map<String, String> parseUrlEncodedForm(String data) {

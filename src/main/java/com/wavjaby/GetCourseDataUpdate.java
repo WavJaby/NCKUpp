@@ -251,7 +251,7 @@ public class GetCourseDataUpdate implements Runnable {
                     String url = null;
                     try {
                         Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
-                        Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, baseCookieStore, null);
+                        Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, 0, baseCookieStore, null);
                         if (token != null)
                             url = token.getUrl();
                     } catch (Exception e) {
