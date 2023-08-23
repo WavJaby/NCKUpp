@@ -1176,7 +1176,6 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 		for (const cosTime of courseData.time) {
 			if (!cosTime.sectionStart)
 				continue;
-			console.log(cosTime.sectionStart)
 			const sectionStart = timeParseSection(cosTime.sectionStart);
 			const sectionEnd = cosTime.sectionEnd ? timeParseSection(cosTime.sectionEnd) : sectionStart;
 
@@ -1221,7 +1220,6 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 					}
 					timeData = usedTime;
 					fetchingData = false;
-					console.log(timeData);
 
 					onFilterUpdate();
 				});
@@ -1314,7 +1312,9 @@ function hidePracticeFilter(onFilterUpdate) {
 	function condition([courseData]) {
 		if (!checkBox.checked)
 			return true;
-		return courseData.courseType !== '實習' && courseData.courseType !== 'Practice' || courseData.courseName.length > 0;
+		return courseData.courseType !== '實習' && courseData.courseType !== 'Practice' ||
+			courseData.courseName.length > 0 ||
+			courseData.serialNumber;
 	}
 
 	return {
