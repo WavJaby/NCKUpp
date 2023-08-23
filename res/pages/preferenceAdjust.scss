@@ -49,12 +49,10 @@
             }
 
             > .itemHolder {
-                height: 50px;
                 width: 100%;
                 margin-bottom: 5px;
 
                 > .item {
-                    height: 50px;
                     width: 100%;
                     @include cursor-grab;
 

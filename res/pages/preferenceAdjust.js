@@ -17,6 +17,7 @@ export default function (router, loginState) {
 	let saveItemOrderCountdown = null, saveItemOrderTimeLeft = 0;
 	let preferenceAdjustLoading = false;
 	let /**@type{AdjustList}*/lastSelectTab = null;
+	let actionKey = null, removeKey = null;
 
 	const adjustListTabButtons = div('tabsBtn');
 	const adjustListTabs = div('tabs');
@@ -83,9 +84,12 @@ export default function (router, loginState) {
 			return;
 
 		console.log(state);
+		actionKey = state.action;
+		removeKey = state.remove;
 		const tabs = state.tabs;
 		for (const tab of tabs) {
 			const adjustList = new AdjustList();
+			adjustList.typeKey = tab.type;
 			const items = tab.items.map(i => div(null, {key: i.key},
 				span('[' + i.sn + '] '),
 				span(i.name + ' '),
@@ -93,8 +97,10 @@ export default function (router, loginState) {
 				span(i.credits + '學分 '),
 				span(i.require ? '必修' : '選修'),
 			));
+			adjustList.onchange = adjustListOnChange;
+			adjustList.ongrab = saveItemOrderCountdownStop;
 			adjustList.setTitle(tab.name);
-			adjustList.updateItem(items);
+			adjustList.setItems(items);
 			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {adjustList: adjustList}));
 			adjustListTabs.appendChild(adjustList.element);
 
@@ -106,7 +112,9 @@ export default function (router, loginState) {
 	}
 
 	function onTabSelect() {
-		saveItemOrderCountdownStop();
+		if (saveItemOrderCountdown) {
+			return;
+		}
 		if (lastSelectTab)
 			lastSelectTab.hide();
 		lastSelectTab = this.adjustList;
@@ -116,11 +124,19 @@ export default function (router, loginState) {
 	function saveItemOrder() {
 		saveItemOrderButton.classList.remove('show');
 		const orderKeys = [];
+		lastSelectTab.updateItemIndex();
 		const items = lastSelectTab.getItems();
 		for (const item of items)
 			orderKeys.push(item.key);
-		const postData = orderKeys.join(',');
-		console.log(postData);
+		const itemsStr = orderKeys.join(',');
+		const typeKey = lastSelectTab.typeKey;
+		const form = 'mode=' + actionKey + '&type=' + typeKey + '&items=' + itemsStr;
+		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
+			if (response.success) {
+				window.messageAlert.addSuccess('志願排序儲存成功', response.msg, 5000);
+			} else
+				window.messageAlert.addError('志願排序儲存失敗', response.msg, 5000);
+		});
 	}
 
 	function adjustListOnChange() {
@@ -142,6 +158,7 @@ export default function (router, loginState) {
 	function saveItemOrderCountdownStop() {
 		clearTimeout(saveItemOrderCountdown);
 		saveItemOrderButton.classList.remove('show');
+		saveItemOrderCountdown = null;
 	}
 
 	return div('preferenceAdjust',
@@ -192,7 +209,7 @@ function AdjustList() {
 		adjustItemTitle.textContent = title;
 	};
 
-	this.updateItem = function (items) {
+	this.setItems = function (items) {
 		this.clearItems();
 		let i = 0;
 		for (const item of items) {
@@ -205,6 +222,13 @@ function AdjustList() {
 		}
 	};
 
+	this.updateItemIndex = function () {
+		let i = 0;
+		for (const item of adjustListBody.children) {
+			item.index = i++;
+		}
+	}
+
 	this.clearItems = function () {
 		while (adjustListBody.firstChild)
 			adjustListBody.removeChild(adjustListBody.firstChild);
@@ -213,8 +237,8 @@ function AdjustList() {
 	this.getItems = function () {
 		const items = new Array(adjustListBody.childElementCount);
 		let i = 0;
-		for (const element of adjustListBody.children) {
-			items[i++] = element.firstElementChild.firstElementChild;
+		for (const itemHolder of adjustListBody.children) {
+			items[i++] = itemHolder.firstElementChild.firstElementChild;
 		}
 		return items;
 	}
@@ -264,6 +288,13 @@ function AdjustList() {
 		grabbingItem = this;
 		grabbingItem.classList.add('grabbing');
 
+		for (const itemHolder of adjustListBody.children) {
+			// Set item holder height
+			itemHolder.style.height = itemHolder.offsetHeight + 'px';
+			// Set item position
+			itemHolder.firstElementChild.style.top = itemHolder.offsetTop + 'px';
+		}
+
 		// Set adjust list body to adjusting state
 		const bodyWidth = adjustListBody.getBoundingClientRect
 			? adjustListBody.getBoundingClientRect().width
@@ -300,23 +331,15 @@ function AdjustList() {
 				switchGrabbingItemHolder = grabbingItemHolder.nextElementSibling;
 
 			if (switchGrabbingItemHolder && switchGrabbingItemHolder !== adjustItemHolder) {
+				if (change < 0)
+					adjustListBody.insertBefore(grabbingItemHolder, switchGrabbingItemHolder);
+				else
+					adjustListBody.insertBefore(switchGrabbingItemHolder, grabbingItemHolder);
 				const switchGrabbingItem = switchGrabbingItemHolder.firstElementChild;
-				const nextPosition = grabbingItemHolder.offsetTop;
 
 				// Animation
-				switchGrabbingItem.style.top = switchGrabbingItem.offsetTop + 'px';
-				// clearTimeout(switchGrabbingItem['animationTimeout']);
-				setTimeout(() => {
-					switchGrabbingItem.style.top = nextPosition + 'px';
-				}, 10);
-				// switchGrabbingItem['animationTimeout'] = setTimeout(() => {
-				//     switchGrabbingItem.style.top = null;
-				// }, 110);
-
-				if (change < 0)
-					grabbingItemHolder.parentElement.insertBefore(grabbingItemHolder, switchGrabbingItemHolder);
-				else
-					grabbingItemHolder.parentElement.insertBefore(switchGrabbingItemHolder, grabbingItemHolder);
+				grabbingItem.style.top = grabbingItemHolder.offsetTop + 'px';
+				switchGrabbingItem.style.top = switchGrabbingItemHolder.offsetTop + 'px';
 			}
 		}
 	}
@@ -334,7 +357,7 @@ function AdjustList() {
 			for (const element of adjustListBody.children) {
 				if (element.index !== i) {
 					changed = true;
-					element.index = i;
+					break;
 				}
 				++i;
 			}
@@ -352,8 +375,9 @@ function AdjustList() {
 				adjustItemHolder.removeChild(movingItemFinal);
 
 			// Reset item style
-			for (const child of adjustListBody.children) {
-				child.firstElementChild.style.top = null;
+			for (const itemHolder of adjustListBody.children) {
+				itemHolder.style.height = null;
+				itemHolder.firstElementChild.style.top = null;
 			}
 
 			// Reset adjust list body to static state
@@ -361,6 +385,6 @@ function AdjustList() {
 				adjustListBody.classList.remove('adjusting');
 				adjustListBody.style.width = null;
 			}
-		}, 110);
+		}, 100);
 	}
 }

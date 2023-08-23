@@ -5,6 +5,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
+import com.wavjaby.json.JsonException;
+import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
@@ -98,11 +100,11 @@ public class PreferenceAdjust implements EndpointModule {
 
     private void updatePreferenceAdjustList(String postData, ApiResponse response, CookieStore cookieStore) {
         Map<String, String> form = parseUrlEncodedForm(postData);
-        String action = form.get("action");
+        String mode = form.get("mode");
         String type = form.get("type");
         String itemIds = form.get("items");
-        if (action == null || action.isEmpty()) {
-            response.errorBadPayload("Payload form require \"action\"");
+        if (mode == null || mode.isEmpty()) {
+            response.errorBadPayload("Payload form require \"mode\"");
             return;
         }
         if (type == null || type.isEmpty()) {
@@ -115,13 +117,12 @@ public class PreferenceAdjust implements EndpointModule {
         }
         StringBuilder items = new StringBuilder();
         for (String itemId : itemIds.split(",")) {
-            if(items.length()>0)
+            if (items.length() > 0)
                 items.append('&');
             items.append("list_data%5B%5D=").append(itemId);
         }
-
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21342&time=" + (System.currentTimeMillis() / 1000) +
-                        "m=" + action + "&type=" + type)
+                        "&m=" + mode + "&type=" + type)
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .followRedirects(false)
@@ -129,9 +130,16 @@ public class PreferenceAdjust implements EndpointModule {
                 .method(Connection.Method.POST)
                 .requestBody(items.toString());
         try {
-            logger.log(conn.execute().body());
+            JsonObject result = new JsonObject(conn.execute().body());
+            if (!result.getBoolean("status"))
+                response.errorCourseNCKU();
+            response.setMessageDisplay(result.getString("msg"));
+        } catch (JsonException e) {
+            logger.errTrace(e);
+            response.errorParse("Response Json parse error: " + e.getMessage());
         } catch (IOException e) {
             logger.errTrace(e);
+            response.errorNetwork(e);
         }
     }
 
@@ -175,9 +183,9 @@ public class PreferenceAdjust implements EndpointModule {
         }
 
         JsonObjectStringBuilder result = new JsonObjectStringBuilder();
-        result.append("actionKey", action.text().trim());
-        result.append("removeKey", remove.text().trim());
-        result.append("group2actionKey", group2action.text().trim());
+        result.append("action", action.text().trim());
+        result.append("remove", remove.text().trim());
+        result.append("group2action", group2action.text().trim());
         JsonArrayStringBuilder tabs = new JsonArrayStringBuilder();
 
         // Get list item
