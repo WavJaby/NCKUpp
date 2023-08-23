@@ -217,7 +217,7 @@ public class PreCourseSchedule implements EndpointModule {
             JsonObject postResult = new JsonObject(conn.execute().body());
             String msg = postResult.getString("msg");
             if (!postResult.containsKey("result") || !postResult.getBoolean("result"))
-                response.errorCourseNcku();
+                response.errorCourseNCKU();
             response.setMessageDisplay(msg);
         } catch (JsonException e) {
             logger.errTrace(e);

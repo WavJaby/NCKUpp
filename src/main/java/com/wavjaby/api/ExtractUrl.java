@@ -150,7 +150,7 @@ public class ExtractUrl implements EndpointModule {
             message = null;
         // Check success
         if (!data.getBoolean("status")) {
-            response.errorCourseNcku();
+            response.errorCourseNCKU();
             if (message == null)
                 message = "Unknown error";
             response.setMessageDisplay(message);

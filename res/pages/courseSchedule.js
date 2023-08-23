@@ -168,12 +168,15 @@ function ScheduleTable(windowRoot) {
 
 	const roomNameElements = [];
 	let /**@type{Object.<string, CourseData>}*/courseDetail = {};
+	let tableWidth, tableHeight;
 	let courseSameCell = {};
 	let preCourseRemoveKey = {};
 	let showClassRoom = false;
 
 	this.setScheduleData = function (response) {
 		scheduleData = response.data;
+		// Get table size
+		[tableWidth, tableHeight] = timeTxt2IntAndGetTableSize(scheduleData);
 	};
 
 	this.setPreScheduleData = function (response) {
@@ -194,15 +197,18 @@ function ScheduleTable(windowRoot) {
 	};
 
 	this.renderTable = function () {
-		// Get table size
-		const [tableWidth, tableHeight] = timeTxt2IntAndGetTableSize(scheduleData);
-		initScheduleTable(tableWidth, tableHeight);
-		initPreScheduleTable(tableWidth, tableHeight);
+		initScheduleTable();
+		initPreScheduleTable();
 
 		for (const course of preScheduleData.schedule)
 			if (course.delete)
 				preCourseRemoveKey[course.deptID + '-' + course.sn] = course.delete;
 	};
+
+	function setAndRenderPreScheduleData(response) {
+		preScheduleData = response.data;
+		initPreScheduleTable();
+	}
 
 	function cellClick() {
 		const detail = courseDetail[this.serialID];
@@ -243,24 +249,26 @@ function ScheduleTable(windowRoot) {
 	function removePreCourse() {
 		const key = preCourseRemoveKey[this.serialID];
 		const detail = courseDetail[this.serialID];
-		console.log(detail)
 
-		const deleteConform = confirm('是否要刪除 ' + detail.sn + detail.cn);
+		const suffix = '[' + detail.serialNumber + '] ' + detail.courseName;
+		const deleteConform = confirm('是否要刪除 ' + suffix);
 		if (!deleteConform)
 			return;
 
-		const title = '預排刪除 ' + detail.sn + detail.cn;
+		const title = '預排刪除 ' + suffix;
 		fetchApi('/preCourseSchedule', 'Delete pre schedule',
 			{method: 'post', body: 'action=delete&info=' + key}
 		).then(response => {
-			if (response.success)
+			if (response.success) {
 				window.messageAlert.addSuccess(title, response.msg, 5000);
-			else
+				fetchApi('/preCourseSchedule', 'Get pre schedule').then(setAndRenderPreScheduleData);
+				courseInfoWindow.windowClose();
+			} else
 				window.messageAlert.addError(title, response.msg, 5000);
 		});
 	}
 
-	function initScheduleTable(tableWidth, tableHeight) {
+	function initScheduleTable() {
 		// Parse data
 		const {dayTable, dayUndecided} = parseData2DayTable(tableWidth, tableHeight, scheduleData);
 
@@ -336,33 +344,36 @@ function ScheduleTable(windowRoot) {
 		}
 	}
 
-	function initPreScheduleTable(tableWidth, tableHeight) {
+	function initPreScheduleTable() {
 		// Get table size
-		const [preTableWidth, preTableHeight] = timeTxt2IntAndGetTableSize(preScheduleData);
-		tableWidth = Math.max(tableWidth, preTableWidth);
-		tableHeight = Math.max(tableHeight, preTableHeight);
+		let [preTableWidth, preTableHeight] = timeTxt2IntAndGetTableSize(preScheduleData);
+		preTableWidth = Math.max(tableWidth, preTableWidth);
+		preTableHeight = Math.max(tableHeight, preTableHeight);
 		// Parse data
-		const {dayTable, dayUndecided} = parseData2DayTable(tableWidth, tableHeight, scheduleData);
-		const {dayTable: dayTablePre, dayUndecided: dayUndecidedPre} = parseData2DayTable(tableWidth, tableHeight, preScheduleData);
+		const {dayTable, dayUndecided} = parseData2DayTable(preTableWidth, preTableHeight, scheduleData);
+		const {
+			dayTable: dayTablePre,
+			dayUndecided: dayUndecidedPre
+		} = parseData2DayTable(preTableWidth, preTableHeight, preScheduleData);
 
 		// Create table
 		initTable(preScheduleTable);
 		preScheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
-		const rows = createScheduleTable(preScheduleTable, tableWidth, tableHeight);
-		const cellTable = new Array(tableHeight);
+		const rows = createScheduleTable(preScheduleTable, preTableWidth, preTableHeight);
+		const cellTable = new Array(preTableHeight);
 
 		// Create table body
-		for (let i = 0; i < tableHeight; i++) {
-			cellTable[i] = new Array(tableWidth);
-			for (let j = 0; j < tableWidth; j++) {
+		for (let i = 0; i < preTableHeight; i++) {
+			cellTable[i] = new Array(preTableWidth);
+			for (let j = 0; j < preTableWidth; j++) {
 				// Create empty cell
 				cellTable[i][j] = rows[i].insertCell();
 			}
 		}
 
 		// Put course
-		for (let i = 0; i < tableWidth; i++) {
-			for (let j = 0; j < tableHeight; j++) {
+		for (let i = 0; i < preTableWidth; i++) {
+			for (let j = 0; j < preTableHeight; j++) {
 				const dayCourse = dayTable[i][j];
 				if (dayCourse)
 					createCourseCellSingleList(cellTable, Object.values(dayCourse), false);
@@ -373,10 +384,10 @@ function ScheduleTable(windowRoot) {
 		}
 
 		// Row background
-		for (let i = 0; i < tableHeight; i++) {
+		for (let i = 0; i < preTableHeight; i++) {
 			rows[i].appendChild(div('splitLine'));
 
-			for (let j = 0; j < tableWidth; j++)
+			for (let j = 0; j < preTableWidth; j++)
 				if (cellTable[i][j].childElementCount === 1)
 					cellTable[i][j].firstElementChild.classList.add('fullHeight');
 		}

@@ -40,10 +40,10 @@ public class ApiResponse {
     public String toString() {
         JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
 
-        if (err.size() > 0)
+        if (!err.isEmpty())
             builder.append("err", new JsonArray(err));
 
-        if (warn.size() > 0)
+        if (!warn.isEmpty())
             builder.append("warn", new JsonArray(warn));
 
         if (msg != null)
@@ -76,7 +76,7 @@ public class ApiResponse {
     }
 
     public void errorNetwork(IOException e) {
-        errorNetwork(e.getMessage());
+        errorNetwork(e.toString());
     }
 
     public void errorNetwork(String message) {
@@ -118,7 +118,7 @@ public class ApiResponse {
         err.add("Login required");
     }
 
-    public void errorCourseNcku() {
+    public void errorCourseNCKU() {
         responseCode = ApiCode.COURSE_NCKU_ERROR;
         success = false;
         err.add("Error from " + Main.courseNcku);

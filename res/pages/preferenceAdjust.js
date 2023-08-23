@@ -12,11 +12,14 @@ export default function (router, loginState) {
 	console.log('Preference adjust Init');
 	// static element
 	const styles = mountableStylesheet('./res/pages/preferenceAdjust.css');
-	const adjustList = new AdjustList();
 	const saveItemOrderButton = button('saveOrderBtn');
 	const saveItemOrderDelayTime = 5000;
-	let saveItemOrderTimeout = null, saveItemOrderTimeLeft = 0;
+	let saveItemOrderCountdown = null, saveItemOrderTimeLeft = 0;
 	let preferenceAdjustLoading = false;
+	let /**@type{AdjustList}*/lastSelectTab = null;
+
+	const adjustListTabButtons = div('tabsBtn');
+	const adjustListTabs = div('tabs');
 
 	function onRender() {
 		console.log('Course schedule Render');
@@ -30,14 +33,12 @@ export default function (router, loginState) {
 		styles.enable();
 		onLoginState(loginState.state);
 		loginState.addListener(onLoginState);
-		adjustList.addListeners();
 	}
 
 	function onPageClose() {
 		console.log('Course schedule Close');
 		styles.disable();
 		loginState.removeListener(onLoginState);
-		adjustList.removeListeners();
 	}
 
 	/**
@@ -62,7 +63,7 @@ export default function (router, loginState) {
 		}
 	}
 
-	const dayOfWeek = ['星期一', '星期-二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+	const dayOfWeek = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 
 	function toTimeStr(time) {
 		if (time === null)
@@ -72,59 +73,81 @@ export default function (router, loginState) {
 	}
 
 	function renderAdjustList(state) {
-		if (!state) {
-			adjustList.setTitle(null);
-			adjustList.clearItems();
+		lastSelectTab = null;
+		while (adjustListTabButtons.firstChild)
+			adjustListTabButtons.removeChild(adjustListTabButtons.firstChild);
+		while (adjustListTabs.firstChild)
+			adjustListTabs.removeChild(adjustListTabs.firstChild);
+
+		if (!state)
 			return;
-		}
 
 		console.log(state);
-		adjustList.setTitle(state.name);
-		const items = state.items.map(i => div(null, {key: i.key},
-			span('[' + i.sn + '] '),
-			span(i.name + ' '),
-			span(toTimeStr(i.time) + ' '),
-			span(i.credits + '學分 '),
-			span(i.require ? '必修' : '選修'),
-		));
-		adjustList.updateItem(items);
+		const tabs = state.tabs;
+		for (const tab of tabs) {
+			const adjustList = new AdjustList();
+			const items = tab.items.map(i => div(null, {key: i.key},
+				span('[' + i.sn + '] '),
+				span(i.name + ' '),
+				span(toTimeStr(i.time) + ' '),
+				span(i.credits + '學分 '),
+				span(i.require ? '必修' : '選修'),
+			));
+			adjustList.setTitle(tab.name);
+			adjustList.updateItem(items);
+			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {adjustList: adjustList}));
+			adjustListTabs.appendChild(adjustList.element);
+
+			if (!lastSelectTab) {
+				lastSelectTab = adjustList;
+				adjustList.show();
+			}
+		}
+	}
+
+	function onTabSelect() {
+		saveItemOrderCountdownStop();
+		if (lastSelectTab)
+			lastSelectTab.hide();
+		lastSelectTab = this.adjustList;
+		lastSelectTab.show();
 	}
 
 	function saveItemOrder() {
 		saveItemOrderButton.classList.remove('show');
 		const orderKeys = [];
-		const items = adjustList.getItems();
+		const items = lastSelectTab.getItems();
 		for (const item of items)
-			orderKeys.push('data_item[]=' + item.key);
-		const postData = orderKeys.join('&');
+			orderKeys.push(item.key);
+		const postData = orderKeys.join(',');
 		console.log(postData);
 	}
 
-	adjustList.onchange = function () {
-		clearTimeout(saveItemOrderTimeout);
+	function adjustListOnChange() {
+		clearTimeout(saveItemOrderCountdown);
 		saveItemOrderTimeLeft = saveItemOrderDelayTime;
 		saveItemOrderButton.textContent = '在' + (saveItemOrderTimeLeft / 1000) + '秒後儲存';
 		saveItemOrderButton.classList.add('show');
-		saveItemOrderTimeout = setInterval(() => {
+		saveItemOrderCountdown = setInterval(() => {
 			saveItemOrderTimeLeft -= 1000;
-			if (saveItemOrderTimeLeft === 0) {
-				clearTimeout(saveItemOrderTimeout);
+			if (saveItemOrderTimeLeft <= 0) {
+				saveItemOrderCountdownStop();
 				saveItemOrder();
 				return;
 			}
-
 			saveItemOrderButton.textContent = '在' + (saveItemOrderTimeLeft / 1000) + '秒後儲存';
 		}, 1000);
-	};
+	}
 
-	adjustList.ongrab = function () {
+	function saveItemOrderCountdownStop() {
+		clearTimeout(saveItemOrderCountdown);
 		saveItemOrderButton.classList.remove('show');
-		clearTimeout(saveItemOrderTimeout);
-	};
+	}
 
 	return div('preferenceAdjust',
 		{onRender, onPageOpen, onPageClose},
-		adjustList.element,
+		adjustListTabButtons,
+		adjustListTabs,
 		saveItemOrderButton,
 	);
 };
@@ -134,11 +157,11 @@ export default function (router, loginState) {
  */
 function AdjustList() {
 	const thisInstance = this;
-	const adjustItemTitle = h1(null, 'title');
+	const adjustItemTitle = h1(null, 'title noSelect');
 	const adjustItemHolder = div('adjustItemHolder');
 	/**@type{HTMLDivElement}*/
 	const adjustListBody = div('body');
-	this.element = div('adjustList',
+	const element = this.element = div('adjustList',
 		adjustItemTitle,
 		adjustItemHolder,
 		adjustListBody,
@@ -147,15 +170,17 @@ function AdjustList() {
 	let movingItem = null, grabbingItem = null;
 	let startGrabbingOffsetX, startGrabbingOffsetY;
 
-	this.addListeners = function () {
+	this.show = function () {
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('touchmove', onMouseMove);
 		window.addEventListener('mouseup', onMouseUp);
 		window.addEventListener('touchend', onMouseUp);
 		window.addEventListener('touchcancel', onMouseUp);
+		element.classList.add('show');
 	};
 
-	this.removeListeners = function () {
+	this.hide = function () {
+		element.classList.remove('show');
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('touchmove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
@@ -172,7 +197,10 @@ function AdjustList() {
 		let i = 0;
 		for (const item of items) {
 			adjustListBody.appendChild(
-				div('itemHolder', div('item noSelect', {onmousedown: onGrabItem, ontouchstart: onGrabItem}, item), {index: i++})
+				div('itemHolder', div('item noSelect', {
+					onmousedown: onGrabItem,
+					ontouchstart: onGrabItem
+				}, item), {index: i++})
 			);
 		}
 	};
@@ -280,7 +308,7 @@ function AdjustList() {
 				// clearTimeout(switchGrabbingItem['animationTimeout']);
 				setTimeout(() => {
 					switchGrabbingItem.style.top = nextPosition + 'px';
-				}, 5);
+				}, 10);
 				// switchGrabbingItem['animationTimeout'] = setTimeout(() => {
 				//     switchGrabbingItem.style.top = null;
 				// }, 110);
@@ -333,6 +361,6 @@ function AdjustList() {
 				adjustListBody.classList.remove('adjusting');
 				adjustListBody.style.width = null;
 			}
-		}, 105);
+		}, 110);
 	}
 }

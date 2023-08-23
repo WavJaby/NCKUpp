@@ -49,7 +49,8 @@ public class FileHost implements EndpointModule {
                     String resFilePath = path.substring(8);
                     if (!resFilePath.startsWith("res/") &&
                             !resFilePath.startsWith("quizlet/") &&
-                            !resFilePath.startsWith("index")) {
+                            !resFilePath.startsWith("index")&&
+                            !resFilePath.equals("web_manifest.json")) {
                         req.sendResponseHeaders(404, 0);
                         req.close();
                         return;

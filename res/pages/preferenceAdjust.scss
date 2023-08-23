@@ -1,10 +1,22 @@
 @import '../variables';
 
 .preferenceAdjust {
+    > .tabsBtn {
+        text-align: center;
 
-    > .adjustList {
+        > button {
+            display: inline-block;
+        }
+    }
+
+    > .tabs > .adjustList {
         text-align: center;
         position: relative;
+        display: none;
+
+        &.show {
+            display: block;
+        }
 
         > .title {
             margin: 0;

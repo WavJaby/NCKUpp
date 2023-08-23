@@ -1176,11 +1176,12 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 		for (const cosTime of courseData.time) {
 			if (!cosTime.sectionStart)
 				continue;
+			console.log(cosTime.sectionStart)
 			const sectionStart = timeParseSection(cosTime.sectionStart);
 			const sectionEnd = cosTime.sectionEnd ? timeParseSection(cosTime.sectionEnd) : sectionStart;
 
 			for (const usedCosTime of timeData) {
-				if (cosTime.dayOfWeek !== usedCosTime[0])
+				if (cosTime.dayOfWeek !== usedCosTime[0] + 1)
 					continue;
 
 				if (sectionStart >= usedCosTime[1] && sectionStart <= usedCosTime[2] ||
@@ -1220,6 +1221,7 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 					}
 					timeData = usedTime;
 					fetchingData = false;
+					console.log(timeData);
 
 					onFilterUpdate();
 				});

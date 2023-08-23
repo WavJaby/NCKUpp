@@ -150,7 +150,7 @@ public class PreferenceAdjust implements EndpointModule {
         Element errorText;
         if (error != null && (errorText = error.getElementsByClass("note-desc").first()) != null) {
             response.setMessageDisplay(errorText.text().trim());
-            response.errorCourseNcku();
+            response.errorCourseNCKU();
             return;
         }
 

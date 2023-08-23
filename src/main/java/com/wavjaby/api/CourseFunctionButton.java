@@ -108,7 +108,7 @@ public class CourseFunctionButton implements EndpointModule {
             response.setMessageDisplay(msg);
 
             if (!postResult.getBoolean("result"))
-                response.errorCourseNcku();
+                response.errorCourseNCKU();
         } catch (IOException e) {
             logger.errTrace(e);
             response.errorNetwork(e);
@@ -169,7 +169,7 @@ public class CourseFunctionButton implements EndpointModule {
                     break;
             }
             if (!success)
-                response.errorCourseNcku();
+                response.errorCourseNCKU();
             if (message == null || message.isEmpty())
                 message = "Unknown error";
 //            else {

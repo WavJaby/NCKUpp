@@ -91,7 +91,8 @@ public class StudentIdentificationSystem implements EndpointModule {
             earnedCredits = Float.parseFloat(row.get(7).text().trim());
             totalCredits = Float.parseFloat(row.get(8).text().trim());
             weightedGrades = Float.parseFloat(row.get(9).text().trim());
-            averageScore = Float.parseFloat(row.get(10).text().trim());
+            String averageScoreStr = row.get(10).text().trim();
+            averageScore = averageScoreStr.isEmpty() ? -1 : Float.parseFloat(averageScoreStr);
 
             String classRankingStr = row.get(11).text().trim();
             if (classRankingStr.equals("　"))
@@ -100,8 +101,10 @@ public class StudentIdentificationSystem implements EndpointModule {
                 String[] classRankingArr = classRankingStr.split("／", 2);
                 int classRanking = -1, classRankingTotal = -1;
                 try {
-                    classRanking = Integer.parseInt(classRankingArr[0]);
-                    classRankingTotal = Integer.parseInt(classRankingArr[1]);
+                    if (!classRankingArr[0].isEmpty())
+                        classRanking = Integer.parseInt(classRankingArr[0]);
+                    if (classRankingArr.length > 1 && !classRankingArr[1].isEmpty())
+                        classRankingTotal = Integer.parseInt(classRankingArr[1]);
                 } catch (NumberFormatException e) {
                     logger.err(classRankingStr);
                     logger.errTrace(e);
@@ -117,8 +120,10 @@ public class StudentIdentificationSystem implements EndpointModule {
                 String[] deptRankingArr = deptRankingStr.split("／", 2);
                 int deptRanking = -1, deptRankingTotal = -1;
                 try {
-                    deptRanking = Integer.parseInt(deptRankingArr[0]);
-                    deptRankingTotal = Integer.parseInt(deptRankingArr[1]);
+                    if (!deptRankingArr[0].isEmpty())
+                        deptRanking = Integer.parseInt(deptRankingArr[0]);
+                    if (deptRankingArr.length > 1 && !deptRankingArr[1].isEmpty())
+                        deptRankingTotal = Integer.parseInt(deptRankingArr[1]);
                 } catch (NumberFormatException e) {
                     logger.err(classRankingStr);
                     logger.errTrace(e);
@@ -163,7 +168,7 @@ public class StudentIdentificationSystem implements EndpointModule {
 
         public CourseGrade(Elements row) {
             String serialNumber_ = row.get(1).text().trim();
-            if (serialNumber_.length() > 0) {
+            if (!serialNumber_.isEmpty()) {
                 int split = serialNumber_.indexOf(' ');
                 if (split != -1) {
                     String dept = serialNumber_.substring(0, split);
@@ -177,12 +182,22 @@ public class StudentIdentificationSystem implements EndpointModule {
             courseName = row.get(3).text().trim();
             // 課程別
             String remark_ = row.get(4).text().trim();
-            remark = remark_.length() == 0 ? null : remark_;
-            credits = Float.parseFloat(row.get(5).text().trim());
+            remark = remark_.isEmpty() ? null : remark_;
+            String creditsStr = row.get(5).text().trim();
+            credits = creditsStr.isEmpty() ? -1 : Float.parseFloat(creditsStr);
             // Required/Elective
             require = row.get(6).text().trim();
-            String grade_ = row.get(7).text().trim();
-            grade = grade_.equals("通過") ? -1 : Float.parseFloat(grade_);
+            // Parse grade
+            String gradeStr = row.get(7).text().trim();
+            float gradeFloat;
+            try {
+                gradeFloat = gradeStr.equals("通過") ? -1 : gradeStr.equals("抵免") ? -2 : gradeStr.equals("退選") ? -3 : Float.parseFloat(gradeStr);
+            } catch (NumberFormatException e) {
+                gradeFloat = -4;
+                logger.errTrace(e);
+            }
+            grade = gradeFloat;
+            // Gpa text
             gpa = row.get(8).text().trim();
 
             String[] link_ = row.get(2).children().attr("href").split("[?&=]", 9);
