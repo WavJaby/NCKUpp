@@ -92,17 +92,7 @@ public class Search implements EndpointModule {
 
     @Override
     public void stop() {
-        cosPreCheckPool.shutdown();
-        try {
-            if (!cosPreCheckPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                logger.warn("CosPreCheck pool close timeout");
-                cosPreCheckPool.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            logger.errTrace(e);
-            logger.warn("CosPreCheck pool close error");
-            cosPreCheckPool.shutdownNow();
-        }
+        executorShutdown(cosPreCheckPool, 1000, "CosPreCheck");
     }
 
     @Override
@@ -174,7 +164,7 @@ public class Search implements EndpointModule {
         final String courseName;        // 課程名稱
         final String instructor;        // 教師姓名
         final String grade;             // 年級 1 ~ 4
-        final String[] dayOfWeek;         // 星期 [1 ~ 7]
+        final String[] dayOfWeek;         // 星期 [0 ~ 6]
         final String[] sectionOfDay;      // 節次 [0 ~ 15]
 
         final boolean getAll;
@@ -197,10 +187,9 @@ public class Search implements EndpointModule {
             String dayOfWeek = null, sectionOfDay = null;
             if (courseData.timeList != null) {
                 for (CourseData.TimeData time : courseData.timeList) {
-                    if (time.section == null) continue;
+                    if (time.sectionStart == null) continue;
                     dayOfWeek = String.valueOf(time.dayOfWeek);
-                    Integer s = time.getSectionAsInt();
-                    sectionOfDay = s == null ? null : String.valueOf(s + 1);
+                    sectionOfDay = String.valueOf(time.sectionStart);
                     break;
                 }
                 // if no section
@@ -235,8 +224,7 @@ public class Search implements EndpointModule {
             this.getSerial = searchQuery.getSerial;
             this.getSerialError = searchQuery.getSerialError;
 
-            this.serialIdNumber = searchQuery.serialIdNumber == null ? null
-                    : new HashMap<>(searchQuery.serialIdNumber);
+            this.serialIdNumber = searchQuery.serialIdNumber == null ? null : new HashMap<>(searchQuery.serialIdNumber);
 
             this.historySearch = searchQuery.historySearch;
             this.historySearchError = searchQuery.historySearchError;
@@ -333,23 +321,16 @@ public class Search implements EndpointModule {
             this.courseName = query.get("courseName");      // 課程名稱
             this.instructor = query.get("instructor");      // 教師姓名
             this.grade = query.get("grade");                // 年級 1 ~ 4
-            String dayOfWeek = query.get("dayOfWeek");        // 星期 [1 ~ 7]
+            String dayOfWeek = query.get("dayOfWeek");        // 星期 [0 ~ 6]
             String sectionOfDay = query.get("section");       // 節次 [0 ~ 15]
             if (dayOfWeek == null && sectionOfDay != null)
-                this.dayOfWeek = new String[]{"1", "2", "3", "4", "5", "6", "7"};
-            else if (dayOfWeek != null)
+                this.dayOfWeek = new String[]{"0", "1", "2", "3", "4", "5", "6"};
+            else if (dayOfWeek != null) {
                 this.dayOfWeek = dayOfWeek.split(",");
-            else
+            } else
                 this.dayOfWeek = null;
 
-            String[] sectionOfDayArr = null;
-            if (sectionOfDay != null) {
-                sectionOfDayArr = sectionOfDay.split(",");
-                for (int i = 0; i < sectionOfDayArr.length; i++)
-                    sectionOfDayArr[i] = String.valueOf(Integer.parseInt(sectionOfDayArr[i]) + 1);
-            }
-            this.sectionOfDay = sectionOfDayArr;
-
+            this.sectionOfDay = sectionOfDay == null ? null : simpleSplit(sectionOfDay, ',');
         }
 
         boolean noQuery() {
@@ -460,20 +441,20 @@ public class Search implements EndpointModule {
         }
 
         private static class TimeData {
-            final Byte dayOfWeek; // Can be null
-            final Character section; // Can be null
-            final Character sectionTo; // Can be null
+            final Byte dayOfWeek; // Can be null, [0 ~ 6]
+            final Byte sectionStart; // Can be null, [0 ~ 15]
+            final Byte sectionEnd; // Can be null, [0 ~ 15]
             final String mapLocation; // Can be null
             final String mapRoomNo; // Can be null
             final String mapRoomName; // Can be null
             // Detailed time data
             final String detailedTimeData; // Can be null
 
-            public TimeData(Byte dayOfWeek, Character section, Character sectionTo,
+            public TimeData(Byte dayOfWeek, Byte sectionStart, Byte sectionEnd,
                             String mapLocation, String mapRoomNo, String mapRoomName) {
                 this.dayOfWeek = dayOfWeek;
-                this.section = section;
-                this.sectionTo = sectionTo;
+                this.sectionStart = sectionStart;
+                this.sectionEnd = sectionEnd;
                 this.mapLocation = mapLocation;
                 this.mapRoomNo = mapRoomNo;
                 this.mapRoomName = mapRoomName;
@@ -482,22 +463,21 @@ public class Search implements EndpointModule {
 
             public TimeData(String detailedTimeData) {
                 this.dayOfWeek = null;
-                this.section = null;
-                this.sectionTo = null;
+                this.sectionStart = null;
+                this.sectionEnd = null;
                 this.mapLocation = null;
                 this.mapRoomNo = null;
                 this.mapRoomName = null;
                 this.detailedTimeData = detailedTimeData;
             }
 
-            public Integer getSectionAsInt() {
-                if (section == null) return null;
-                if (section <= '4') return section - '0';
+            public static Byte sectionCharToByte(char section) {
+                if (section <= '4') return (byte) (section - '0');
                 if (section == 'N') return 5;
-                if (section <= '9') return section - '5' + 6;
-                if (section >= 'A' && section <= 'E') return section - 'A' + 11;
-                if (section >= 'a' && section <= 'e') return section - 'a' + 11;
-                throw new RuntimeException(new NumberFormatException());
+                if (section <= '9') return (byte) (section - '5' + 6);
+                if (section >= 'A' && section <= 'E') return (byte) (section - 'A' + 11);
+                if (section >= 'a' && section <= 'e') return (byte) (section - 'a' + 11);
+                throw new NumberFormatException();
             }
 
             @Override
@@ -508,9 +488,9 @@ public class Search implements EndpointModule {
                 StringBuilder builder = new StringBuilder();
                 if (dayOfWeek != null) builder.append(dayOfWeek);
                 builder.append(',');
-                if (section != null) builder.append(section);
+                if (sectionStart != null) builder.append(sectionStart);
                 builder.append(',');
-                if (sectionTo != null) builder.append(sectionTo);
+                if (sectionEnd != null) builder.append(sectionEnd);
                 builder.append(',');
                 if (mapLocation != null) builder.append(mapLocation);
                 builder.append(',');
@@ -596,11 +576,11 @@ public class Search implements EndpointModule {
                     builder.append(',');
 
                 builder.append('[').append(i.dayOfWeek).append(']');
-                if (i.section != null) {
-                    if (i.sectionTo != null)
-                        builder.append(i.section).append('~').append(i.sectionTo);
+                if (i.sectionStart != null) {
+                    if (i.sectionEnd != null)
+                        builder.append(i.sectionStart).append('~').append(i.sectionEnd);
                     else
-                        builder.append(i.section);
+                        builder.append(i.sectionStart);
                 }
             }
             return builder.toString();
@@ -788,11 +768,7 @@ public class Search implements EndpointModule {
                         });
                     }
                     taskLeft.await();
-                    fetchPool.shutdown();
-                    if (!fetchPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
-                        fetchPool.shutdownNow();
-                        logger.warn("FetchPool shutdown timeout");
-                    }
+                    executorShutdown(fetchPool, 5000, "SearchFetchPool");
                     success = allSuccess.get();
                     response.setData(courseDataList.toString());
                 }
@@ -823,11 +799,7 @@ public class Search implements EndpointModule {
                     });
                 }
                 taskLeft.await();
-                fetchPool.shutdown();
-                if (!fetchPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
-                    fetchPool.shutdownNow();
-                    logger.warn("FetchPool shutdown timeout");
-                }
+                executorShutdown(fetchPool, 5000, "SearchFetchPool");
                 success = allSuccess.get();
                 response.setData(result.toString());
             } else if (searchQuery.dayOfWeek != null && searchQuery.dayOfWeek.length > 1) {
@@ -852,11 +824,7 @@ public class Search implements EndpointModule {
                     });
                 }
                 taskLeft.await();
-                fetchPool.shutdown();
-                if (!fetchPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
-                    fetchPool.shutdownNow();
-                    logger.warn("FetchPool shutdown timeout");
-                }
+                executorShutdown(fetchPool, 5000, "SearchFetchPool");
                 success = allSuccess.get();
                 if (success)
                     response.setData(courseDataList.toString());
@@ -1274,11 +1242,18 @@ public class Search implements EndpointModule {
                 if (searchQuery.instructor != null)
                     postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
                 if (searchQuery.dayOfWeek != null)
-                    postData.append("&wk=").append(searchQuery.dayOfWeek[dayOfWeekIndex]);
+                    postData.append("&wk=").append(Integer.parseInt(searchQuery.dayOfWeek[dayOfWeekIndex]) + 1);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
-                if (searchQuery.sectionOfDay != null)
-                    postData.append("&cl=").append(URLEncoder.encode(String.join(",", searchQuery.sectionOfDay), "UTF-8"));
+                if (searchQuery.sectionOfDay != null) {
+                    StringBuilder b = new StringBuilder();
+                    for (String i : searchQuery.sectionOfDay) {
+                        if (b.length() > 0)
+                            b.append("%2C");
+                        b.append(Integer.parseInt(i) + 1);
+                    }
+                    postData.append("&cl=").append(b);
+                }
             }
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);
@@ -1549,14 +1524,14 @@ public class Search implements EndpointModule {
             // Get course tags
             CourseData.TagData[] courseData_tags = null;
             Elements tagElements = section.get(sectionOffset + 4).getElementsByClass("label");
-            if (tagElements.size() > 0) {
+            if (!tagElements.isEmpty()) {
                 courseData_tags = new CourseData.TagData[tagElements.size()];
                 for (int i = 0; i < courseData_tags.length; i++) {
                     Element tagElement = tagElements.get(i);
                     // Get tag Color
                     String tagColor;
                     String styleOverride = tagElement.attr("style");
-                    if (styleOverride.length() > 0) {
+                    if (!styleOverride.isEmpty()) {
                         int backgroundColorStart, backgroundColorEnd;
                         if ((backgroundColorStart = styleOverride.indexOf("background-color:")) != -1 &&
                                 (backgroundColorEnd = styleOverride.indexOf(';', backgroundColorStart + 17)) != -1)
@@ -1589,7 +1564,7 @@ public class Search implements EndpointModule {
             Boolean courseData_required = null;
             List<TextNode> section5 = section.get(sectionOffset + 5).textNodes();
             String section5Str;
-            if (section5.size() > 0 && (section5Str = section5.get(0).text().trim()).length() > 0) {
+            if (section5.size() > 0 && !(section5Str = section5.get(0).text().trim()).isEmpty()) {
                 courseData_credits = Float.parseFloat(section5Str);
                 String cache = section5.get(1).text().trim();
                 courseData_required = cache.equals("必修") || cache.equals("Required");
@@ -1598,7 +1573,7 @@ public class Search implements EndpointModule {
             // Get instructor name
             String[] courseData_instructors = null;
             String instructors = section.get(sectionOffset + 6).text();
-            if (instructors.length() > 0 && !instructors.equals("未定")) {
+            if (!instructors.isEmpty() && !instructors.equals("未定")) {
                 instructors = instructors.replace("*", "");
                 courseData_instructors = instructors.split(" ");
                 // Add urSchool cache
@@ -1614,15 +1589,14 @@ public class Search implements EndpointModule {
             // Add urSchool cache
             if (addUrSchoolCache && urSchool != null) {
                 // Flush to add urSchool cache
-                if (urSchoolCache.size() > 0)
+                if (!urSchoolCache.isEmpty())
                     urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
             }
 
             // Get time list
             CourseData.TimeData[] courseData_timeList = null;
             List<CourseData.TimeData> timeDataList = new ArrayList<>();
-            Byte timeCacheDayOfWeek = null;
-            Character timeCacheSection = null, timeCacheSectionTo = null;
+            Byte timeCacheDayOfWeek = null, timeCacheSection = null, timeCacheSectionTo = null;
             String timeCacheMapLocation = null, timeCacheMapRoomNo = null, timeCacheMapRoomName = null;
             int timeParseState = 0;
             for (Node node : section.get(sectionOffset + 8).childNodes()) {
@@ -1631,16 +1605,16 @@ public class Search implements EndpointModule {
                     timeParseState++;
                     String text;
                     // Check if data exist
-                    if (node instanceof TextNode && (text = ((TextNode) node).text().trim()).length() > 0) {
+                    if (node instanceof TextNode && !(text = ((TextNode) node).text().trim()).isEmpty()) {
                         // Get dayOfWeek, format: [1]2~3
                         if (text.length() > 2 && text.charAt(2) == ']') {
-                            timeCacheDayOfWeek = (byte) (text.charAt(1) - '0');
+                            timeCacheDayOfWeek = (byte) (text.charAt(1) - '1');
                             // Get section
                             if (text.length() > 3) {
-                                timeCacheSection = text.charAt(3);
+                                timeCacheSection = CourseData.TimeData.sectionCharToByte(text.charAt(3));
                                 // Get section end
                                 if (text.length() > 5 && text.charAt(4) == '~') {
-                                    timeCacheSectionTo = text.charAt(5);
+                                    timeCacheSectionTo = CourseData.TimeData.sectionCharToByte(text.charAt(5));
                                 }
                             }
                             continue;
@@ -1652,7 +1626,7 @@ public class Search implements EndpointModule {
                     timeParseState++;
                     // Location link, format: javascript:maps('12','789AB');
                     String attribute;
-                    if ((attribute = node.attr("href")).length() > 0) {
+                    if (!(attribute = node.attr("href")).isEmpty()) {
                         // Get location
                         int locStart, locEnd;
                         if ((locStart = attribute.indexOf('\'')) != -1 &&
@@ -1694,7 +1668,7 @@ public class Search implements EndpointModule {
                     timeCacheMapLocation != null || timeCacheMapRoomNo != null || timeCacheMapRoomName != null)
                 timeDataList.add(new CourseData.TimeData(timeCacheDayOfWeek, timeCacheSection, timeCacheSectionTo,
                         timeCacheMapLocation, timeCacheMapRoomNo, timeCacheMapRoomName));
-            if (timeDataList.size() > 0)
+            if (!timeDataList.isEmpty())
                 courseData_timeList = timeDataList.toArray(new CourseData.TimeData[0]);
 
             // Get selected & available

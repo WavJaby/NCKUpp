@@ -20,6 +20,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static com.wavjaby.lib.Lib.executorShutdown;
+
 public class ProxyChecker {
     int okCount = 0;
 //    Map<String, ProxyManager.ProxyData> duplicateProxy = new ConcurrentHashMap<>();
@@ -184,13 +186,7 @@ public class ProxyChecker {
 
         getSpysOneProxy(allowHttp, proxyDataList);
 
-        pool.shutdown();
-        try {
-            if (!pool.awaitTermination(60000, TimeUnit.MILLISECONDS))
-                pool.shutdownNow();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        executorShutdown(pool, 60000, "ProxyGetter");
     }
 
     private void testProxy(Map<String, ProxyManager.ProxyData> proxyDataList, int threadCount, int timeoutTime, boolean allowTimeout,
@@ -322,17 +318,9 @@ public class ProxyChecker {
             e.printStackTrace();
         }
 
-        checkConnectionPool.shutdown();
-        pool.shutdown();
+        executorShutdown(checkConnectionPool, timeoutTime, "CheckConnection");
+        executorShutdown(pool, 1000, "CheckTask");
 
-        try {
-            if (!checkConnectionPool.awaitTermination(timeoutTime, TimeUnit.MILLISECONDS))
-                checkConnectionPool.shutdownNow();
-            if (!pool.awaitTermination(1000, TimeUnit.MILLISECONDS))
-                pool.shutdownNow();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         System.out.print('\n');
     }
 

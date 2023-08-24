@@ -124,29 +124,8 @@ public class Login implements EndpointModule {
 
     @Override
     public void stop() {
-        keepLoginUpdater.shutdown();
-        try {
-            if (!keepLoginUpdater.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                logger.warn("KeepLoginUpdater pool close timeout");
-                keepLoginUpdater.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            logger.errTrace(e);
-            logger.warn("KeepLoginUpdater pool close error");
-            keepLoginUpdater.shutdownNow();
-        }
-
-        loginCosPreCheckPool.shutdown();
-        try {
-            if (!loginCosPreCheckPool.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                logger.warn("loginCosPreCheckPool pool close timeout");
-                loginCosPreCheckPool.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            logger.errTrace(e);
-            logger.warn("loginCosPreCheckPool pool close error");
-            loginCosPreCheckPool.shutdownNow();
-        }
+        executorShutdown(keepLoginUpdater, 1000, "LoginUpdater");
+        executorShutdown(loginCosPreCheckPool, 1000, "LoginCosPreCheck");
     }
 
     @Override

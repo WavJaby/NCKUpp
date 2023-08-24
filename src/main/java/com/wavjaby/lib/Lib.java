@@ -16,8 +16,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.CookieStore;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.Main.accessControlAllowOrigin;
 
@@ -90,6 +93,20 @@ public class Lib {
         }
     }
 
+    public static void executorShutdown(ExecutorService service, long timeoutMillis, String name) {
+        service.shutdown();
+        try {
+            if (!service.awaitTermination(timeoutMillis, TimeUnit.MILLISECONDS)) {
+                logger.warn("[Executor] " + name + " shutdown timeout");
+                service.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            logger.errTrace(e);
+            logger.warn("[Executor] " + name + " shutdown error");
+            service.shutdownNow();
+        }
+    }
+
     public static String readRequestBody(HttpExchange req) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         InputStream in = req.getRequestBody();
@@ -154,6 +171,20 @@ public class Lib {
             responseHeader.set("Access-Control-Allow-Origin", originUrl);
         else
             responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);
+    }
+
+    public static String[] simpleSplit(String input, char splitter) {
+        ArrayList<String> arr = new ArrayList<>();
+        int last = 0;
+        for (int i = 0; i < input.length(); i++) {
+            if (input.charAt(i) == splitter) {
+                arr.add(input.substring(last, i));
+                last = i + 1;
+            }
+        }
+        if (input.length() > last)
+            arr.add(input.substring(last));
+        return arr.toArray(new String[0]);
     }
 
     public static String parseUnicode(String input) {

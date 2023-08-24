@@ -137,17 +137,7 @@ public class UrSchool implements EndpointModule {
 
     @Override
     public void stop() {
-        pool.shutdown();
-        try {
-            if (!pool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
-                logger.warn("Data update pool close timeout");
-                pool.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            logger.errTrace(e);
-            logger.warn("Data update pool close error");
-            pool.shutdownNow();
-        }
+        executorShutdown(pool, 5000, "UrSchoolDataUpdater");
     }
 
     @Override
@@ -432,12 +422,12 @@ public class UrSchool implements EndpointModule {
                     fetchPoolLock.acquire();
                 } catch (InterruptedException ignore) {
                     // Stop all
-                    shutdownFetchPool(1000, fetchPool);
+                    executorShutdown(fetchPool, 1000, "UrSchoolFetch");
                     return;
                 }
                 // Stop all
                 if (pool.isShutdown()) {
-                    shutdownFetchPool(1000, fetchPool);
+                    executorShutdown(fetchPool, 1000, "UrSchoolFetch");
                     return;
                 }
 
@@ -458,7 +448,7 @@ public class UrSchool implements EndpointModule {
                 logger.errTrace(e);
                 return;
             }
-            shutdownFetchPool(1000, fetchPool);
+            executorShutdown(fetchPool, 1000, "UrSchoolFetch");
 
             progressBar.setProgress(100f);
             Logger.removeProgressBar(progressBar);
@@ -478,19 +468,6 @@ public class UrSchool implements EndpointModule {
             logger.log("Used " + (System.currentTimeMillis() - start) + "ms");
         });
         return false;
-    }
-
-    private void shutdownFetchPool(long timeout, ExecutorService pool) {
-        pool.shutdown();
-        try {
-            if (!pool.awaitTermination(timeout, TimeUnit.MILLISECONDS)) {
-                pool.shutdownNow();
-                logger.warn("FetchPool shutdown timeout");
-            }
-        } catch (InterruptedException ignore) {
-            logger.warn("FetchPool shutdown interrupted");
-            pool.shutdownNow();
-        }
     }
 
     private List<ProfessorSummary> fetchUrSchoolData(int page, int[] maxPage) {

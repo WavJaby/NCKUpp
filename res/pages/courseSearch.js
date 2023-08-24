@@ -188,7 +188,7 @@ import {
 } from '../domHelper_v001.min.js';
 
 import SelectMenu from '../selectMenu.js';
-import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse, timeParseSection} from '../lib.js';
+import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';
 import PopupWindow from '../popupWindow.js';
 
 /**
@@ -208,7 +208,7 @@ export default function (router, loginState) {
 	// Element
 	const courseSearchResultInfo = span();
 	// Static data
-	let nckuHubCourseID = null;
+	let avalibleNckuHubCourseID = null;
 	let urSchoolData = null;
 
 	// query string
@@ -272,16 +272,17 @@ export default function (router, loginState) {
 		['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', 'N'], ['6', '5'], ['7', '6'], ['8', '7'], ['9', '8'], ['10', '9'],
 		['11', 'A'], ['12', 'B'], ['13', 'C'], ['14', 'D'], ['15', 'E']
 	], {multiple: true});
+	const dayOfWeekSelectMenu = new SelectMenu('DayOfWeek', 'dayOfWeek', 'dayOfWeek', [['0', '一'], ['1', '二'], ['2', '三'], ['3', '四'], ['4', '五'], ['5', '六'], ['6', '日']], {
+		searchBar: false,
+		multiple: true
+	})
 	const courseSearchForm = div('form',
 		// input(null, 'Serial number', 'serial', {onkeyup}),
 		input(null, 'Course name', 'courseName', {onkeyup}),
 		deptNameSelectMenu,
 		input(null, 'Instructor', 'instructor', {onkeyup}),
 		new SelectMenu('Grade', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
-		new SelectMenu('DayOfWeek', 'dayOfWeek', 'dayOfWeek', [['1', '一'], ['2', '二'], ['3', '三'], ['4', '四'], ['5', '五'], ['6', '六'], ['7', '日']], {
-			searchBar: false,
-			multiple: true
-		}),
+		dayOfWeekSelectMenu,
 		sectionSelectMenu,
 		button(null, 'search', search),
 		button(null, 'get watched course', getWatchCourse),
@@ -296,9 +297,9 @@ export default function (router, loginState) {
 		if (searching) return;
 		searching = true;
 		// get all course ID
-		if (nckuHubCourseID === null) {
+		if (avalibleNckuHubCourseID === null) {
 			searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
-			nckuHubCourseID = (await fetchApi('/nckuhub', 'get nckuhub id')).data;
+			avalibleNckuHubCourseID = (await fetchApi('/nckuhub', 'get nckuhub id')).data;
 		}
 
 		// get urSchool data
@@ -369,26 +370,21 @@ export default function (router, loginState) {
 			courseResult.push(courseData);
 
 			if (courseData.serialNumber != null) {
-				const deptAndID = courseData.serialNumber.split('-');
-				let nckuHubID = nckuHubCourseID[deptAndID[0]];
-				if (nckuHubID) nckuHubID = nckuHubID[deptAndID[1]];
-				if (nckuHubID) nckuhubResult[courseData.serialNumber] = {nckuHubID, courseData, signal: new Signal()};
+				let nckuHubID = avalibleNckuHubCourseID.indexOf(courseData.serialNumber) !== -1;
+				if (nckuHubID) nckuhubResult[courseData.serialNumber] = {courseData, signal: new Signal()};
 			}
 		}
 
 		// Get nckuhub data
 		const chunkSize = 20;
-		const nckuHubDataArr = Object.values(nckuhubResult);
-		for (let i = 0; i < nckuHubDataArr.length; i += chunkSize) {
-			const chunk = [];
-			for (let j = i; j < i + chunkSize && j < nckuHubDataArr.length; j++)
-				chunk.push(nckuHubDataArr[j].nckuHubID);
-
+		const courseSerialNumbers = Object.keys(nckuhubResult);
+		for (let i = 0; i < courseSerialNumbers.length; i += chunkSize) {
+			const chunk = courseSerialNumbers.slice(i, i + chunkSize);
 			fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
-				for (let j = 0; j < chunk.length; j++) {
-					const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubDataArr[i + j];
+				for (let data of Object.entries(response.data)) {
+					const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuhubResult[data[0]];
 					/**@type NckuHubRaw*/
-					const nckuhub = response.data[j];
+					const nckuhub = data[1];
 					courseData.nckuhub = /**@type NckuHub*/ {
 						noData: nckuhub.rate_count === 0 && nckuhub.comment.length === 0,
 						got: parseFloat(nckuhub.got),
@@ -397,11 +393,6 @@ export default function (router, loginState) {
 						rate_count: nckuhub.rate_count,
 						comments: nckuhub.comment,
 						parsedRates: nckuhub.rates.reduce((a, v) => {
-							// nckuhub why
-							if (!v.recommend && v['recommand']) {
-								v.recommend = v['recommand'];
-								delete v['recommand'];
-							}
 							a[v.post_id] = v;
 							return a;
 						}, {})
@@ -420,7 +411,7 @@ export default function (router, loginState) {
 	let watchList = null;
 
 	/**
-	 * @this {{courseData: CourseData}}
+	 * @this {HTMLButtonElement & {courseData: CourseData}}
 	 */
 	function watchedCourseAddRemove() {
 		if (!loginState.state || !loginState.state.login || !watchList) return;
@@ -596,7 +587,7 @@ export default function (router, loginState) {
 	const filterOptions = [
 		textSearchFilter(updateFilter),
 		hideConflictCourseFilter(updateFilter, loginState),
-		insureSectionRangeFilter(updateFilter, sectionSelectMenu),
+		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
 		hidePracticeFilter(updateFilter)
 	];
 	filter.setOptions(filterOptions);
@@ -701,19 +692,20 @@ export default function (router, loginState) {
 				const nckuhubInfo = nckuhubResultData && nckuhubResultData.signal
 					? State(nckuhubResultData.signal, () => {
 						if (data.nckuhub) {
-							if (data.nckuhub.noData) return td('No data', 'nckuhub', {colSpan: 3});
+							if (data.nckuhub.noData)
+								return td('沒有資料', 'nckuhub', {colSpan: 3});
 							const options = {colSpan: 3, onclick: openNckuhubDetailWindow};
 							if (data.nckuhub.rate_count === 0)
-								return td('No rating', 'nckuhub', options);
+								return td('沒有評分', 'nckuhub', options);
 							return td(null, 'nckuhub', options,
 								span(data.nckuhub.got.toFixed(1), 'reward'),
 								span(data.nckuhub.sweet.toFixed(1), 'sweet'),
 								span(data.nckuhub.cold.toFixed(1), 'cool'),
 							);
 						}
-						return td('Loading...', 'nckuhub', {colSpan: 3});
+						return td('載入中...', 'nckuhub', {colSpan: 3});
 					})
-					: td('No data', 'nckuhub', {colSpan: 3})
+					: td('沒有資料', 'nckuhub', {colSpan: 3})
 
 
 				function toggleCourseInfo(forceState) {
@@ -1176,11 +1168,11 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 		for (const cosTime of courseData.time) {
 			if (!cosTime.sectionStart)
 				continue;
-			const sectionStart = timeParseSection(cosTime.sectionStart);
-			const sectionEnd = cosTime.sectionEnd ? timeParseSection(cosTime.sectionEnd) : sectionStart;
+			const sectionStart = cosTime.sectionStart;
+			const sectionEnd = cosTime.sectionEnd ? cosTime.sectionEnd : sectionStart;
 
 			for (const usedCosTime of timeData) {
-				if (cosTime.dayOfWeek !== usedCosTime[0] + 1)
+				if (cosTime.dayOfWeek !== usedCosTime[0])
 					continue;
 
 				if (sectionStart >= usedCosTime[1] && sectionStart <= usedCosTime[2] ||
@@ -1213,13 +1205,12 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 					// Parse time data
 					const usedTime = [];
 					for (const i of response.data.schedule) {
-						for (const info of i.info) {
-							const time = timeParse(info.time);
-							usedTime.push(time);
-						}
+						for (const info of i.info)
+							usedTime.push(timeParse(info.time));
 					}
 					timeData = usedTime;
 					fetchingData = false;
+					console.log(usedTime);
 
 					onFilterUpdate();
 				});
@@ -1238,13 +1229,15 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 
 /**
  * @param {function()} onFilterUpdate
+ * @param {SelectMenu} dayOfWeekSelectMenu
  * @param {SelectMenu} sectionSelectMenu
  * @return {FilterOption}
  */
-function insureSectionRangeFilter(onFilterUpdate, sectionSelectMenu) {
+function insureSectionRangeFilter(onFilterUpdate, dayOfWeekSelectMenu, sectionSelectMenu) {
 	const checkBoxOuter = checkboxWithName(null, '確保節次範圍', true, onchange);
 	const checkBox = checkBoxOuter.input;
 
+	let searchDayOfWeek = -1;
 	let searchSectionStart = -1, searchSectionEnd = -1;
 
 	function onFilterStart(firstRenderAfterSearch) {
@@ -1254,41 +1247,48 @@ function insureSectionRangeFilter(onFilterUpdate, sectionSelectMenu) {
 
 	/**@param{CourseData}courseData*/
 	function condition([courseData]) {
-		if (!checkBox.checked || searchSectionStart === -1)
+		if (!checkBox.checked || (searchSectionStart === -1 && searchDayOfWeek === -1))
 			return true;
 
 		for (const cosTime of courseData.time) {
-			if (!cosTime.sectionStart)
-				continue;
-			const sectionStart = timeParseSection(cosTime.sectionStart);
-			const sectionEnd = cosTime.sectionEnd ? timeParseSection(cosTime.sectionEnd) : sectionStart;
-			if (sectionStart < searchSectionStart || sectionEnd > searchSectionEnd)
+			if (searchDayOfWeek !== -1 && cosTime.dayOfWeek !== searchDayOfWeek)
 				return false;
+			if (searchSectionStart !== -1) {
+				if (!cosTime.sectionStart)
+					continue;
+				const sectionStart = cosTime.sectionStart;
+				const sectionEnd = cosTime.sectionEnd ? cosTime.sectionEnd : sectionStart;
+				if (sectionStart < searchSectionStart || sectionEnd > searchSectionEnd)
+					return false;
+			}
 		}
 		return true;
 	}
 
 	function updateSearchSection() {
 		let searchSection = sectionSelectMenu.getSelectedValue();
-		if (searchSection.length === 0) {
+		if (searchSection.length !== 0) {
+			searchSectionStart = searchSectionEnd = parseInt(searchSection[0]);
+			for (let i of searchSection) {
+				i = parseInt(i);
+				if (i < searchSectionStart)
+					searchSectionStart = i;
+				else if (i > searchSectionEnd)
+					searchSectionEnd = i;
+			}
+		} else
 			searchSectionStart = -1;
-			return;
-		}
 
-		searchSectionStart = searchSectionEnd = parseInt(searchSection[0]);
-		for (let i of searchSection) {
-			i = parseInt(i);
-			if (i < searchSectionStart)
-				searchSectionStart = i;
-			else if (i > searchSectionEnd)
-				searchSectionEnd = i;
-		}
-		// console.log(searchSectionStart, searchSectionEnd);
+		let searchDayOfWeekV = dayOfWeekSelectMenu.getSelectedValue();
+		if (searchDayOfWeekV.length !== 0) {
+			searchDayOfWeek = parseInt(searchDayOfWeekV[0]);
+		} else
+			searchDayOfWeek = -1;
 	}
 
 	function onchange() {
 		updateSearchSection();
-		if (searchSectionStart !== -1)
+		if (searchSectionStart !== -1 || searchDayOfWeek !== -1)
 			onFilterUpdate();
 	}
 

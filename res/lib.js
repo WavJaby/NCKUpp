@@ -68,30 +68,15 @@ export function fetchApi(endpoint, showState, option) {
 		});
 }
 
-export function timeParseSection(sectionText) {
-	let section;
-	if (sectionText === 'N')
-		section = 5;
-	else {
-		section = parseInt(sectionText, 16);
-		// Skip 5
-		if (section > 4)
-			++section;
-	}
-	return section;
-}
-
 export function timeParse(timeStr) {
 	const time = timeStr.split(',');
 	const parsedTime = new Int8Array(3);
 
 	parsedTime[0] = parseInt(time[0]);
-	if (time.length > 1) {
-		parsedTime[1] = timeParseSection(time[1]);
-	}
-	if (time.length > 2) {
-		parsedTime[2] = timeParseSection(time[2]);
-	}
+	if (time.length > 1)
+		parsedTime[1] = parseInt(time[1]);
+	if (time.length > 2)
+		parsedTime[2] = parseInt(time[2]);
 	// Make section end equals to section start
 	else if (time.length > 1)
 		parsedTime[2] = parsedTime[1];
@@ -108,6 +93,9 @@ const courseDataTagColor = [
 	'#d9534f'
 ];
 
+const sectionStr = ['0', '1', '2', '3', '4', 'N', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E'];
+const weekStr = ['一', '二', '三', '四', '五', '六', '日'];
+
 /**
  * @param {CourseDataTime} time
  * @return {string}
@@ -117,12 +105,12 @@ export function courseDataTimeToString(time) {
 	if (time.sectionStart !== null) {
 		let section;
 		if (time.sectionEnd !== null) {
-			section = time.sectionStart + '~' + time.sectionEnd;
+			section = sectionStr[time.sectionStart] + '~' + sectionStr[time.sectionEnd];
 		} else
-			section = time.sectionStart;
-		return '[' + (time.dayOfWeek) + ']' + section;
+			section = sectionStr[time.sectionStart];
+		return '[' + weekStr[time.dayOfWeek] + ']' + section;
 	}
-	return '[' + (time.dayOfWeek) + ']';
+	return '[' + weekStr[time.dayOfWeek] + ']';
 }
 
 /**
