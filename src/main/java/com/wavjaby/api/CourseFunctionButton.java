@@ -139,8 +139,7 @@ public class CourseFunctionButton implements EndpointModule {
                 }
 
                 // Post request
-                String code = robotCode.getCode(
-                        courseNckuOrg + "/index.php?c=cos21112&m=captcha",
+                String code = robotCode.getCode(courseNckuOrg + "/index.php?c=cos21112&m=captcha",
                         cookieStore,
                         RobotCode.Mode.SINGLE,
                         RobotCode.WordType.HEX
@@ -167,6 +166,7 @@ public class CourseFunctionButton implements EndpointModule {
                 }
                 if (!message.contains("CAPTCHA") && !message.contains("驗證碼"))
                     break;
+                logger.log("Retry");
             }
             if (!success)
                 response.errorCourseNCKU();

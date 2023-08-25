@@ -16,7 +16,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.wavjaby.Main.*;
+import static com.wavjaby.Main.courseNcku;
+import static com.wavjaby.Main.courseNckuOrgUri;
 
 public class GetCourseDataUpdate implements Runnable {
     private static final String TAG = "[CourseListener]";

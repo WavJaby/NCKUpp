@@ -4,6 +4,8 @@
       <root url="jar://$PROJECT_DIR$/../WebSocket/out/WebSocket.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../WebSocket/src" />
+    </SOURCES>
   </library>
 </component>

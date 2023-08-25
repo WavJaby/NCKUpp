@@ -170,6 +170,7 @@ import {
 	ClassList,
 	colgroup,
 	div,
+	h1,
 	img,
 	input,
 	label,
@@ -193,7 +194,7 @@ import PopupWindow from '../popupWindow.js';
 
 /**
  * @param {QueryRouter} router
- * @param loginState
+ * @param {Signal} loginState
  * @return {HTMLDivElement}
  */
 export default function (router, loginState) {
@@ -267,25 +268,25 @@ export default function (router, loginState) {
 	}
 
 	// Search form
-	const deptNameSelectMenu = new SelectMenu('Dept Name', 'dept', 'dept', null, {searchValue: true});
-	const sectionSelectMenu = new SelectMenu('Section', 'section', 'section', [
+	const deptNameSelectMenu = new SelectMenu('系所', 'dept', 'dept', null, {searchValue: true});
+	const sectionSelectMenu = new SelectMenu('節次', 'section', 'section', [
 		['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', 'N'], ['6', '5'], ['7', '6'], ['8', '7'], ['9', '8'], ['10', '9'],
 		['11', 'A'], ['12', 'B'], ['13', 'C'], ['14', 'D'], ['15', 'E']
 	], {multiple: true});
-	const dayOfWeekSelectMenu = new SelectMenu('DayOfWeek', 'dayOfWeek', 'dayOfWeek', [['0', '一'], ['1', '二'], ['2', '三'], ['3', '四'], ['4', '五'], ['5', '六'], ['6', '日']], {
+	const dayOfWeekSelectMenu = new SelectMenu('星期', 'dayOfWeek', 'dayOfWeek', [['0', '一'], ['1', '二'], ['2', '三'], ['3', '四'], ['4', '五'], ['5', '六'], ['6', '日']], {
 		searchBar: false,
 		multiple: true
 	})
 	const courseSearchForm = div('form',
 		// input(null, 'Serial number', 'serial', {onkeyup}),
-		input(null, 'Course name', 'courseName', {onkeyup}),
+		input(null, '課程名稱', 'courseName', {onkeyup}),
 		deptNameSelectMenu,
-		input(null, 'Instructor', 'instructor', {onkeyup}),
-		new SelectMenu('Grade', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
+		input(null, '教師姓名', 'instructor', {onkeyup}),
+		new SelectMenu('年級', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
 		dayOfWeekSelectMenu,
 		sectionSelectMenu,
-		button(null, 'search', search),
-		button(null, 'get watched course', getWatchCourse),
+		button(null, '搜尋', search),
+		button(null, '關注列表', getWatchCourse),
 	);
 
 	/**
@@ -296,15 +297,16 @@ export default function (router, loginState) {
 	async function search(rawQuery, saveQuery) {
 		if (searching) return;
 		searching = true;
+		searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 		// get all course ID
+		const getAvalibleNckuHubCourseID = avalibleNckuHubCourseID !== null ? null :
+			await fetchApi('/nckuhub', 'get nckuhub id');
 		if (avalibleNckuHubCourseID === null) {
-			searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 			avalibleNckuHubCourseID = (await fetchApi('/nckuhub', 'get nckuhub id')).data;
 		}
 
 		// get urSchool data
 		if (urSchoolData === null) {
-			searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 			urSchoolData = (await fetchApi('/urschool', 'get urschool data')).data;
 		}
 
@@ -341,7 +343,6 @@ export default function (router, loginState) {
 		lastQueryString = queryString;
 
 		console.log('Search:', queryString);
-		searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
 
 		// fetch data
 		const result = (await fetchApi('/search?' + queryString, 'Searching', {timeout: 10000}));
@@ -441,7 +442,10 @@ export default function (router, loginState) {
 	}
 
 	function getWatchCourse() {
-		if (!loginState.state || !loginState.state.login) return;
+		if (!loginState.state || !loginState.state.login) {
+			window.askForLoginAlert();
+			return;
+		}
 		fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
 			const eql = encodeURIComponent('&');
 			watchList = [];
@@ -698,9 +702,9 @@ export default function (router, loginState) {
 							if (data.nckuhub.rate_count === 0)
 								return td('沒有評分', 'nckuhub', options);
 							return td(null, 'nckuhub', options,
-								span(data.nckuhub.got.toFixed(1), 'reward'),
-								span(data.nckuhub.sweet.toFixed(1), 'sweet'),
-								span(data.nckuhub.cold.toFixed(1), 'cool'),
+								span(data.nckuhub.got.toFixed(1), '收穫'),
+								span(data.nckuhub.sweet.toFixed(1), '甜度'),
+								span(data.nckuhub.cold.toFixed(1), '凉度'),
 							);
 						}
 						return td('載入中...', 'nckuhub', {colSpan: 3});
@@ -810,6 +814,7 @@ export default function (router, loginState) {
 	let tHead;
 	const courseSearch = div('courseSearch',
 		{onRender, onPageClose, onPageOpen},
+		h1('課程查詢', 'title'),
 		courseSearchForm,
 		table('result', {cellPadding: 0},
 			colgroup(null,
@@ -1099,7 +1104,7 @@ function Filter() {
  * @return {FilterOption}
  */
 function textSearchFilter(onFilterUpdate) {
-	const searchInput = input(null, 'Teacher, Course name, Serial number', null, {
+	const searchInput = input(null, '篩選課程', null, {
 		type: 'search',
 		oninput: textSearchFilterChange,
 		onpropertychange: textSearchFilterChange

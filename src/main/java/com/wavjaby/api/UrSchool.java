@@ -36,7 +36,7 @@ public class UrSchool implements EndpointModule {
     private static final long updateInterval = 2 * 60 * 60 * 1000;
     private static final long cacheUpdateInterval = 10 * 60 * 1000;
     private static final int UPDATE_THREAD_COUNT = 8;
-    private final ExecutorService pool = Executors.newFixedThreadPool(4, new ThreadFactory("UrSchool-"));
+    private final ExecutorService pool = Executors.newFixedThreadPool(6, new ThreadFactory("UrSchool-"));
 
     private final CookieStore urSchoolCookie = new CookieManager().getCookieStore();
 
@@ -196,27 +196,35 @@ public class UrSchool implements EndpointModule {
         // check if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
-//            logger.log(id + " use cache");
+//            logger.log(id + '-' + mode + " use cache");
             if (response != null)
                 response.setData((String) cacheData[1]);
             return;
         }
-//        logger.log(id + " fetch data");
+//        logger.log(id + '-' + mode + " fetch data");
 
         try {
-            Connection.Response result;
-            while (true) {
+            Connection.Response result = null;
+            IOException ioExp = null;
+            for (int i = 0; i < 3; i++) {
                 try {
                     result = HttpConnection.connect("https://urschool.org/ajax/modal/" + id + "?mode=" + mode)
                             .header("Connection", "keep-alive")
                             .ignoreContentType(true)
                             .cookieStore(urSchoolCookie)
                             .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
-                            .timeout(20 * 1000)
+                            .timeout(10 * 1000)
                             .execute();
+                    ioExp = null;
                     break;
-                } catch (IOException ignore) {
+                } catch (IOException e) {
+                    ioExp = e;
                 }
+            }
+            if (ioExp != null) {
+                if (response != null)
+                    response.errorNetwork(ioExp);
+                return;
             }
             String resultBody = result.body();
 
@@ -615,7 +623,12 @@ public class UrSchool implements EndpointModule {
     public void addInstructorCache(String[] instructors) {
 //        logger.log(Arrays.toString(instructors));
         pool.submit(() -> {
+//            logger.log(Arrays.toString(instructors));
+
             for (String name : instructors) {
+                if (pool.isShutdown())
+                    return;
+
                 List<ProfessorSummary> results = new ArrayList<>();
                 for (ProfessorSummary i : urSchoolData) {
                     if (i.name.equals(name))
@@ -626,13 +639,12 @@ public class UrSchool implements EndpointModule {
                 for (ProfessorSummary i : results) {
                     if (i.recommend != -1) {
                         id = i.id;
-                        mode = i.name;
+                        mode = i.method;
                         break;
                     }
                 }
 
                 if (id != null && mode != null) {
-//                    logger.log("Add cache " + id);
                     getInstructorInfo(id, mode, null);
                 }
             }

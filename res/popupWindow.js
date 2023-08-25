@@ -1,4 +1,4 @@
-import {button, div} from "./domHelper_v001.min.js";
+import {button, div} from './domHelper_v001.min.js';
 
 /**
  * @typedef PopupWindowOption

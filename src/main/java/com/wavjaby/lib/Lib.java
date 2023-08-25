@@ -30,27 +30,33 @@ public class Lib {
 
     public static void cosPreCheck(String urlOrigin, String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
         String cosPreCheckKey = null;
-        int cosPreCheckStart;
-        if ((cosPreCheckStart = body.indexOf("m=cosprecheck")) != -1 &&
-                (cosPreCheckStart = body.indexOf("&ref=", cosPreCheckStart + 13)) != -1) {
+        int cosPreCheckStart = body.indexOf("m=cosprecheck");
+        if (cosPreCheckStart == -1) {
+            if (response != null)
+                response.addWarn(TAG + "CosPreCheck not found");
+            logger.warn("CosPreCheck not found");
+            return;
+        }
+        if ((cosPreCheckStart = body.indexOf("&ref=", cosPreCheckStart + 13)) != -1) {
             cosPreCheckStart += 5;
             int cosPreCheckEnd = body.indexOf('"', cosPreCheckStart);
             if (cosPreCheckEnd != -1)
                 cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
         }
-        if (cosPreCheckKey == null) {
-            if (response != null)
-                response.addWarn(TAG + "CosPreCheck key not found");
-            logger.warn("CosPreCheck key not found");
-            return;
-        }
 //        logger.log("Make CosPreCheck " + cookieStore.getCookies().toString());
+        long now = System.currentTimeMillis() / 1000;
+        String postData = "time=" + now;
+        if (cosPreCheckKey != null) {
+            try {
+                postData += "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                logger.errTrace(e);
+            }
+        }
 
         // 3 try
         for (int i = 0; i < 2; i++) {
-            long now = System.currentTimeMillis() / 1000;
             try {
-                String postData = "time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8");
                 HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
@@ -61,7 +67,7 @@ public class Lib {
                         .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                         .header("X-Requested-With", "XMLHttpRequest")
                         .requestBody(postData)
-                        .timeout(5000)
+                        .timeout(10000)
                         .execute();
                 return;
             } catch (IOException e) {
@@ -175,16 +181,23 @@ public class Lib {
 
     public static String[] simpleSplit(String input, char splitter) {
         ArrayList<String> arr = new ArrayList<>();
-        int last = 0;
-        for (int i = 0; i < input.length(); i++) {
-            if (input.charAt(i) == splitter) {
-                arr.add(input.substring(last, i));
-                last = i + 1;
-            }
+        int off = 0, next;
+        while ((next = input.indexOf(splitter, off)) != -1) {
+            arr.add(input.substring(off, next));
+            off = next + 1;
         }
-        if (input.length() > last)
-            arr.add(input.substring(last));
+        if (input.length() > off)
+            arr.add(input.substring(off));
         return arr.toArray(new String[0]);
+    }
+
+    public static Byte sectionCharToByte(char section) {
+        if (section <= '4') return (byte) (section - '0');
+        if (section == 'N') return 5;
+        if (section <= '9') return (byte) (section - '5' + 6);
+        if (section >= 'A' && section <= 'E') return (byte) (section - 'A' + 11);
+        if (section >= 'a' && section <= 'e') return (byte) (section - 'a' + 11);
+        throw new NumberFormatException();
     }
 
     public static String parseUnicode(String input) {

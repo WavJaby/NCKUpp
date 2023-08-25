@@ -1,7 +1,14 @@
+@import '../variables';
+
 $course-block-bg-color: #5985ef;
 $schedule-head-bg-color: #282B2C;
+$schedule-row-bg-color: #1C1E1F;
 
 .courseSchedule {
+    > .title {
+        margin: 10px 10px 0 10px;
+    }
+
     > .options {
         margin: 10px 10px 0 10px;
         display: inline-block;
@@ -11,14 +18,41 @@ $schedule-head-bg-color: #282B2C;
         }
     }
 
+    > .scheduleTableInfo {
+        margin: 10px 10px 0 10px;
+        display: block;
+    }
+
+    > .tableContainer {
+        margin: 0 10px;
+    }
+
+    // Expend table width when capture image
+    &.capture > .courseScheduleTable {
+        width: 100%;
+    }
+
+    > .downloadScheduleBtn {
+        background: $button-dark-bg-color;
+        cursor: pointer;
+        margin: 10px;
+        padding: 5px;
+        border-radius: 10px;
+        font-size: 20px;
+        display: none;
+
+        &.show {
+            display: inline-block;
+        }
+
+        &:hover {
+            background: $button-dark-green-bg-color;
+        }
+    }
+
     .courseScheduleTable {
         height: 100%;
-        margin: 10px;
         border-spacing: 3px;
-
-        > caption {
-            text-align: left;
-        }
 
         > thead {
             position: relative;
@@ -28,7 +62,8 @@ $schedule-head-bg-color: #282B2C;
                 text-align: center;
 
                 > td:nth-child(n+2) {
-                    min-width: 8em;
+                    min-width: 90px;
+                    font-size: 18px;
                 }
             }
 
@@ -49,23 +84,33 @@ $schedule-head-bg-color: #282B2C;
                 position: relative;
 
                 > td {
-                    height: 100%;
+                    //height: 100%;
 
                     &:nth-child(1) {
+                        background: $schedule-row-bg-color;
+                        width: 0;
+                        font-size: 20px;
                         padding: 5px;
+                        position: sticky;
+                        left: 0;
                     }
 
                     // Time split line
                     &:nth-child(2) {
+                        background: $schedule-row-bg-color;
                         width: 0;
+                        font-size: 18px;
+                        padding: 2px 5px;
                         border-right: white 1px solid;
                         white-space: pre-wrap;
-                        padding: 5px;
+                        position: sticky;
+                        left: 1em;
                     }
                 }
 
                 // Course block
                 > td.activate > div {
+                    font-size: 18px;
                     padding: 5px;
                     text-align: center;
                     box-sizing: border-box;
@@ -85,7 +130,7 @@ $schedule-head-bg-color: #282B2C;
 
                 // Row background
                 > .splitLine {
-                    background-color: #1C1E1F;
+                    background-color: $schedule-row-bg-color;
                     width: 100%;
                     height: 100%;
                     top: 0;

@@ -61,7 +61,7 @@ public class Profile implements EndpointModule {
 
         try {
             ApiResponse apiResponse = new ApiResponse();
-            
+
             String method = req.getRequestMethod();
             String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
             if (PHPSESSID == null) {

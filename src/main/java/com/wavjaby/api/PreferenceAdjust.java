@@ -102,7 +102,6 @@ public class PreferenceAdjust implements EndpointModule {
         Map<String, String> form = parseUrlEncodedForm(postData);
         String mode = form.get("mode");
         String type = form.get("type");
-        String itemIds = form.get("items");
         if (mode == null || mode.isEmpty()) {
             response.errorBadPayload("Payload form require \"mode\"");
             return;
@@ -111,16 +110,24 @@ public class PreferenceAdjust implements EndpointModule {
             response.errorBadPayload("Payload form require \"type\"");
             return;
         }
-        if (itemIds == null || itemIds.isEmpty()) {
-            response.errorBadPayload("Payload form require \"items\"");
+
+        StringBuilder payload = new StringBuilder();
+        String modifyItems, removeItem;
+        if ((modifyItems = form.get("modifyItems")) != null && !modifyItems.isEmpty()) {
+            for (String itemId : modifyItems.split(",")) {
+                if (payload.length() > 0)
+                    payload.append('&');
+                payload.append("list_data%5B%5D=").append(itemId);
+            }
+        } else if ((removeItem = form.get("removeItem")) != null && !removeItem.isEmpty()) {
+            payload.append("time=").append(System.currentTimeMillis() / 1000)
+                    .append("&type=").append(type)
+                    .append("&item=").append(removeItem);
+        } else {
+            response.errorBadPayload("Payload form require \"modifyItems\" or \"removeItem\"");
             return;
         }
-        StringBuilder items = new StringBuilder();
-        for (String itemId : itemIds.split(",")) {
-            if (items.length() > 0)
-                items.append('&');
-            items.append("list_data%5B%5D=").append(itemId);
-        }
+
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21342&time=" + (System.currentTimeMillis() / 1000) +
                         "&m=" + mode + "&type=" + type)
                 .header("Connection", "keep-alive")
@@ -128,7 +135,7 @@ public class PreferenceAdjust implements EndpointModule {
                 .followRedirects(false)
                 .proxy(proxyManager.getProxy())
                 .method(Connection.Method.POST)
-                .requestBody(items.toString());
+                .requestBody(payload.toString());
         try {
             JsonObject result = new JsonObject(conn.execute().body());
             if (!result.getBoolean("status"))

@@ -42,7 +42,7 @@ import {fetchApi} from '../lib.js';
 
 /**
  * @param {QueryRouter} router
- * @param loginState
+ * @param {Signal} loginState
  * @return {HTMLDivElement}
  */
 export default function (router, loginState) {
@@ -195,17 +195,9 @@ export default function (router, loginState) {
 				button('closeButton', null, () => normalDestImg.set(null),
 					div('icon')
 				),
-				img('data:image/svg+xml;base64,' + btoa(state.graph), '')
+				img('data:image/svg+xml;base64,' + btoa(state.graph), '', '', {onload: i => URL.revokeObjectURL(i.target.src)})
 			))
 		)),
-
-		State(currentSemestersInfo, i => !i ? div()
-			: div('semesterInfo', {onclick: () => semesterGrades.set(i.courseGrades)},
-				h1('本學期'),
-				span(null, 'info', span('學期'), text(': ' + parseSemesterStr(i.semester))),
-				span(null, 'info', span('總學分'), text(': ' + i.courseGrades.reduce((a, b) => a + b.credits, 0))),
-			)
-		),
 
 		State(semestersInfo, /**@param{SemesterInfo[]}i*/i => !i ? div()
 			// If Semesters data, render
@@ -236,6 +228,14 @@ export default function (router, loginState) {
 					span(null, 'info', span('系排'), text(': ' + semInfo.deptRanking + '/' + semInfo.deptRankingTotal)),
 				)
 			))
+		),
+
+		State(currentSemestersInfo, i => !i ? div()
+			: div('semesterInfo', {onclick: () => semesterGrades.set(i.courseGrades)},
+				h1('本學期'),
+				span(null, 'info', span('學期'), text(': ' + parseSemesterStr(i.semester))),
+				span(null, 'info', span('總學分'), text(': ' + i.courseGrades.reduce((a, b) => a + b.credits, 0))),
+			)
 		),
 
 		State(semesterGrades, /**@param{CourseGrade[]}i*/i => !i ? div()

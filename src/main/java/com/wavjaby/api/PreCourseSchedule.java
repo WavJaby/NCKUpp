@@ -104,12 +104,12 @@ public class PreCourseSchedule implements EndpointModule {
         // get table
         JsonArray courseScheduleData = new JsonArray();
         Elements tables = body.getElementsByTag("table");
-        if (tables.size() == 0) {
+        if (tables.isEmpty()) {
             response.errorParse("Table not found");
             return;
         }
         Elements tbody = tables.get(0).getElementsByTag("tbody");
-        if (tbody.size() == 0) {
+        if (tbody.isEmpty()) {
             response.errorParse("Table body not found");
             return;
         }
@@ -118,7 +118,7 @@ public class PreCourseSchedule implements EndpointModule {
         for (Element row : eachCourse) {
             Elements col = row.children();
             if (col.size() < 7) {
-                if (col.size() != 0 && "7".equals(col.get(0).attr("colspan")))
+                if (!col.isEmpty() && "7".equals(col.get(0).attr("colspan")))
                     continue;
                 response.errorParse("Course info row parse error");
                 return;
@@ -147,16 +147,17 @@ public class PreCourseSchedule implements EndpointModule {
 
                 StringBuilder builder = new StringBuilder();
                 // Parse section
-                if (dayEnd != -1) {
+                if (dayEnd != -1 && time.length() > dayEnd + 1) {
                     builder.append(date).append(',');
-                    int timeSplit = time.indexOf('~', dayEnd + 1);
+                    int timeSplit = time.indexOf('~');
                     if (timeSplit == -1)
-                        builder.append(time, dayEnd + 1, time.length());
+                        builder.append(sectionCharToByte(time.charAt(dayEnd + 1)));
                     else
-                        builder.append(time, dayEnd + 1, timeSplit).append(',')
-                                .append(time, timeSplit + 1, time.length());
+                        builder.append(sectionCharToByte(time.charAt(dayEnd + 1))).append(',')
+                                .append(sectionCharToByte(time.charAt(timeSplit + 1)));
                 } else
                     builder.append(date);
+
                 timeArr.add(new JsonObjectStringBuilder().append("time", builder.toString()));
             }
             course.put("info", timeArr);

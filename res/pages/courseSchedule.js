@@ -1,6 +1,6 @@
 'use strict';
 
-import {button, checkboxWithName, div, h2, mountableStylesheet, p, span, table} from '../domHelper_v001.min.js';
+import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table, td} from '../domHelper_v001.min.js';
 import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';
 import PopupWindow from '../popupWindow.js';
 
@@ -29,7 +29,7 @@ const nightTimeStart = 10;
 
 /**
  * @param {QueryRouter} router
- * @param loginState
+ * @param {Signal} loginState
  * @return {HTMLDivElement}
  */
 export default function (router, loginState) {
@@ -38,8 +38,10 @@ export default function (router, loginState) {
 	const styles = mountableStylesheet('./res/pages/courseSchedule.css');
 	const showClassroomCheckbox = checkboxWithName(null, '顯示教室', false);
 	const showPreScheduleCheckbox = checkboxWithName(null, '顯示預排科目', false);
+	const scheduleTableInfo = span(null, 'scheduleTableInfo');
 	const windowRoot = div();
 	const scheduleTable = new ScheduleTable(windowRoot);
+	const downloadScheduleButton = a('下載課表', null, 'downloadScheduleBtn');
 	let scheduleLoading = false, scheduleLoadingQueue = false;
 
 	showClassroomCheckbox.input.onchange = () => scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
@@ -80,6 +82,7 @@ export default function (router, loginState) {
 			// Update data
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
+			downloadScheduleButton.classList.remove('show');
 			scheduleTable.dataReset();
 			fetchApi('/courseSchedule', 'Get schedule').then(response => {
 				// Parse normal schedule
@@ -88,6 +91,9 @@ export default function (router, loginState) {
 					scheduleTable.renderTable();
 					updateCourseInfo();
 				}
+				const scheduleData = response.data;
+				downloadScheduleButton.download = scheduleData.year + '學年_第' + scheduleData.semester + '學期_課表';
+				scheduleTableInfo.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
 			});
 			fetchApi('/preCourseSchedule', 'Get pre schedule').then(response => {
 				// Parse normal schedule
@@ -105,6 +111,11 @@ export default function (router, loginState) {
 	}
 
 	function updateCourseInfo() {
+		elementToImage(scheduleTable.table.firstElementChild, 'courseSchedule capture',
+			['static.css', 'courseSchedule.css']).then(imageData => {
+			downloadScheduleButton.href = imageData;
+			downloadScheduleButton.classList.add('show');
+		});
 		scheduleTable.fetchCourseInfo().then(() => {
 			// Reset loading
 			scheduleLoading = false;
@@ -118,12 +129,15 @@ export default function (router, loginState) {
 
 	return div('courseSchedule',
 		{onRender, onPageOpen, onPageClose},
+		h1('學期課表', 'title'),
 		div('scheduleTab'),
 		div('options',
 			showClassroomCheckbox,
 			showPreScheduleCheckbox,
 		),
+		scheduleTableInfo,
 		scheduleTable.table,
+		downloadScheduleButton,
 		windowRoot,
 	);
 };
@@ -161,7 +175,7 @@ function ScheduleTable(windowRoot) {
 	const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
 	const preScheduleTable = table('courseScheduleTable pre', {'cellPadding': 0});
 	preScheduleTable.style.display = 'none';
-	this.table = div(null, scheduleTable, preScheduleTable);
+	this.table = div('tableContainer', scheduleTable, preScheduleTable);
 
 	let /**@type ?ScheduleData*/ scheduleData = null;
 	let /**@type ?ScheduleData*/ preScheduleData = null;
@@ -274,7 +288,6 @@ function ScheduleTable(windowRoot) {
 
 		// Create table
 		initTable(scheduleTable);
-		scheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
 		const rows = createScheduleTable(scheduleTable, tableWidth, tableHeight);
 
 		// Add course cell
@@ -335,12 +348,12 @@ function ScheduleTable(windowRoot) {
 				daysUndecidedCell.appendChild(cell);
 			}
 			// Background
-			row.appendChild(div('splitLine'));
+			row.appendChild(td(null, 'splitLine'));
 		}
 
 		// Row background
 		for (let i = 0; i < tableHeight; i++) {
-			rows[i].appendChild(div('splitLine'));
+			rows[i].appendChild(td(null, 'splitLine'));
 		}
 	}
 
@@ -358,7 +371,6 @@ function ScheduleTable(windowRoot) {
 
 		// Create table
 		initTable(preScheduleTable);
-		preScheduleTable.caption.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
 		const rows = createScheduleTable(preScheduleTable, preTableWidth, preTableHeight);
 		const cellTable = new Array(preTableHeight);
 
@@ -385,7 +397,7 @@ function ScheduleTable(windowRoot) {
 
 		// Row background
 		for (let i = 0; i < preTableHeight; i++) {
-			rows[i].appendChild(div('splitLine'));
+			rows[i].appendChild(td(null, 'splitLine'));
 
 			for (let j = 0; j < preTableWidth; j++)
 				if (cellTable[i][j].childElementCount === 1)
@@ -446,12 +458,12 @@ function ScheduleTable(windowRoot) {
 	 * @param {HTMLTableElement} table
 	 */
 	function initTable(table) {
-		if (table.tHead) table.tHead.innerHTML = '';
+		if (table.tHead)
+			while (table.tHead.firstChild) table.tHead.removeChild(table.tHead.firstChild);
 		else table.createTHead();
-		if (table.tBody) table.tBody.innerHTML = '';
+		if (table.tBody)
+			while (table.tBody.firstChild) table.tBody.removeChild(table.tBody.firstChild);
 		else table.tBody = table.createTBody();
-		if (table.caption) table.caption.textContent = '';
-		else table.createCaption();
 	}
 
 	/**
@@ -520,7 +532,7 @@ function ScheduleTable(windowRoot) {
 			cell.textContent = weekTable[i];
 			if (i === 0) cell.colSpan = 2;
 		}
-		headRow.appendChild(div('background'));
+		headRow.appendChild(td(null, 'background'));
 
 		// Table time cell
 		const rows = new Array(tableHeight);
@@ -632,5 +644,90 @@ function ScheduleTable(windowRoot) {
 			scheduleTable.style.display = null;
 			preScheduleTable.style.display = 'none';
 		}
+	}
+}
+
+/**
+ * @param {HTMLElement} element
+ * @param {string} rootClassName
+ * @param loadedStyleSheet
+ */
+async function elementToImage(element, rootClassName, loadedStyleSheet) {
+	const elementWidth = element.offsetWidth || 100;
+	const elementHeight = element.offsetHeight || 100;
+
+	const width = elementWidth;
+	const height = elementHeight;
+
+	// Read style
+	let cssStyles = '';
+	for (let i = 0; i < document.styleSheets.length; i++) {
+		const styleSheet = document.styleSheets[i];
+		let find = false;
+		for (const i of loadedStyleSheet) {
+			if (styleSheet.href.endsWith(i)) {
+				find = true;
+				break;
+			}
+		}
+		if (!find)
+			continue;
+
+		let styles = styleSheet.cssRules || styleSheet.rules;
+		for (const item in styles) {
+			if (styles[item].cssText)
+				cssStyles += styles[item].cssText;
+		}
+	}
+
+	// Read font
+	const embedFont = await loadAndPackFont('https://fonts.googleapis.com/css2?family=JetBrains+Mono');
+
+	// Create svg
+	const svgBody = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
+		'<defs><style>' + embedFont + cssStyles + 'body{background:none; z-index:-1;}</style></defs>' +
+		'<foreignObject width="100%" height="100%">' +
+		'<body xmlns="http://www.w3.org/1999/xhtml"><div style="width:100%;height:100%" class="' + rootClassName + '">' +
+		element.outerHTML +
+		'</div></body>' +
+		'</foreignObject></svg>';
+
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	canvas.width = width;
+	canvas.height = height;
+
+	// Make svg to data url
+	const svgBlob = new Blob([svgBody], {type: 'image/svg+xml;charset=utf-8'});
+	const reader = new FileReader();
+	reader.readAsDataURL(svgBlob);
+	await new Promise(resolve => reader.onloadend = resolve);
+	const svgObjectUrl = reader.result.toString();
+
+	// To image
+	const tempImg = new Image();
+	const imageLoad = new Promise(resolve => tempImg.onload = resolve);
+	tempImg.src = svgObjectUrl;
+	await imageLoad;
+	ctx.drawImage(tempImg, 0, 0);
+
+	return canvas.toDataURL('image/png');
+
+	async function loadAndPackFont(url) {
+		const URL_REGEX = /src: ?url\(['"]?([^'"]+?)['"]?\)/g;
+		const font = await fetch(url).then(i => i.text());
+		let embedFont = '';
+		let fontFile, lastIndex = 0;
+		while ((fontFile = URL_REGEX.exec(font))) {
+			embedFont += font.substring(lastIndex, fontFile.index + 9);
+			const url = fontFile[1];
+			const reader = new FileReader();
+			reader.readAsDataURL(await fetch(url).then(i => i.blob()));
+			await new Promise(resolve => reader.onloadend = resolve);
+			embedFont += '"' + reader.result + '"';
+			lastIndex = fontFile.index + url.length + 9;
+		}
+		embedFont += font.substring(lastIndex, font.length);
+		return embedFont;
 	}
 }

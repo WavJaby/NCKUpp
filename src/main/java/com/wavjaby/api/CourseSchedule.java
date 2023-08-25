@@ -26,8 +26,7 @@ import java.util.List;
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.checkCourseNckuLoginRequiredPage;
-import static com.wavjaby.lib.Lib.setAllowOrigin;
+import static com.wavjaby.lib.Lib.*;
 
 public class CourseSchedule implements EndpointModule {
     private static final String TAG = "[Schedule]";
@@ -178,12 +177,12 @@ public class CourseSchedule implements EndpointModule {
         // get table
         JsonArray courseScheduleData = new JsonArray();
         Elements tables = body.getElementsByTag("table");
-        if (tables.size() == 0) {
+        if (tables.isEmpty()) {
             response.errorParse("Table not found");
             return;
         }
         Elements tbody = tables.get(0).getElementsByTag("tbody");
-        if (tbody.size() == 0) {
+        if (tbody.isEmpty()) {
             response.errorParse("Table body not found");
             return;
         }
@@ -233,21 +232,21 @@ public class CourseSchedule implements EndpointModule {
                     response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
                     continue;
                 }
-                if (dayEnd != -1) {
+                if (dayEnd != -1 && time.length() > dayEnd + 1) {
                     builder.append(date).append(',');
                     int timeSplit = time.indexOf('~');
                     if (timeSplit == -1)
-                        builder.append(time, dayEnd + 1, time.length());
+                        builder.append(sectionCharToByte(time.charAt(dayEnd + 1)));
                     else
-                        builder.append(time, dayEnd + 1, timeSplit).append(',')
-                                .append(time, timeSplit + 1, time.length());
+                        builder.append(sectionCharToByte(time.charAt(dayEnd + 1))).append(',')
+                                .append(sectionCharToByte(time.charAt(timeSplit + 1)));
                 } else
                     builder.append(date);
             }
             info.put("time", builder.toString());
             String room = rowElements.get(8).text();
             int roomIdEnd = room.indexOf(' ');
-            if (room.length() > 0 && roomIdEnd == -1) {
+            if (!room.isEmpty() && roomIdEnd == -1) {
                 response.errorParse("Course room id not found: " + room);
                 return;
             }

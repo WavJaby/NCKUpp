@@ -77,19 +77,21 @@ window.pageLoading = new Signal(false);
 		Schedule: '課表',
 		GradeInquiry: '成績查詢',
 		CourseSelectionPreference: '志願排序',
+		UsefulWebsite: '實用網站',
 		Profile: '使用者資料',
 	};
-	const navBarBtnPageId = ['CourseSearch', 'Schedule', 'GradeInquiry', 'CourseSelectionPreference'];
+	const navBarBtnPageId = ['CourseSearch', 'Schedule', 'GradeInquiry', 'CourseSelectionPreference', 'UsefulWebsite'];
 	const defaultPage = 'Home';
 	const userLoginData = new Signal();
 	const showLoginWindow = new Signal(false);
 	const queryRouter = new QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
-			Home: new RouterLazyLoad('./pages/home.js'),
+			Home: new RouterLazyLoad('./pages/home_v001.min.js'),
 			CourseSearch: new RouterLazyLoad('./pages/courseSearch.js', userLoginData),
 			Schedule: new RouterLazyLoad('./pages/courseSchedule.js', userLoginData),
 			GradeInquiry: new RouterLazyLoad('./pages/stuIdSysGrades.js', userLoginData),
 			CourseSelectionPreference: new RouterLazyLoad('./pages/preferenceAdjust.js', userLoginData),
+			UsefulWebsite: new RouterLazyLoad('./pages/usefulWebsite.js', userLoginData),
 			Profile: new RouterLazyLoad('./pages/profile.js', userLoginData),
 		},
 		footer(
@@ -178,7 +180,7 @@ window.pageLoading = new Signal(false);
 	window.onload = () => {
 		console.log('Window onload');
 		font.mount();
-		document.body.innerHTML = '';
+		while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
 		document.body.appendChild(root);
 	};
 	queryRouter.init();

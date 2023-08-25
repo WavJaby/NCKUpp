@@ -6,6 +6,10 @@ $search-result-item-spacing: 10px;
 $instructor-info-fade-time: 200ms;
 
 .courseSearch {
+    > .title {
+        margin: 10px 10px 0 10px;
+    }
+
     // Search form
     > .form {
         padding: 5px;
@@ -227,7 +231,7 @@ $instructor-info-fade-time: 200ms;
                     padding: 3px 2px;
 
                     > button {
-                        background-color: #303A47;
+                        background-color: $button-dark-bg-color;
                         height: 100%;
                         max-height: 2em;
                         display: inline-block;
@@ -243,7 +247,7 @@ $instructor-info-fade-time: 200ms;
                     border-left: 1px gray solid;
 
                     > button {
-                        background-color: #303A47;
+                        background-color: $button-dark-bg-color;
                         margin-bottom: 2px;
                         padding: 2px;
                         font-size: 18px;
@@ -251,7 +255,7 @@ $instructor-info-fade-time: 200ms;
                         cursor: pointer;
 
                         &:hover {
-                            background-color: #304C47;
+                            background-color: $button-dark-green-bg-color;
                         }
                     }
                 }

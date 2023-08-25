@@ -455,8 +455,11 @@ public class Login implements EndpointModule {
         String redirect = portalPage.header("refresh");
         int redirectUrlStart;
         if (redirect != null && (redirectUrlStart = redirect.indexOf("url=")) != -1) {
+            redirect = redirect.substring(redirectUrlStart + 4);
+            if (redirect.startsWith("http://"))
+                redirect = "https://" + redirect.substring(7);
             try {
-                return HttpConnection.connect(redirect.substring(redirectUrlStart + 4))
+                return HttpConnection.connect(redirect)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)

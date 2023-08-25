@@ -2,7 +2,7 @@ import {div, mountableStylesheet} from '../domHelper_v001.min.js';
 
 /**
  * @param {QueryRouter} router
- * @param loginState
+ * @param {Signal} loginState
  * @return {HTMLDivElement}
  */
 export default function (router, loginState) {
@@ -25,7 +25,7 @@ export default function (router, loginState) {
 	}
 
 	function onPageClose() {
-		console.log('Course schedule Close');
+		console.log('Profile schedule Close');
 		styles.disable();
 		loginState.removeListener(onLoginState);
 	}

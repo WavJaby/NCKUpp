@@ -4,6 +4,8 @@
       <root url="jar://$PROJECT_DIR$/../TinyJson/build/libs/TinyJson-0.0.4.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../TinyJson/src/main/java" />
+    </SOURCES>
   </library>
 </component>

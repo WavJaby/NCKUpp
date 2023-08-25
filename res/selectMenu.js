@@ -3,8 +3,8 @@
 import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v001.min.js';
 
 /**
- * @typedef {[string|number, string|number]|[string|number, ItemData[]]} ItemData
  * [itemValue, displayName] or [groupName, ItemData[]]
+ * @typedef {[string, string]|[string, ItemData[]]} ItemData
  */
 
 /**
@@ -13,6 +13,7 @@ import {checkboxWithName, div, img, input, label, li, span, text, ul} from './do
  * @property {boolean} [showValueName] Show value name at result. Default: false
  * @property {boolean} [searchValue] Search with value. Default: false
  * @property {boolean} [searchBar] Show search bar. Default: true
+ * @property {boolean} [sortByValue] Sort selected by value. Default: true
  */
 
 /**
@@ -27,8 +28,10 @@ import {checkboxWithName, div, img, input, label, li, span, text, ul} from './do
 export default function SelectMenu(placeholder, inputId, className, items, options) {
 	if (!options)
 		options = {};
-	if (options.searchBar === null || options.searchBar === undefined)
+	if (!options.searchBar)
 		options.searchBar = true;
+	if (!options.sortByValue)
+		options.sortByValue = true;
 
 	// Init elements
 	const itemsContainer = ul('items');
@@ -49,8 +52,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	);
 
 	// Init select menu
-	const selectedItemsValue = [];
-	const selectedItemsName = [];
+	const selectedItems = [];
 	selectItem(null);
 	if (items)
 		createItemsElement(itemsContainer, items);
@@ -111,34 +113,35 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	function selectItem(itemElement, force) {
 		if (itemElement) {
 			if (options.multiple) {
-				const index = selectedItemsValue.indexOf(itemElement.itemValue);
+				const index = selectedItems.findIndex(i => i[0] === itemElement.itemValue);
 				// Add item
 				if (itemElement.input.checked || force) {
 					itemElement.input.checked = true;
-					if (index === -1) {
-						selectedItemsValue.push(itemElement.itemValue);
-						selectedItemsName.push(itemElement.itemName);
-					}
+					if (index === -1)
+						selectedItems.push([itemElement.itemValue, itemElement.itemName]);
 				}
 				// Remove item
 				else {
-					if (index !== -1) {
-						selectedItemsValue.splice(index, 1);
-						selectedItemsName.splice(index, 1);
-					}
+					if (index !== -1)
+						selectedItems.splice(index, 1);
 				}
 			} else {
-				selectedItemsValue.length = 1;
-				selectedItemsName.length = 1;
-				selectedItemsValue[0] = itemElement.itemValue;
-				selectedItemsName[0] = itemElement.itemName;
+				selectedItems.length = 1;
+				selectedItems[0] = [itemElement.itemValue, itemElement.itemName];
+			}
+
+			if (options.multiple && options.sortByValue) {
+				selectedItems.sort(([a], [b]) => a.localeCompare(b));
 			}
 
 			// Show items
-			if (options.showValueName)
-				resultBox.value = selectedItemsValue.join(', ');
-			else
-				resultBox.value = selectedItemsName.join(', ');
+			let result = '';
+			for (let i of selectedItems) {
+				if (result.length > 0)
+					result += ', ';
+				result += options.showValueName ? i[0] : i[1];
+			}
+			resultBox.value = result;
 		} else {
 			// Clear checked
 			if (options.multiple) {
@@ -146,8 +149,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 					itemElement.input.checked = false;
 				}
 			}
-			selectedItemsValue.length = 0;
-			selectedItemsName.length = 0;
+			selectedItems.length = 0;
 			resultBox.value = '';
 		}
 	}
@@ -214,7 +216,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 
 	/**
 	 * @param {HTMLUListElement} parent
-	 * @param {[string, Array]} items
+	 * @param {ItemData[]} items
 	 */
 	function createItemsElement(parent, items) {
 		for (let item of items) {
@@ -264,8 +266,8 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 
 	selectMenu.getSelectedValue = function () {
 		if (options.multiple)
-			return selectedItemsValue;
-		return selectedItemsValue[0];
+			return selectedItems.map(i => i[0]);
+		return selectedItems[0][0];
 	};
 
 	return selectMenu;

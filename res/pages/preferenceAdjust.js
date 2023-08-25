@@ -5,15 +5,16 @@ import {fetchApi} from '../lib.js';
 
 /**
  * @param {QueryRouter} router
- * @param loginState
+ * @param {Signal} loginState
  * @return {HTMLDivElement}
  */
 export default function (router, loginState) {
 	console.log('Preference adjust Init');
 	// static element
 	const styles = mountableStylesheet('./res/pages/preferenceAdjust.css');
-	const saveItemOrderButton = button('saveOrderBtn');
+	const saveItemOrderButton = button('saveOrderBtn', null, saveItemOrder);
 	const saveItemOrderDelayTime = 5000;
+	const dayOfWeek = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 	let saveItemOrderCountdown = null, saveItemOrderTimeLeft = 0;
 	let preferenceAdjustLoading = false;
 	let /**@type{AdjustList}*/lastSelectTab = null;
@@ -47,16 +48,7 @@ export default function (router, loginState) {
 	 */
 	function onLoginState(state) {
 		if (state && state.login) {
-			if (preferenceAdjustLoading)
-				return;
-			preferenceAdjustLoading = true;
-			fetchApi('/preferenceAdjust', 'Get preference').then(i => {
-				if (i.success)
-					renderAdjustList(i.data);
-				else
-					window.messageAlert.addError('Error', i.msg, 3000);
-				preferenceAdjustLoading = false;
-			});
+			updatePreferenceAdjust();
 		} else {
 			if (state)
 				window.askForLoginAlert();
@@ -64,7 +56,19 @@ export default function (router, loginState) {
 		}
 	}
 
-	const dayOfWeek = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+	function updatePreferenceAdjust() {
+		if (preferenceAdjustLoading)
+			return;
+
+		preferenceAdjustLoading = true;
+		fetchApi('/preferenceAdjust', 'Get preference').then(i => {
+			if (i.success)
+				renderAdjustList(i.data);
+			else
+				window.messageAlert.addError('Error', i.msg, 3000);
+			preferenceAdjustLoading = false;
+		});
+	}
 
 	function toTimeStr(time) {
 		if (time === null)
@@ -83,19 +87,20 @@ export default function (router, loginState) {
 		if (!state)
 			return;
 
-		console.log(state);
+		// console.log(state);
 		actionKey = state.action;
 		removeKey = state.remove;
 		const tabs = state.tabs;
 		for (const tab of tabs) {
 			const adjustList = new AdjustList();
 			adjustList.typeKey = tab.type;
-			const items = tab.items.map(i => div(null, {key: i.key},
+			const items = tab.items.map(i => div('courseBlock', {key: i.key},
 				span('[' + i.sn + '] '),
 				span(i.name + ' '),
 				span(toTimeStr(i.time) + ' '),
 				span(i.credits + '學分 '),
 				span(i.require ? '必修' : '選修'),
+				button('removeBtn', '移除', removeCourse, {courseData: i, typeKey: tab.type}),
 			));
 			adjustList.onchange = adjustListOnChange;
 			adjustList.ongrab = saveItemOrderCountdownStop;
@@ -111,6 +116,24 @@ export default function (router, loginState) {
 		}
 	}
 
+	function removeCourse() {
+		const course = this.courseData;
+		const typeKey = this.typeKey;
+		const suffix = '[' + course.sn + '] ' + course.name;
+		const deleteConform = confirm('是否要刪除 ' + suffix);
+		if (!deleteConform)
+			return;
+
+		const form = 'mode=' + removeKey + '&type=' + typeKey + '&removeItem=' + course.key;
+		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
+			updatePreferenceAdjust();
+			if (response.success) {
+				window.messageAlert.addSuccess('志願排序刪除成功', response.msg, 5000);
+			} else
+				window.messageAlert.addError('志願排序刪除失敗', response.msg, 5000);
+		});
+	}
+
 	function onTabSelect() {
 		if (saveItemOrderCountdown) {
 			return;
@@ -122,6 +145,7 @@ export default function (router, loginState) {
 	}
 
 	function saveItemOrder() {
+		saveItemOrderCountdownStop();
 		saveItemOrderButton.classList.remove('show');
 		const orderKeys = [];
 		lastSelectTab.updateItemIndex();
@@ -130,28 +154,29 @@ export default function (router, loginState) {
 			orderKeys.push(item.key);
 		const itemsStr = orderKeys.join(',');
 		const typeKey = lastSelectTab.typeKey;
-		const form = 'mode=' + actionKey + '&type=' + typeKey + '&items=' + itemsStr;
+		const form = 'mode=' + actionKey + '&type=' + typeKey + '&modifyItems=' + itemsStr;
 		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
 			if (response.success) {
 				window.messageAlert.addSuccess('志願排序儲存成功', response.msg, 5000);
-			} else
+			} else {
 				window.messageAlert.addError('志願排序儲存失敗', response.msg, 5000);
+				updatePreferenceAdjust();
+			}
 		});
 	}
 
 	function adjustListOnChange() {
 		clearTimeout(saveItemOrderCountdown);
 		saveItemOrderTimeLeft = saveItemOrderDelayTime;
-		saveItemOrderButton.textContent = '在' + (saveItemOrderTimeLeft / 1000) + '秒後儲存';
+		saveItemOrderButton.textContent = '點我儲存, ' + (saveItemOrderTimeLeft / 1000) + '秒後自動儲存';
 		saveItemOrderButton.classList.add('show');
 		saveItemOrderCountdown = setInterval(() => {
 			saveItemOrderTimeLeft -= 1000;
 			if (saveItemOrderTimeLeft <= 0) {
-				saveItemOrderCountdownStop();
 				saveItemOrder();
 				return;
 			}
-			saveItemOrderButton.textContent = '在' + (saveItemOrderTimeLeft / 1000) + '秒後儲存';
+			saveItemOrderButton.textContent = '點我儲存, ' + (saveItemOrderTimeLeft / 1000) + '秒後自動儲存';
 		}, 1000);
 	}
 
@@ -249,6 +274,9 @@ function AdjustList() {
 	this.onchange = null;
 
 	function onGrabItem(e) {
+		if (e.target instanceof HTMLButtonElement)
+			return;
+
 		let pointerX, pointerY;
 		if (e instanceof TouchEvent) {
 			const touches = e.changedTouches;

@@ -1,6 +1,6 @@
 export const mobileWidth = 700;
 const apiEndPoint = window.location.hostname === 'localhost'
-	? window.location.origin + '/api'
+	? 'https://localhost/api'
 	: 'https://api.simon.chummydns.com/api';
 /**
  * @typedef {Object} ApiResponse

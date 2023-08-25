@@ -471,15 +471,6 @@ public class Search implements EndpointModule {
                 this.detailedTimeData = detailedTimeData;
             }
 
-            public static Byte sectionCharToByte(char section) {
-                if (section <= '4') return (byte) (section - '0');
-                if (section == 'N') return 5;
-                if (section <= '9') return (byte) (section - '5' + 6);
-                if (section >= 'A' && section <= 'E') return (byte) (section - 'A' + 11);
-                if (section >= 'a' && section <= 'e') return (byte) (section - 'a' + 11);
-                throw new NumberFormatException();
-            }
-
             @Override
             public String toString() {
                 if (detailedTimeData != null)
@@ -1433,7 +1424,7 @@ public class Search implements EndpointModule {
             }
         }
 
-        List<String> urSchoolCache = addUrSchoolCache ? new ArrayList<>() : null;
+        Set<String> urSchoolCache = addUrSchoolCache ? new HashSet<>() : null;
         int sectionOffset = historySearch ? 1 : 0;
 
         // get course list
@@ -1575,22 +1566,10 @@ public class Search implements EndpointModule {
             String instructors = section.get(sectionOffset + 6).text();
             if (!instructors.isEmpty() && !instructors.equals("未定")) {
                 instructors = instructors.replace("*", "");
-                courseData_instructors = instructors.split(" ");
+                courseData_instructors = simpleSplit(instructors, ' ');
                 // Add urSchool cache
-                if (addUrSchoolCache && urSchool != null) {
+                if (addUrSchoolCache && urSchool != null)
                     urSchoolCache.addAll(Arrays.asList(courseData_instructors));
-                    // Flush to add urSchool cache
-                    if (urSchoolCache.size() > 10) {
-                        urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
-                        urSchoolCache.clear();
-                    }
-                }
-            }
-            // Add urSchool cache
-            if (addUrSchoolCache && urSchool != null) {
-                // Flush to add urSchool cache
-                if (!urSchoolCache.isEmpty())
-                    urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
             }
 
             // Get time list
@@ -1611,10 +1590,10 @@ public class Search implements EndpointModule {
                             timeCacheDayOfWeek = (byte) (text.charAt(1) - '1');
                             // Get section
                             if (text.length() > 3) {
-                                timeCacheSection = CourseData.TimeData.sectionCharToByte(text.charAt(3));
+                                timeCacheSection = sectionCharToByte(text.charAt(3));
                                 // Get section end
                                 if (text.length() > 5 && text.charAt(4) == '~') {
-                                    timeCacheSectionTo = CourseData.TimeData.sectionCharToByte(text.charAt(5));
+                                    timeCacheSectionTo = sectionCharToByte(text.charAt(5));
                                 }
                             }
                             continue;
@@ -1750,6 +1729,13 @@ public class Search implements EndpointModule {
                     courseData_moodle,
                     courseData_btnPreferenceEnter, courseData_btnAddCourse, courseData_btnPreRegister, courseData_btnAddRequest);
             courseDataList.add(courseData);
+        }
+
+        // Add urSchool cache
+        if (addUrSchoolCache && urSchool != null) {
+            // Flush to add urSchool cache
+            if (!urSchoolCache.isEmpty())
+                urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
         }
     }
 

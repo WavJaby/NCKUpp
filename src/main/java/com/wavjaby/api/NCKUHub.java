@@ -163,6 +163,7 @@ public class NCKUHub implements EndpointModule {
             final Integer nckuhubId = a == null ? null : a.get(serialId.substring(split + 1));
             if (nckuhubId == null) {
                 courses.appendRaw(serialId, null);
+                taskLeft.countDown();
                 continue;
             }
 
@@ -170,6 +171,7 @@ public class NCKUHub implements EndpointModule {
             final NckuHubCourseData cached = courseInfoCache.get(nckuhubId);
             if (cached != null && now - cached.lastUpdate < maxCacheTime) {
                 courses.appendRaw(serialId, cached.data);
+                taskLeft.countDown();
                 continue;
             }
 
@@ -191,6 +193,8 @@ public class NCKUHub implements EndpointModule {
                 } catch (IOException e) {
                     logger.errTrace(e);
                     response.errorNetwork(e);
+                    courseInfoGetterLock.release();
+                    taskLeft.countDown();
                     return;
                 }
                 // Parse data
@@ -204,7 +208,6 @@ public class NCKUHub implements EndpointModule {
                 json.remove("courseInfo");
                 String resultData = json.toString();
                 courses.appendRaw(serialId, resultData);
-                courseInfoGetterLock.release();
                 taskLeft.countDown();
 
                 // Update cache
@@ -219,6 +222,7 @@ public class NCKUHub implements EndpointModule {
                         courseInfoCache.put(nckuhubId, newCache);
                     }
                 }
+                courseInfoGetterLock.release();
             });
         }
 

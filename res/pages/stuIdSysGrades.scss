@@ -14,15 +14,16 @@
 }
 
 .stuIdSysGrades {
-    > .semesterInfo {
+    > .semesters, .semesterInfo {
         float: left;
     }
 
     .semesterInfo {
         background: #1a1d28;
         cursor: pointer;
-        display: inline-block;
+        display: block;
         padding: 10px;
+        box-sizing: border-box;
         border-radius: 10px;
         margin: 5px 0 0 5px;
 
@@ -47,6 +48,7 @@
         padding: 5px;
         text-align: center;
         border-top: white 1px solid;
+        clear: both;
 
         > div {
             background: #1a1d28;
