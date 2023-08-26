@@ -95,7 +95,7 @@ export default function (router, loginState) {
 				downloadScheduleButton.download = scheduleData.year + '學年_第' + scheduleData.semester + '學期_課表';
 				scheduleTableInfo.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
 			});
-			fetchApi('/preCourseSchedule', 'Get pre schedule').then(response => {
+			fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(response => {
 				// Parse normal schedule
 				scheduleTable.setPreScheduleData(response);
 				if (scheduleTable.dataReady()) {
@@ -270,12 +270,12 @@ function ScheduleTable(windowRoot) {
 			return;
 
 		const title = '預排刪除 ' + suffix;
-		fetchApi('/preCourseSchedule', 'Delete pre schedule',
+		fetchApi('/courseSchedule?pre=true', 'Delete pre schedule',
 			{method: 'post', body: 'action=delete&info=' + key}
 		).then(response => {
 			if (response.success) {
 				window.messageAlert.addSuccess(title, response.msg, 5000);
-				fetchApi('/preCourseSchedule', 'Get pre schedule').then(setAndRenderPreScheduleData);
+				fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(setAndRenderPreScheduleData);
 				courseInfoWindow.windowClose();
 			} else
 				window.messageAlert.addError(title, response.msg, 5000);

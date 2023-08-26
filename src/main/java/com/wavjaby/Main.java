@@ -87,14 +87,15 @@ public class Main {
         registerModule(new AllDept(search), "/api/alldept");
         registerModule(new HomeInfo(proxyManager), "/api/homeInfo");
         registerModule(new CourseFunctionButton(robotCode), "/api/courseFuncBtn");
-        registerModule(new NCKUHub(), "/api/nckuhub");
         registerModule(new Logout(proxyManager), "/api/logout");
         registerModule(new CourseSchedule(proxyManager), "/api/courseSchedule");
-        registerModule(new PreCourseSchedule(proxyManager), "/api/preCourseSchedule");
         registerModule(new ExtractUrl(proxyManager), "/api/extract");
         registerModule(new PreferenceAdjust(proxyManager), "/api/preferenceAdjust");
-        registerModule(new StudentIdentificationSystem(), "/api/stuIdSys");
+
+        registerModule(new NCKUHub(), "/api/nckuhub");
+        registerModule(new UsefulWebsite(), "/api/usefulWebsite");
         registerModule(new ClientDebugLog(), "/api/clientDebugLog");
+        registerModule(new StudentIdentificationSystem(), "/api/stuIdSys");
 
         server.start();
         logger.log("Server started, " + server.hostname + ':' + server.port);

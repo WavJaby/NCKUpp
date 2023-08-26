@@ -54,9 +54,14 @@ public class CourseFunctionButton implements EndpointModule {
 
         try {
             ApiResponse apiResponse = new ApiResponse();
-            logger.log(req.getRequestURI().getRawQuery());
             Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-            processData(query, apiResponse, cookieStore);
+            String key;
+            if ((key = query.get("cosdata")) != null) {
+                postCosData(key, cookieStore, apiResponse);
+            } else if ((key = query.get("prekey")) != null) {
+                postPreKey(key, cookieStore, apiResponse);
+            } else
+                apiResponse.errorBadQuery("Query require one of \"cosdata\" or \"prekey\"");
 
             Headers responseHeader = req.getResponseHeaders();
             packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
@@ -80,16 +85,6 @@ public class CourseFunctionButton implements EndpointModule {
     @Override
     public HttpHandler getHttpHandler() {
         return httpHandler;
-    }
-
-    private void processData(Map<String, String> query, ApiResponse response, CookieStore cookieStore) {
-        String key;
-        if ((key = query.get("cosdata")) != null) {
-            postCosData(key, cookieStore, response);
-        } else if ((key = query.get("prekey")) != null) {
-            postPreKey(key, cookieStore, response);
-        } else
-            response.errorBadQuery("Query require one of \"cosdata\" or \"prekey\"");
     }
 
     private void postPreKey(String key, CookieStore cookieStore, ApiResponse response) {

@@ -785,12 +785,15 @@ export default function (router, loginState) {
 
 	function openInstructorDetailWindow(info) {
 		window.pageLoading.set(true);
-		fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`).then(response => {
+		fetchApi(`/urschool?id=${info.id}&mode=${info.mode}`, 'Get UrSchool Data', {timeout: 10000}).then(response => {
+			window.pageLoading.set(false);
+			if (!response || !response.success || !response.data)
+				return;
+
 			/**@type UrSchoolInstructor*/
 			const instructor = response.data;
 			instructor.info = info;
 			instructorDetailWindow.set(instructor);
-			window.pageLoading.set(false);
 		});
 	}
 

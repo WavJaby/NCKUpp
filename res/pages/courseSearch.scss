@@ -342,12 +342,17 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 .info > .instructorBtn {
-                    margin: 0 5px 0 0;
+                    background: $button-dark-bg-color;
                     font-size: 16px;
                     padding: 2px 5px;
+                    margin: 0 5px 0 0;
                     border-radius: 5px;
-                    vertical-align: middle;
                     display: inline-block;
+                    cursor: pointer;
+
+                    &:hover {
+                        background: $button-dark-green-bg-color;
+                    }
                 }
             }
         }

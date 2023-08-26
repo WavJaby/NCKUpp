@@ -65,61 +65,61 @@ public class Login implements EndpointModule {
             SQLite.printSqlError(e);
         }
 
-        keepLoginUpdater.scheduleAtFixedRate(() -> {
-            try {
-                for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
-                    search.getAllDeptData(entry.getValue(), null);
-
-                    Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
-                            .header("Connection", "keep-alive")
-                            .cookieStore(entry.getValue())
-                            .ignoreContentType(true)
-                            .proxy(proxyManager.getProxy())
-                            .execute();
-
-                    String result = checkLoginPage.body();
-                    int loginState;
-                    if (checkLoginPage.url().toString().endsWith("/index.php?c=portal") && // check if already login
-                            (loginState = result.indexOf(loginCheckString)) != -1 &&
-                            (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
-
-                        int start, end = loginState + loginCheckString.length();
-                        // dept/grade
-                        String deptGradeInfo = null;
-                        if ((start = result.indexOf('>', end)) != -1 &&
-                                (end = result.indexOf('<', ++start)) != -1) {
-                            deptGradeInfo = result.substring(start, end++);
-                        }
-
-                        // name
-                        String name = null;
-                        if ((start = result.indexOf('>', end)) != -1 &&
-                                (end = result.indexOf('<', ++start)) != -1)
-                            name = result.substring(start, end++);
-
-                        // student ID
-                        String studentID = null;
-                        if ((start = result.indexOf('>', end)) != -1 &&
-                                (end = result.indexOf('<', ++start)) != -1) {
-                            int cache = result.indexOf('（', start);
-                            if (cache != -1 && cache < end) start = cache + 1;
-                            cache = result.lastIndexOf('）', end);
-                            if (cache != -1 && cache > start) end = cache;
-                            studentID = result.substring(start, end);
-                        }
-
-                        logger.log(studentID + " is login");
-                    } else {
-                        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, entry.getValue());
-                        logger.log(PHPSESSID + " is logout");
-                        loginUserCookie.remove(entry.getKey());
-                    }
-                }
-
-            } catch (IOException e) {
-                logger.errTrace(e);
-            }
-        }, 0, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
+//        keepLoginUpdater.scheduleAtFixedRate(() -> {
+//            try {
+//                for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
+//                    search.getAllDeptData(entry.getValue(), null);
+//                    String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, entry.getValue());
+//
+//                    Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
+//                            .header("Connection", "keep-alive")
+//                            .cookieStore(entry.getValue())
+//                            .ignoreContentType(true)
+//                            .proxy(proxyManager.getProxy())
+//                            .execute();
+//
+//                    String result = checkLoginPage.body();
+//                    int loginState;
+//                    if (checkLoginPage.url().toString().endsWith("/index.php?c=portal") && // check if already login
+//                            (loginState = result.indexOf(loginCheckString)) != -1 &&
+//                            (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
+//
+//                        int start, end = loginState + loginCheckString.length();
+//                        // dept/grade
+//                        String deptGradeInfo = null;
+//                        if ((start = result.indexOf('>', end)) != -1 &&
+//                                (end = result.indexOf('<', ++start)) != -1) {
+//                            deptGradeInfo = result.substring(start, end++);
+//                        }
+//
+//                        // name
+//                        String name = null;
+//                        if ((start = result.indexOf('>', end)) != -1 &&
+//                                (end = result.indexOf('<', ++start)) != -1)
+//                            name = result.substring(start, end++);
+//
+//                        // student ID
+//                        String studentID = null;
+//                        if ((start = result.indexOf('>', end)) != -1 &&
+//                                (end = result.indexOf('<', ++start)) != -1) {
+//                            int cache = result.indexOf('（', start);
+//                            if (cache != -1 && cache < end) start = cache + 1;
+//                            cache = result.lastIndexOf('）', end);
+//                            if (cache != -1 && cache > start) end = cache;
+//                            studentID = result.substring(start, end);
+//                        }
+//
+//                        logger.log(studentID + " is login");
+//                    } else {
+//                        logger.log(PHPSESSID + " is logout");
+//                        loginUserCookie.remove(entry.getKey());
+//                    }
+//                }
+//
+//            } catch (IOException e) {
+//                logger.errTrace(e);
+//            }
+//        }, 0, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
     }
 
     @Override
