@@ -106,11 +106,12 @@
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-HGNQ4WERFG"></script>
 	<script>
 		window.dataLayer = window.dataLayer || [];
+		if (window.location.hostname !== 'localhost') {
+			gtag('js', new Date());
+			gtag('config', 'G-HGNQ4WERFG');
+		}
 
 		function gtag() {dataLayer.push(arguments);}
-
-		gtag('js', new Date());
-		gtag('config', 'G-HGNQ4WERFG');
 	</script>
 
 	<!-- IE version check -->

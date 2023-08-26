@@ -207,7 +207,9 @@ public class NCKUHub implements EndpointModule {
                 }
                 json.remove("courseInfo");
                 String resultData = json.toString();
-                courses.appendRaw(serialId, resultData);
+                synchronized (courses) {
+                    courses.appendRaw(serialId, resultData);
+                }
                 taskLeft.countDown();
 
                 // Update cache

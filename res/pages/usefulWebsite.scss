@@ -1,5 +1,73 @@
+@import '../variables';
+
 .usefulWebsite {
     > .title {
         margin: 10px 10px 0 10px;
+    }
+
+    > .websites {
+        position: relative;
+        padding: 10px;
+        display: grid;
+        counter-reset: grid-items;
+        grid-gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(500px, max-content));
+        justify-content: center;
+
+        > .site {
+            background: $background-color-block;
+            max-width: 600px;
+            min-height: 150px;
+            border-radius: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            counter-increment: grid-item;
+
+            &:hover {
+                background: #3b4a5f;
+            }
+
+            > .icon {
+                height: 30px;
+                width: 30px;
+                display: inline-block;
+                vertical-align: text-bottom;
+                overflow: hidden;
+
+                > img {
+                    border-radius: 5px;
+                    height: 100%;
+                }
+            }
+
+            > .title {
+                font-size: 25px;
+                margin: 0 0 0 5px;
+                display: inline-block;
+            }
+
+            > .logo {
+                float: right;
+                max-width: 200px;
+                overflow: hidden;
+                border-radius: 10px;
+                margin-top: 5px;
+            }
+
+            > .description {
+                margin-top: 10px;
+                font-size: 18px;
+            }
+        }
+
+        @media only screen and ($small-screen) {
+            grid-template-columns: 1fr;
+
+            > .site {
+                > .logo {
+                    display: none;
+                }
+            }
+        }
     }
 }

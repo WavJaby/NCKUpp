@@ -19,7 +19,7 @@
     }
 
     .semesterInfo {
-        background: #1a1d28;
+        background: $background-color-block;
         cursor: pointer;
         display: block;
         padding: 10px;
@@ -51,7 +51,7 @@
         clear: both;
 
         > div {
-            background: #1a1d28;
+            background: $background-color-block;
             cursor: pointer;
             display: inline-block;
             padding: 10px;

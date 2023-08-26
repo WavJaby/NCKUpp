@@ -80,7 +80,7 @@
                 overflow: hidden;
 
                 > .department {
-                    background: #1a1d28;
+                    background: $background-color-block;
                     padding: 5px;
                     border-radius: 10px;
                     margin-bottom: 5px;
@@ -115,7 +115,7 @@
 
         > .bulletinPanel {
             > .items > .bulletin {
-                background: #1a1d28;
+                background: $background-color-block;
                 padding: 5px;
                 border-radius: 10px;
                 margin-bottom: 5px;

@@ -6,3 +6,4 @@
 /res/quizlet/
 Test.java
 minify.bat
+*.min.js.map
