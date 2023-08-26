@@ -51,7 +51,11 @@
                 max-width: 200px;
                 overflow: hidden;
                 border-radius: 10px;
-                margin-top: 5px;
+                margin: 5px 0 0 5px;
+
+                > img {
+                    width: 100%;
+                }
             }
 
             > .description {
