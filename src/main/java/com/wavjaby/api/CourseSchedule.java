@@ -123,7 +123,7 @@ public class CourseSchedule implements EndpointModule {
                 if (method.equalsIgnoreCase("GET"))
                     getPreCourseSchedule(cookieStore, apiResponse);
                 else if (method.equalsIgnoreCase("POST"))
-                    postPreCourseSchedule(readRequestBody(req), cookieStore, apiResponse);
+                    postPreCourseSchedule(readRequestBody(req, StandardCharsets.UTF_8), cookieStore, apiResponse);
                 else
                     apiResponse.errorUnsupportedHttpMethod(method);
             }

@@ -34,6 +34,7 @@ $navbar-bg-color: #161b22;
     height: $navbar-height;
     position: absolute;
     z-index: 100;
+    white-space: nowrap;
 
     > .hamburgerMenu {
         height: $navbar-height;
@@ -50,7 +51,6 @@ $navbar-bg-color: #161b22;
     > .homePage {
         font-size: 1.5em;
         vertical-align: top;
-        float: left;
     }
 
     ul {
@@ -59,6 +59,7 @@ $navbar-bg-color: #161b22;
         margin: 0;
         list-style-type: none;
         overflow: hidden;
+        display: inline-block;
     }
 
     // Select list
@@ -196,19 +197,17 @@ footer {
     position: sticky;
     left: 0;
     margin-top: 10px;
-    padding: 0 40px;
+    padding: 0 50px;
     box-sizing: border-box;
     text-align: center;
+
+    @media only screen and ($small-screen) {
+        padding: 0;
+    }
 
     > .borderLine {
         width: 100%;
         margin-bottom: 10px;
-        border-top: gray 1px solid;
-    }
-
-    > .splitLine {
-        width: 50%;
-        margin: 15px auto 10px auto;
         border-top: gray 1px solid;
     }
 
@@ -240,6 +239,8 @@ footer {
 
     // 資料來源
     > .source {
+        display: inline-block;
+
         > h2 {
             margin: 7px 0;
         }
@@ -251,6 +252,12 @@ footer {
             > img {
                 height: 2em;
             }
+        }
+
+        > .splitLine {
+            width: 100%;
+            margin: 15px auto 10px auto;
+            border-top: gray 1px solid;
         }
     }
 }
@@ -268,7 +275,7 @@ footer {
 .router > div {
     width: 100%;
     min-height: 100%;
-    overflow: auto hidden;
+    display: inline-block;
 }
 
 .expandable {

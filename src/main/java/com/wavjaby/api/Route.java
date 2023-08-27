@@ -15,6 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
+import static com.wavjaby.lib.Lib.readInputStreamToString;
+
 @SuppressWarnings("ALL")
 public class Route implements EndpointModule {
     private static final String TAG = "[Route]";
@@ -71,27 +73,21 @@ public class Route implements EndpointModule {
                             return;
                         }
 
-                        InputStream in = conn.getInputStream();
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        int len;
-                        byte[] buff = new byte[1024];
-                        while ((len = in.read(buff, 0, buff.length)) > 0)
-                            out.write(buff, 0, len);
-                        in.close();
+                        String response = readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
 
                         String contrentType = conn.getHeaderField("Content-Type");
                         if (contrentType.startsWith("application/javascript"))
-                            fileBytes = out.toString("UTF-8")
+                            fileBytes = response
                                     .replace("\"/_next/", "\"/api/route/https:/quizlet.com/_next/")
                                     .replace("el.qzlt.io", "/api/route/")
                                     .replace("el.quizlet.com", "/api/route/")
                                     .getBytes(StandardCharsets.UTF_8);
                         else if (contrentType.startsWith("text/css"))
-                            fileBytes = out.toString("UTF-8")
+                            fileBytes = response
                                     .replace("url(/_next/", "url(/api/route/https:/quizlet.com/_next/")
                                     .getBytes(StandardCharsets.UTF_8);
                         else
-                            fileBytes = out.toByteArray();
+                            fileBytes = response.getBytes("UTF-8");
 
                         headerData = new JsonObject();
                         headerData.put("Content-Type", contrentType);

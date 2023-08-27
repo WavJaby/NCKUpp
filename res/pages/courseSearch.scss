@@ -37,7 +37,7 @@ $instructor-info-fade-time: 200ms;
         width: 100%;
         height: 100%;
         border-spacing: 0;
-        font-size: 18px;
+        font-size: 20px;
         padding: 0 5px;
         white-space: nowrap;
         margin: auto;
@@ -63,8 +63,6 @@ $instructor-info-fade-time: 200ms;
         }
 
         .nckuhub {
-            width: 4em;
-            text-align: center;
             cursor: pointer;
 
             &:hover {
@@ -72,7 +70,7 @@ $instructor-info-fade-time: 200ms;
             }
 
             > span {
-                width: 4em;
+                width: 3em;
                 display: inline-block;
                 padding-left: 2px;
                 padding-right: 1px;
@@ -84,6 +82,11 @@ $instructor-info-fade-time: 200ms;
             background: $search-result-header-bg-color;
             position: sticky;
             top: 0;
+
+            > tr:not(:last-child) {
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+            }
 
             > tr {
                 // Course search result filter
@@ -124,7 +127,14 @@ $instructor-info-fade-time: 200ms;
                     padding-left: 5px;
                 }
 
+                > .nckuhub {
+                    width: 0;
+                }
+
                 > th {
+                    line-height: 1.4em;
+                    vertical-align: bottom;
+
                     > .expandDownArrow {
                         height: 1.7em;
                     }
@@ -138,42 +148,36 @@ $instructor-info-fade-time: 200ms;
                         height: 0.7em;
                         pointer-events: none;
                         @include transition(0.1s transform);
+
+                        &.reverse {
+                            @include transform(rotate(180deg));
+                        }
                     }
                 }
-            }
 
-            > tr > th > .sortArrow.reverse {
-                @include transform(rotate(180deg));
-            }
+                > th:not(:first-child) {
+                    border-left: lightgrey solid 1px;
+                }
 
-            > tr > th {
-                line-height: 1.4em;
-                vertical-align: bottom;
-            }
+                > th:not(:first-child):not(:last-child) {
+                    position: relative;
+                    padding: 5px 1px 0 1px;
 
-            > tr > th:not(:first-child) {
-                border-left: lightgrey solid 1px;
-            }
+                    &:hover {
+                        background: $button-hover-color;
+                    }
+                }
 
-            > tr > th:not(:first-child):not(:last-child) {
-                cursor: pointer;
-                position: relative;
-                padding: 0 1px;
-            }
+                // Round corner
+                &:last-child > th:first-child {
+                    width: 0;
+                    border-bottom-left-radius: 10px;
+                }
 
-            > tr > th:not(:first-child):not(:last-child):hover {
-                background: $button-hover-color;
-            }
-
-            // Round corner
-            > tr:last-child > th:first-child {
-                width: 0;
-                border-bottom-left-radius: 10px;
-            }
-
-            > tr:last-child > th:last-child {
-                border-bottom-right-radius: 10px;
-                padding-right: 10px;
+                &:last-child > th:last-child {
+                    border-bottom-right-radius: 10px;
+                    padding-right: 10px;
+                }
             }
         }
 
@@ -190,21 +194,20 @@ $instructor-info-fade-time: 200ms;
 
             // Block
             > tr:nth-child(3n+2) {
-                font-weight: bold;
-                font-size: 20px;
+                //font-weight: bold;
 
                 > td {
                     padding: 5px 2px;
                     text-align: center;
-                }
 
-                > td:last-child {
-                    border-radius: 0 10px 10px 0;
-                    padding-right: 5px;
-                }
+                    &:last-child {
+                        border-radius: 0 10px 10px 0;
+                        padding-right: 5px;
+                    }
 
-                > td:first-child {
-                    border-radius: 10px 0 0 0;
+                    &:first-child {
+                        border-radius: 10px 0 0 0;
+                    }
                 }
 
                 // Result course name
@@ -215,6 +218,8 @@ $instructor-info-fade-time: 200ms;
                         width: 100%;
                         height: 100%;
                         display: table;
+                        padding: 5px 2px;
+                        box-sizing: border-box;
 
                         > span {
                             display: table-cell;
@@ -249,7 +254,7 @@ $instructor-info-fade-time: 200ms;
                     > button {
                         background-color: $button-dark-bg-color;
                         margin-bottom: 2px;
-                        padding: 2px;
+                        padding: 2px 5px;
                         font-size: 18px;
                         border-radius: 10px;
                         cursor: pointer;
@@ -341,17 +346,80 @@ $instructor-info-fade-time: 200ms;
                     font-size: 16px;
                 }
 
-                .info > .instructorBtn {
-                    background: $button-dark-bg-color;
+                .info > .instructorBtn, .info > .instructorBtnNoInfo {
                     font-size: 16px;
                     padding: 2px 5px;
                     margin: 0 5px 0 0;
-                    border-radius: 5px;
                     display: inline-block;
+                }
+
+                .info > .instructorBtn {
+                    background: $button-dark-bg-color;
+                    border-radius: 5px;
                     cursor: pointer;
 
                     &:hover {
                         background: $button-dark-green-bg-color;
+                    }
+                }
+            }
+        }
+
+        @media only screen and ($small-screen) {
+            > thead {
+                > tr:last-child {
+                    display: none;
+                }
+            }
+
+            > tbody {
+                display: block;
+
+                > tr:nth-child(3n+2) {
+                    > td:not(:first-child) {
+                        background: $button-dark-bg-color;
+                        margin: 2px 5px;
+                        border-radius: 10px;
+                        display: block;
+                        float: left;
+                        vertical-align: top;
+                        white-space: pre-wrap;
+
+                        &:not(:last-child) {
+                            line-height: 2em;
+                            height: 2em;
+                            padding: 0 5px;
+                        }
+
+                        &.courseName {
+                            background: none;
+                            width: 100%;
+                            margin: 2px 0;
+                            box-sizing: border-box;
+                            clear: both;
+
+                            > a {
+                                padding: 0;
+                                font-weight: bold;
+                                font-size: 25px;
+                            }
+                        }
+
+                        &.options {
+                            background: none;
+                            width: 100%;
+                            margin: 10px 0 5px 0;
+                            padding: 0 5px;
+                            box-sizing: border-box;
+                            border-left: none;
+                            clear: both;
+
+                            > button {
+                                margin: 0 5px;
+                                padding: 10px;
+                                display: inline-block;
+                            }
+                        }
                     }
                 }
             }

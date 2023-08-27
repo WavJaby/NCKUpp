@@ -27,7 +27,7 @@ import {
 } from './res/domHelper_v001.min.js';
 
 import {metaSet, metaType} from './res/metaTag.js';
-import {fetchApi, mobileWidth} from './res/lib.js';
+import {fetchApi, isMobile} from './res/lib.js';
 
 window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
@@ -107,8 +107,8 @@ window.pageLoading = new Signal(false);
 				a(null, 'https://urschool.org/', 'noSelect', null, {target: '_blank'},
 					img('res/assets/UrSchool_logo.png', 'UrSchool', 'noDrag')
 				),
+				div('splitLine'),
 			),
-			div('splitLine'),
 			h3('By WavJaby'),
 			h3('Email: WavJaby@gmail.com'),
 			a(null, 'https://github.com/WavJaby/NCKUpp', 'openRepo noSelect', null, {target: '_blank'},
@@ -246,7 +246,7 @@ window.pageLoading = new Signal(false);
 		}
 
 		function openSelectList() {
-			if (window.innerWidth > mobileWidth)
+			if (!isMobile())
 				list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
 		}
 

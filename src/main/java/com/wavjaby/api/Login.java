@@ -231,7 +231,7 @@ public class Login implements EndpointModule {
         else if (mode.equals("course")) {
             String loginState = unpackCourseLoginStateCookie(cookies, cookieStore);
             try {
-                String postData = post ? readRequestBody(req) : null;
+                String postData = post ? readRequestBody(req, StandardCharsets.UTF_8) : null;
                 loginCourseNcku(get, postData, response, cookieStore);
             } catch (IOException e) {
                 response.errorBadPayload("Read payload error");
@@ -243,7 +243,7 @@ public class Login implements EndpointModule {
         else if (mode.equals("stuId")) {
             String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
             try {
-                String postData = post ? readRequestBody(req) : null;
+                String postData = post ? readRequestBody(req, StandardCharsets.UTF_8) : null;
                 loginNckuStudentIdSystem(get, postData, response, cookieStore);
             } catch (IOException e) {
                 response.errorBadPayload("Read payload error");

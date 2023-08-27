@@ -115,8 +115,13 @@ public class Main {
         running = true;
         for (Module module : modules.values()) {
             long start = System.currentTimeMillis();
-            module.start();
-            logger.log("##### " + module.getTag() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
+            try {
+                module.start();
+                logger.log("##### " + module.getTag() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
+            } catch (Exception e) {
+                logger.errTrace(e);
+                logger.err("##### " + module.getTag() + " ERROR " + (System.currentTimeMillis() - start) + "ms #####");
+            }
         }
     }
 

@@ -33,12 +33,13 @@ import static com.wavjaby.lib.Lib.*;
 public class UrSchool implements EndpointModule {
     private static final String TAG = "[UrSchool]";
     private static final Logger logger = new Logger(TAG);
-    private static final long updateInterval = 2 * 60 * 60 * 1000;
-    private static final long cacheUpdateInterval = 10 * 60 * 1000;
+    private static final long UPDATE_INTERVAL = 2 * 60 * 60 * 1000;
+    private static final long CACHE_UPDATE_INTERVAL = 10 * 60 * 1000;
     private static final int UPDATE_THREAD_COUNT = 8;
+    private static final String URSCHOOL_FILE_PATH = "./api_file/urschool.json";
     private final ExecutorService pool = Executors.newFixedThreadPool(6, new ThreadFactory("UrSchool-"));
-
     private final CookieStore urSchoolCookie = new CookieManager().getCookieStore();
+    private File urSchoolFile;
 
     private String urSchoolDataJson;
     private List<ProfessorSummary> urSchoolData;
@@ -108,27 +109,15 @@ public class UrSchool implements EndpointModule {
 
     @Override
     public void start() {
-        File file = new File("./urschool.json");
-        if (file.exists()) {
-            try {
-                InputStream reader = Files.newInputStream(file.toPath());
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-                int len;
-                byte[] buff = new byte[1024];
-                while ((len = reader.read(buff)) != -1)
-                    out.write(buff, 0, len);
-                reader.close();
-
-                urSchoolData = new ArrayList<>();
-                urSchoolDataJson = out.toString("UTF-8");
-                for (Object i : new JsonArray(urSchoolDataJson)) {
-                    urSchoolData.add(new ProfessorSummary((JsonArray) i));
-                }
-            } catch (IOException e) {
-                logger.errTrace(e);
+        urSchoolFile = getFileFromPath(URSCHOOL_FILE_PATH, true);
+        if (urSchoolFile.exists()) {
+            urSchoolData = new ArrayList<>();
+            urSchoolDataJson = readFileToString(urSchoolFile, false, StandardCharsets.UTF_8);
+            assert urSchoolDataJson != null;
+            for (Object i : new JsonArray(urSchoolDataJson)) {
+                urSchoolData.add(new ProfessorSummary((JsonArray) i));
             }
-            lastFileUpdateTime = file.lastModified();
+            lastFileUpdateTime = urSchoolFile.lastModified();
         }
 
         if (checkTimeUpdateUrSchoolData())
@@ -195,7 +184,7 @@ public class UrSchool implements EndpointModule {
     private void getInstructorInfo(String id, String mode, ApiResponse response) {
         // check if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
-        if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < cacheUpdateInterval) {
+        if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < CACHE_UPDATE_INTERVAL) {
 //            logger.log(id + '-' + mode + " use cache");
             if (response != null)
                 response.setData((String) cacheData[1]);
@@ -403,7 +392,7 @@ public class UrSchool implements EndpointModule {
 
     private synchronized boolean checkTimeUpdateUrSchoolData() {
         final long start = System.currentTimeMillis();
-        if (start - lastFileUpdateTime <= updateInterval)
+        if (start - lastFileUpdateTime <= UPDATE_INTERVAL)
             return true;
         lastFileUpdateTime = start;
         pool.submit(() -> {
@@ -465,8 +454,7 @@ public class UrSchool implements EndpointModule {
             urSchoolDataJson = resultString;
             urSchoolData = result;
             try {
-                File file = new File("./urschool.json");
-                FileWriter fileWriter = new FileWriter(file);
+                FileWriter fileWriter = new FileWriter(urSchoolFile);
                 fileWriter.write(resultString);
                 fileWriter.close();
             } catch (IOException e) {

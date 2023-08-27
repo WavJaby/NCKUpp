@@ -2,6 +2,11 @@ export const mobileWidth = 700;
 const apiEndPoint = window.location.hostname === 'localhost'
 	? 'https://localhost/api'
 	: 'https://api.simon.chummydns.com/api';
+
+export function isMobile() {
+	return window.innerWidth <= mobileWidth
+}
+
 /**
  * @typedef {Object} ApiResponse
  * @property {string} success

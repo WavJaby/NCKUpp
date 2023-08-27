@@ -50,7 +50,7 @@ public class ClientDebugLog implements EndpointModule {
 
             if (req.getRequestMethod().equalsIgnoreCase("POST")) {
                 String time = DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now());
-                String log = time + ":  " + Lib.readRequestBody(req).trim() + "\n\n";
+                String log = time + ":  " + Lib.readRequestBody(req, StandardCharsets.UTF_8).trim() + "\n\n";
                 logFileOut.write(log.getBytes(StandardCharsets.UTF_8));
                 logFileOut.flush();
             }

@@ -11,6 +11,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
@@ -21,6 +22,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import static com.wavjaby.lib.Lib.executorShutdown;
+import static com.wavjaby.lib.Lib.readInputStreamToString;
 
 public class ProxyChecker {
     int okCount = 0;
@@ -353,14 +355,7 @@ public class ProxyChecker {
                 conn.setRequestProperty("Connection", "close");
 
                 if (conn.getResponseCode() == 200) {
-                    InputStream in = conn.getInputStream();
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    int len;
-                    byte[] buff = new byte[1024];
-                    while ((len = in.read(buff, 0, buff.length)) > 0)
-                        out.write(buff, 0, len);
-
-                    data = out.toString("UTF-8");
+                    data = readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
                 } else
                     error = "ResponseCode Error";
             } catch (Exception e) {

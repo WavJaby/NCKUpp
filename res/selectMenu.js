@@ -28,9 +28,9 @@ import {checkboxWithName, div, img, input, label, li, span, text, ul} from './do
 export default function SelectMenu(placeholder, inputId, className, items, options) {
 	if (!options)
 		options = {};
-	if (!options.searchBar)
+	if (options.searchBar == null)
 		options.searchBar = true;
-	if (!options.sortByValue)
+	if (!options.sortByValue == null)
 		options.sortByValue = true;
 
 	// Init elements

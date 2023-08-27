@@ -9,13 +9,13 @@ import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Element;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.CookieStore;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -113,15 +113,81 @@ public class Lib {
         }
     }
 
-    public static String readRequestBody(HttpExchange req) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+    public static File getFileFromPath(String filePath, boolean mkdir) {
+        File file = new File(filePath);
+
+        // Check parent folder
+        File folder = file.getParentFile();
+        if (folder.exists() && !folder.isDirectory()) {
+            logger.err(folder.getAbsolutePath() + " is file not directory");
+            return file;
+        }
+
+        if (!mkdir)
+            return file;
+
+        // Create parent folder if not exist
+        if (!folder.exists()) {
+            if (!folder.mkdirs())
+                logger.err("Failed to create directory: " + folder.getAbsolutePath());
+        }
+        return file;
+    }
+
+    public static boolean createFileIfNotExist(File file) {
+        if (!file.exists()) {
+            try {
+                return file.createNewFile();
+            } catch (IOException e) {
+                logger.errTrace(e);
+                return false;
+            }
+        } else if (file.isDirectory()) {
+            logger.err(file.getAbsolutePath() + " is a directory");
+            return false;
+        }
+        return true;
+    }
+
+    public static String readFileToString(File file, boolean createIfNotExist, Charset charset) {
+        // Check parent folder
+        File folder = file.getParentFile();
+        if (folder.exists() && !folder.isDirectory()) {
+            logger.err(folder.getAbsolutePath() + " is file not directory");
+            return null;
+        }
+
+        if (createIfNotExist) {
+            if (!createFileIfNotExist(file))
+                return null;
+        } else if (!file.exists()) {
+            return null;
+        } else if (file.isDirectory()) {
+            logger.err(file.getAbsolutePath() + " is directory");
+            return null;
+        }
+
+        try {
+            return readInputStreamToString(Files.newInputStream(file.toPath()), charset);
+        } catch (IOException e) {
+            logger.err(e);
+            return null;
+        }
+    }
+
+    public static String readRequestBody(HttpExchange req, Charset charset) throws IOException {
         InputStream in = req.getRequestBody();
+        return readInputStreamToString(in, charset);
+    }
+
+    public static String readInputStreamToString(InputStream in, Charset charset) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buff = new byte[1024];
         int len;
         while ((len = in.read(buff, 0, buff.length)) > 0)
             out.write(buff, 0, len);
         in.close();
-        return out.toString("UTF-8");
+        return out.toString(charset.name());
     }
 
     public static Map<String, String> parseUrlEncodedForm(String data) {

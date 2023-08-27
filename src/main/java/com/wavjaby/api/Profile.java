@@ -68,7 +68,7 @@ public class Profile implements EndpointModule {
                 apiResponse.errorCookie("Cookie \"PHPSESSID\" not found");
             } else {
                 if (method.equalsIgnoreCase("POST")) {
-                    Map<String, String> query = parseUrlEncodedForm(readRequestBody(req));
+                    Map<String, String> query = parseUrlEncodedForm(readRequestBody(req, StandardCharsets.UTF_8));
                     String studentID = query.get("studentID");
                     String courseSerial;
                     if (studentID == null) {

@@ -189,7 +189,7 @@ import {
 } from '../domHelper_v001.min.js';
 
 import SelectMenu from '../selectMenu.js';
-import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';
+import {courseDataTimeToString, fetchApi, isMobile, parseRawCourseData, timeParse} from '../lib.js';
 import PopupWindow from '../popupWindow.js';
 
 /**
@@ -298,18 +298,17 @@ export default function (router, loginState) {
 		if (searching) return;
 		searching = true;
 		searchResultSignal.set({loading: true, courseResult: null, nckuhubResult: null});
+
 		// get all course ID
-		const getAvalibleNckuHubCourseID = avalibleNckuHubCourseID !== null ? null :
-			await fetchApi('/nckuhub', 'get nckuhub id');
-		if (avalibleNckuHubCourseID === null) {
-			avalibleNckuHubCourseID = (await fetchApi('/nckuhub', 'get nckuhub id')).data;
-		}
-
+		const getAvalibleNckuHubID = avalibleNckuHubCourseID === null ? fetchApi('/nckuhub', 'get nckuhub id') : null;
 		// get urSchool data
-		if (urSchoolData === null) {
-			urSchoolData = (await fetchApi('/urschool', 'get urschool data')).data;
-		}
+		const getUrSchoolData = urSchoolData === null ? fetchApi('/urschool', 'get urschool data') : null;
+		if (getAvalibleNckuHubID)
+			avalibleNckuHubCourseID = (await getAvalibleNckuHubID).data;
+		if (getUrSchoolData)
+			urSchoolData = (await getUrSchoolData).data;
 
+		// Get queryData
 		let queryData = rawQuery instanceof Event ? null : rawQuery;
 		if (!queryData) {
 			// Generate query from form
@@ -675,7 +674,7 @@ export default function (router, loginState) {
 						span('Instructor: ', 'instructor'),
 						data.instructors === null ? null : data.instructors.map(instructor =>
 							!(instructor instanceof Object)
-								? button('instructorBtn', instructor)
+								? span(instructor, 'instructorBtnNoInfo')
 								: button('instructorBtn',
 									instructor.name,
 									() => openInstructorDetailWindow(instructor),
@@ -702,9 +701,9 @@ export default function (router, loginState) {
 							if (data.nckuhub.rate_count === 0)
 								return td('沒有評分', 'nckuhub', options);
 							return td(null, 'nckuhub', options,
-								span(data.nckuhub.got.toFixed(1), '收穫'),
-								span(data.nckuhub.sweet.toFixed(1), '甜度'),
-								span(data.nckuhub.cold.toFixed(1), '凉度'),
+								span(data.nckuhub.got.toFixed(1)),
+								span(data.nckuhub.sweet.toFixed(1)),
+								span(data.nckuhub.cold.toFixed(1)),
 							);
 						}
 						return td('載入中...', 'nckuhub', {colSpan: 3});
@@ -728,28 +727,45 @@ export default function (router, loginState) {
 					nckuhubDetailWindow.set(data);
 				}
 
+				const resultObject = [
+					td(data.departmentName, 'departmentName'),
+					td(data.serialNumber, 'serialNumber'),
+					td(data.courseType, 'courseType'),
+					td(data.courseGrade, 'grade'),
+					td(data.classInfo, 'class'),
+					td(!data.time ? data.timeString : null, 'courseTime', data.time && data.time.map(i =>
+						button(null, i.extraTimeDataKey ? '詳細時間' : courseDataTimeToString(i))
+					)),
+					td(null, 'courseName',
+						a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.courseName))
+					),
+					td(data.required ? '必修' : '選修', 'required'),
+					td(data.credits, 'credits'),
+					td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
+					nckuhubInfo,
+				];
+				if (isMobile()) {
+					const [courseName] = resultObject.splice(6, 1);
+					resultObject.unshift(courseName);
+					resultObject[1].insertBefore(span('系所: '), resultObject[1].firstChild);
+					resultObject[2].insertBefore(span('系-序號: '), resultObject[2].firstChild);
+					resultObject[3].insertBefore(span('類別: '), resultObject[3].firstChild);
+					resultObject[4].insertBefore(span('年級: '), resultObject[4].firstChild);
+					resultObject[5].insertBefore(span('班別: '), resultObject[5].firstChild);
+					resultObject[6].insertBefore(span('時間: '), resultObject[6].firstChild);
+					resultObject[7].insertBefore(span('選必修: '), resultObject[7].firstChild);
+					resultObject[8].insertBefore(span('學分: '), resultObject[8].firstChild);
+					resultObject[9].insertBefore(span('已選/餘額: '), resultObject[9].firstChild);
+				}
+
 				// render result item
 				const courseResult = [
 					tr(),
 					// Info
 					tr(null,
-						// Title sections
 						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
-						td(data.departmentName, 'departmentName'),
-						td(data.serialNumber, 'serialNumber'),
-						td(data.courseType, 'courseType'),
-						td(data.courseGrade, 'grade'),
-						td(data.classInfo, 'class'),
-						td(!data.time ? data.timeString : null, 'courseTime', data.time && data.time.map(i =>
-							button(null, i.extraTimeDataKey ? '詳細時間' : courseDataTimeToString(i))
-						)),
-						td(null, 'courseName',
-							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.courseName))
-						),
-						td(data.required ? '必修' : '選修', 'required'),
-						td(data.credits, 'credits'),
-						td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
-						nckuhubInfo,
+						resultObject,
+						// Title sections
 						td(null, 'options', {rowSpan: 2},
 							!data.serialNumber || !loginState.state || !loginState.state.login ? null :
 								button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
@@ -776,7 +792,7 @@ export default function (router, loginState) {
 		showResultLastIndex = showResultIndexStep - 1;
 		for (let i = 0; i < courseRenderResultDisplay.length; i++) {
 			const item = courseRenderResultDisplay[i];
-			const display = i > showResultLastIndex ? 'none' : 'table-row';
+			const display = i > showResultLastIndex ? 'none' : null;
 			item[0].style.display = item[1].style.display = item[2].style.display = display;
 		}
 
@@ -849,7 +865,7 @@ export default function (router, loginState) {
 					// // Function buttons
 					// th('Options', 'options'),
 					th('系所', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
-					th('系號-序號', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
+					th('系-序號', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
 					th('類別', 'courseType', {key: 'courseType', onclick: sortStringKey}),
 					th('年級', 'grade', {key: 'grade', onclick: sortIntKey}),
 					th('班別', 'class', {key: 'classInfo', onclick: sortStringKey}),

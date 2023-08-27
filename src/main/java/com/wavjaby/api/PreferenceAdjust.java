@@ -75,7 +75,7 @@ public class PreferenceAdjust implements EndpointModule {
             if (method.equalsIgnoreCase("GET"))
                 getPreferenceAdjustList(apiResponse, cookieStore);
             else if (method.equalsIgnoreCase("POST"))
-                updatePreferenceAdjustList(readRequestBody(req), apiResponse, cookieStore);
+                updatePreferenceAdjustList(readRequestBody(req, StandardCharsets.UTF_8), apiResponse, cookieStore);
             else
                 apiResponse.errorUnsupportedHttpMethod(method);
 
