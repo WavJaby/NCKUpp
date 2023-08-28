@@ -30,7 +30,6 @@ $popupWindow-bg-color: #15181D;
             top: 0;
             position: sticky;
             cursor: pointer;
-            pointer-events: none;
 
             &:focus {
                 box-shadow: none;
