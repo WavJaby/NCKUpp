@@ -201,6 +201,12 @@ $navbar-active-color: #49505A;
     top: $navbar-height;
     right: 0;
 
+    > .description {
+        margin: 5px;
+        display: block;
+        font-size: 18px;
+    }
+
     > .loginField {
         display: block;
         margin: 5px;

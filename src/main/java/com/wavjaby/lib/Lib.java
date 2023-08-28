@@ -57,7 +57,7 @@ public class Lib {
         // 3 try
         for (int i = 0; i < 2; i++) {
             try {
-                HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
+                Connection.Response res = HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
@@ -69,6 +69,7 @@ public class Lib {
                         .requestBody(postData)
                         .timeout(10000)
                         .execute();
+//                logger.log(res.body());
                 return;
             } catch (IOException e) {
 //                logger.errTrace(e);

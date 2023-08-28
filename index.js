@@ -311,34 +311,35 @@ window.pageLoading = new Signal(false);
 			createMessageBox('success', title, description, null, removeTimeout);
 		}
 
-		function onCloseBtn() {
-			removeMessageBox(this.parentElement);
+		function onMessageBoxTap() {
+			removeMessageBox(this);
 		}
 
 		function createMessageBox(classname, title, description, htmlElement, removeTimeout) {
-			const messageBox = div(classname,
+			const messageBox = div(classname, {onclick: onMessageBoxTap},
 				span(title, 'title'),
 				span(description, 'description', htmlElement),
-				div('closeButton', {onclick: onCloseBtn})
+				div('closeButton')
 			);
-			// height += messageBox.offsetHeight + 10;
 			if (removeTimeout !== undefined)
 				messageBox.removeTimeout = setTimeout(() => removeMessageBox(messageBox), removeTimeout);
-			// if (!updateTop)
-			//     updateTop = setTimeout(updateMessageBoxTop, 0);
 			if (messageBoxRoot.childElementCount > 0)
 				messageBoxRoot.insertBefore(messageBox, messageBoxRoot.firstElementChild);
 			else
 				messageBoxRoot.appendChild(messageBox);
 			messageBox.style.marginTop = -messageBox.offsetHeight + 'px';
 
-			setTimeout(() => messageBox.classList.add('animation'), 10);
+			// Slide in
+			setTimeout(() => {
+				messageBox.classList.add('animation');
+				messageBox.style.marginTop = '0';
+			}, 10);
 		}
 
 		function removeMessageBox(messageBox) {
 			clearTimeout(messageBox.removeTimeout);
 			messageBox.style.opacity = '0';
-			messageBox.style.marginTop = (-messageBox.offsetHeight) + 'px';
+			messageBox.style.marginTop = (-messageBox.offsetHeight - 10) + 'px';
 			setTimeout(() => {
 				messageBoxRoot.removeChild(messageBox);
 			}, 500);
@@ -390,6 +391,7 @@ window.pageLoading = new Signal(false);
 
 		// element
 		return div('loginWindow', {onRender: () => username.focus()},
+			span('帳密與成功入口相同', 'description'),
 			username,
 			password,
 			button('loginField', 'Login', login, {type: 'submit'}),

@@ -30,7 +30,7 @@
         margin: 0 auto 0 auto;
 
         &.animation {
-            margin-top: 10px !important;
+            margin-bottom: 10px;
             @include transition((500ms margin-top, 200ms opacity));
         }
 

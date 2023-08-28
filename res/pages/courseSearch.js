@@ -234,11 +234,26 @@ export default function (router, loginState) {
 		styles.enable();
 		if (isHistory)
 			loadLastSearch();
+
+		loginState.addListener(onLoginState);
+		onLoginState(loginState.state);
 	}
 
 	function onPageClose() {
 		console.log('Course search Close');
 		styles.disable();
+		loginState.removeListener(onLoginState);
+	}
+
+	function onLoginState(state) {
+		if (state && state.login) {
+			getWatchCourse();
+			search();
+		} else {
+			if (state)
+				window.askForLoginAlert();
+			watchList = null;
+		}
 	}
 
 	function loadLastSearch() {
