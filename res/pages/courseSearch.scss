@@ -16,6 +16,7 @@ $instructor-info-fade-time: 200ms;
 
         > input, > label, > .selectMenu {
             width: 350px;
+            max-width: 100%;
             margin: 2px;
             display: block;
             float: left;
@@ -188,12 +189,12 @@ $instructor-info-fade-time: 200ms;
             }
 
             // Block spacing
-            > tr:nth-child(3n+1) {
+            > tr.courseBlockSpacing {
                 height: $search-result-item-spacing;
             }
 
             // Block
-            > tr:nth-child(3n+2) {
+            > tr.courseInfoBlock {
                 //font-weight: bold;
 
                 > td {
@@ -208,6 +209,10 @@ $instructor-info-fade-time: 200ms;
                     &:first-child {
                         border-radius: 10px 0 0 0;
                     }
+
+                    > .label {
+                        display: none;
+                    }
                 }
 
                 // Result course name
@@ -215,11 +220,12 @@ $instructor-info-fade-time: 200ms;
                     padding: 0;
 
                     > a {
-                        width: 100%;
+                        width: 30vw;
                         height: 100%;
                         display: table;
                         padding: 5px 2px;
                         box-sizing: border-box;
+                        white-space: pre-wrap;
 
                         > span {
                             display: table-cell;
@@ -230,6 +236,14 @@ $instructor-info-fade-time: 200ms;
                     &:hover {
                         background: #21262d;
                     }
+                }
+
+                > .detailedCourseName {
+                    display: none;
+                }
+
+                > .nckuhub > span > .label {
+                    display: none;
                 }
 
                 .courseTime {
@@ -267,99 +281,99 @@ $instructor-info-fade-time: 200ms;
             }
 
             // Block detail
-            > .courseDetail {
+            > .courseDetailBlock {
                 color: $font-color2;
 
                 > td {
                     border-radius: 0 0 0 10px;
+
+                    > .expandable {
+                        overflow: hidden;
+                        @include transition(0.2s height);
+                    }
                 }
 
-                // Course info
-                > td > .expandable {
-                    overflow: hidden;
-                    @include transition(0.2s height);
-                }
-
-                .info {
+                // Course detail
+                > td .info {
                     white-space: pre-wrap;
                     padding: 0 0 5px 5px;
-                }
 
-                .info > .splitLine {
-                    width: 100%;
-                    border-top: 1px gray solid;
-                    margin-bottom: 2px;
-                }
-
-                // Course tags
-                .info > .tags {
-                    padding: 5px 0;
-                    color: #ffffff;
-
-                    > div, > a {
-                        margin-right: 10px;
-                        border-radius: 8px;
-                        padding: 1px 3px;
-                        display: inline-block;
+                    > .splitLine {
+                        width: 100%;
+                        border-top: 1px gray solid;
+                        margin-bottom: 2px;
                     }
 
-                    > a {
-                        text-decoration: underline;
+                    // Course tags
+                    > .tags {
+                        padding: 5px 0;
+                        color: #ffffff;
+
+                        > div, > a {
+                            margin-right: 10px;
+                            border-radius: 8px;
+                            padding: 1px 3px;
+                            display: inline-block;
+                        }
+
+                        > a {
+                            text-decoration: underline;
+                        }
+
+                        a::after {
+                            content: '';
+                            background: $icon-new-tab no-repeat 0 0 / 1em;
+                            width: 1em;
+                            height: 1em;
+                            display: inline-block;
+                            vertical-align: middle;
+                        }
                     }
 
-                    a::after {
-                        content: '';
-                        background: $icon-new-tab no-repeat 0 0 / 1em;
+                    > .note,
+                    > .limit {
+                        display: block;
+                    }
+
+                    > .note::before {
+                        background: $icon-info no-repeat 0 0 / 1em;
                         width: 1em;
                         height: 1em;
+                        content: '';
                         display: inline-block;
-                        vertical-align: middle;
+                        vertical-align: text-top;
+                        margin-top: 0.15em;
                     }
-                }
 
-                .info > .note,
-                .info > .limit {
-                    display: block;
-                }
+                    > .limit::before {
+                        background: $icon-warn no-repeat 0 0 / 1em;
+                        width: 1em;
+                        height: 1em;
+                        content: '';
+                        display: inline-block;
+                        vertical-align: text-top;
+                        margin-top: 0.15em;
+                    }
 
-                .info > .note::before {
-                    background: $icon-info no-repeat 0 0 / 1em;
-                    width: 1em;
-                    height: 1em;
-                    content: '';
-                    display: inline-block;
-                    vertical-align: text-top;
-                    margin-top: 0.15em;
-                }
+                    > .instructor {
+                        font-size: 18px;
+                    }
 
-                .info > .limit::before {
-                    background: $icon-warn no-repeat 0 0 / 1em;
-                    width: 1em;
-                    height: 1em;
-                    content: '';
-                    display: inline-block;
-                    vertical-align: text-top;
-                    margin-top: 0.15em;
-                }
+                    > .instructorBtn, > .instructorBtnNoInfo {
+                        font-size: 18px;
+                        padding: 2px 5px;
+                        margin: 0 5px 0 0;
+                        display: inline-block;
+                    }
 
-                .info > .instructor {
-                    font-size: 16px;
-                }
+                    > .instructorBtn {
+                        background: $button-dark-bg-color;
+                        border-radius: 5px;
+                        cursor: pointer;
 
-                .info > .instructorBtn, .info > .instructorBtnNoInfo {
-                    font-size: 16px;
-                    padding: 2px 5px;
-                    margin: 0 5px 0 0;
-                    display: inline-block;
-                }
-
-                .info > .instructorBtn {
-                    background: $button-dark-bg-color;
-                    border-radius: 5px;
-                    cursor: pointer;
-
-                    &:hover {
-                        background: $button-dark-green-bg-color;
+                        &:hover {
+                            background: $button-dark-green-bg-color;
+                        }
                     }
                 }
             }
@@ -375,50 +389,83 @@ $instructor-info-fade-time: 200ms;
             > tbody {
                 display: block;
 
-                > tr:nth-child(3n+2) {
-                    > td:not(:first-child) {
-                        background: $button-dark-bg-color;
-                        margin: 2px 5px;
-                        border-radius: 10px;
+                > tr.courseInfoBlock {
+                    > td.expandDownArrow {
                         display: block;
                         float: left;
-                        vertical-align: top;
-                        white-space: pre-wrap;
+                    }
 
-                        &:not(:last-child) {
-                            line-height: 2em;
-                            height: 2em;
-                            padding: 0 5px;
+                    > td:not(.expandDownArrow) {
+                        min-width: 48%;
+                        border-radius: 10px;
+                        white-space: pre-wrap;
+                        display: block;
+                        float: left;
+
+                        &:not(.options) {
+                            background: $button-dark-bg-color;
+                            line-height: 1.7em;
+                            min-height: 1.7em;
+                            margin: 2px 1%;
+                            padding: 0 2px 0 3px;
+                            text-align: left;
+                            box-sizing: border-box;
                         }
 
-                        &.courseName {
-                            background: none;
-                            width: 100%;
-                            margin: 2px 0;
-                            box-sizing: border-box;
-                            clear: both;
+                        > .label {
+                            display: inline-block;
+                            vertical-align: top;
+                            margin-right: 2px;
+                        }
 
-                            > a {
-                                padding: 0;
-                                font-weight: bold;
-                                font-size: 25px;
+                        &.departmentName {
+                            clear: both;
+                        }
+
+                        &.nckuhub {
+                            text-align: center;
+                            width: 98%;
+
+                            > span {
+                                width: 30%;
+
+                                > span:last-child {
+                                    width: 3em;
+                                    display: inline-block;
+                                }
+
+                                > .label {
+                                    margin-right: 2px;
+                                    display: inline-block;
+                                }
                             }
                         }
 
+                        &.serialNumber, &.courseName {
+                            display: none;
+                        }
+
                         &.options {
-                            background: none;
                             width: 100%;
-                            margin: 10px 0 5px 0;
+                            margin: 5px 0;
                             padding: 0 5px;
                             box-sizing: border-box;
                             border-left: none;
                             clear: both;
 
                             > button {
-                                margin: 0 5px;
+                                margin: 5px 5px 0 5px;
                                 padding: 10px;
                                 display: inline-block;
                             }
+                        }
+                    }
+                }
+
+                > tr.courseDetailBlock {
+                    > td .info {
+                        > .instructorBtn {
+                            padding: 5px;
                         }
                     }
                 }

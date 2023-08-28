@@ -3,7 +3,6 @@
 import {
 	a,
 	button,
-	ClassList,
 	div,
 	doomHelperDebug,
 	footer,
@@ -27,11 +26,10 @@ import {
 } from './res/domHelper_v001.min.js';
 
 import {metaSet, metaType} from './res/metaTag.js';
-import {fetchApi, isMobile} from './res/lib.js';
+import {fetchApi} from './res/lib.js';
 
 window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
-window.navMenu = new ClassList('links');
 window.pageLoading = new Signal(false);
 
 /**
@@ -131,6 +129,25 @@ window.pageLoading = new Signal(false);
 			nextPageButton.classList.add('opened');
 		metaSet(metaType.TITLE, document.title);
 	}
+	const navbarLinks = ul('links',
+		Object.values(pageButtons),
+		NavSelectList('arrow', text('0w0'), [
+			['安安', null],
+			['🥰', null],
+		]),
+	);
+	const navBarMobileBackground = ul('navBarMobileBG', {onclick: navMenuClose});
+	window.navMenuClose = navMenuClose;
+
+	function navMenuClose() {
+		navbarLinks.classList.remove('open');
+		navBarMobileBackground.classList.remove('open');
+	}
+
+	function navMenuToggle() {
+		navbarLinks.classList.toggle('open');
+		navBarMobileBackground.classList.toggle('open');
+	}
 
 	// check login
 	fetchApi('/login?mode=course', 'Check login').then(onLoginStateChange);
@@ -157,16 +174,11 @@ window.pageLoading = new Signal(false);
 				}
 			),
 			ul('hamburgerMenu', li(null,
-				img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: () => window.navMenu.toggle('open')})
+				img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
 			)),
 			ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
-			ul(window.navMenu,
-				Object.values(pageButtons),
-				// NavSelectList('arrow', text('List'), [
-				//     ['0w0', null],
-				//     ['awa', null],
-				// ]),
-			)
+			navBarMobileBackground,
+			navbarLinks,
 		),
 		// Pages
 		queryRouter.element,
@@ -182,8 +194,8 @@ window.pageLoading = new Signal(false);
 		font.mount();
 		while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
 		document.body.appendChild(root);
+		queryRouter.init();
 	};
-	queryRouter.init();
 
 	// functions
 	function pageButtonClick(e) {
@@ -234,33 +246,43 @@ window.pageLoading = new Signal(false);
 		);
 
 		for (const item of items) {
-			const itemOnclick = item[1];
+			const onItemClick = item[1];
 			itemsElement.appendChild(
 				li(null, text(item[0]), {
-					onclick: itemOnclick ? () => {
-						itemOnclick();
-						closeSelectList();
-					} : closeSelectList
+					onItemClick: onItemClick,
+					onclick: closeSelectList
 				})
 			);
 		}
 
 		function openSelectList() {
-			if (!isMobile())
-				list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
+			list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
+			window.addEventListener('pointerup', checkOutFocus);
 		}
 
 		function closeSelectList() {
+			if (this && this.onItemClick)
+				this.onItemClick();
 			list.style.height = null;
+			window.removeEventListener('pointerup', checkOutFocus);
 		}
 
 		function toggleSelectList() {
 			if (onOpen && !onOpen() && !list.style.height) return;
 
 			if (list.style.height)
-				list.style.height = null;
+				closeSelectList();
 			else
-				list.style.height = (list.firstElementChild.offsetHeight + list.lastElementChild.offsetHeight) + 'px';
+				openSelectList();
+		}
+
+		function checkOutFocus(e) {
+			let parent = e.target;
+			do {
+				if (parent === list)
+					return;
+			} while ((parent = parent.parentElement) !== document.body);
+			closeSelectList();
 		}
 
 		return list;

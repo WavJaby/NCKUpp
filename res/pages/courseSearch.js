@@ -230,7 +230,7 @@ export default function (router, loginState) {
 	function onPageOpen(isHistory) {
 		console.log('Course search Open');
 		// close navLinks when using mobile devices
-		window.navMenu.remove('open');
+		window.navMenuClose();
 		styles.enable();
 		if (isHistory)
 			loadLastSearch();
@@ -671,7 +671,7 @@ export default function (router, loginState) {
 						data.courseLimit === null ? null : span(data.courseLimit, 'limit red'),
 
 						// Instructor
-						span('Instructor: ', 'instructor'),
+						span('教師姓名: ', 'instructor'),
 						data.instructors === null ? null : data.instructors.map(instructor =>
 							!(instructor instanceof Object)
 								? span(instructor, 'instructorBtnNoInfo')
@@ -700,11 +700,19 @@ export default function (router, loginState) {
 							const options = {colSpan: 3, onclick: openNckuhubDetailWindow};
 							if (data.nckuhub.rate_count === 0)
 								return td('沒有評分', 'nckuhub', options);
-							return td(null, 'nckuhub', options,
-								span(data.nckuhub.got.toFixed(1)),
-								span(data.nckuhub.sweet.toFixed(1)),
-								span(data.nckuhub.cold.toFixed(1)),
-							);
+							if (isMobile()) {
+								return td(null, 'nckuhub', options,
+									span(null, null, span('得', 'label'), span(data.nckuhub.got.toFixed(1))),
+									span(null, null, span('甜', 'label'), span(data.nckuhub.sweet.toFixed(1))),
+									span(null, null, span('涼', 'label'), span(data.nckuhub.cold.toFixed(1))),
+								);
+							} else {
+								return td(null, 'nckuhub', options,
+									span(data.nckuhub.got.toFixed(1)),
+									span(data.nckuhub.sweet.toFixed(1)),
+									span(data.nckuhub.cold.toFixed(1)),
+								);
+							}
 						}
 						return td('載入中...', 'nckuhub', {colSpan: 3});
 					})
@@ -745,24 +753,28 @@ export default function (router, loginState) {
 					nckuhubInfo,
 				];
 				if (isMobile()) {
-					const [courseName] = resultObject.splice(6, 1);
+					resultObject[2].insertBefore(span('類別:', 'label'), resultObject[2].firstChild);
+					resultObject[3].insertBefore(span('年級:', 'label'), resultObject[3].firstChild);
+					resultObject[4].insertBefore(span('班別:', 'label'), resultObject[4].firstChild);
+					resultObject[5].insertBefore(span('時間:', 'label'), resultObject[5].firstChild);
+
+					resultObject[7].insertBefore(span('選必修:', 'label'), resultObject[7].firstChild);
+					resultObject[8].insertBefore(span('學分:', 'label'), resultObject[8].firstChild);
+					resultObject[9].insertBefore(span('選/餘:', 'label'), resultObject[9].firstChild);
+
+					const courseName = resultObject[6].cloneNode(true);
+					courseName.className = 'detailedCourseName';
+					const l = courseName.firstElementChild;
+					l.appendChild(span(data.serialNumber + ' '));
+					l.appendChild(l.firstChild);
 					resultObject.unshift(courseName);
-					resultObject[1].insertBefore(span('系所: '), resultObject[1].firstChild);
-					resultObject[2].insertBefore(span('系-序號: '), resultObject[2].firstChild);
-					resultObject[3].insertBefore(span('類別: '), resultObject[3].firstChild);
-					resultObject[4].insertBefore(span('年級: '), resultObject[4].firstChild);
-					resultObject[5].insertBefore(span('班別: '), resultObject[5].firstChild);
-					resultObject[6].insertBefore(span('時間: '), resultObject[6].firstChild);
-					resultObject[7].insertBefore(span('選必修: '), resultObject[7].firstChild);
-					resultObject[8].insertBefore(span('學分: '), resultObject[8].firstChild);
-					resultObject[9].insertBefore(span('已選/餘額: '), resultObject[9].firstChild);
 				}
 
 				// render result item
 				const courseResult = [
-					tr(),
+					tr('courseBlockSpacing'),
 					// Info
-					tr(null,
+					tr('courseInfoBlock',
 						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
 						resultObject,
 						// Title sections
@@ -777,7 +789,7 @@ export default function (router, loginState) {
 								button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
 						),
 					),
-					tr('courseDetail',
+					tr('courseDetailBlock',
 						// Details
 						courseDetail,
 					)
@@ -867,13 +879,13 @@ export default function (router, loginState) {
 					th('系所', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 					th('系-序號', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
 					th('類別', 'courseType', {key: 'courseType', onclick: sortStringKey}),
-					th('年級', 'grade', {key: 'grade', onclick: sortIntKey}),
+					th('年級', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
 					th('班別', 'class', {key: 'classInfo', onclick: sortStringKey}),
 					th('時間', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
 					th('課程名稱', 'courseName', {key: 'courseName', onclick: sortStringKey}),
 					th('選必修', 'required', {key: 'required', onclick: sortIntKey}),
 					th('學分', 'credits', {key: 'credits', onclick: sortIntKey}),
-					th('已選/餘額', 'available', {key: 'available', onclick: sortIntKey}),
+					th('選/餘', 'available', {key: 'available', onclick: sortIntKey}),
 					// NckuHub
 					th('收穫', 'nckuhub', {key: 'got', onclick: sortNckuhubKey}),
 					th('甜度', 'nckuhub', {key: 'sweet', onclick: sortNckuhubKey}),

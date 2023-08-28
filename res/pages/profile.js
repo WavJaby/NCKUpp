@@ -18,7 +18,7 @@ export default function (router, loginState) {
 	function onPageOpen() {
 		console.log('Profile Open');
 		// close navLinks when using mobile devices
-		window.navMenu.remove('open');
+		window.navMenuClose();
 		styles.enable();
 		onLoginState(loginState.state);
 		loginState.addListener(onLoginState);

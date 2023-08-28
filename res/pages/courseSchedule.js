@@ -55,7 +55,7 @@ export default function (router, loginState) {
 	function onPageOpen() {
 		console.log('Course schedule Open');
 		// close navLinks when using mobile devices
-		window.navMenu.remove('open');
+		window.navMenuClose();
 		styles.enable();
 		loginState.addListener(onLoginState);
 		onLoginState(loginState.state);
@@ -92,8 +92,10 @@ export default function (router, loginState) {
 					updateCourseInfo();
 				}
 				const scheduleData = response.data;
-				downloadScheduleButton.download = scheduleData.year + '學年_第' + scheduleData.semester + '學期_課表';
-				scheduleTableInfo.textContent = scheduleData.studentId + ' credits: ' + scheduleData.credits;
+				const semesterInfo = scheduleData.semesterInfo;
+				const studentInfo = scheduleData.studentInfo;
+				downloadScheduleButton.download = semesterInfo.year + '學年_第' + semesterInfo.semester + '學期_課表';
+				scheduleTableInfo.textContent = studentInfo.id + ' 學分: ' + scheduleData.credits;
 			});
 			fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(response => {
 				// Parse normal schedule

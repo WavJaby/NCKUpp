@@ -113,9 +113,9 @@ export function courseDataTimeToString(time) {
 			section = sectionStr[time.sectionStart] + '~' + sectionStr[time.sectionEnd];
 		} else
 			section = sectionStr[time.sectionStart];
-		return '[' + weekStr[time.dayOfWeek] + ']' + section;
+		return weekStr[time.dayOfWeek] + ' ' + section;
 	}
-	return '[' + weekStr[time.dayOfWeek] + ']';
+	return weekStr[time.dayOfWeek] + ' ';
 }
 
 /**

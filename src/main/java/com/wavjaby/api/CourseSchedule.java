@@ -481,7 +481,7 @@ public class CourseSchedule implements EndpointModule {
         Node node0 = nodes.get(0);
         String studentInfo = !(node0 instanceof TextNode) ? null : ((TextNode) node0).text().trim();
         Node node1 = nodes.get(1);
-        String studentName = !(node1 instanceof TextNode) ? null : ((TextNode) node1).text().trim();
+        String studentName = !(node1 instanceof Element) ? null : ((Element) node1).text().trim();
         Node node2 = nodes.get(2);
         String studentId = !(node2 instanceof TextNode) ? null : ((TextNode) node2).text().trim();
         if (studentId != null) {
@@ -491,7 +491,6 @@ public class CourseSchedule implements EndpointModule {
         }
 
         if (studentInfo == null || studentName == null || studentId == null || studentId.isEmpty()) {
-            response.addWarn("Student short info not found");
             return null;
         }
 

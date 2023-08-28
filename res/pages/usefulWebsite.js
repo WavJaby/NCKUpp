@@ -31,7 +31,7 @@ export default function (router, loginState) {
 	function onPageOpen() {
 		console.log('UsefulWebsite Open');
 		// close navLinks when using mobile devices
-		window.navMenu.remove('open');
+		window.navMenuClose();
 		styles.enable();
 
 		updateSites();
