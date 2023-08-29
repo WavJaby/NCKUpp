@@ -21,6 +21,8 @@ import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
@@ -125,27 +127,31 @@ public class HomeInfo implements EndpointModule {
             for (Element phraseElement : contentsElements.children()) {
                 StringBuilder contentText = new StringBuilder();
                 // content
-                for (Node node : phraseElement.childNodes()) {
-                    if (node instanceof TextNode) {
-                        contentText.append(((TextNode) node).text());
-                    } else if (node instanceof Element) {
-                        if (((Element) node).tagName().equals("a")) {
-                            // Append content text
-                            if (contentText.length() > 0)
-                                contents.append(contentText.toString().trim());
-                            contentText.setLength(0);
+                for (Node node1 : phraseElement.childNodes()) {
+                    boolean isSpan = node1 instanceof Element && ((Element) node1).tagName().equals("span");
+                    List<Node> nodes = isSpan ? node1.childNodes() : Collections.singletonList(node1);
+                    for (Node node : nodes) {
+                        if (node instanceof TextNode) {
+                            contentText.append(((TextNode) node).text());
+                        } else if (node instanceof Element) {
+                            if (((Element) node).tagName().equals("a")) {
+                                // Append content text
+                                if (contentText.length() > 0)
+                                    contents.append(contentText.toString().trim());
+                                contentText.setLength(0);
 
-                            // Get text with url
-                            contents.append(new JsonObjectStringBuilder()
-                                    .append("url", node.attr("href"))
-                                    .append("content", ((Element) node).text().trim())
-                            );
+                                // Get text with url
+                                contents.append(new JsonObjectStringBuilder()
+                                        .append("url", node.attr("href"))
+                                        .append("content", ((Element) node).text().trim())
+                                );
+                            } else {
+                                contentText.append(((Element) node).text());
+                            }
                         } else {
-                            contentText.append(((Element) node).text());
+                            response.errorParse("Can not parse news content text");
+                            return;
                         }
-                    } else {
-                        response.errorParse("Can not parse news content text");
-                        return;
                     }
                 }
                 if (contentText.length() > 0)

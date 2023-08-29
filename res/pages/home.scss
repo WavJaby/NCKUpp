@@ -45,7 +45,8 @@
             line-height: 2em;
 
             > img {
-                height: 1.6em;
+                max-height: 1.6em;
+                max-width: 100%;
                 vertical-align: text-bottom;
                 display: inline-block;
             }

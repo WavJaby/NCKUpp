@@ -290,7 +290,7 @@ public class StudentIdentificationSystem implements EndpointModule {
             logger.errTrace(e);
             req.close();
         }
-        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get student id system " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

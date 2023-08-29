@@ -1,3 +1,5 @@
+@import './static';
+
 .stateBox {
     position: fixed;
     width: 100%;
@@ -17,7 +19,7 @@
             height: 30px;
             width: 30px;
             padding: 5px;
-            box-sizing: border-box;
+            @include box-sizing(border-box);
             display: inline-block;
         }
 

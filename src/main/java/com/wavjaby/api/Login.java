@@ -22,7 +22,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static com.wavjaby.Main.*;
 import static com.wavjaby.lib.Cookie.*;
@@ -446,7 +449,7 @@ public class Login implements EndpointModule {
             if (errorStart != -1 &&
                     (errorStart = loginPage.indexOf('>', errorStart + 14)) != -1 &&
                     (errorEnd = loginPage.indexOf('<', errorStart + 1)) != -1) {
-                response.setMessageDisplay(Parser.unescapeEntities(loginPage.substring(errorStart + 1, errorEnd), true).replace("\\", "\\\\"));
+                response.setMessageDisplay(Parser.unescapeEntities(loginPage.substring(errorStart + 1, errorEnd), true));
                 return null;
             }
         }

@@ -366,7 +366,7 @@ public class Search implements EndpointModule {
         private final Integer forGrade;  // Can be null
         private final String forClass; // Can be null
         private final String group;  // Can be null
-        private final String courseType;
+        private final String category;
         private final String courseName;
         private final String courseNote; // Can be null
         private final String courseLimit; // Can be null
@@ -387,7 +387,7 @@ public class Search implements EndpointModule {
                           String departmentName,
                           String serialNumber, String courseAttributeCode, String courseSystemNumber,
                           Integer forGrade, String forClass, String group,
-                          String courseType,
+                          String category,
                           String courseName, String courseNote, String courseLimit, TagData[] tags,
                           Float credits, Boolean required,
                           String[] instructors,
@@ -403,7 +403,7 @@ public class Search implements EndpointModule {
             this.forGrade = forGrade;
             this.forClass = forClass;
             this.group = group;
-            this.courseType = courseType;
+            this.category = category;
             this.courseName = courseName;
             this.courseNote = courseNote;
             this.courseLimit = courseLimit;
@@ -516,7 +516,7 @@ public class Search implements EndpointModule {
             jsonBuilder.append("co", forClass);
             jsonBuilder.append("cg", group);
 
-            jsonBuilder.append("ct", courseType);
+            jsonBuilder.append("ct", category);
 
             jsonBuilder.append("cn", courseName);
             jsonBuilder.append("ci", courseNote);
@@ -1476,7 +1476,7 @@ public class Search implements EndpointModule {
             if (courseData_departmentName.isEmpty()) courseData_departmentName = null;
 
             // Get course type
-            String courseData_courseType = section.get(sectionOffset + 3).text();
+            String courseData_category = section.get(sectionOffset + 3).text();
 
             // Get forGrade & classInfo & group
             Integer courseData_forGrade = null;
@@ -1495,7 +1495,7 @@ public class Search implements EndpointModule {
                     if (section2c == 0)
                         courseData_forGrade = Integer.parseInt(cache);
                     else if (section2c == 1)
-                        courseData_forClass = cache;
+                        courseData_forClass = cache.replace("　", "");
                     else
                         courseData_group = cache;
                 }
@@ -1720,7 +1720,7 @@ public class Search implements EndpointModule {
                     courseData_departmentName,
                     courseData_serialNumber, courseData_courseAttributeCode, courseData_courseSystemNumber,
                     courseData_forGrade, courseData_forClass, courseData_group,
-                    courseData_courseType,
+                    courseData_category,
                     courseData_courseName, courseData_courseNote, courseData_courseLimit, courseData_tags,
                     courseData_credits, courseData_required,
                     courseData_instructors,

@@ -30,8 +30,6 @@ export default function (router, loginState) {
 
 	function onPageOpen() {
 		console.log('Course schedule Open');
-		// close navLinks when using mobile devices
-		window.navMenuClose();
 		styles.enable();
 		onLoginState(loginState.state);
 		loginState.addListener(onLoginState);

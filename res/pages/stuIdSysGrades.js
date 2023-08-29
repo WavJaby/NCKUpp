@@ -64,8 +64,6 @@ export default function (router, loginState) {
 
 	function onPageOpen() {
 		console.log('StuIdSys grades Open');
-		// close navLinks when using mobile devices
-		window.navMenuClose();
 		styles.enable();
 		loginState.addListener(onLoginState);
 		onLoginState(loginState.state);

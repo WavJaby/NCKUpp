@@ -165,6 +165,7 @@ window.pageLoading = new Signal(false);
 				],
 				false,
 				() => {
+					navMenuClose();
 					// Is login
 					if (userLoginData.state && userLoginData.state.login)
 						return true; // Open select list
@@ -202,6 +203,7 @@ window.pageLoading = new Signal(false);
 		e.preventDefault();
 		const pageId = this.pageId;
 		queryRouter.openPage(pageId);
+		navMenuClose();
 		return false;
 	}
 

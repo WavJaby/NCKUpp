@@ -22,7 +22,6 @@ import {checkboxWithName, div, img, input, label, li, span, text, ul} from './do
  * @param {string} className
  * @param {ItemData[]} [items]
  * @param {SelectMenuOption} [options]
- * @return {HTMLElement}
  * @constructor
  */
 export default function SelectMenu(placeholder, inputId, className, items, options) {
@@ -33,6 +32,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	if (!options.sortByValue == null)
 		options.sortByValue = true;
 
+	const thisInstance = this;
 	// Init elements
 	const itemsContainer = ul('items');
 	const searchInput = input(null, 'Search', null, {type: 'search', oninput: onSearch});
@@ -41,21 +41,23 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		itemsContainer,
 	);
 
-	const resultBox = input(null, placeholder, inputId, {readOnly: true});
+	const resultBox = input(null, placeholder, null, {readOnly: true});
+	const valueOut = input(null, null, inputId, {type: 'hidden', selectMenu: this});
 	const clearButton = img('./res/assets/close_icon.svg', 'clear_button', 'clearBtn');
-	clearButton.style.display = 'none';
+	setClearButtonState(false);
 
 	// Select menu body
-	const selectMenu = label('selectMenu noSelect ' + className, null,
-		resultBox, clearButton,
+	const selectMenu = this.element = label('selectMenu noSelect ' + className, null,
+		resultBox, valueOut, clearButton,
 		searchBox,
 	);
+
 
 	// Init select menu
 	const selectedItems = [];
 	selectItem(null);
 	if (items)
-		createItemsElement(itemsContainer, items);
+		createItemsElement(itemsContainer, items, false);
 
 	selectMenu.onclick = function (e) {
 		if (!(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLLabelElement))
@@ -71,8 +73,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		else if (!searchBox.classList.contains('open')) {
 			window.addEventListener('mouseup', checkClickOutsideSelectMenu);
 			// Have item selected
-			if (resultBox.value)
-				clearButton.style.display = 'block';
+			setClearButtonState(resultBox.value);
 			searchBox.classList.add('open');
 
 			if (options.searchBar) {
@@ -86,8 +87,52 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		selectItem(null);
 	};
 
+	/**
+	 * @param {ItemData[]} itemsData
+	 * @param {boolean} [defaultSelected]
+	 */
+	this.setItems = function (itemsData, defaultSelected) {
+		selectedItems.length = 0;
+		resultBox.value = '';
+		valueOut.value = '';
+		while (itemsContainer.firstChild)
+			itemsContainer.removeChild(itemsContainer.firstChild);
+		createItemsElement(itemsContainer, itemsData, !!defaultSelected);
+	};
+
+	this.onSelectItemChange = null;
+
+	this.selectItemByValue = function (values) {
+		if (!options.multiple)
+			values = [values];
+
+		const items = itemsContainer.getElementsByTagName('li');
+		for (const value of values) {
+			for (const item of items) {
+				if (item.itemValue === value) {
+					selectItem(options.multiple ? item.firstElementChild : item, true);
+					break;
+				}
+			}
+		}
+	};
+
+	this.getSelectedValue = function () {
+		if (options.multiple)
+			return selectedItems.map(i => i[0]);
+		return selectedItems[0][0];
+	};
+
+	function setClearButtonState(state) {
+		clearButton.style.display = state ? 'block' : 'none';
+		if (state)
+			resultBox.classList.add('withClearBtn');
+		else
+			resultBox.classList.remove('withClearBtn');
+	}
+
 	function closeSelectMenu() {
-		clearButton.style.display = 'none';
+		setClearButtonState(false);
 		searchBox.classList.remove('open');
 		window.removeEventListener('mouseup', checkClickOutsideSelectMenu);
 	}
@@ -110,50 +155,61 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		selectItem(this);
 	}
 
+	function updateOutputValue() {
+		if (options.multiple && options.sortByValue)
+			selectedItems.sort(([a], [b]) => a.localeCompare(b));
+
+		let result = '';
+		for (let i of selectedItems) {
+			if (result.length > 0)
+				result += ', ';
+			result += options.showValueName ? i[0] : i[1];
+		}
+		resultBox.value = result;
+		valueOut.value = options.multiple ? selectedItems.map(i => i[0]) : selectedItems[0][0];
+	}
+
 	function selectItem(itemElement, force) {
 		if (itemElement) {
 			if (options.multiple) {
+				const checkBox = itemElement;
+				itemElement = itemElement.parentElement;
 				const index = selectedItems.findIndex(i => i[0] === itemElement.itemValue);
 				// Add item
-				if (itemElement.input.checked || force) {
-					itemElement.input.checked = true;
+				if (checkBox.checked || force) {
+					checkBox.checked = true;
 					if (index === -1)
 						selectedItems.push([itemElement.itemValue, itemElement.itemName]);
 				}
 				// Remove item
-				else {
-					if (index !== -1)
-						selectedItems.splice(index, 1);
-				}
+				else if (index !== -1)
+					selectedItems.splice(index, 1);
 			} else {
 				selectedItems.length = 1;
 				selectedItems[0] = [itemElement.itemValue, itemElement.itemName];
 			}
 
-			if (options.multiple && options.sortByValue) {
-				selectedItems.sort(([a], [b]) => a.localeCompare(b));
-			}
-
-			// Show items
-			let result = '';
-			for (let i of selectedItems) {
-				if (result.length > 0)
-					result += ', ';
-				result += options.showValueName ? i[0] : i[1];
-			}
-			resultBox.value = result;
+			updateOutputValue();
+			if (thisInstance.onSelectItemChange)
+				thisInstance.onSelectItemChange();
+			setClearButtonState(selectedItems.length > 0);
 		} else {
 			// Clear checked
 			if (options.multiple) {
 				for (const itemElement of itemsContainer.getElementsByTagName('li')) {
-					itemElement.input.checked = false;
+					itemElement.firstElementChild.input.checked = false;
 				}
 			}
+			setClearButtonState(false);
 			selectedItems.length = 0;
 			resultBox.value = '';
+			valueOut.value = '';
+			if (thisInstance.onSelectItemChange)
+				thisInstance.onSelectItemChange();
 		}
 	}
 
+	// Group
 	function expandGroupToggle() {
 		if ((this.expend = !this.expend))
 			expandGroupElement(this);
@@ -217,58 +273,28 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	/**
 	 * @param {HTMLUListElement} parent
 	 * @param {ItemData[]} items
+	 * @param {boolean} defaultSelected
 	 */
-	function createItemsElement(parent, items) {
+	function createItemsElement(parent, items, defaultSelected) {
 		for (let item of items) {
 			if (item[1] instanceof Array) {
 				// Create group
 				const base = ul('group');
 				parent.appendChild(span(item[0], 'groupTitle', {onclick: expandGroupToggle}));
 				parent.appendChild(base);
-				createItemsElement(base, /**@type{[string, Array]}*/item[1]);
+				createItemsElement(base, /**@type{[string, Array]}*/item[1], defaultSelected);
 			} else {
 				// Create item
 				if (options.multiple) {
-					const checkbox = checkboxWithName(null, item[1], false);
-					parent.appendChild(li('item multi', checkbox, {
-						itemValue: item[0],
-						itemName: item[1],
-						input: checkbox.input,
-						onclick: onItemClick
-					}));
+					const checkbox = checkboxWithName(null, item[1], defaultSelected, onItemClick, {itemValue: item[0], itemName: item[1]});
+					parent.appendChild(li('item multi', checkbox, {itemValue: item[0], itemName: item[1]}));
+					if (defaultSelected)
+						selectedItems.push([item[0], item[1]]);
 				} else
 					parent.appendChild(li('item', text(item[1]), {itemValue: item[0], itemName: item[1], onclick: onItemClick}));
 			}
 		}
+		if (defaultSelected)
+			updateOutputValue();
 	}
-
-	/**
-	 * @param {ItemData[]} itemsData
-	 */
-	selectMenu.setItems = function (itemsData) {
-		itemsContainer.innerHTML = '';
-		createItemsElement(itemsContainer, itemsData);
-	};
-
-	selectMenu.selectItemByValue = function (values) {
-		if (!options.multiple)
-			values = [values];
-
-		for (const value of values) {
-			for (const itemElement of itemsContainer.getElementsByTagName('li')) {
-				if (itemElement.itemValue === value) {
-					selectItem(itemElement, true);
-					break;
-				}
-			}
-		}
-	};
-
-	selectMenu.getSelectedValue = function () {
-		if (options.multiple)
-			return selectedItems.map(i => i[0]);
-		return selectedItems[0][0];
-	};
-
-	return selectMenu;
 }

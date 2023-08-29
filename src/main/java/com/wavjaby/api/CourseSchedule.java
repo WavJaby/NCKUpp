@@ -166,7 +166,7 @@ public class CourseSchedule implements EndpointModule {
                 .cookieStore(cookieStore)
                 .followRedirects(false)
                 .proxy(proxyManager.getProxy());
-        Element body = checkCourseNckuLoginRequiredPage(conn, response);
+        Element body = checkCourseNckuLoginRequiredPage(conn, response, false);
         if (body == null)
             return;
 
@@ -296,7 +296,7 @@ public class CourseSchedule implements EndpointModule {
                 .cookieStore(cookieStore)
                 .followRedirects(false)
                 .proxy(proxyManager.getProxy());
-        Element body = checkCourseNckuLoginRequiredPage(conn, response);
+        Element body = checkCourseNckuLoginRequiredPage(conn, response, false);
         if (body == null)
             return;
 

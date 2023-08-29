@@ -10,7 +10,7 @@
  * @property {int} g - courseGrade 年級
  * @property {string} co - classInfo 班別
  * @property {string} cg - classGroup 組別
- * @property {string} ct - courseType
+ * @property {string} ct - category
  * @property {string} cn - courseName
  * @property {string} ci - courseNote
  * @property {string} cl - courseLimit
@@ -37,7 +37,7 @@
  * @property {int} courseGrade
  * @property {string} classInfo
  * @property {string} classGroup
- * @property {string} courseType
+ * @property {string} category
  * @property {string} courseName
  * @property {string|null} courseNote
  * @property {string|null} courseLimit
@@ -229,8 +229,6 @@ export default function (router, loginState) {
 
 	function onPageOpen(isHistory) {
 		console.log('Course search Open');
-		// close navLinks when using mobile devices
-		window.navMenuClose();
 		styles.enable();
 		if (isHistory)
 			loadLastSearch();
@@ -265,9 +263,8 @@ export default function (router, loginState) {
 				for (const rawQueryElement of rawQuery) {
 					if (node.id === rawQueryElement[0]) {
 						// From select menu
-						if (node.parentElement instanceof HTMLLabelElement &&
-							node.parentElement.selectItemByValue)
-							node.parentElement.selectItemByValue(rawQueryElement[1]);
+						if (node.selectMenu)
+							node.selectMenu.selectItemByValue(rawQueryElement[1]);
 						else
 							node.value = rawQueryElement[1];
 						found = true;
@@ -295,11 +292,11 @@ export default function (router, loginState) {
 	const courseSearchForm = div('form',
 		// input(null, 'Serial number', 'serial', {onkeyup}),
 		input(null, '課程名稱', 'courseName', {onkeyup}),
-		deptNameSelectMenu,
+		deptNameSelectMenu.element,
 		input(null, '教師姓名', 'instructor', {onkeyup}),
-		new SelectMenu('年級', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}),
-		dayOfWeekSelectMenu,
-		sectionSelectMenu,
+		new SelectMenu('年級', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}).element,
+		dayOfWeekSelectMenu.element,
+		sectionSelectMenu.element,
 		button(null, '搜尋', search),
 		button(null, '關注列表', getWatchCourse),
 	);
@@ -506,7 +503,14 @@ export default function (router, loginState) {
 	let courseRenderResultFilter = [];
 	const courseRenderResultDisplay = [];
 	const expandButtons = [];
+	const expandAllButton = th(null, 'expandDownArrow expand', expandArrowImage.cloneNode(), {onclick: expandAllToggle});
 	let waitingResult = false;
+
+	function expandAllToggle() {
+		const expand = !expandAllButton.classList.toggle('expand');
+		for (let expandButton of expandButtons)
+			expandButton(expand);
+	}
 
 	// Sort
 	const sortArrow = expandArrowImage.cloneNode();
@@ -606,7 +610,8 @@ export default function (router, loginState) {
 		textSearchFilter(updateFilter),
 		hideConflictCourseFilter(updateFilter, loginState),
 		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
-		hidePracticeFilter(updateFilter)
+		hidePracticeFilter(updateFilter),
+		classFilter(updateFilter, courseRenderResult),
 	];
 	filter.setOptions(filterOptions);
 
@@ -715,19 +720,11 @@ export default function (router, loginState) {
 							const options = {colSpan: 3, onclick: openNckuhubDetailWindow};
 							if (data.nckuhub.rate_count === 0)
 								return td('沒有評分', 'nckuhub', options);
-							if (isMobile()) {
-								return td(null, 'nckuhub', options,
-									span(null, null, span('得', 'label'), span(data.nckuhub.got.toFixed(1))),
-									span(null, null, span('甜', 'label'), span(data.nckuhub.sweet.toFixed(1))),
-									span(null, null, span('涼', 'label'), span(data.nckuhub.cold.toFixed(1))),
-								);
-							} else {
-								return td(null, 'nckuhub', options,
-									span(data.nckuhub.got.toFixed(1)),
-									span(data.nckuhub.sweet.toFixed(1)),
-									span(data.nckuhub.cold.toFixed(1)),
-								);
-							}
+							return td(null, 'nckuhub', options,
+								div(null, span('收穫', 'label'), nckuHubScoreToSpan(data.nckuhub.got)),
+								div(null, span('甜度', 'label'), nckuHubScoreToSpan(data.nckuhub.sweet)),
+								div(null, span('涼度', 'label'), nckuHubScoreToSpan(data.nckuhub.cold)),
+							);
 						}
 						return td('載入中...', 'nckuhub', {colSpan: 3});
 					})
@@ -735,12 +732,14 @@ export default function (router, loginState) {
 
 
 				function toggleCourseInfo(forceState) {
-					if (forceState instanceof Boolean ? forceState : expandArrowStateClass.toggle('expand')) {
-						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
-						setTimeout(() => expandableElement.style.height = null, 200);
-					} else {
+					if (typeof forceState === 'boolean' ? forceState : expandArrowStateClass.contains('expand')) {
 						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
 						setTimeout(() => expandableElement.style.height = '0');
+						expandArrowStateClass.remove('expand');
+					} else {
+						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
+						setTimeout(() => expandableElement.style.height = null, 200);
+						expandArrowStateClass.add('expand');
 					}
 				}
 
@@ -753,7 +752,7 @@ export default function (router, loginState) {
 				const resultObject = [
 					td(data.departmentName, 'departmentName'),
 					td(data.serialNumber, 'serialNumber'),
-					td(data.courseType, 'courseType'),
+					td(data.category, 'category'),
 					td(data.courseGrade, 'grade'),
 					td(data.classInfo, 'class'),
 					td(!data.time ? data.timeString : null, 'courseTime', data.time && data.time.map(i =>
@@ -815,7 +814,7 @@ export default function (router, loginState) {
 		}
 
 		// Update display element
-		courseSearchResultInfo.textContent = '搜尋到 ' + courseRenderResultDisplay.length + ' 個結果';
+		courseSearchResultInfo.textContent = '搜尋到 ' + courseRenderResultDisplay.length + ' 個結果, 點擊欄位即可排序';
 		showResultLastIndex = showResultIndexStep - 1;
 		for (let i = 0; i < courseRenderResultDisplay.length; i++) {
 			const item = courseRenderResultDisplay[i];
@@ -872,12 +871,10 @@ export default function (router, loginState) {
 				filter.createElement(),
 				tr(null, th(null, 'resultCount', {colSpan: 15}, courseSearchResultInfo)),
 				tr(null,
-					th(null, null,
-						div('expandDownArrow', expandArrowImage.cloneNode()),
-					),
+					expandAllButton,
 					// th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 					// th('Serial', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
-					// th('Type', 'courseType', {key: 'courseType', onclick: sortStringKey}),
+					// th('Category', 'category', {key: 'category', onclick: sortStringKey}),
 					// th('Grade', 'grade', {key: 'grade', onclick: sortIntKey}),
 					// th('Class', 'class', {key: 'classInfo', onclick: sortStringKey}),
 					// th('Time', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
@@ -893,7 +890,7 @@ export default function (router, loginState) {
 					// th('Options', 'options'),
 					th('系所', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 					th('系-序號', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
-					th('類別', 'courseType', {key: 'courseType', onclick: sortStringKey}),
+					th('類別', 'category', {key: 'category', onclick: sortStringKey}),
 					th('年級', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
 					th('班別', 'class', {key: 'classInfo', onclick: sortStringKey}),
 					th('時間', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
@@ -1053,16 +1050,16 @@ function NckuhubDetailWindow(courseSearch) {
 				span('課程評分 (' + nckuhub.rate_count + ')', 'title'),
 				nckuhub.rate_count === 0 ? div('rates') : div('rates',
 					div(null, div('rateBox',
-						span('Reward'),
-						span(nckuhub.got.toFixed(1)),
+						span('收穫'),
+						nckuHubScoreToSpan(nckuhub.got),
 					)),
 					div(null, div('rateBox',
-						span('Sweetness'),
-						span(nckuhub.sweet.toFixed(1)),
+						span('甜度'),
+						nckuHubScoreToSpan(nckuhub.sweet),
 					)),
 					div(null, div('rateBox',
-						span('Cool'),
-						span(nckuhub.cold.toFixed(1)),
+						span('涼度'),
+						nckuHubScoreToSpan(nckuhub.cold),
 					)),
 				),
 				// comment
@@ -1077,6 +1074,13 @@ function NckuhubDetailWindow(courseSearch) {
 		));
 		popupWindow.windowOpen();
 	};
+}
+
+function nckuHubScoreToSpan(score) {
+	score = score.toFixed(1);
+	if (score === '10.0')
+		score = '10';
+	return span(score);
 }
 
 function sortToEnd(data) {
@@ -1301,6 +1305,8 @@ function insureSectionRangeFilter(onFilterUpdate, dayOfWeekSelectMenu, sectionSe
 		if (!checkBox.checked || (searchSectionStart === -1 && searchDayOfWeek === -1))
 			return true;
 
+		if (!courseData.time)
+			return false;
 		for (const cosTime of courseData.time) {
 			if (searchDayOfWeek !== -1 && cosTime.dayOfWeek !== searchDayOfWeek)
 				return false;
@@ -1350,7 +1356,6 @@ function insureSectionRangeFilter(onFilterUpdate, dayOfWeekSelectMenu, sectionSe
 	}
 }
 
-
 /**
  * @param {function()} onFilterUpdate
  * @return {FilterOption}
@@ -1363,7 +1368,7 @@ function hidePracticeFilter(onFilterUpdate) {
 	function condition([courseData]) {
 		if (!checkBox.checked)
 			return true;
-		return courseData.courseType !== '實習' && courseData.courseType !== 'Practice' ||
+		return courseData.category !== '實習' && courseData.category !== 'Practice' ||
 			courseData.courseName.length > 0 ||
 			courseData.serialNumber;
 	}
@@ -1371,5 +1376,48 @@ function hidePracticeFilter(onFilterUpdate) {
 	return {
 		condition: condition,
 		element: checkBoxOuter,
+	}
+}
+
+/**
+ * @param {function()} onFilterUpdate
+ * @param {any[]} courseRenderResult
+ * @return {FilterOption}
+ */
+function classFilter(onFilterUpdate, courseRenderResult) {
+	const selectMenu = new SelectMenu('班別過濾', 'classFilter', 'classFilter', null, {multiple: true});
+	let selectValue = null;
+
+	function updateSelectValue() {
+		selectValue = selectMenu.getSelectedValue();
+		onFilterUpdate();
+	}
+
+	function onFilterStart(firstRenderAfterSearch) {
+		if (!firstRenderAfterSearch)
+			return;
+
+		const classCategory = [];
+		for (const [i] of courseRenderResult) {
+			if (i.classInfo && classCategory.indexOf(i.classInfo) === -1)
+				classCategory.push(i.classInfo);
+		}
+
+		selectMenu.setItems(classCategory.map(i => [i, i]), true);
+		selectValue = selectMenu.getSelectedValue();
+		selectMenu.onSelectItemChange = updateSelectValue;
+	}
+
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
+		if (!selectValue)
+			return true;
+		return selectValue.indexOf(courseData.classInfo) !== -1;
+	}
+
+	return {
+		onFilterStart: onFilterStart,
+		condition: condition,
+		element: selectMenu.element,
 	}
 }

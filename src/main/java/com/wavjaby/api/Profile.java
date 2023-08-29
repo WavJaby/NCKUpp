@@ -98,7 +98,7 @@ public class Profile implements EndpointModule {
             logger.errTrace(e);
             req.close();
         }
-        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get profile " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void updateUserProfile(String courseSerial, String studentID, String PHPSESSID, ApiResponse response) {

@@ -14,7 +14,6 @@ import java.net.CookieStore;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,14 +80,18 @@ public class Lib {
             response.addWarn(TAG + "Network error");
     }
 
-    public static Element checkCourseNckuLoginRequiredPage(Connection connection, ApiResponse response) {
+    public static Element checkCourseNckuLoginRequiredPage(Connection connection, ApiResponse response, boolean useWarn) {
         try {
             Connection.Response res = connection.execute();
             if (res.statusCode() == 301) {
                 String location = res.header("location");
-                if (location != null && location.endsWith("index.php?auth"))
-                    response.errorLoginRequire();
-                else
+                if (location != null && location.endsWith("index.php?auth")) {
+                    if (useWarn) {
+                        response.addWarn("Not login");
+                        return res.parse().body();
+                    } else
+                        response.errorLoginRequire();
+                } else
                     response.errorParse("Redirect but unknown location");
                 return null;
             }

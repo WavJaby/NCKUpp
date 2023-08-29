@@ -51,30 +51,36 @@ $instructor-info-fade-time: 200ms;
             margin: auto;
         }
 
-        .expandDownArrow > img {
-            width: 1em;
-            margin: 0 0.2em;
-            vertical-align: middle;
-            @include transform(rotate(-90deg));
-            @include transition(0.2s transform);
-        }
+        .expandDownArrow {
+            > img {
+                width: 1em;
+                //margin: 0 0.2em;
+                vertical-align: middle;
+                @include transform(rotate(-90deg));
+                @include transition(0.2s transform);
 
-        .expandDownArrow.expand > img {
-            @include transform(rotate(0));
+            }
+
+            &.expand > img {
+                @include transform(rotate(0));
+            }
         }
 
         .nckuhub {
+            width: 0;
             cursor: pointer;
 
             &:hover {
                 background: #21262d;
             }
 
-            > span {
-                width: 3em;
+            > div {
+                width: 2.5em;
                 display: inline-block;
-                padding-left: 2px;
-                padding-right: 1px;
+
+                > .label {
+                    display: none;
+                }
             }
         }
 
@@ -92,8 +98,9 @@ $instructor-info-fade-time: 200ms;
             > tr {
                 // Course search result filter
                 > .filterOptions {
+                    font-size: 18px;
                     text-align: left;
-                    padding-left: 5px;
+                    padding: 2px 5px;
 
                     > .searchBar {
                         width: 100%;
@@ -112,11 +119,12 @@ $instructor-info-fade-time: 200ms;
                         > input {
                             background: none;
                             width: 100%;
-                            padding-left: 1.4em;
+                            padding: 0 0 0 1.4em;
                             box-shadow: none;
                         }
                     }
 
+                    > .selectMenu,
                     > .checkboxWithName {
                         display: inline-block;
                         margin-right: 10px;
@@ -128,18 +136,16 @@ $instructor-info-fade-time: 200ms;
                     padding-left: 5px;
                 }
 
-                > .nckuhub {
+                > .expandDownArrow {
+                    width: 0;
+                    padding: 0 2px;
+                }
+
+                > .serialNumber {
                     width: 0;
                 }
 
                 > th {
-                    line-height: 1.4em;
-                    vertical-align: bottom;
-
-                    > .expandDownArrow {
-                        height: 1.7em;
-                    }
-
                     > .sortArrow {
                         position: absolute;
                         top: -2px;
@@ -157,12 +163,9 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 > th:not(:first-child) {
-                    border-left: lightgrey solid 1px;
-                }
-
-                > th:not(:first-child):not(:last-child) {
-                    position: relative;
                     padding: 5px 1px 0 1px;
+                    border-left: lightgrey solid 1px;
+                    position: relative;
 
                     &:hover {
                         background: $button-hover-color;
@@ -171,7 +174,6 @@ $instructor-info-fade-time: 200ms;
 
                 // Round corner
                 &:last-child > th:first-child {
-                    width: 0;
                     border-bottom-left-radius: 10px;
                 }
 
@@ -215,16 +217,25 @@ $instructor-info-fade-time: 200ms;
                     }
                 }
 
-                // Result course name
+                > .departmentName {
+                    text-overflow: ellipsis;
+                    max-width: 10vh;
+                    overflow: hidden;
+                }
+
+                > .category {
+                    white-space: pre-wrap;
+                }
+
                 > .courseName {
                     padding: 0;
 
                     > a {
-                        width: 30vw;
+                        width: 100%;
                         height: 100%;
                         display: table;
                         padding: 5px 2px;
-                        box-sizing: border-box;
+                        @include box-sizing(border-box);
                         white-space: pre-wrap;
 
                         > span {
@@ -242,21 +253,16 @@ $instructor-info-fade-time: 200ms;
                     display: none;
                 }
 
-                > .nckuhub > span > .label {
-                    display: none;
-                }
-
-                .courseTime {
+                > .courseTime {
                     padding: 3px 2px;
+                    white-space: pre-wrap;
 
                     > button {
                         background-color: $button-dark-bg-color;
-                        height: 100%;
-                        max-height: 2em;
                         display: inline-block;
                         cursor: pointer;
                         border-radius: 10px;
-                        margin-left: 3px;
+                        margin: 3px 3px 0 0;
                         padding: 2px 5px;
                     }
                 }
@@ -382,7 +388,38 @@ $instructor-info-fade-time: 200ms;
         @media only screen and ($small-screen) {
             > thead {
                 > tr:last-child {
-                    display: none;
+                    display: block;
+                    overflow-x: auto;
+                    //width: calc(100vw - 20px);
+                    //width: -moz-calc(100vw - 20px);
+                    //width: -webkit-calc(100vw - 20px);
+                    @include calc(width, "100vw - 20px");
+
+                    > th {
+                        &:not(.expandDownArrow) {
+                            background: $button-dark-green-bg-color;
+                            width: auto;
+                            padding-left: 2px;
+                            padding-right: 2px;
+                            margin-bottom: 2px;
+                            margin-right: 2px;
+                            border-radius: 5px;
+                            display: inline-block;
+                            border: none;
+                        }
+
+                        &.expandDownArrow {
+                            display: none;
+                        }
+
+                        &.options {
+                            display: none;
+                        }
+
+                        &:hover {
+                            background: none;
+                        }
+                    }
                 }
             }
 
@@ -404,12 +441,12 @@ $instructor-info-fade-time: 200ms;
 
                         &:not(.options) {
                             background: $button-dark-bg-color;
-                            line-height: 1.7em;
-                            min-height: 1.7em;
+                            line-height: 1.6em;
+                            min-height: 1.6em;
                             margin: 2px 1%;
                             padding: 0 2px 0 3px;
                             text-align: left;
-                            box-sizing: border-box;
+                            @include box-sizing(border-box);
                         }
 
                         > .label {
@@ -424,13 +461,15 @@ $instructor-info-fade-time: 200ms;
 
                         &.nckuhub {
                             text-align: center;
+                            padding: 0;
                             width: 98%;
 
-                            > span {
-                                width: 30%;
+                            > div {
+                                width: 33%;
 
                                 > span:last-child {
                                     width: 3em;
+                                    max-width: 100%;
                                     display: inline-block;
                                 }
 
@@ -445,11 +484,19 @@ $instructor-info-fade-time: 200ms;
                             display: none;
                         }
 
+                        &.courseTime {
+                            > button {
+                                margin-top: 0;
+                                height: 100%;
+                                vertical-align: top;
+                            }
+                        }
+
                         &.options {
                             width: 100%;
                             margin: 5px 0;
                             padding: 0 5px;
-                            box-sizing: border-box;
+                            @include box-sizing(border-box);
                             border-left: none;
                             clear: both;
 
@@ -463,9 +510,15 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 > tr.courseDetailBlock {
-                    > td .info {
-                        > .instructorBtn {
-                            padding: 5px;
+                    > td {
+                        border-radius: 0 0 10px 10px;
+
+                        .info {
+                            padding: 0 5px 5px 5px;
+
+                            > .instructorBtn {
+                                padding: 5px;
+                            }
                         }
                     }
                 }
@@ -550,7 +603,7 @@ $instructor-info-fade-time: 200ms;
             max-width: 500px;
             padding: 5px;
             border-radius: 10px;
-            box-sizing: border-box;
+            @include box-sizing(border-box);
             white-space: pre-wrap;
             word-break: break-word;
             bottom: 0;

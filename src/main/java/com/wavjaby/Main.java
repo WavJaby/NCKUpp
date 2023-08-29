@@ -91,6 +91,7 @@ public class Main {
         registerModule(new CourseSchedule(proxyManager), "/api/courseSchedule");
         registerModule(new ExtractUrl(proxyManager), "/api/extract");
         registerModule(new PreferenceAdjust(proxyManager), "/api/preferenceAdjust");
+        registerModule(new A9Registered(proxyManager), "/api/a9Registered");
 
         registerModule(new NCKUHub(), "/api/nckuhub");
         registerModule(new UsefulWebsite(), "/api/usefulWebsite");

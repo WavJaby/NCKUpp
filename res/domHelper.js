@@ -199,7 +199,7 @@ function ClassList(...className) {
 				return element.classList.toggle(name);
 			};
 			this.contains = function (name) {
-				element.classList.contains(name);
+				return element.classList.contains(name);
 			};
 		} else {
 			element.className += classList.join(' ');

@@ -98,7 +98,7 @@ public class UsefulWebsite implements EndpointModule {
             logger.errTrace(e);
             req.close();
         }
-        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Get useful website " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

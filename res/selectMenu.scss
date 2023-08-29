@@ -20,6 +20,11 @@
     > input {
         width: 100%;
         cursor: pointer;
+        padding: 5px 1.5em 5px 5px;
+
+        &.withClearBtn {
+            padding-right: 2.7em;
+        }
     }
 
     > .clearBtn {
@@ -29,7 +34,7 @@
         bottom: 0;
         margin: auto;
         cursor: pointer;
-        right: 2em;
+        right: 1.8em;
     }
 
     > .content {
@@ -41,7 +46,7 @@
         z-index: 1;
         display: none;
         position: absolute;
-        box-sizing: border-box;
+        @include box-sizing(border-box);
         box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.4);
 
         &.open {
@@ -126,7 +131,7 @@
                 padding: 0;
                 // Multi selection
                 > .checkboxWithName {
-                    box-sizing: border-box;
+                    @include box-sizing(border-box);
                     width: 100%;
                     line-height: 2em;
                     padding: 0 10px;

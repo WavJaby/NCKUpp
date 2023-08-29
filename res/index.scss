@@ -1,6 +1,5 @@
 @import 'variables';
 
-$login-window-bg-color: rgba(30, 30, 30, 0.8);
 $navbar-bg-color: #161b22;
 $navbar-hover-color: #35383b;
 $navbar-active-color: #49505A;
@@ -37,7 +36,6 @@ $navbar-active-color: #49505A;
     position: absolute;
     z-index: 100;
     white-space: nowrap;
-
     > .hamburgerMenu {
         height: $navbar-height;
         vertical-align: top;
@@ -49,7 +47,7 @@ $navbar-active-color: #49505A;
             > img {
                 height: 100%;
                 padding: 4px;
-                box-sizing: border-box;
+                @include box-sizing(border-box);
             }
         }
     }
@@ -196,7 +194,7 @@ $navbar-active-color: #49505A;
 
 // Login Window
 .loginWindow {
-    background: $login-window-bg-color;
+    background: $overlay-transparent-bg-color;
     position: absolute;
     top: $navbar-height;
     right: 0;
@@ -217,7 +215,7 @@ $navbar-active-color: #49505A;
     }
 
     @media only screen and ($small-screen) {
-        width: 100%;
+        max-width: 100%;
     }
 }
 
@@ -229,7 +227,7 @@ footer {
     left: 0;
     margin-top: 10px;
     padding: 0 50px;
-    box-sizing: border-box;
+    @include box-sizing(border-box);
     text-align: center;
 
     @media only screen and ($small-screen) {
@@ -248,6 +246,7 @@ footer {
         line-height: 2em;
         font-weight: normal;
         font-size: 1em;
+        overflow-wrap: break-word;
     }
 
     // Project repo link
@@ -281,7 +280,8 @@ footer {
             margin: 0 5px;
 
             > img {
-                height: 2em;
+                max-height: 2em;
+                width: 100%;
             }
         }
 
@@ -345,9 +345,9 @@ footer {
 
     > .checkmark {
         background-color: $button-bg-color;
-        height: 1.4em;
-        width: 1.4em;
-        margin-right: 5px;
+        height: 1.3em;
+        width: 1.3em;
+        margin-right: 3px;
         border-radius: 5px;
         display: inline-block;
         vertical-align: text-bottom;

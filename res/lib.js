@@ -132,7 +132,7 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 		courseGrade: rawCourseData.g,
 		classInfo: rawCourseData.co,
 		classGroup: rawCourseData.cg,
-		courseType: rawCourseData.ct,
+		category: rawCourseData.ct,
 		courseName: rawCourseData.cn,
 		courseNote: rawCourseData.ci,
 		courseLimit: rawCourseData.cl,

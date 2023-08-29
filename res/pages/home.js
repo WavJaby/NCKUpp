@@ -60,8 +60,6 @@ export default function (router) {
 
 	function onPageOpen() {
 		console.log('Home Open');
-		// close navLinks when using mobile devices
-		window.navMenuClose();
 		styles.enable();
 		setTimeout(() =>
 				titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px'

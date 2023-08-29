@@ -50,7 +50,7 @@ input {
     border: none;
     padding: 5px;
     border-radius: 5px;
-    box-sizing: border-box;
+    @include box-sizing(border-box);
     text-decoration: none;
     font-size: $font-size;
 

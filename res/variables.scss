@@ -42,6 +42,18 @@ $icon-search: url($source-root + 'search_icon.svg');
     -webkit-transition: $transition;
 }
 
+@mixin calc($prop, $values) {
+    #{$prop}: calc(#{$values});
+    #{$prop}: -moz-calc(#{$values});
+    #{$prop}: -webkit-calc(#{$values});
+}
+
+@mixin box-sizing($value) {
+    box-sizing: $value;
+    -moz-box-sizing: $value;
+    -webkit-box-sizing: $value;
+}
+
 @mixin cursor-grabbing {
     cursor: url('https://www.google.com/intl/en_ALL/mapfiles/closedhand.cur'), all-scroll;
     cursor: grabbing;

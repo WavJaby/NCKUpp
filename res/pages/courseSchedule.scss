@@ -113,7 +113,7 @@ $schedule-row-bg-color: #1C1E1F;
                     font-size: 18px;
                     padding: 5px;
                     text-align: center;
-                    box-sizing: border-box;
+                    @include box-sizing(border-box);
                     border-radius: 10px;
                     cursor: pointer;
 
@@ -157,7 +157,7 @@ $schedule-row-bg-color: #1C1E1F;
                         min-width: 6em;
                         display: inline-block;
                         border-radius: 10px;
-                        box-sizing: border-box;
+                        @include box-sizing(border-box);
                         padding: 5px;
                         margin-right: 5px;
                         text-align: center;
