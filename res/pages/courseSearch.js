@@ -344,6 +344,14 @@ export default function (router, loginState) {
 		// To query string
 		const queryString = queryData.map(i => i[0] + '=' + encodeURIComponent(i[1])).join('&');
 
+		if (queryData.length === 0) {
+			window.messageAlert.addInfo('課程搜尋', '請輸入搜尋資料', 2000);
+			lastQueryString = queryString;
+			searchResultSignal.set({loading: false, courseResult: null, nckuhubResult: null, failed: true});
+			searching = false;
+			return;
+		}
+
 		// Save query string and create history
 		if ((saveQuery === undefined || saveQuery === true) && lastQueryString !== queryString) {
 			window.urlHashData['searchRawQuery'] = queryData;
@@ -1397,13 +1405,15 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 		if (!firstRenderAfterSearch)
 			return;
 
-		const classCategory = [];
+		let classCategory = [];
 		for (const [i] of courseRenderResult) {
 			if (i.classInfo && classCategory.indexOf(i.classInfo) === -1)
 				classCategory.push(i.classInfo);
 		}
+		classCategory = classCategory.map(i => [i, i]);
+		classCategory.push(['', '無班別']);
 
-		selectMenu.setItems(classCategory.map(i => [i, i]), true);
+		selectMenu.setItems(classCategory, true);
 		selectValue = selectMenu.getSelectedValue();
 		selectMenu.onSelectItemChange = updateSelectValue;
 	}
@@ -1412,6 +1422,9 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 	function condition([courseData]) {
 		if (!selectValue)
 			return true;
+		if (!courseData.classInfo)
+			return selectValue.indexOf('') !== -1;
+
 		return selectValue.indexOf(courseData.classInfo) !== -1;
 	}
 
