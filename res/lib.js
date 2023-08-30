@@ -45,11 +45,18 @@ export function fetchApi(endpoint, showState, option) {
 	}
 	const stateElement = showState ? requestState.addState(showState) : null;
 
+	if (isSafari) {
+		if (!option.headers)
+			option.headers = {};
+		option.headers['Safari-Cookie'] = document.cookie;
+	}
+
 	return fetch(apiEndPoint + endpoint, option)
 		.then(i => {
 			if (isSafari) {
 				const c = i.headers.get('Safari-Cookie');
-				if (c) c.split(',').forEach(i => document.cookie = i);
+				console.log(c);
+				if (c) c.split(',').forEach(i => document.cookie = i.replace(/Domain=[\w.]+/, 'Domain=' + window.location.hostname));
 			}
 			return i.json()
 		})

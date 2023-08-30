@@ -155,8 +155,8 @@ public class Cookie {
             addCookieToHeader("stuSysLoginData", cookieValue, "/", req);
     }
 
-    public static String[] splitCookie(Headers requestHeaders) {
-        String cookie = requestHeaders.getFirst("Cookie");
+    public static String[] splitCookie(Headers headers) {
+        String cookie = isSafari(headers) ? headers.getFirst("Safari-Cookie") : headers.getFirst("Cookie");
         return cookie == null ? null : cookie.split("; ?");
     }
 
@@ -167,11 +167,7 @@ public class Cookie {
 
     public static void addCookieToHeader(String key, String value, String path, HttpExchange req) {
         Headers headers = req.getResponseHeaders();
-        String userAgent = req.getRequestHeaders().getFirst("User-Agent");
-        if (userAgent != null &&
-                userAgent.contains("Safari") && !userAgent.contains("Chrome") &&
-                !userAgent.contains("CriOS") &&
-                !userAgent.contains("FxiOS")) {
+        if (isSafari(req.getRequestHeaders())) {
             headers.add("Safari-Cookie", key + '=' + value + "; Path=" + path +
                     "; SameSite=None; Secure; Domain=" + cookieDomain);
         } else {
@@ -182,5 +178,13 @@ public class Cookie {
 
     public static void addRemoveCookieToHeader(String key, String path, HttpExchange req) {
         addCookieToHeader(key, "; Max-Age=0", path, req);
+    }
+
+    private static boolean isSafari(Headers headers) {
+        String userAgent = headers.getFirst("User-Agent");
+        return userAgent != null &&
+                userAgent.contains("Safari") && !userAgent.contains("Chrome") &&
+                !userAgent.contains("CriOS") &&
+                !userAgent.contains("FxiOS");
     }
 }
