@@ -1,14 +1,22 @@
 package com.wavjaby.lib;
 
+import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Main;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.logger.Logger;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.wavjaby.lib.Lib.setAllowOrigin;
+
 public class ApiResponse {
+    private static final Logger logger = new Logger("ApiResponse");
     private boolean success = true;
     private final List<String> err = new ArrayList<>();
     private final List<String> warn = new ArrayList<>();
@@ -133,5 +141,24 @@ public class ApiResponse {
         return responseCode.code <= ApiCode.NORMAL.code ? 200
                 : responseCode.code <= ApiCode.SERVER_ERROR.code ? 500
                 : 400;
+    }
+
+    public void sendResponse(HttpExchange req) {
+        Headers responseHeader = req.getResponseHeaders();
+        byte[] dataByte = this.toString().getBytes(StandardCharsets.UTF_8);
+        responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+        setAllowOrigin(req.getRequestHeaders(), responseHeader);
+
+        try {
+            // send response
+            req.sendResponseHeaders(getResponseCode(), dataByte.length);
+            OutputStream response = req.getResponseBody();
+            response.write(dataByte);
+            response.flush();
+            req.close();
+        } catch (IOException e) {
+            logger.errTrace(e);
+            req.close();
+        }
     }
 }

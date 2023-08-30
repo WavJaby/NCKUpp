@@ -3,6 +3,11 @@ const apiEndPoint = window.location.hostname === 'localhost' || window.location.
 	? 'https://' + window.location.hostname + '/api'
 	: 'https://api.simon.chummydns.com/api';
 
+const isSafari = navigator.userAgent &&
+	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1 &&
+	navigator.userAgent.indexOf('CriOS') === -1 &&
+	navigator.userAgent.indexOf('FxiOS') === -1;
+
 export function isMobile() {
 	return window.innerWidth <= mobileWidth
 }
@@ -41,7 +46,13 @@ export function fetchApi(endpoint, showState, option) {
 	const stateElement = showState ? requestState.addState(showState) : null;
 
 	return fetch(apiEndPoint + endpoint, option)
-		.then(i => i.json())
+		.then(i => {
+			if (isSafari) {
+				const c = i.headers.get('Safari-Cookie');
+				if (c) c.split(',').forEach(i => document.cookie = i);
+			}
+			return i.json()
+		})
 		// Handle self defined error
 		.then(i => {
 			if (abortTimeout)

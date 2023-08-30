@@ -1,14 +1,11 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +15,8 @@ import java.util.Map;
 
 import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.lib.Cookie.*;
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
+import static com.wavjaby.lib.Lib.readRequestBody;
 
 public class Profile implements EndpointModule {
     private static final String TAG = "[Profile]";
@@ -54,50 +52,34 @@ public class Profile implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        String loginState = getDefaultCookie(requestHeaders, cookieStore);
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
+        ApiResponse apiResponse = new ApiResponse();
 
-            String method = req.getRequestMethod();
-            String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
-            if (PHPSESSID == null) {
-                apiResponse.errorCookie("Cookie \"PHPSESSID\" not found");
-            } else {
-                if (method.equalsIgnoreCase("POST")) {
-                    Map<String, String> query = parseUrlEncodedForm(readRequestBody(req, StandardCharsets.UTF_8));
-                    String studentID = query.get("studentID");
-                    String courseSerial;
-                    if (studentID == null) {
-                        apiResponse.errorBadPayload("Form require \"studentID\"");
-                    } else if ((courseSerial = query.get("courseSerial")) != null) {
-                        updateUserProfile(courseSerial, studentID, PHPSESSID, apiResponse);
-                    }
-                } else if (method.equalsIgnoreCase("GET")) {
-                    getUserProfile(req.getRequestURI().getRawQuery(), PHPSESSID, apiResponse);
-                } else
-                    apiResponse.errorUnsupportedHttpMethod(method);
-            }
-
-            Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
+        String method = req.getRequestMethod();
+        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
+        if (PHPSESSID == null) {
+            apiResponse.errorCookie("Cookie \"PHPSESSID\" not found");
+        } else {
+            if (method.equalsIgnoreCase("POST")) {
+                Map<String, String> query = parseUrlEncodedForm(readRequestBody(req, StandardCharsets.UTF_8));
+                String studentID = query.get("studentID");
+                String courseSerial;
+                if (studentID == null) {
+                    apiResponse.errorBadPayload("Form require \"studentID\"");
+                } else if ((courseSerial = query.get("courseSerial")) != null) {
+                    updateUserProfile(courseSerial, studentID, PHPSESSID, apiResponse);
+                }
+            } else if (method.equalsIgnoreCase("GET")) {
+                getUserProfile(req.getRequestURI().getRawQuery(), PHPSESSID, apiResponse);
+            } else
+                apiResponse.errorUnsupportedHttpMethod(method);
         }
+
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+
+        apiResponse.sendResponse(req);
         logger.log("Get profile " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

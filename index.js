@@ -9,6 +9,7 @@ import {
 	h1,
 	h2,
 	h3,
+	iframe,
 	img,
 	input,
 	li,

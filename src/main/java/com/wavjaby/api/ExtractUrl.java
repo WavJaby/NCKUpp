@@ -13,16 +13,13 @@ import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
-import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class ExtractUrl implements EndpointModule {
     private static final String TAG = "[Extract]";
@@ -48,37 +45,21 @@ public class ExtractUrl implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
         getDefaultCookie(requestHeaders, cookieStore);
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
-            String queryString = req.getRequestURI().getRawQuery();
-            Map<String, String> query = parseUrlEncodedForm(queryString);
-            if (query.containsKey("moodle"))
-                getMoodle(query.get("moodle"), cookieStore, apiResponse);
-            else if (query.containsKey("location"))
-                getLocation(query.get("location"), cookieStore, apiResponse);
-            else
-                apiResponse.errorBadQuery("Query require one of \"moodle\" or \"location\"");
+        ApiResponse apiResponse = new ApiResponse();
+        String queryString = req.getRequestURI().getRawQuery();
+        Map<String, String> query = parseUrlEncodedForm(queryString);
+        if (query.containsKey("moodle"))
+            getMoodle(query.get("moodle"), cookieStore, apiResponse);
+        else if (query.containsKey("location"))
+            getLocation(query.get("location"), cookieStore, apiResponse);
+        else
+            apiResponse.errorBadQuery("Query require one of \"moodle\" or \"location\"");
 
-            Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
+        apiResponse.sendResponse(req);
         logger.log("Extract url " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

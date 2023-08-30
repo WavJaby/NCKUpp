@@ -240,7 +240,6 @@ export default function (router, loginState) {
 			loadLastSearch();
 
 		loginState.addListener(onLoginState);
-		onLoginState(loginState.state);
 	}
 
 	function onPageClose() {

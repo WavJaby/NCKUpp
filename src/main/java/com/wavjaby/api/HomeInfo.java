@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
@@ -17,17 +16,14 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class HomeInfo implements EndpointModule {
     private static final String TAG = "[HomeInfo]";
@@ -53,39 +49,20 @@ public class HomeInfo implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        String loginState = getDefaultCookie(requestHeaders, cookieStore);
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
+        ApiResponse apiResponse = new ApiResponse();
+        getHomepageInfo(cookieStore, apiResponse);
+        packCourseLoginStateCookie(req, loginState, cookieStore);
 
-            getHomepageInfo(cookieStore, apiResponse);
-
-            Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
+        apiResponse.sendResponse(req);
         logger.log("Get homeInfo " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void getHomepageInfo(CookieStore cookieStore, ApiResponse response) {
         Connection request = HttpConnection.connect(courseNckuOrg + "/index.php")
                 .header("Connection", "keep-alive")
-                .cookieStore(cookieStore)
                 .proxy(proxyManager.getProxy());
         Document document;
         try {

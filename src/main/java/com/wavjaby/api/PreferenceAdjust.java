@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
@@ -17,7 +16,6 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
@@ -63,38 +61,22 @@ public class PreferenceAdjust implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        String loginState = getDefaultCookie(requestHeaders, cookieStore);
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
+        ApiResponse apiResponse = new ApiResponse();
 
-            String method = req.getRequestMethod();
-            if (method.equalsIgnoreCase("GET"))
-                getPreferenceAdjustList(apiResponse, cookieStore);
-            else if (method.equalsIgnoreCase("POST"))
-                updatePreferenceAdjustList(readRequestBody(req, StandardCharsets.UTF_8), apiResponse, cookieStore);
-            else
-                apiResponse.errorUnsupportedHttpMethod(method);
+        String method = req.getRequestMethod();
+        if (method.equalsIgnoreCase("GET"))
+            getPreferenceAdjustList(apiResponse, cookieStore);
+        else if (method.equalsIgnoreCase("POST"))
+            updatePreferenceAdjustList(readRequestBody(req, StandardCharsets.UTF_8), apiResponse, cookieStore);
+        else
+            apiResponse.errorUnsupportedHttpMethod(method);
 
-            Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+        apiResponse.sendResponse(req);
 
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
         logger.log("Preference adjust " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

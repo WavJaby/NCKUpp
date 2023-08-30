@@ -180,8 +180,7 @@ public class Lib {
     }
 
     public static String readRequestBody(HttpExchange req, Charset charset) throws IOException {
-        InputStream in = req.getRequestBody();
-        return readInputStreamToString(in, charset);
+        return readInputStreamToString(req.getRequestBody(), charset);
     }
 
     public static String readInputStreamToString(InputStream in, Charset charset) throws IOException {
@@ -237,13 +236,16 @@ public class Lib {
         if (originUrl == null)
             return;
 
+//        responseHeader.set("Cross-Origin-Resource-Policy", "cross-origin");
+//        responseHeader.set("Access-Control-Expose-Headers", "Set-Cookie");
+//        responseHeader.set("Access-Control-Allow-Headers", "Cookie");
         responseHeader.set("Access-Control-Allow-Credentials", "true");
         for (String i : accessControlAllowOrigin)
             if (originUrl.equals(i)) {
                 responseHeader.set("Access-Control-Allow-Origin", i);
                 return;
             }
-        if (originUrl.startsWith("http://localhost") || originUrl.startsWith("https://localhost"))
+        if (originUrl.startsWith("http://localhost") || originUrl.startsWith("https://localhost") || originUrl.startsWith("https://192.168."))
             responseHeader.set("Access-Control-Allow-Origin", originUrl);
         else
             responseHeader.set("Access-Control-Allow-Origin", accessControlAllowOrigin[0]);

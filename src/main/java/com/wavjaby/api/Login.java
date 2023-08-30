@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
@@ -14,7 +13,6 @@ import org.jsoup.helper.HttpConnection;
 import org.jsoup.parser.Parser;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +33,7 @@ import static com.wavjaby.lib.Lib.*;
 public class Login implements EndpointModule {
     private static final String TAG = "[Login]";
     private static final Logger logger = new Logger(TAG);
-    private static final String loginCheckString = "/index.php?c=auth&m=logout";
+    public static final String loginCheckString = "/index.php?c=auth&m=logout";
 
     private final SQLite sqLite;
     private final Search search;
@@ -187,36 +185,17 @@ public class Login implements EndpointModule {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
 
-        try {
-            // Login
-            ApiResponse apiResponse = new ApiResponse();
-            login(req, apiResponse);
-
-            Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(req.getRequestHeaders(), responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
+        // Login
+        ApiResponse apiResponse = new ApiResponse();
+        login(req, apiResponse);
+        apiResponse.sendResponse(req);
         logger.log("Login " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void login(HttpExchange req, ApiResponse response) {
         // Setup cookies
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        Headers responseHeader = req.getResponseHeaders();
-        String[] cookies = splitCookie(requestHeaders);
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String[] cookies = splitCookie(req.getRequestHeaders());
         String authState = unpackAuthCookie(cookies, cookieStore);
 
         Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
@@ -240,7 +219,7 @@ public class Login implements EndpointModule {
                 response.errorBadPayload("Read payload error");
                 logger.errTrace(e);
             }
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
+            packCourseLoginStateCookie(req, loginState, cookieStore);
         }
         // Login student identification system
         else if (mode.equals("stuId")) {
@@ -252,13 +231,13 @@ public class Login implements EndpointModule {
                 response.errorBadPayload("Read payload error");
                 logger.errTrace(e);
             }
-            packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
+            packStudentIdSysLoginStateCookie(req, loginState, cookieStore);
         }
         // Unknown mode
         else
             response.errorBadQuery("Unknown login mode: " + mode);
 
-        packAuthCookie(responseHeader, authState, cookieStore);
+        packAuthCookie(req, authState, cookieStore);
     }
 
     @Override

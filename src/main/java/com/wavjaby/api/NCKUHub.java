@@ -13,7 +13,6 @@ import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.CookieManager;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -23,7 +22,8 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.executorShutdown;
+import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
 public class NCKUHub implements EndpointModule {
     private static final String TAG = "[NCKU Hub]";
@@ -106,36 +106,21 @@ public class NCKUHub implements EndpointModule {
         Headers requestHeaders = req.getRequestHeaders();
         getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
+        ApiResponse apiResponse = new ApiResponse();
 
-            String queryString = req.getRequestURI().getRawQuery();
-            if (queryString == null) {
-                // get courseID
-                if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
-                    if (!updateNckuHubCourseID())
-                        apiResponse.addWarn("Update NCKU-HUB course id failed");
-                apiResponse.setData(availableSerialId);
-            } else {
-                // get course info
-                getNckuHubCourseInfo(queryString, apiResponse);
-            }
-
-            Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
+        String queryString = req.getRequestURI().getRawQuery();
+        if (queryString == null) {
+            // get courseID
+            if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
+                if (!updateNckuHubCourseID())
+                    apiResponse.addWarn("Update NCKU-HUB course id failed");
+            apiResponse.setData(availableSerialId);
+        } else {
+            // get course info
+            getNckuHubCourseInfo(queryString, apiResponse);
         }
+
+        apiResponse.sendResponse(req);
         logger.log("Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

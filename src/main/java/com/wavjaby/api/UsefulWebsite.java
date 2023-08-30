@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
@@ -11,11 +10,10 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.getFileFromPath;
+import static com.wavjaby.lib.Lib.readFileToString;
 
 public class UsefulWebsite implements EndpointModule {
     private static final String TAG = "[UsefulWebsite]";
@@ -73,31 +71,16 @@ public class UsefulWebsite implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        Headers requestHeaders = req.getRequestHeaders();
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
-            String method = req.getRequestMethod();
-            if (method.equalsIgnoreCase("GET"))
-                getLinks(apiResponse);
-            else
-                apiResponse.errorUnsupportedHttpMethod(method);
+        ApiResponse apiResponse = new ApiResponse();
+        String method = req.getRequestMethod();
+        if (method.equalsIgnoreCase("GET"))
+            getLinks(apiResponse);
+        else
+            apiResponse.errorUnsupportedHttpMethod(method);
 
-            Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+        apiResponse.sendResponse(req);
 
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
         logger.log("Get useful website " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

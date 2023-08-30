@@ -19,17 +19,16 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static com.wavjaby.Main.stuIdSysNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.leftPad;
+import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
 public class StudentIdentificationSystem implements EndpointModule {
     private static final String TAG = "[StuIdSys]";
@@ -265,31 +264,16 @@ public class StudentIdentificationSystem implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
         Headers requestHeaders = req.getRequestHeaders();
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
-            String loginState = unpackStudentIdSysLoginStateCookie(splitCookie(requestHeaders), cookieStore);
-            studentIdSysGet(req.getRequestURI().getRawQuery(), cookieStore, apiResponse);
+        ApiResponse apiResponse = new ApiResponse();
+        String loginState = unpackStudentIdSysLoginStateCookie(splitCookie(requestHeaders), cookieStore);
+        studentIdSysGet(req.getRequestURI().getRawQuery(), cookieStore, apiResponse);
 
-            Headers responseHeader = req.getResponseHeaders();
-            packStudentIdSysLoginStateCookie(responseHeader, loginState, cookieStore);
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+        packStudentIdSysLoginStateCookie(req, loginState, cookieStore);
 
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
+        apiResponse.sendResponse(req);
         logger.log("Get student id system " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

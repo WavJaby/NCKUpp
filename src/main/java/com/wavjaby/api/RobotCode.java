@@ -1,10 +1,9 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
-import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.logger.Logger;
 
@@ -12,7 +11,6 @@ import java.io.*;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.HttpCookie;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,7 +21,6 @@ import java.util.concurrent.TimeoutException;
 
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class RobotCode implements EndpointModule {
     private static final String TAG = "[RobotCode]";
@@ -100,36 +97,15 @@ public class RobotCode implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        String loginState = getDefaultCookie(requestHeaders, cookieStore);
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
 
-        try {
-            // Crack robot code
-            JsonObjectStringBuilder data = new JsonObjectStringBuilder();
-            boolean success = true;
-            data.append("success", success);
+        ApiResponse apiResponse = new ApiResponse();
 
-            // Set cookie
-            Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+        apiResponse.sendResponse(req);
 
-            byte[] dataByte = data.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // Send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(success ? 200 : 400, dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
-        logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log("Crack RobotCode " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

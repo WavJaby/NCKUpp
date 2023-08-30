@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.ProxyManager;
@@ -18,7 +17,6 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -109,49 +107,32 @@ public class CourseSchedule implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        String loginState = getDefaultCookie(requestHeaders, cookieStore);
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
-            Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-            String method = req.getRequestMethod();
-            // Get pre schedule
-            if ("true".equals(query.get("pre"))) {
-                if (method.equalsIgnoreCase("GET"))
-                    getPreCourseSchedule(cookieStore, apiResponse);
-                else if (method.equalsIgnoreCase("POST"))
-                    postPreCourseSchedule(readRequestBody(req, StandardCharsets.UTF_8), cookieStore, apiResponse);
-                else
-                    apiResponse.errorUnsupportedHttpMethod(method);
-            }
-            // Get schedule
-            else {
-                if (method.equalsIgnoreCase("GET"))
-                    getCourseSchedule(cookieStore, apiResponse);
-                else
-                    apiResponse.errorUnsupportedHttpMethod(method);
-            }
-
-            Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
-
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
+        ApiResponse apiResponse = new ApiResponse();
+        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
+        String method = req.getRequestMethod();
+        // Get pre schedule
+        if ("true".equals(query.get("pre"))) {
+            if (method.equalsIgnoreCase("GET"))
+                getPreCourseSchedule(cookieStore, apiResponse);
+            else if (method.equalsIgnoreCase("POST"))
+                postPreCourseSchedule(readRequestBody(req, StandardCharsets.UTF_8), cookieStore, apiResponse);
+            else
+                apiResponse.errorUnsupportedHttpMethod(method);
         }
+        // Get schedule
+        else {
+            if (method.equalsIgnoreCase("GET"))
+                getCourseSchedule(cookieStore, apiResponse);
+            else
+                apiResponse.errorUnsupportedHttpMethod(method);
+        }
+
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+        apiResponse.sendResponse(req);
+
         logger.log("Get schedule " + (System.currentTimeMillis() - startTime) + "ms");
     };
 

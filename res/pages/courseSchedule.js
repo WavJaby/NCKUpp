@@ -92,7 +92,7 @@ export default function (router, loginState) {
 				const scheduleData = response.data;
 				const semesterInfo = scheduleData.semesterInfo;
 				const studentInfo = scheduleData.studentInfo;
-				downloadScheduleButton.download = semesterInfo.year + '學年_第' + semesterInfo.semester + '學期_課表';
+				downloadScheduleButton.download = semesterInfo.year + '學年_第' + semesterInfo.sem + '學期_課表';
 				scheduleTableInfo.textContent = studentInfo.id + ' 學分: ' + scheduleData.credits;
 			});
 			fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(response => {

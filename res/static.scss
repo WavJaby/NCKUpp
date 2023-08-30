@@ -48,6 +48,7 @@ input {
     background-color: $button-bg-color;
     color: $font-color;
     border: none;
+    margin: 0;
     padding: 5px;
     border-radius: 5px;
     @include box-sizing(border-box);
@@ -66,6 +67,11 @@ input {
         -webkit-text-fill-color: $font-color !important;
         caret-color: $font-color !important;
     }
+}
+
+iframe {
+    border: none;
+    display: block;
 }
 
 // Paragraph Element

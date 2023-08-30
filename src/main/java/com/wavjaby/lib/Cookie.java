@@ -1,6 +1,7 @@
 package com.wavjaby.lib;
 
 import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpExchange;
 
 import java.net.CookieStore;
 import java.net.HttpCookie;
@@ -57,7 +58,7 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packAuthCookie(Headers headers, String orgCookie, CookieStore cookieStore) {
+    public static void packAuthCookie(HttpExchange req, String orgCookie, CookieStore cookieStore) {
         StringBuilder cookieValueBuilder = new StringBuilder();
         Map<String, String> portalNckuCookies = new HashMap<>();
         for (HttpCookie i : cookieStore.get(portalNckuOrgUri))
@@ -74,7 +75,7 @@ public class Cookie {
 
         String cookieValue = cookieValueBuilder.toString();
         if (!cookieValue.equals(orgCookie))
-            headers.add("Set-Cookie", "authData=" + cookieValue + "; Path=/api/login" + setCookieDomain());
+            addCookieToHeader("authData", cookieValue, "/api/login", req);
     }
 
     public static String unpackCourseLoginStateCookie(String[] cookieIn, CookieStore cookieStore) {
@@ -101,7 +102,7 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packCourseLoginStateCookie(Headers headers, String orgCookie, CookieStore cookieStore) {
+    public static void packCourseLoginStateCookie(HttpExchange req, String orgCookie, CookieStore cookieStore) {
         Map<String, String> courseNckuCookies = new HashMap<>();
         for (HttpCookie i : cookieStore.get(courseNckuOrgUri))
             courseNckuCookies.put(i.getName(), i.getValue());
@@ -121,7 +122,7 @@ public class Cookie {
 
         String cookieValue = cookieValueBuilder.toString();
         if (!cookieValue.equals(orgCookie))
-            headers.add("Set-Cookie", "courseLoginData=" + cookieValue + "; Path=/" + setCookieDomain());
+            addCookieToHeader("courseLoginData", cookieValue, "/", req);
     }
 
     public static String unpackStudentIdSysLoginStateCookie(String[] cookieIn, CookieStore cookieStore) {
@@ -142,15 +143,16 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packStudentIdSysLoginStateCookie(Headers headers, String orgCookie, CookieStore cookieStore) {
+    public static void packStudentIdSysLoginStateCookie(HttpExchange req, String orgCookie, CookieStore cookieStore) {
         String cookieValue = null;
         for (HttpCookie i : cookieStore.get(stuIdSysNckuOrgUri)) {
-            String out = i.getName() + '|' + i.getValue();
-            if (cookieValue == null || !cookieValue.equals(orgCookie))
-                cookieValue = out;
+            if (i.getName().startsWith("ASPSESSION")) {
+                cookieValue = i.getName() + '|' + i.getValue();
+                break;
+            }
         }
         if (cookieValue != null && !cookieValue.equals(orgCookie))
-            headers.add("Set-Cookie", "stuSysLoginData=" + cookieValue + "; Path=/" + setCookieDomain());
+            addCookieToHeader("stuSysLoginData", cookieValue, "/", req);
     }
 
     public static String[] splitCookie(Headers requestHeaders) {
@@ -163,11 +165,22 @@ public class Cookie {
         return unpackCourseLoginStateCookie(splitCookie(requestHeaders), cookieStore);
     }
 
-    public static String setCookieDomain() {
-        return "; SameSite=None; Secure; Domain=" + cookieDomain;
+    public static void addCookieToHeader(String key, String value, String path, HttpExchange req) {
+        Headers headers = req.getResponseHeaders();
+        String userAgent = req.getRequestHeaders().getFirst("User-Agent");
+        if (userAgent != null &&
+                userAgent.contains("Safari") && !userAgent.contains("Chrome") &&
+                !userAgent.contains("CriOS") &&
+                !userAgent.contains("FxiOS")) {
+            headers.add("Safari-Cookie", key + '=' + value + "; Path=" + path +
+                    "; SameSite=None; Secure; Domain=" + cookieDomain);
+        } else {
+            headers.add("Set-Cookie", key + '=' + value + "; Path=" + path +
+                    "; SameSite=None; OnlyHttp; Secure; Domain=" + cookieDomain);
+        }
     }
 
-    public static String removeCookie(String key) {
-        return key + "=; Max-Age=0";
+    public static void addRemoveCookieToHeader(String key, String path, HttpExchange req) {
+        addCookieToHeader(key, "; Max-Age=0", path, req);
     }
 }

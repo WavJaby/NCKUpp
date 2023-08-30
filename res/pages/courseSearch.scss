@@ -339,6 +339,7 @@ $instructor-info-fade-time: 200ms;
                     > .note,
                     > .limit {
                         display: block;
+                        overflow-wrap: anywhere;
                     }
 
                     > .note::before {

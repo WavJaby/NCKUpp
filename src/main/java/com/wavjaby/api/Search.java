@@ -1,7 +1,6 @@
 package com.wavjaby.api;
 
 import com.sun.istack.internal.Nullable;
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
@@ -26,11 +25,9 @@ import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -102,53 +99,35 @@ public class Search implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
 
-        try {
-            // unpack cookie
-            String[] cookieIn = splitCookie(requestHeaders);
-            String loginState = unpackCourseLoginStateCookie(cookieIn, cookieStore);
+        // unpack cookie
+        String[] cookieIn = splitCookie(req.getRequestHeaders());
+        String loginState = unpackCourseLoginStateCookie(cookieIn, cookieStore);
 
-            // search
-            String rawQuery = req.getRequestURI().getRawQuery();
-            SearchQuery searchQuery = new SearchQuery(rawQuery, cookieIn);
-            ApiResponse apiResponse = new ApiResponse();
-            if (searchQuery.serialNumberEmpty()) {
-                apiResponse.errorBadQuery("Query \"serial\" is empty");
-            } else if (searchQuery.serialNumberInvalid()) {
-                apiResponse.errorBadQuery("Query \"serial\" is invalid: " + searchQuery.getSerialError);
-            } else if (searchQuery.historySearchInvalid()) {
-                apiResponse.errorBadQuery("Query \"queryTime\" is invalid: " + searchQuery.historySearchError);
-            } else if (searchQuery.noQuery()) {
-                apiResponse.errorBadQuery("Query \"" + rawQuery + "\" Require least 1 of \"dept\", \"serial\", \"courseName\", \"instructor\", \"grade\", \"dayOfWeek\", \"section\"");
-            } else
-                search(searchQuery, apiResponse, cookieStore);
+        // search
+        String rawQuery = req.getRequestURI().getRawQuery();
+        SearchQuery searchQuery = new SearchQuery(rawQuery, cookieIn);
+        ApiResponse apiResponse = new ApiResponse();
+        if (searchQuery.serialNumberEmpty()) {
+            apiResponse.errorBadQuery("Query \"serial\" is empty");
+        } else if (searchQuery.serialNumberInvalid()) {
+            apiResponse.errorBadQuery("Query \"serial\" is invalid: " + searchQuery.getSerialError);
+        } else if (searchQuery.historySearchInvalid()) {
+            apiResponse.errorBadQuery("Query \"queryTime\" is invalid: " + searchQuery.historySearchError);
+        } else if (searchQuery.noQuery()) {
+            apiResponse.errorBadQuery("Query \"" + rawQuery + "\" Require least 1 of \"dept\", \"serial\", \"courseName\", \"instructor\", \"grade\", \"dayOfWeek\", \"section\"");
+        } else
+            search(searchQuery, apiResponse, cookieStore);
 
-            // set cookie
-            Headers responseHeader = req.getResponseHeaders();
-            packCourseLoginStateCookie(responseHeader, loginState, cookieStore);
-            if (apiResponse.isSuccess())
-                responseHeader.add("Set-Cookie", setSearchIdCookie(searchQuery) +
-                        "; Path=/api/search" + setCookieDomain());
-            else
-                responseHeader.add("Set-Cookie", removeCookie("searchID") +
-                        "; Path=/api/search" + setCookieDomain());
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+        // set cookie
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+        if (apiResponse.isSuccess())
+            addCookieToHeader("searchID", getSearchIdCookieValue(searchQuery), "/", req);
+        else
+            addRemoveCookieToHeader("searchID", "/", req);
 
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
+        apiResponse.sendResponse(req);
         logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
@@ -833,8 +812,7 @@ public class Search implements EndpointModule {
     }
 
     public CookieStore createCookieStore() {
-        CookieManager cookieManager = new CookieManager();
-        CookieStore cookieStore = cookieManager.getCookieStore();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
         cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
         for (int i = 0; i < 3; i++) {
             try {
@@ -855,14 +833,14 @@ public class Search implements EndpointModule {
         return cookieStore;
     }
 
-    public static String setSearchIdCookie(SearchQuery searchQuery) {
+    public static String getSearchIdCookieValue(SearchQuery searchQuery) {
         if (searchQuery.searchID == null && searchQuery.historySearchID == null)
-            return "searchID=|";
+            return "|";
         if (searchQuery.searchID == null)
-            return "searchID=|" + searchQuery.historySearchID;
+            return '|' + searchQuery.historySearchID;
         if (searchQuery.historySearchID == null)
-            return "searchID=" + searchQuery.searchID + '|';
-        return "searchID=" + searchQuery.searchID + '|' + searchQuery.historySearchID;
+            return searchQuery.searchID + '|';
+        return searchQuery.searchID + '|' + searchQuery.historySearchID;
     }
 
     public AllDeptData getAllDeptData(CookieStore cookieStore, ApiResponse response) {

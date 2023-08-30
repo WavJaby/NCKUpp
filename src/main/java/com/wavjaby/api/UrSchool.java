@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
@@ -18,7 +17,10 @@ import org.jsoup.nodes.Node;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
@@ -135,43 +137,27 @@ public class UrSchool implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        Headers requestHeaders = req.getRequestHeaders();
 
-        try {
-            ApiResponse apiResponse = new ApiResponse();
-
-            String queryString = req.getRequestURI().getRawQuery();
-            if (queryString == null) {
-                checkTimeUpdateUrSchoolData();
-                apiResponse.setData(urSchoolDataJson);
-            } else {
-                Map<String, String> query = parseUrlEncodedForm(queryString);
-                String instructorID = query.get("id");
-                String getMode = query.get("mode");
-                if (instructorID == null || getMode == null) {
-                    String err = "Query require";
-                    if (instructorID == null) err += " \"id\"";
-                    if (getMode == null) err += " \"mode\"";
-                    apiResponse.errorBadQuery(err);
-                } else
-                    getInstructorInfo(instructorID, getMode, apiResponse);
-            }
-
-            Headers responseHeader = req.getResponseHeaders();
-            byte[] dataByte = apiResponse.toString().getBytes(StandardCharsets.UTF_8);
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
-
-            // send response
-            setAllowOrigin(requestHeaders, responseHeader);
-            req.sendResponseHeaders(apiResponse.getResponseCode(), dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
+        ApiResponse apiResponse = new ApiResponse();
+        String queryString = req.getRequestURI().getRawQuery();
+        if (queryString == null) {
+            checkTimeUpdateUrSchoolData();
+            apiResponse.setData(urSchoolDataJson);
+        } else {
+            Map<String, String> query = parseUrlEncodedForm(queryString);
+            String instructorID = query.get("id");
+            String getMode = query.get("mode");
+            if (instructorID == null || getMode == null) {
+                String err = "Query require";
+                if (instructorID == null) err += " \"id\"";
+                if (getMode == null) err += " \"mode\"";
+                apiResponse.errorBadQuery(err);
+            } else
+                getInstructorInfo(instructorID, getMode, apiResponse);
         }
+
+        apiResponse.sendResponse(req);
+
         logger.log("Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
