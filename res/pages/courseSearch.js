@@ -189,7 +189,7 @@ import {
 } from '../domHelper_v001.min.js';
 
 import SelectMenu from '../selectMenu.js';
-import {courseDataTimeToString, fetchApi, isMobile, parseRawCourseData, timeParse} from '../lib.js';
+import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';
 import PopupWindow from '../popupWindow.js';
 
 const textColor = {
@@ -764,6 +764,9 @@ export default function (router, loginState) {
 				}
 
 				const resultObject = [
+					td(null, 'detailedCourseName',
+						a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.serialNumber + ' ' + data.courseName))
+					),
 					td(data.departmentName, 'departmentName'),
 					td(data.serialNumber, 'serialNumber'),
 					td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
@@ -782,23 +785,6 @@ export default function (router, loginState) {
 					td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
 					nckuhubInfo,
 				];
-				if (isMobile()) {
-					resultObject[2].insertBefore(span('類別:', 'label'), resultObject[2].firstChild);
-					resultObject[3].insertBefore(span('年級:', 'label'), resultObject[3].firstChild);
-					resultObject[4].insertBefore(span('班別:', 'label'), resultObject[4].firstChild);
-					resultObject[5].insertBefore(span('時間:', 'label'), resultObject[5].firstChild);
-
-					resultObject[7].insertBefore(span('選必修:', 'label'), resultObject[7].firstChild);
-					resultObject[8].insertBefore(span('學分:', 'label'), resultObject[8].firstChild);
-					resultObject[9].insertBefore(span('選/餘:', 'label'), resultObject[9].firstChild);
-
-					const courseName = resultObject[6].cloneNode(true);
-					courseName.className = 'detailedCourseName';
-					const l = courseName.firstElementChild;
-					l.appendChild(span(data.serialNumber + ' '));
-					l.appendChild(l.firstChild);
-					resultObject.unshift(courseName);
-				}
 
 				// render result item
 				const courseResult = [

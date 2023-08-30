@@ -486,9 +486,10 @@ $instructor-info-fade-time: 200ms;
 
                         &.courseTime {
                             > button {
-                                margin-top: 0;
+                                margin: 0 5px 0 0;
                                 height: 100%;
                                 vertical-align: top;
+                                @include box-sizing(border-box);
                             }
                         }
 
