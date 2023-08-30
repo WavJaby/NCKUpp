@@ -1,6 +1,6 @@
 export const mobileWidth = 700;
-const apiEndPoint = window.location.hostname === 'localhost'
-	? 'https://localhost/api'
+const apiEndPoint = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
+	? 'https://' + window.location.hostname + '/api'
 	: 'https://api.simon.chummydns.com/api';
 
 export function isMobile() {

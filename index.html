@@ -25,13 +25,13 @@
 	<meta name="twitter:image" content="https://wavjaby.github.io/NCKUpp/res/assets/icon.svg"/>
 
 	<meta name="description"
-		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~"/>
 	<meta itemprop="description"
-		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~"/>
 	<meta property="og:description"
-		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~"/>
 	<meta name="twitter:description"
-		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~"/>
+		  content="NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~"/>
 
 	<meta name="theme-color" content="#A31F34"/>
 	<meta name="twitter:card" content="summary_large_image"/>
@@ -67,8 +67,8 @@
 			remoteLog(errorText);
 		});
 
-		var apiEndPoint = window.location.hostname === 'localhost'
-			? 'https://localhost/api'
+		var apiEndPoint = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
+			? 'https://' + window.location.hostname + '/api'
 			: 'https://api.simon.chummydns.com/api';
 
 		function remoteLog(text) {
@@ -106,7 +106,7 @@
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-HGNQ4WERFG"></script>
 	<script>
 		window.dataLayer = window.dataLayer || [];
-		if (window.location.hostname !== 'localhost') {
+		if (window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('192.168.')) {
 			gtag('js', new Date());
 			gtag('config', 'G-HGNQ4WERFG');
 		}

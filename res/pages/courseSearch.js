@@ -763,36 +763,33 @@ export default function (router, loginState) {
 					nckuhubDetailWindow.set(data);
 				}
 
-				const resultObject = [
-					td(null, 'detailedCourseName',
-						a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.serialNumber + ' ' + data.courseName))
-					),
-					td(data.departmentName, 'departmentName'),
-					td(data.serialNumber, 'serialNumber'),
-					td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
-					td(null, 'grade', span('年級:', 'label'), data.courseGrade && text(data.courseGrade.toString())),
-					td(null, 'class', span('班別:', 'label'), data.classInfo && text(data.classInfo)),
-					td(null, 'courseTime', span('時間:', 'label'),
-						data.time && data.time.map(i =>
-							button(null, i.extraTimeDataKey ? '詳細時間' : courseDataTimeToString(i))
-						) || text(data.timeString)
-					),
-					td(null, 'courseName',
-						a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.courseName))
-					),
-					td(null, 'required', span('選必修:', 'label'), text(data.required ? '必修' : '選修')),
-					td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
-					td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
-					nckuhubInfo,
-				];
-
 				// render result item
 				const courseResult = [
 					tr('courseBlockSpacing'),
 					// Info
 					tr('courseInfoBlock',
 						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
-						resultObject,
+						td(null, 'detailedCourseName',
+							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'},
+								span((data.serialNumber ? data.serialNumber + ' ' : '') + data.courseName))
+						),
+						td(data.departmentName, 'departmentName'),
+						td(data.serialNumber, 'serialNumber'),
+						td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
+						td(null, 'grade', span('年級:', 'label'), data.courseGrade && text(data.courseGrade.toString())),
+						td(null, 'class', span('班別:', 'label'), data.classInfo && text(data.classInfo)),
+						td(null, 'courseTime', span('時間:', 'label'),
+							data.time && data.time.map(i =>
+								button(null, i.extraTimeDataKey ? '詳細時間' : courseDataTimeToString(i))
+							) || text(data.timeString)
+						),
+						td(null, 'courseName',
+							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.courseName))
+						),
+						td(null, 'required', span('選必修:', 'label'), text(data.required ? '必修' : '選修')),
+						td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
+						td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
+						nckuhubInfo,
 						// Title sections
 						td(null, 'options', {rowSpan: 2},
 							!data.serialNumber || !loginState.state || !loginState.state.login ? null :

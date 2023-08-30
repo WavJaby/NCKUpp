@@ -46,6 +46,10 @@ window.pageLoading = new Signal(false);
 	window.messageAlert = new MessageAlert();
 	window.requestState = requestStateObject();
 	const font = mountableStylesheet('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
+	document.requestStorageAccess().then(
+		() => console.log("StorageAccess granted"),
+		() => console.log("StorageAccess denied")
+	);
 
 	// debug
 	let debugWindow = null;
