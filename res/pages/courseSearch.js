@@ -192,6 +192,12 @@ import SelectMenu from '../selectMenu.js';
 import {courseDataTimeToString, fetchApi, isMobile, parseRawCourseData, timeParse} from '../lib.js';
 import PopupWindow from '../popupWindow.js';
 
+const textColor = {
+	red: '#fa2b16',
+	orange: '#ff8633',
+	green: '#62cc38'
+};
+
 /**
  * @param {QueryRouter} router
  * @param {Signal} loginState
@@ -760,18 +766,20 @@ export default function (router, loginState) {
 				const resultObject = [
 					td(data.departmentName, 'departmentName'),
 					td(data.serialNumber, 'serialNumber'),
-					td(data.category, 'category'),
-					td(data.courseGrade, 'grade'),
-					td(data.classInfo, 'class'),
-					td(!data.time ? data.timeString : null, 'courseTime', data.time && data.time.map(i =>
-						button(null, i.extraTimeDataKey ? '詳細時間' : courseDataTimeToString(i))
-					)),
+					td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
+					td(null, 'grade', span('年級:', 'label'), data.courseGrade && text(data.courseGrade.toString())),
+					td(null, 'class', span('班別:', 'label'), data.classInfo && text(data.classInfo)),
+					td(null, 'courseTime', span('時間:', 'label'),
+						data.time && data.time.map(i =>
+							button(null, i.extraTimeDataKey ? '詳細時間' : courseDataTimeToString(i))
+						) || text(data.timeString)
+					),
 					td(null, 'courseName',
 						a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.courseName))
 					),
-					td(data.required ? '必修' : '選修', 'required'),
-					td(data.credits, 'credits'),
-					td(data.selected === null && data.available === null ? null : `${data.selected}/${data.available}`, 'available'),
+					td(null, 'required', span('選必修:', 'label'), text(data.required ? '必修' : '選修')),
+					td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
+					td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
 					nckuhubInfo,
 				];
 				if (isMobile()) {
@@ -811,10 +819,8 @@ export default function (router, loginState) {
 								button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
 						),
 					),
-					tr('courseDetailBlock',
-						// Details
-						courseDetail,
-					)
+					// Details
+					tr('courseDetailBlock', courseDetail)
 				];
 				courseRenderResult.push([data, courseResult]);
 			}
@@ -861,6 +867,26 @@ export default function (router, loginState) {
 		return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
 			'&co_no=' + systemNumber +
 			'&class_code=' + classCode;
+	}
+
+	function createSelectAvailableStr(courseData) {
+		if (courseData.selected === null && courseData.available === null)
+			return null;
+		const selected = courseData.selected === null ? '' : courseData.selected;
+		const available = courseData.available === null ? ''
+			: courseData.available === -1 ? '不限'
+				: courseData.available === -2 ? '洽系所'
+					: courseData.available.toString();
+		// Colored text
+		if (courseData.available !== null) {
+			if (courseData.available === 0)
+				return span(selected + '/' + available, null, {style: 'color:' + textColor.red});
+			else if (courseData.available > 40)
+				return span(selected + '/', null, span(available, null, {style: 'color:' + textColor.green}));
+			else if (courseData.available > 0)
+				return span(selected + '/', null, span(available, null, {style: 'color:' + textColor.orange}));
+		}
+		return span(selected + '/' + available);
 	}
 
 	// Search page
@@ -1085,10 +1111,11 @@ function NckuhubDetailWindow(courseSearch) {
 }
 
 function nckuHubScoreToSpan(score) {
+	const color = score > 7 ? textColor.green : score > 3 ? textColor.orange : textColor.red;
 	score = score.toFixed(1);
 	if (score === '10.0')
 		score = '10';
-	return span(score);
+	return span(score, null, {style: 'color:' + color});
 }
 
 function sortToEnd(data) {

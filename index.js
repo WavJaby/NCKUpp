@@ -131,10 +131,10 @@ window.pageLoading = new Signal(false);
 	}
 	const navbarLinks = ul('links',
 		Object.values(pageButtons),
-		NavSelectList('arrow', text('0w0'), [
+		li(null, NavSelectList('arrow', text('0w0'), [
 			['安安', null],
 			['🥰', null],
-		]),
+		])),
 	);
 	const navBarMobileBackground = ul('navBarMobileBG', {onclick: navMenuClose});
 	window.navMenuClose = navMenuClose;

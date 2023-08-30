@@ -44,7 +44,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	const resultBox = input(null, placeholder, null, {readOnly: true});
 	const valueOut = input(null, null, inputId, {type: 'hidden', selectMenu: this});
 	const clearButton = img('./res/assets/close_icon.svg', 'clear_button', 'clearBtn');
-	setClearButtonState(false);
+	clearButton.style.display = 'none';
 
 	// Select menu body
 	const selectMenu = this.element = label('selectMenu noSelect ' + className, null,
@@ -70,7 +70,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			closeSelectMenu();
 		}
 		// Open search box
-		else if (!searchBox.classList.contains('open')) {
+		else {
 			window.addEventListener('mouseup', checkClickOutsideSelectMenu);
 			// Have item selected
 			setClearButtonState(resultBox.value);
@@ -192,7 +192,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			updateOutputValue();
 			if (thisInstance.onSelectItemChange)
 				thisInstance.onSelectItemChange();
-			setClearButtonState(selectedItems.length > 0);
+			setClearButtonState(searchBox.classList.contains('open') && selectedItems.length > 0);
 		} else {
 			// Clear checked
 			if (options.multiple) {

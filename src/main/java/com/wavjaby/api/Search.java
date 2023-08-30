@@ -1555,7 +1555,7 @@ public class Search implements EndpointModule {
             Boolean courseData_required = null;
             List<TextNode> section5 = section.get(sectionOffset + 5).textNodes();
             String section5Str;
-            if (section5.size() > 0 && !(section5Str = section5.get(0).text().trim()).isEmpty()) {
+            if (!section5.isEmpty() && !(section5Str = section5.get(0).text().trim()).isEmpty()) {
                 courseData_credits = Float.parseFloat(section5Str);
                 String cache = section5.get(1).text().trim();
                 courseData_required = cache.equals("必修") || cache.equals("Required");
@@ -1678,7 +1678,7 @@ public class Search implements EndpointModule {
             // Get moodle, outline
             String courseData_moodle = null;
             Elements linkEle = section.get(sectionOffset + 9).getElementsByAttribute("href");
-            if (linkEle.size() > 0) {
+            if (!linkEle.isEmpty()) {
                 for (Element ele : linkEle) {
                     String href = ele.attr("href");
                     if (href.startsWith("javascript"))
