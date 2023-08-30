@@ -1,5 +1,6 @@
 export const mobileWidth = 700;
-const apiEndPoint = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
+const apiEndPoint = window.location.hostname === 'localhost'
+	// || window.location.hostname.startsWith('192.168.')
 	? 'https://' + window.location.hostname + '/api'
 	: 'https://api.simon.chummydns.com/api';
 
@@ -46,18 +47,21 @@ export function fetchApi(endpoint, showState, option) {
 	const stateElement = showState ? requestState.addState(showState) : null;
 
 	if (isSafari) {
-		if (!option.headers)
-			option.headers = {};
-		option.headers['Access-Control-Request-Headers'] = 'X-Safari-Cookie';
-		option.headers['X-Safari-Cookie'] = document.cookie;
+		if (endpoint.indexOf('?') === -1)
+			endpoint += '?cookie=' + encodeURI(document.cookie);
+		else
+			endpoint += '&cookie=' + encodeURI(document.cookie);
+
 	}
 
 	return fetch(apiEndPoint + endpoint, option)
 		.then(i => {
 			if (isSafari) {
-				const c = i.headers.get('X-Safari-Cookie');
-				console.log(c);
-				if (c) c.split(',').forEach(i => document.cookie = i.replace(/Domain=[\w.]+/, 'Domain=' + window.location.hostname));
+				let c = i.headers.get('Content-type');
+				if (c) {
+					c = c.substring(c.indexOf('c=') + 2);
+					c.split(',').forEach(i => document.cookie = i.replace(/Domain=[\w.]+/, 'Domain=' + window.location.hostname));
+				}
 			}
 			return i.json()
 		})

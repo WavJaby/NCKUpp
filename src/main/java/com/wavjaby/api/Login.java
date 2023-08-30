@@ -195,7 +195,7 @@ public class Login implements EndpointModule {
     private void login(HttpExchange req, ApiResponse response) {
         // Setup cookies
         CookieStore cookieStore = new CookieManager().getCookieStore();
-        String[] cookies = splitCookie(req.getRequestHeaders());
+        String[] cookies = splitCookie(req);
         String authState = unpackAuthCookie(cookies, cookieStore);
 
         Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());

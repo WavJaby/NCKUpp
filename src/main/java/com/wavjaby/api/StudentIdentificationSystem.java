@@ -265,10 +265,9 @@ public class StudentIdentificationSystem implements EndpointModule {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
 
         ApiResponse apiResponse = new ApiResponse();
-        String loginState = unpackStudentIdSysLoginStateCookie(splitCookie(requestHeaders), cookieStore);
+        String loginState = unpackStudentIdSysLoginStateCookie(splitCookie(req), cookieStore);
         studentIdSysGet(req.getRequestURI().getRawQuery(), cookieStore, apiResponse);
 
         packStudentIdSysLoginStateCookie(req, loginState, cookieStore);

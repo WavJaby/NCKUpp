@@ -45,7 +45,7 @@ public class AllDept implements EndpointModule {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
-        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
+        String loginState = getDefaultCookie(req, cookieStore);
 
         ApiResponse apiResponse = new ApiResponse();
         apiResponse.setData(deptGroup);

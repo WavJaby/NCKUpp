@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.Main.accessControlAllowOrigin;
+import static com.wavjaby.lib.Cookie.isSafari;
 
 public class Lib {
     private static final String TAG = "[CosPreCheck]";
@@ -236,9 +237,6 @@ public class Lib {
         if (originUrl == null)
             return;
 
-//        responseHeader.set("Cross-Origin-Resource-Policy", "cross-origin");
-//        responseHeader.set("Access-Control-Expose-Headers", "Set-Cookie");
-//        responseHeader.set("Access-Control-Allow-Headers", "Cookie");
         responseHeader.set("Access-Control-Allow-Credentials", "true");
         for (String i : accessControlAllowOrigin)
             if (originUrl.equals(i)) {

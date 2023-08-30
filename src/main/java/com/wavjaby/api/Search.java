@@ -102,7 +102,7 @@ public class Search implements EndpointModule {
         CookieStore cookieStore = new CookieManager().getCookieStore();
 
         // unpack cookie
-        String[] cookieIn = splitCookie(req.getRequestHeaders());
+        String[] cookieIn = splitCookie(req);
         String loginState = unpackCourseLoginStateCookie(cookieIn, cookieStore);
 
         // search

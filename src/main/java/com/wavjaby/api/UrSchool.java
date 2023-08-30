@@ -140,21 +140,19 @@ public class UrSchool implements EndpointModule {
 
         ApiResponse apiResponse = new ApiResponse();
         String queryString = req.getRequestURI().getRawQuery();
-        if (queryString == null) {
+        Map<String, String> query = parseUrlEncodedForm(queryString);
+        String instructorID = query.get("id");
+        String getMode = query.get("mode");
+        if (instructorID == null && getMode == null) {
             checkTimeUpdateUrSchoolData();
             apiResponse.setData(urSchoolDataJson);
-        } else {
-            Map<String, String> query = parseUrlEncodedForm(queryString);
-            String instructorID = query.get("id");
-            String getMode = query.get("mode");
-            if (instructorID == null || getMode == null) {
-                String err = "Query require";
-                if (instructorID == null) err += " \"id\"";
-                if (getMode == null) err += " \"mode\"";
-                apiResponse.errorBadQuery(err);
-            } else
-                getInstructorInfo(instructorID, getMode, apiResponse);
-        }
+        } else if (instructorID == null || getMode == null) {
+            String err = "Query require";
+            if (instructorID == null) err += " \"id\"";
+            if (getMode == null) err += " \"mode\"";
+            apiResponse.errorBadQuery(err);
+        } else
+            getInstructorInfo(instructorID, getMode, apiResponse);
 
         apiResponse.sendResponse(req);
 

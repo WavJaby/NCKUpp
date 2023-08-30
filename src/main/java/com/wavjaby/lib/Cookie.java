@@ -2,16 +2,20 @@ package com.wavjaby.lib;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.logger.Logger;
 
+import java.io.UnsupportedEncodingException;
 import java.net.CookieStore;
 import java.net.HttpCookie;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.wavjaby.Main.*;
 
 public class Cookie {
+    private static final Logger logger = new Logger("Cookie");
     public static HttpCookie createHttpCookie(String key, String value, String domain) {
         HttpCookie httpCookie = new HttpCookie(key, value);
         httpCookie.setPath("/");
@@ -155,32 +159,38 @@ public class Cookie {
             addCookieToHeader("stuSysLoginData", cookieValue, "/", req);
     }
 
-    public static String[] splitCookie(Headers headers) {
-        String cookie = isSafari(headers) ? headers.getFirst("Safari-Cookie") : headers.getFirst("Cookie");
+    public static String[] splitCookie(HttpExchange req) {
+        Headers headers = req.getRequestHeaders();
+        String cookie;
+        if (isSafari(headers)) {
+            String q = req.getRequestURI().getRawQuery();
+            cookie = q.substring(q.lastIndexOf("cookie=") + 7);
+            try {
+                cookie = URLDecoder.decode(cookie, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                logger.errTrace(e);
+            }
+        } else
+            cookie = headers.getFirst("Cookie");
         return cookie == null ? null : cookie.split("; ?");
     }
 
-    public static String getDefaultCookie(Headers requestHeaders, CookieStore cookieStore) {
+    public static String getDefaultCookie(HttpExchange req, CookieStore cookieStore) {
         // Unpack cookie
-        return unpackCourseLoginStateCookie(splitCookie(requestHeaders), cookieStore);
+        return unpackCourseLoginStateCookie(splitCookie(req), cookieStore);
     }
 
     public static void addCookieToHeader(String key, String value, String path, HttpExchange req) {
         Headers headers = req.getResponseHeaders();
-        if (isSafari(req.getRequestHeaders())) {
-            headers.add("Safari-Cookie", key + '=' + value + "; Path=" + path +
-                    "; SameSite=None; Secure; Domain=" + cookieDomain);
-        } else {
-            headers.add("Set-Cookie", key + '=' + value + "; Path=" + path +
-                    "; SameSite=None; OnlyHttp; Secure; Domain=" + cookieDomain);
-        }
+        headers.add("Set-Cookie", key + '=' + value + "; Path=" + path +
+                "; SameSite=None; OnlyHttp; Secure; Domain=" + cookieDomain);
     }
 
     public static void addRemoveCookieToHeader(String key, String path, HttpExchange req) {
         addCookieToHeader(key, "; Max-Age=0", path, req);
     }
 
-    private static boolean isSafari(Headers headers) {
+    public static boolean isSafari(Headers headers) {
         String userAgent = headers.getFirst("User-Agent");
         return userAgent != null &&
                 userAgent.contains("Safari") && !userAgent.contains("Chrome") &&

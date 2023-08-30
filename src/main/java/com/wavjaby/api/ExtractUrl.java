@@ -46,8 +46,7 @@ public class ExtractUrl implements EndpointModule {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
-        Headers requestHeaders = req.getRequestHeaders();
-        getDefaultCookie(requestHeaders, cookieStore);
+        getDefaultCookie(req, cookieStore);
 
         ApiResponse apiResponse = new ApiResponse();
         String queryString = req.getRequestURI().getRawQuery();

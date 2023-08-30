@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.json.JsonArray;
@@ -13,7 +12,6 @@ import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
 import java.io.IOException;
-import java.net.CookieManager;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +19,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.*;
 
-import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Lib.executorShutdown;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
@@ -102,23 +99,11 @@ public class NCKUHub implements EndpointModule {
 
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
-        CookieManager cookieManager = new CookieManager();
-        Headers requestHeaders = req.getRequestHeaders();
-        getDefaultCookie(requestHeaders, cookieManager.getCookieStore());
 
         ApiResponse apiResponse = new ApiResponse();
 
         String queryString = req.getRequestURI().getRawQuery();
-        if (queryString == null) {
-            // get courseID
-            if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
-                if (!updateNckuHubCourseID())
-                    apiResponse.addWarn("Update NCKU-HUB course id failed");
-            apiResponse.setData(availableSerialId);
-        } else {
-            // get course info
-            getNckuHubCourseInfo(queryString, apiResponse);
-        }
+        getNckuHubCourseInfo(queryString, apiResponse);
 
         apiResponse.sendResponse(req);
         logger.log("Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
@@ -133,9 +118,15 @@ public class NCKUHub implements EndpointModule {
         Map<String, String> query = parseUrlEncodedForm(queryString);
         String serialIdsStr = query.get("id");
         if (serialIdsStr == null) {
-            response.errorBadQuery("Query require \"id\"");
+            // get courseID
+            if (System.currentTimeMillis() - lastCourseIDUpdateTime > courseIDUpdateInterval)
+                if (!updateNckuHubCourseID())
+                    response.addWarn("Update NCKU-HUB course id failed");
+            response.setData(availableSerialId);
             return;
         }
+
+        // get course info
         String[] serialIds = serialIdsStr.split(",");
         CountDownLatch taskLeft = new CountDownLatch(serialIds.length);
 

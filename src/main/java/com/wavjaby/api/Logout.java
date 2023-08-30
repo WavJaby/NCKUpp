@@ -44,7 +44,7 @@ public class Logout implements EndpointModule {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
-        String loginState = getDefaultCookie(req.getRequestHeaders(), cookieStore);
+        String loginState = getDefaultCookie(req, cookieStore);
 
         // Logout
         ApiResponse apiResponse = new ApiResponse();

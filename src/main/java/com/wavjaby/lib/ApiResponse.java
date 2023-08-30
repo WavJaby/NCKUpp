@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.wavjaby.lib.Cookie.isSafari;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class ApiResponse {
@@ -146,7 +147,14 @@ public class ApiResponse {
     public void sendResponse(HttpExchange req) {
         Headers responseHeader = req.getResponseHeaders();
         byte[] dataByte = this.toString().getBytes(StandardCharsets.UTF_8);
-        responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
+        String cookie;
+        if (isSafari(req.getRequestHeaders()) && (cookie = responseHeader.getFirst("Set-Cookie")) != null) {
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8; c=" + cookie);
+            responseHeader.remove("Set-Cookie");
+        } else
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8");
+
         setAllowOrigin(req.getRequestHeaders(), responseHeader);
 
         try {
