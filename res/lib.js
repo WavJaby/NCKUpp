@@ -48,9 +48,9 @@ export function fetchApi(endpoint, showState, option) {
 
 	if (isSafari) {
 		if (endpoint.indexOf('?') === -1)
-			endpoint += '?cookie=' + encodeURI(document.cookie);
+			endpoint += '?cookie=' + encodeURIComponent(document.cookie);
 		else
-			endpoint += '&cookie=' + encodeURI(document.cookie);
+			endpoint += '&cookie=' + encodeURIComponent(document.cookie);
 
 	}
 
