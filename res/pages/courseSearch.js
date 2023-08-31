@@ -186,7 +186,7 @@ import {
 	th,
 	thead,
 	tr
-} from '../domHelper_v001.min.js';
+} from '../domHelper_v002.min.js';
 
 import SelectMenu from '../selectMenu.js';
 import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';

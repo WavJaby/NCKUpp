@@ -1,13 +1,16 @@
 export const mobileWidth = 700;
-const apiEndPoint = window.location.hostname === 'localhost'
-	// || window.location.hostname.startsWith('192.168.')
+export const isLocalNetwork = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
+const apiEndPoint = isLocalNetwork
 	? 'https://' + window.location.hostname + '/api'
 	: 'https://api.simon.chummydns.com/api';
 
+// const isSafari = navigator.userAgent &&
+// 	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1 &&
+// 	navigator.userAgent.indexOf('CriOS') === -1 &&
+// 	navigator.userAgent.indexOf('FxiOS') === -1;
+
 const isSafari = navigator.userAgent &&
-	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1 &&
-	navigator.userAgent.indexOf('CriOS') === -1 &&
-	navigator.userAgent.indexOf('FxiOS') === -1;
+	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1;
 
 export function isMobile() {
 	return window.innerWidth <= mobileWidth

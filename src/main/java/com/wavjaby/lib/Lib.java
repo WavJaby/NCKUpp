@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.Main.accessControlAllowOrigin;
-import static com.wavjaby.lib.Cookie.isSafari;
 
 public class Lib {
     private static final String TAG = "[CosPreCheck]";

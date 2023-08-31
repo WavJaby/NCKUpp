@@ -267,15 +267,18 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	const pageScrollSave = {};
 	let lastPage, lastPageId = null;
 
+	urlSearchDataUpdate();
+	urlHashDataUpdate();
+	// Update title
+	document.title = titlePrefix + ' ' + pageSuffix[urlSearchData.get('page') || defaultPageId];
+
 	window.addEventListener('popstate', function () {
 		urlSearchDataUpdate();
 		urlHashDataUpdate();
 		openPage(null, true);
 	});
 	this.openPage = openPage;
-	this.init = function () {
-		urlSearchDataUpdate();
-		urlHashDataUpdate();
+	this.initFirstPage = function () {
 		openPage(null, true);
 	}
 

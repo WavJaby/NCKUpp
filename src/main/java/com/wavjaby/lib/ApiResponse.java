@@ -148,9 +148,10 @@ public class ApiResponse {
         Headers responseHeader = req.getResponseHeaders();
         byte[] dataByte = this.toString().getBytes(StandardCharsets.UTF_8);
 
-        String cookie;
-        if (isSafari(req.getRequestHeaders()) && (cookie = responseHeader.getFirst("Set-Cookie")) != null) {
-            responseHeader.set("Content-Type", "application/json; charset=UTF-8; c=" + cookie);
+        List<String> cookie;
+        if (isSafari(req.getRequestHeaders()) && (cookie = responseHeader.get("Set-Cookie")) != null) {
+            responseHeader.set("Content-Type", "application/json; charset=UTF-8; c=" +
+                    String.join(",", cookie).replace("Path=/api/login", "Path=/"));
             responseHeader.remove("Set-Cookie");
         } else
             responseHeader.set("Content-Type", "application/json; charset=UTF-8");

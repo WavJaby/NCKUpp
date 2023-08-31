@@ -20,10 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
 import static com.wavjaby.Main.*;
 import static com.wavjaby.lib.Cookie.*;
@@ -43,6 +40,44 @@ public class Login implements EndpointModule {
     private final Map<String, CookieStore> loginUserCookie = new ConcurrentHashMap<>();
     private final ScheduledExecutorService keepLoginUpdater = Executors.newSingleThreadScheduledExecutor();
     private final ThreadPoolExecutor loginCosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+
+    private static class UserShortInfo {
+        public final String studentID, name, deptGradeInfo, PHPSESSID;
+        public final Integer academicYear, semester;
+
+        private UserShortInfo(String studentID, String name, String deptGradeInfo, Integer academicYear, Integer semester, String PHPSESSID) {
+            this.studentID = studentID;
+            this.name = name;
+            this.deptGradeInfo = deptGradeInfo;
+            this.academicYear = academicYear;
+            this.semester = semester;
+            this.PHPSESSID = PHPSESSID;
+        }
+
+        public void setDataToApiResponse(ApiResponse response) {
+            if (deptGradeInfo == null)
+                response.errorParse("Student dept/grade info not found");
+            if (name == null)
+                response.errorParse("Student name not found");
+            if (studentID == null)
+                response.errorParse("Student id not found");
+            if (academicYear == null)
+                response.errorParse("AcademicYear not found");
+            if (semester == null)
+                response.errorParse("Semester not found");
+            if (PHPSESSID == null)
+                response.errorParse("PHPSESSID id not found");
+
+            JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
+            builder.append("studentID", studentID);
+            builder.append("name", name);
+            builder.append("deptGradeInfo", deptGradeInfo);
+            builder.append("academicYear", academicYear);
+            builder.append("semester", semester);
+            builder.append("login", true);
+            response.setData(builder.toString());
+        }
+    }
 
     public Login(Search search, SQLite sqLite, ProxyManager proxyManager) {
         this.search = search;
@@ -66,61 +101,33 @@ public class Login implements EndpointModule {
             SQLite.printSqlError(e);
         }
 
-//        keepLoginUpdater.scheduleAtFixedRate(() -> {
-//            try {
-//                for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
-//                    search.getAllDeptData(entry.getValue(), null);
-//                    String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, entry.getValue());
-//
-//                    Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
-//                            .header("Connection", "keep-alive")
-//                            .cookieStore(entry.getValue())
-//                            .ignoreContentType(true)
-//                            .proxy(proxyManager.getProxy())
-//                            .execute();
-//
-//                    String result = checkLoginPage.body();
-//                    int loginState;
-//                    if (checkLoginPage.url().toString().endsWith("/index.php?c=portal") && // check if already login
-//                            (loginState = result.indexOf(loginCheckString)) != -1 &&
-//                            (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
-//
-//                        int start, end = loginState + loginCheckString.length();
-//                        // dept/grade
-//                        String deptGradeInfo = null;
-//                        if ((start = result.indexOf('>', end)) != -1 &&
-//                                (end = result.indexOf('<', ++start)) != -1) {
-//                            deptGradeInfo = result.substring(start, end++);
-//                        }
-//
-//                        // name
-//                        String name = null;
-//                        if ((start = result.indexOf('>', end)) != -1 &&
-//                                (end = result.indexOf('<', ++start)) != -1)
-//                            name = result.substring(start, end++);
-//
-//                        // student ID
-//                        String studentID = null;
-//                        if ((start = result.indexOf('>', end)) != -1 &&
-//                                (end = result.indexOf('<', ++start)) != -1) {
-//                            int cache = result.indexOf('（', start);
-//                            if (cache != -1 && cache < end) start = cache + 1;
-//                            cache = result.lastIndexOf('）', end);
-//                            if (cache != -1 && cache > start) end = cache;
-//                            studentID = result.substring(start, end);
-//                        }
-//
-//                        logger.log(studentID + " is login");
-//                    } else {
-//                        logger.log(PHPSESSID + " is logout");
-//                        loginUserCookie.remove(entry.getKey());
-//                    }
-//                }
-//
-//            } catch (IOException e) {
-//                logger.errTrace(e);
-//            }
-//        }, 0, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
+        keepLoginUpdater.scheduleAtFixedRate(() -> {
+            for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
+                String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, entry.getValue());
+                search.getAllDeptData(entry.getValue(), null);
+                String result;
+                try {
+                    Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
+                            .header("Connection", "keep-alive")
+                            .cookieStore(entry.getValue())
+                            .ignoreContentType(true)
+                            .proxy(proxyManager.getProxy())
+                            .execute();
+                    result = checkLoginPage.body();
+                } catch (IOException e) {
+                    logger.errTrace(e);
+                    continue;
+                }
+
+                UserShortInfo shortInfo = getCourseLoginUserInfo(result, entry.getValue());
+                if (shortInfo != null) {
+                    logger.log(shortInfo.studentID + " is login");
+                } else {
+                    logger.log(PHPSESSID + " is logout");
+                    loginUserCookie.remove(entry.getKey());
+                }
+            }
+        }, 0, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -269,14 +276,13 @@ public class Login implements EndpointModule {
 
             // check login state
             String checkResult = checkLoginPage.body();
-            int loginState;
-            if ((get || checkLoginPage.url().toString().endsWith("/index.php?c=portal")) && // check if already login
-                    (loginState = checkResult.indexOf(loginCheckString)) != -1 &&
-                    (loginState = checkResult.indexOf(loginCheckString, loginState + loginCheckString.length())) != -1) {
+            UserShortInfo shortInfo;
+            if ((get || checkLoginPage.url().toString().endsWith("/index.php?c=portal")) &&
+                    (shortInfo = getCourseLoginUserInfo(checkResult, cookieStore)) != null) {
                 // POST and already login
                 if (!get)
                     response.addWarn("Already login");
-                packUserLoginResponse(checkResult, loginState + loginCheckString.length(), cookieStore, response);
+                shortInfo.setDataToApiResponse(response);
                 return;
             }
 
@@ -329,12 +335,12 @@ public class Login implements EndpointModule {
 
             // check login state
             logger.log("Check login state");
-            if ((loginState = result.indexOf(loginCheckString)) == -1 ||
-                    (loginState = result.indexOf(loginCheckString, loginState + loginCheckString.length())) == -1) {
+            shortInfo = getCourseLoginUserInfo(result, cookieStore);
+            if (shortInfo == null) {
                 response.setData("{\"login\":false}");
                 return;
             }
-            packUserLoginResponse(result, loginState + loginCheckString.length(), cookieStore, response);
+            shortInfo.setDataToApiResponse(response);
 
             String finalResult = result;
             loginCosPreCheckPool.execute(() ->
@@ -524,25 +530,27 @@ public class Login implements EndpointModule {
         return null;
     }
 
-    private void packUserLoginResponse(String result, int infoStart, CookieStore cookie, ApiResponse response) {
-        JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
-        builder.append("login", true);
+    private UserShortInfo getCourseLoginUserInfo(String result, CookieStore cookie) {
+        int infoStart;
+        if ((infoStart = result.indexOf(loginCheckString)) == -1 ||
+                (infoStart = result.indexOf(loginCheckString, infoStart + loginCheckString.length())) == -1) {
+            return null;
+        }
+        infoStart += loginCheckString.length();
+
         int start, end = infoStart;
         // dept/grade
         String deptGradeInfo = null;
         if ((start = result.indexOf('>', end)) != -1 &&
                 (end = result.indexOf('<', ++start)) != -1) {
-            builder.append("dept", deptGradeInfo = result.substring(start, end++).trim());
-        } else
-            response.errorParse("Student dept/grade info not found");
+            deptGradeInfo = result.substring(start, end++).trim();
+        }
 
         // name
         String name = null;
         if ((start = result.indexOf('>', end)) != -1 &&
                 (end = result.indexOf('<', ++start)) != -1)
-            builder.append("name", name = result.substring(start, end++));
-        else
-            response.errorParse("Student name not found");
+            name = result.substring(start, end++);
 
         // student ID
         String studentID = null;
@@ -552,33 +560,32 @@ public class Login implements EndpointModule {
             if (cache != -1 && cache < end) start = cache + 1;
             cache = result.lastIndexOf('）', end);
             if (cache != -1 && cache > start) end = cache;
-            builder.append("studentID", studentID = result.substring(start, end));
-        } else
-            response.errorParse("Student id not found");
+            studentID = result.substring(start, end);
+        }
 
         // year/semester
+        Integer academicYear = null, semester = null;
         if ((start = result.indexOf("\"apName")) != -1 &&
                 (start = result.indexOf("span>", start + 7)) != -1) {
             char c;
             while ((c = result.charAt(start)) < '0' || c > '9') start++;
             end = start;
             while ((c = result.charAt(end)) >= '0' && c <= '9') end++;
-            builder.append("year", Integer.parseInt(result.substring(start, end)));
+            academicYear = Integer.parseInt(result.substring(start, end));
 
             start = end;
             while ((c = result.charAt(start)) < '0' || c > '9') start++;
             end = start;
             while ((c = result.charAt(end)) >= '0' && c <= '9') end++;
-            builder.append("semester", Integer.parseInt(result.substring(start, end)));
+            semester = Integer.parseInt(result.substring(start, end));
         }
 
         // PHPSESSID
         String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookie);
-        if (PHPSESSID == null)
-            response.errorParse("PHPSESSID id not found");
-        loginDataEdit(studentID, name, deptGradeInfo, PHPSESSID);
-
-        loginUserCookie.put(PHPSESSID, cookie);
-        response.setData(builder.toString());
+        if (PHPSESSID != null) {
+            loginDataEdit(studentID, name, deptGradeInfo, PHPSESSID);
+            loginUserCookie.put(PHPSESSID, cookie);
+        }
+        return new UserShortInfo(studentID, name, deptGradeInfo, academicYear, semester, PHPSESSID);
     }
 }

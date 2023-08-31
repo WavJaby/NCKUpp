@@ -227,14 +227,13 @@ $instructor-info-fade-time: 200ms;
                     white-space: pre-wrap;
                 }
 
-                > .courseName {
+                > .detailedCourseName, > .courseName {
                     padding: 0;
 
                     > a {
                         width: 100%;
                         height: 100%;
                         display: table;
-                        padding: 5px 2px;
                         @include box-sizing(border-box);
                         white-space: pre-wrap;
 
@@ -246,6 +245,12 @@ $instructor-info-fade-time: 200ms;
 
                     &:hover {
                         background: #21262d;
+                    }
+                }
+
+                > .courseName {
+                    > a {
+                        padding: 5px 2px;
                     }
                 }
 
@@ -391,9 +396,6 @@ $instructor-info-fade-time: 200ms;
                 > tr:last-child {
                     display: block;
                     overflow-x: auto;
-                    //width: calc(100vw - 20px);
-                    //width: -moz-calc(100vw - 20px);
-                    //width: -webkit-calc(100vw - 20px);
                     @include calc(width, "100vw - 20px");
 
                     > th {
@@ -442,8 +444,8 @@ $instructor-info-fade-time: 200ms;
 
                         &:not(.options) {
                             background: $button-dark-bg-color;
-                            line-height: 1.6em;
-                            min-height: 1.6em;
+                            line-height: 1.7em;
+                            min-height: 1.7em;
                             margin: 2px 1%;
                             padding: 0 2px 0 3px;
                             text-align: left;
@@ -487,8 +489,8 @@ $instructor-info-fade-time: 200ms;
 
                         &.courseTime {
                             > button {
-                                margin: 0 5px 0 0;
-                                height: 100%;
+                                margin: 0 3px 0 0;
+                                height: 1.7em;
                                 vertical-align: top;
                                 @include box-sizing(border-box);
                             }

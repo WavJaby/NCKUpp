@@ -192,9 +192,11 @@ public class Cookie {
 
     public static boolean isSafari(Headers headers) {
         String userAgent = headers.getFirst("User-Agent");
+//        return userAgent != null &&
+//                userAgent.contains("Safari") && !userAgent.contains("Chrome") &&
+//                !userAgent.contains("CriOS") &&
+//                !userAgent.contains("FxiOS");
         return userAgent != null &&
-                userAgent.contains("Safari") && !userAgent.contains("Chrome") &&
-                !userAgent.contains("CriOS") &&
-                !userAgent.contains("FxiOS");
+                userAgent.contains("Safari") && !userAgent.contains("Chrome");
     }
 }

@@ -9,7 +9,6 @@ import {
 	h1,
 	h2,
 	h3,
-	iframe,
 	img,
 	input,
 	li,
@@ -24,10 +23,10 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/domHelper_v001.min.js';
+} from './res/domHelper_v002.min.js';
 
 import {metaSet, metaType} from './res/metaTag.js';
-import {fetchApi} from './res/lib.js';
+import {fetchApi, isLocalNetwork} from './res/lib.js';
 
 window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
@@ -45,7 +44,7 @@ window.pageLoading = new Signal(false);
 (function main() {
 	console.log('index.js Init');
 	window.messageAlert = new MessageAlert();
-	window.requestState = requestStateObject();
+	window.requestState = new RequestStateObject();
 	const font = mountableStylesheet('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
 	if (document.requestStorageAccess)
 		document.requestStorageAccess().then(
@@ -54,8 +53,9 @@ window.pageLoading = new Signal(false);
 		);
 
 	// debug
+	const debugModeEnable = isLocalNetwork || window.localStorage && !!localStorage.getItem('debug');
 	let debugWindow = null;
-	if (location.hostname === 'localhost') {
+	if (debugModeEnable) {
 		console.log('Debug enabled');
 		doomHelperDebug();
 
@@ -121,6 +121,7 @@ window.pageLoading = new Signal(false);
 			),
 		)
 	);
+	enableGoogleAnalytics(debugModeEnable);
 
 	const pageButtons = {};
 	for (const pageId of navBarBtnPageId) {
@@ -138,7 +139,7 @@ window.pageLoading = new Signal(false);
 	const navbarLinks = ul('links',
 		Object.values(pageButtons),
 		li(null, NavSelectList('arrow', text('0w0'), [
-			['安安', null],
+			['嗨嗨', null],
 			['🥰', null],
 		])),
 	);
@@ -192,16 +193,16 @@ window.pageLoading = new Signal(false);
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert.element,
-		requestState,
+		window.requestState.element,
 		debugWindow,
 	);
 
 	window.onload = () => {
 		console.log('Window onload');
 		font.mount();
+		queryRouter.initFirstPage();
 		while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
 		document.body.appendChild(root);
-		queryRouter.init();
 	};
 
 	// functions
@@ -354,21 +355,19 @@ window.pageLoading = new Signal(false);
 		}
 	}
 
-	function requestStateObject() {
-		const stateBox = div('stateBox noSelect');
+	function RequestStateObject() {
+		const stateBox = this.element = div('stateBox noSelect');
 
-		stateBox.addState = function (title) {
+		this.addState = function (title) {
 			return stateBox.appendChild(div(null,
 				window.loadingElement.cloneNode(true),
 				h1(title, 'title')
 			));
 		};
 
-		stateBox.removeState = function (stateElement) {
+		this.removeState = function (stateElement) {
 			stateBox.removeChild(stateElement);
 		};
-
-		return stateBox;
 	}
 
 	function LoginWindow(onLoginStateChange) {

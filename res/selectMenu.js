@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v001.min.js';
+import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v002.min.js';
 
 /**
  * [itemValue, displayName] or [groupName, ItemData[]]

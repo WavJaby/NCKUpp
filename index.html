@@ -85,11 +85,11 @@
 
 	<!--Main resources-->
 	<link rel="manifest" href="web_manifest.json" crossorigin="use-credentials">
-	<link rel="modulepreload" href="./res/domHelper_v001.min.js">
+	<link rel="modulepreload" href="res/domHelper_v002.min.js">
 	<link rel="modulepreload" href="./res/lib.js">
 	<link rel="modulepreload" href="./res/metaTag.js">
 	<link rel="modulepreload" href="./res/popupWindow.js">
-	<script type="module" src="index_v004.min.js"></script>
+	<script type="module" src="index_v005.min.js"></script>
 
 	<link href="./res/loading.css" rel="stylesheet"/>
 	<link href="./res/static.css" rel="stylesheet"/>
@@ -105,13 +105,17 @@
 	<!-- Google tag (gtag.js) -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-HGNQ4WERFG"></script>
 	<script>
-		window.dataLayer = window.dataLayer || [];
-		if (window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('192.168.')) {
+		function enableGoogleAnalytics(debugMode) {
+			window.dataLayer = window.dataLayer || [];
 			gtag('js', new Date());
-			gtag('config', 'G-HGNQ4WERFG');
-		}
+			if (debugMode)
+				gtag('config', 'G-HGNQ4WERFG', {'debug_mode': true});
+			else
+				gtag('config', 'G-HGNQ4WERFG');
+			console.log('Enable Google Analytics, debug: ' + !!debugMode);
 
-		function gtag() {dataLayer.push(arguments);}
+			function gtag() {dataLayer.push(arguments);}
+		}
 	</script>
 
 	<!-- IE version check -->
