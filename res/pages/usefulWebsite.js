@@ -1,5 +1,5 @@
-import {a, div, h1, h3, img, mountableStylesheet, p, Signal, State} from '../domHelper_v002.min.js';
-import {fetchApi} from '../lib.js';
+import {a, div, h1, h3, img, mountableStylesheet, p, Signal, State} from '../lib/domHelper_v002.min.js';
+import {fetchApi} from '../lib/lib.js';
 
 /**
  * @typedef Website

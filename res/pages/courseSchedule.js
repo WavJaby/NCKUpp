@@ -1,7 +1,7 @@
 'use strict';
 
-import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table, td} from '../domHelper_v002.min.js';
-import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib.js';
+import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table, td} from '../lib/domHelper_v002.min.js';
+import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
 // static
@@ -225,23 +225,27 @@ function ScheduleTable(windowRoot) {
 	}
 
 	function cellClick() {
-		const detail = courseDetail[this.serialID];
-		if (!detail)
+		const data = courseDetail[this.serialID];
+		if (!data)
 			return;
 
 		const locationButtons = [];
-		if (detail.time)
-			for (let time of detail.time) {
+		if (data.time)
+			for (let time of data.time) {
 				let timeStr = courseDataTimeToString(time);
 				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
 			}
 		courseInfoWindow.setWindowContent(div('courseInfo',
 			preCourseRemoveKey[this.serialID] && button('delete', '刪除', removePreCourse, {serialID: this.serialID}),
-			h2(detail.serialNumber + ' ' + detail.courseName),
-			detail.instructors.map(i => span(i + ' ')),
-			p(detail.courseNote),
-			button(null, 'moodle', openCourseMoodle, {moodleQuery: detail.m}),
+			h2(data.serialNumber + ' ' + data.courseName),
+			data.instructors.map(i => span(i + ' ')),
+			p(data.courseNote),
+			button(null, 'moodle', openCourseMoodle, {moodleQuery: data.moodle}),
 			locationButtons,
+			!data.preferenceEnter ? null :
+				button(null, '加入志願', sendCosData, {courseData: data, key: data.preferenceEnter}),
+			!data.addCourse ? null :
+				button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
 		));
 		courseInfoWindow.windowOpen();
 	}
@@ -257,6 +261,20 @@ function ScheduleTable(windowRoot) {
 		fetchApi('/extract?moodle=' + this.moodleQuery).then(i => {
 			if (i.data && i.success)
 				window.open(i.data.url, '_blank');
+		});
+	}
+
+	/**@this{{courseData: CourseData, key: string}}*/
+	function sendCosData() {
+		const title = this.courseData.courseName + ' 加入';
+		fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.key)}`, 'Send course data').then(i => {
+			if (i.success)
+				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
+			else {
+				const d = div();
+				d.innerHTML = i.msg;
+				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
+			}
 		});
 	}
 
@@ -308,7 +326,7 @@ function ScheduleTable(windowRoot) {
 				// Add space
 				if (course[1].time.length === 3) {
 					const length = course[1].time[2] - course[1].time[1] + 1;
-					cell.rowSpan = length;
+					cell.rowSpan = length * 2 - 1;
 					rowSize[j] = i + 1;
 					for (let k = 1; k < length; k++) {
 						// fill space
@@ -347,13 +365,6 @@ function ScheduleTable(windowRoot) {
 				cell.onclick = cellClick;
 				daysUndecidedCell.appendChild(cell);
 			}
-			// Background
-			row.appendChild(td(null, 'splitLine'));
-		}
-
-		// Row background
-		for (let i = 0; i < tableHeight; i++) {
-			rows[i].appendChild(td(null, 'splitLine'));
 		}
 	}
 
@@ -397,8 +408,6 @@ function ScheduleTable(windowRoot) {
 
 		// Row background
 		for (let i = 0; i < preTableHeight; i++) {
-			rows[i].appendChild(td(null, 'splitLine'));
-
 			for (let j = 0; j < preTableWidth; j++)
 				if (cellTable[i][j].childElementCount === 1)
 					cellTable[i][j].firstElementChild.classList.add('fullHeight');
@@ -423,9 +432,8 @@ function ScheduleTable(windowRoot) {
 
 		// fetch data
 		return fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
-			for (const entry of Object.entries(i.data))
-				for (const course of entry[1])
-					courseDetail[course.sn] = parseRawCourseData(course, null);
+			for (const course of i.data)
+				courseDetail[course.sn] = parseRawCourseData(course, null);
 		});
 	};
 
@@ -539,11 +547,18 @@ function ScheduleTable(windowRoot) {
 		for (let i = 0; i < tableHeight; i++) {
 			rows[i] = table.tBody.insertRow();
 			const index = rows[i].insertCell();
-			index.textContent = timeTable[i][0];
 			index.className = 'noSelect';
+			index.appendChild(span(timeTable[i][0]));
+
 			const time = rows[i].insertCell();
-			if (timeTable[i][1]) time.textContent = timeTable[i][1];
 			time.className = 'noSelect';
+			if (timeTable[i][1])
+				time.appendChild(span(timeTable[i][1]));
+			time.appendChild(div('border'));
+
+			const splitLine = table.tBody.insertRow();
+			splitLine.className = 'splitLine';
+			splitLine.insertCell().colSpan = tableWidth + 2;
 		}
 		return rows;
 	}
@@ -656,7 +671,8 @@ async function elementToImage(element, rootClassName, loadedStyleSheet) {
 	const elementWidth = element.offsetWidth || 100;
 	const elementHeight = element.offsetHeight || 100;
 
-	const width = elementWidth;
+	// TODO: Find why need extra width
+	const width = elementWidth + 50;
 	const height = elementHeight;
 
 	// Read style

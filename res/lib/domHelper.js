@@ -313,7 +313,8 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 		if (page instanceof RouterLazyLoad) {
 			if (!page.loding) {
 				page.loding = true;
-				import(page.url).then(function (i) {
+				const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+				import(baseUrl + page.url).then(function (i) {
 					pageReadyOpen(loadedPage[pageId] = i.default(thisI, ...page.parameters), pageId, isHistory);
 					page.loding = false;
 				});

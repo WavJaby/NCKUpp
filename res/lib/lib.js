@@ -132,7 +132,7 @@ const weekStr = ['一', '二', '三', '四', '五', '六', '日'];
  * @return {string}
  */
 export function courseDataTimeToString(time) {
-	if (time.extraTimeDataKey) return '';
+	if (time.flexTimeDataKey) return '詳細時間';
 	if (time.sectionStart !== null) {
 		let section;
 		if (time.sectionEnd !== null) {
@@ -182,7 +182,7 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 	if (rawCourseData.t != null) {
 		courseData.time = rawCourseData.t.map(i => {
 			if (i.indexOf(',') === -1)
-				return {extraTimeDataKey: i};
+				return {flexTimeDataKey: i};
 			i = i.split(',');
 			return {
 				dayOfWeek: parseInt(i[0]),

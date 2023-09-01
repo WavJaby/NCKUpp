@@ -109,10 +109,10 @@ public class Search implements EndpointModule {
         String rawQuery = req.getRequestURI().getRawQuery();
         SearchQuery searchQuery = new SearchQuery(rawQuery, cookieIn);
         ApiResponse apiResponse = new ApiResponse();
-        if (searchQuery.serialNumberEmpty()) {
-            apiResponse.errorBadQuery("Query \"serial\" is empty");
-        } else if (searchQuery.serialNumberInvalid()) {
+        if (searchQuery.serialNumberInvalid()) {
             apiResponse.errorBadQuery("Query \"serial\" is invalid: " + searchQuery.getSerialError);
+        } else if (searchQuery.serialNumberEmpty()) {
+            apiResponse.errorBadQuery("Query \"serial\" is empty");
         } else if (searchQuery.historySearchInvalid()) {
             apiResponse.errorBadQuery("Query \"queryTime\" is invalid: " + searchQuery.historySearchError);
         } else if (searchQuery.noQuery()) {
@@ -267,29 +267,43 @@ public class Search implements EndpointModule {
             this.historySearchError = historySearchError;
 
             // Get with serial
-            String serialNum = query.get("serial"), getSerialError = null;
-            this.getSerial = serialNum != null;
+            String rawSerial = query.get("serial"), getSerialError = null;
+            this.getSerial = rawSerial != null;
             Map<String, Set<String>> serialIdNumber = null;
             if (this.getSerial) {
-                serialIdNumber = new HashMap<>();
+                String deptSerial = null;
                 try {
-                    for (Map.Entry<String, String> deptSerial : parseUrlEncodedForm(URLDecoder.decode(serialNum, "UTF-8")).entrySet()) {
-                        Set<String> serialNums = new HashSet<>();
-                        serialIdNumber.put(deptSerial.getKey(), serialNums);
-
-                        String serialNumsStr = deptSerial.getValue();
-                        for (int index0 = 0, index1; index0 < serialNumsStr.length(); ) {
-                            if ((index1 = serialNumsStr.indexOf(',', index0)) == -1) index1 = serialNumsStr.length();
-                            serialNums.add(serialNumsStr.substring(index0, index1));
-                            index0 = index1 + 1;
+                    deptSerial = URLDecoder.decode(rawSerial, "UTF-8");
+                } catch (IllegalArgumentException | UnsupportedEncodingException e) {
+                    logger.errTrace(e);
+                    getSerialError = rawSerial;
+                }
+                if (deptSerial != null) {
+                    serialIdNumber = new HashMap<>();
+                    // Text type
+                    if (deptSerial.indexOf('=') == -1 && deptSerial.indexOf('-') != -1) {
+                        String[] deptSerialArr = simpleSplit(deptSerial, ',');
+                        for (String i : deptSerialArr) {
+                            int index = i.indexOf('-');
+                            if (index == -1) {
+                                getSerialError = i;
+                                break;
+                            }
+                            Set<String> serial = serialIdNumber.computeIfAbsent(i.substring(0, index), k -> new HashSet<>());
+                            serial.add(i.substring(index + 1));
                         }
                     }
-                } catch (IllegalArgumentException e) {
-                    logger.errTrace(e);
-                    serialIdNumber = null;
-                    getSerialError = serialNum;
-                } catch (UnsupportedEncodingException e) {
-                    logger.errTrace(e);
+                    // Form type
+                    else {
+                        for (Map.Entry<String, String> i : parseUrlEncodedForm(deptSerial).entrySet()) {
+                            String serialNumsStr = i.getValue();
+                            if (serialNumsStr == null) {
+                                getSerialError = rawSerial;
+                                break;
+                            }
+                            serialIdNumber.put(i.getKey(), new HashSet<>(simpleSplitToArray(serialNumsStr, ',')));
+                        }
+                    }
                 }
             }
             this.getSerialError = getSerialError;
@@ -328,7 +342,7 @@ public class Search implements EndpointModule {
         }
 
         public boolean serialNumberInvalid() {
-            return getSerial && serialIdNumber == null;
+            return getSerial && getSerialError != null;
         }
 
         public boolean historySearchInvalid() {
@@ -740,7 +754,8 @@ public class Search implements EndpointModule {
                     taskLeft.await();
                     executorShutdown(fetchPool, 5000, "SearchFetchPool");
                     success = allSuccess.get();
-                    response.setData(courseDataList.toString());
+                    if (success)
+                        response.setData(courseDataList.toString());
                 }
                 progressBar.setProgress(100f);
                 Logger.removeProgressBar(progressBar);
@@ -752,18 +767,18 @@ public class Search implements EndpointModule {
                 CountDownLatch taskLeft = new CountDownLatch(searchQuery.serialIdNumber.size());
                 Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
 
-                JsonObjectStringBuilder result = new JsonObjectStringBuilder();
+                List<CourseData> courseDataList = new ArrayList<>();
                 AtomicBoolean allSuccess = new AtomicBoolean(true);
                 for (Map.Entry<String, Set<String>> i : searchQuery.serialIdNumber.entrySet()) {
                     fetchPoolLock.acquire();
                     fetchPool.submit(() -> {
-                        List<CourseData> courseDataList = new ArrayList<>();
                         SearchQuery finalSearchQuery = new SearchQuery(searchQuery);
+                        List<CourseData> eachCourseDataList = new ArrayList<>();
                         finalSearchQuery.deptNo = i.getKey();
-                        if (allSuccess.get() && !getQueryCourseData(finalSearchQuery, i.getValue(), cookieStore, response, courseDataList)) {
+                        if (allSuccess.get() && !getQueryCourseData(finalSearchQuery, i.getValue(), cookieStore, response, eachCourseDataList)) {
                             allSuccess.set(false);
                         }
-                        result.appendRaw(i.getKey(), courseDataList.toString());
+                        courseDataList.addAll(eachCourseDataList);
                         fetchPoolLock.release();
                         taskLeft.countDown();
                     });
@@ -771,7 +786,8 @@ public class Search implements EndpointModule {
                 taskLeft.await();
                 executorShutdown(fetchPool, 5000, "SearchFetchPool");
                 success = allSuccess.get();
-                response.setData(result.toString());
+                if (success)
+                    response.setData(courseDataList.toString());
             } else if (searchQuery.dayOfWeek != null && searchQuery.dayOfWeek.length > 1) {
                 final int threadCount = 2;
                 ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount, new ThreadFactory("SearchT-"));
@@ -822,6 +838,7 @@ public class Search implements EndpointModule {
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
                         .execute();
                 break;
             } catch (IOException e) {
@@ -1175,6 +1192,7 @@ public class Search implements EndpointModule {
                                 .cookieStore(postCookieStore)
                                 .ignoreContentType(true)
                                 .proxy(proxyManager.getProxy())
+                                .userAgent(Main.USER_AGENT)
                                 .execute();
                     } catch (IOException e) {
                         logger.errTrace(e);
@@ -1237,6 +1255,7 @@ public class Search implements EndpointModule {
                 .cookieStore(postCookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
+                .userAgent(Main.USER_AGENT)
                 .method(Connection.Method.POST)
                 .requestBody(postData.toString())
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
@@ -1279,6 +1298,7 @@ public class Search implements EndpointModule {
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
+                .userAgent(Main.USER_AGENT)
                 .timeout(8000)
                 .maxBodySize(20 * 1024 * 1024);
         HttpResponseData httpResponseData = sendRequestAndCheckRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);

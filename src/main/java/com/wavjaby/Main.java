@@ -14,7 +14,7 @@ import java.util.Scanner;
 
 
 public class Main {
-    public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36";
+    public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36";
     private static final String TAG = "[Main]";
     private static final Logger logger = new Logger(TAG);
     public static final String courseNcku = "course.ncku.edu.tw";
@@ -86,7 +86,7 @@ public class Main {
         registerModule(new Profile(login, sqLite), "/api/profile");
         registerModule(new AllDept(search), "/api/alldept");
         registerModule(new HomeInfo(proxyManager), "/api/homeInfo");
-        registerModule(new CourseFunctionButton(robotCode), "/api/courseFuncBtn");
+        registerModule(new CourseFunctionButton(proxyManager, robotCode), "/api/courseFuncBtn");
         registerModule(new Logout(proxyManager), "/api/logout");
         registerModule(new CourseSchedule(proxyManager), "/api/courseSchedule");
         registerModule(new ExtractUrl(proxyManager), "/api/extract");

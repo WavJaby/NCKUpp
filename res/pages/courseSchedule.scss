@@ -52,7 +52,7 @@ $schedule-row-bg-color: #1C1E1F;
 
     .courseScheduleTable {
         height: 100%;
-        border-spacing: 3px;
+        border-collapse: collapse;
 
         > thead {
             position: relative;
@@ -84,15 +84,17 @@ $schedule-row-bg-color: #1C1E1F;
                 position: relative;
 
                 > td {
-                    //height: 100%;
-
                     &:nth-child(1) {
                         background: $schedule-row-bg-color;
-                        width: 0;
                         font-size: 20px;
-                        padding: 5px;
                         position: sticky;
                         left: 0;
+
+                        > span {
+                            width: 1em;
+                            display: inline-block;
+                            text-align: center;
+                        }
                     }
 
                     // Time split line
@@ -101,20 +103,40 @@ $schedule-row-bg-color: #1C1E1F;
                         width: 0;
                         font-size: 18px;
                         padding: 2px 5px;
-                        border-right: white 1px solid;
                         white-space: pre-wrap;
                         position: sticky;
                         left: 1em;
+
+                        //> .border {
+                        //    background: white;
+                        //    height: 100%;
+                        //    width: 2px;
+                        //    margin-right: 2px;
+                        //    display: inline-block;
+                        //}
+                    }
+                }
+
+                &.splitLine > td {
+                    &:nth-child(1) {
+                        background: #b2b2b2;
+                        height: 3px;
+                        padding: 0;
+                        z-index: -1;
                     }
                 }
 
                 // Course block
+                > td.activate {
+                    padding: 3px 0 3px 4px;
+                }
+
                 > td.activate > div {
                     font-size: 18px;
                     padding: 5px;
+                    border-radius: 10px;
                     text-align: center;
                     @include box-sizing(border-box);
-                    border-radius: 10px;
                     cursor: pointer;
 
                     // Course data
@@ -126,17 +148,6 @@ $schedule-row-bg-color: #1C1E1F;
                     > span.room {
                         display: block;
                     }
-                }
-
-                // Row background
-                > .splitLine {
-                    background-color: $schedule-row-bg-color;
-                    width: 100%;
-                    height: 100%;
-                    top: 0;
-                    left: 0;
-                    z-index: -1;
-                    position: absolute;
                 }
             }
 
@@ -174,16 +185,10 @@ $schedule-row-bg-color: #1C1E1F;
             // Schedule section row
             > tr > td.activate {
                 vertical-align: top;
-                border: 1px #666 solid;
-                border-radius: 13px;
-                padding: 3px;
-
-                &.hover {
-                    box-shadow: 0 0 2px 2px white;
-                }
+                padding-top: 0;
+                padding-bottom: 0;
 
                 > div {
-                    padding: 3px 5px;
 
                     &:nth-child(n+2) {
                         margin-top: 5px;
@@ -204,7 +209,6 @@ $schedule-row-bg-color: #1C1E1F;
 
                     &.fullHeight {
                         height: 100%;
-                        vertical-align: center;
                     }
                 }
             }

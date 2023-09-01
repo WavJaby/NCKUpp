@@ -16,6 +16,7 @@ import static com.wavjaby.Main.*;
 
 public class Cookie {
     private static final Logger logger = new Logger("Cookie");
+
     public static HttpCookie createHttpCookie(String key, String value, String domain) {
         HttpCookie httpCookie = new HttpCookie(key, value);
         httpCookie.setPath("/");
@@ -167,7 +168,7 @@ public class Cookie {
             cookie = q.substring(q.lastIndexOf("cookie=") + 7);
             try {
                 cookie = URLDecoder.decode(cookie, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
+            } catch (IllegalArgumentException | UnsupportedEncodingException e) {
                 logger.errTrace(e);
             }
         } else

@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, img, input, label, li, span, text, ul} from './domHelper_v002.min.js';
+import {checkboxWithName, div, img, input, label, li, span, text, ul} from './lib/domHelper_v002.min.js';
 
 /**
  * [itemValue, displayName] or [groupName, ItemData[]]
@@ -45,16 +45,20 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	const valueOut = input(null, null, inputId, {type: 'hidden', selectMenu: this});
 	const clearButton = img('./res/assets/close_icon.svg', 'clear_button', 'clearBtn');
 	clearButton.style.display = 'none';
+	clearButton.onclick = () => selectItem(null);
 
 	// Select menu body
-	const selectMenu = this.element = label('selectMenu noSelect ' + className, null,
+	const selectMenu = this.element = label('selectMenu noSelect ' + className, null, {
+			onmouseenter: () => setClearButtonState(selectedItems.length > 0),
+			onmouseleave: () => setClearButtonState(menuOpen && selectedItems.length > 0)
+		},
 		resultBox, valueOut, clearButton,
 		searchBox,
 	);
 
-
 	// Init select menu
 	const selectedItems = [];
+	let menuOpen = false;
 	selectItem(null);
 	if (items)
 		createItemsElement(itemsContainer, items, false);
@@ -66,25 +70,11 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 
 	resultBox.onclick = function () {
 		// Close search box
-		if (searchBox.classList.contains('open')) {
+		if (searchBox.classList.contains('open'))
 			closeSelectMenu();
-		}
 		// Open search box
-		else {
-			window.addEventListener('mouseup', checkClickOutsideSelectMenu);
-			// Have item selected
-			setClearButtonState(resultBox.value);
-			searchBox.classList.add('open');
-
-			if (options.searchBar) {
-				searchInput.focus();
-				searchInput.oninput();
-			}
-		}
-	};
-
-	clearButton.onclick = function () {
-		selectItem(null);
+		else
+			openSelectMenu();
 	};
 
 	/**
@@ -132,9 +122,23 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	}
 
 	function closeSelectMenu() {
+		menuOpen = false;
 		setClearButtonState(false);
 		searchBox.classList.remove('open');
 		window.removeEventListener('mouseup', checkClickOutsideSelectMenu);
+	}
+
+	function openSelectMenu() {
+		menuOpen = true;
+		// Have item selected
+		setClearButtonState(selectedItems.length > 0);
+		searchBox.classList.add('open');
+		window.addEventListener('mouseup', checkClickOutsideSelectMenu);
+
+		if (options.searchBar) {
+			searchInput.focus();
+			searchInput.oninput();
+		}
 	}
 
 	function checkClickOutsideSelectMenu(e) {
@@ -147,12 +151,6 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			target = target.parentElement;
 		}
 		closeSelectMenu();
-	}
-
-	function onItemClick() {
-		if (!options.multiple)
-			closeSelectMenu();
-		selectItem(this);
 	}
 
 	function updateOutputValue() {
@@ -192,7 +190,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			updateOutputValue();
 			if (thisInstance.onSelectItemChange)
 				thisInstance.onSelectItemChange();
-			setClearButtonState(searchBox.classList.contains('open') && selectedItems.length > 0);
+			setClearButtonState(menuOpen && selectedItems.length > 0);
 		} else {
 			// Clear checked
 			if (options.multiple) {
@@ -296,5 +294,11 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		}
 		if (defaultSelected)
 			updateOutputValue();
+	}
+
+	function onItemClick() {
+		if (!options.multiple)
+			closeSelectMenu();
+		selectItem(this);
 	}
 }

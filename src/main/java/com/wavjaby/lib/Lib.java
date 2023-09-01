@@ -17,6 +17,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -249,6 +250,10 @@ public class Lib {
     }
 
     public static String[] simpleSplit(String input, char splitter) {
+        return simpleSplitToArray(input, splitter).toArray(new String[0]);
+    }
+
+    public static List<String> simpleSplitToArray(String input, char splitter) {
         ArrayList<String> arr = new ArrayList<>();
         int off = 0, next;
         while ((next = input.indexOf(splitter, off)) != -1) {
@@ -257,7 +262,7 @@ public class Lib {
         }
         if (input.length() > off)
             arr.add(input.substring(off));
-        return arr.toArray(new String[0]);
+        return arr;
     }
 
     public static Byte sectionCharToByte(char section) {

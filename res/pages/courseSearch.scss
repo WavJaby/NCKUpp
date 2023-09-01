@@ -14,9 +14,10 @@ $instructor-info-fade-time: 200ms;
     > .form {
         padding: 5px;
 
-        > input, > label, > .selectMenu {
+        > input, > .selectMenu {
             width: 350px;
             max-width: 100%;
+            font-size: 20px;
             margin: 2px;
             display: block;
             float: left;
@@ -44,11 +45,23 @@ $instructor-info-fade-time: 200ms;
         margin: auto;
         position: relative;
 
-        > .loaderCircle {
-            position: absolute;
-            left: 0;
-            right: 0;
-            margin: auto;
+        // Result loading
+        > .loading > td {
+            > .loaderCircle {
+                margin: 20px auto;
+                display: block;
+            }
+
+            > .cancelBtn {
+                background: $button-dark-bg-color;
+                margin: 20px auto;
+                padding: 10px 20px;
+                border-radius: 10px;
+
+                &:hover {
+                    background: $button-dark-red-bg-color;
+                }
+            }
         }
 
         .expandDownArrow {
@@ -66,7 +79,7 @@ $instructor-info-fade-time: 200ms;
             }
         }
 
-        .nckuhub {
+        .nckuHub {
             width: 0;
             cursor: pointer;
 
@@ -96,6 +109,10 @@ $instructor-info-fade-time: 200ms;
             }
 
             > tr {
+                > .hide {
+                    display: none;
+                }
+
                 // Course search result filter
                 > .filterOptions {
                     font-size: 18px;
@@ -126,8 +143,9 @@ $instructor-info-fade-time: 200ms;
 
                     > .selectMenu,
                     > .checkboxWithName {
-                        display: inline-block;
                         margin-right: 10px;
+                        display: inline-block;
+                        vertical-align: middle;
                     }
                 }
 
@@ -197,7 +215,9 @@ $instructor-info-fade-time: 200ms;
 
             // Block
             > tr.courseInfoBlock {
-                //font-weight: bold;
+                > .hide {
+                    display: none;
+                }
 
                 > td {
                     padding: 5px 2px;
@@ -308,17 +328,18 @@ $instructor-info-fade-time: 200ms;
                 > td .info {
                     white-space: pre-wrap;
                     padding: 0 0 5px 5px;
+                    overflow: hidden;
 
                     > .splitLine {
                         width: 100%;
                         border-top: 1px gray solid;
-                        margin-bottom: 2px;
                     }
 
                     // Course tags
                     > .tags {
-                        padding: 5px 0;
+                        padding: 2px 0;
                         color: #ffffff;
+                        clear: both;
 
                         > div, > a {
                             margin-right: 10px;
@@ -347,6 +368,10 @@ $instructor-info-fade-time: 200ms;
                         overflow-wrap: anywhere;
                     }
 
+                    > .limit {
+                        color: #d94141;
+                    }
+
                     > .note::before {
                         background: $icon-info no-repeat 0 0 / 1em;
                         width: 1em;
@@ -369,22 +394,38 @@ $instructor-info-fade-time: 200ms;
 
                     > .instructor {
                         font-size: 18px;
+                        float: left;
+
+                        > .label {
+                            margin-right: 5px;
+                        }
+
+                        > .instructorBtn, > .instructorBtnNoInfo {
+                            font-size: 18px;
+                            padding: 2px 5px;
+                            margin: 0 5px 0 0;
+                            display: inline-block;
+                        }
+
+                        > .instructorBtn {
+                            background: $button-dark-bg-color;
+                            border-radius: 5px;
+                            cursor: pointer;
+
+                            &:hover {
+                                background: $button-dark-green-bg-color;
+                            }
+                        }
                     }
 
-                    > .instructorBtn, > .instructorBtnNoInfo {
-                        font-size: 18px;
-                        padding: 2px 5px;
-                        margin: 0 5px 0 0;
-                        display: inline-block;
-                    }
+                    > .systemNumber, > .attributeCode {
+                        color: gray;
+                        font-size: 16px;
+                        margin: 5px 5px 0 5px;
+                        float: right;
 
-                    > .instructorBtn {
-                        background: $button-dark-bg-color;
-                        border-radius: 5px;
-                        cursor: pointer;
-
-                        &:hover {
-                            background: $button-dark-green-bg-color;
+                        > .label {
+                            margin: 0 3px;
                         }
                     }
                 }
@@ -427,7 +468,12 @@ $instructor-info-fade-time: 200ms;
             }
 
             > tbody {
-                display: block;
+                &.loading {
+                    td {
+                        display: block;
+                        width: 100%;
+                    }
+                }
 
                 > tr.courseInfoBlock {
                     > td.expandDownArrow {
@@ -462,7 +508,7 @@ $instructor-info-fade-time: 200ms;
                             clear: both;
                         }
 
-                        &.nckuhub {
+                        &.nckuHub {
                             text-align: center;
                             padding: 0;
                             width: 98%;
@@ -489,6 +535,7 @@ $instructor-info-fade-time: 200ms;
 
                         &.courseTime {
                             > button {
+                                background: $button-dark-green-bg-color;
                                 margin: 0 3px 0 0;
                                 height: 1.7em;
                                 vertical-align: top;
@@ -520,8 +567,16 @@ $instructor-info-fade-time: 200ms;
                         .info {
                             padding: 0 5px 5px 5px;
 
-                            > .instructorBtn {
-                                padding: 5px;
+                            > .instructor {
+                                float: none;
+
+                                > .instructorBtn {
+                                    padding: 5px;
+                                }
+                            }
+
+                            > .systemNumber, > .attributeCode {
+                                margin: 0;
                             }
                         }
                     }
@@ -531,15 +586,17 @@ $instructor-info-fade-time: 200ms;
     }
 
     // Course detail window
-    .nckuhubDetailWindow {
+    .nckuHubDetailWindow {
         > .courseInfoPanel {
+            text-align: center;
+
             > span {
                 font-size: 25px;
                 margin-right: 10px;
             }
         }
 
-        > .nckuhubPanel {
+        > .nckuHubPanel {
 
             > .title {
                 margin-top: 10px;
@@ -714,6 +771,39 @@ $instructor-info-fade-time: 200ms;
 
         > .comments > .item > .body > span {
             display: block;
+        }
+    }
+
+    // Flex time window
+    .flexTimeWindow {
+        > .courseInfoPanel {
+            text-align: center;
+
+            > span {
+                font-size: 25px;
+                margin-right: 10px;
+            }
+        }
+
+        > .timeTable {
+            border-collapse: collapse;
+            font-size: 18px;
+            margin: 20px auto 0 auto;
+
+            > tr {
+                text-align: center;
+
+                > th {
+                    background-color: #04AA6D;
+                    border: 1px solid #ddd;
+                    padding: 5px 10px;
+                }
+
+                > td {
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                }
+            }
         }
     }
 }

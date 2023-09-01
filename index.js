@@ -23,10 +23,10 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/domHelper_v002.min.js';
+} from './res/lib/domHelper_v002.min.js';
 
-import {metaSet, metaType} from './res/metaTag.js';
-import {fetchApi, isLocalNetwork} from './res/lib.js';
+import {metaSet, metaType} from './res/lib/metaTag.js';
+import {fetchApi, isLocalNetwork} from './res/lib/lib.js';
 
 window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
@@ -90,13 +90,13 @@ window.pageLoading = new Signal(false);
 	const showLoginWindow = new Signal(false);
 	const queryRouter = new QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
-			Home: new RouterLazyLoad('./pages/home_v001.min.js'),
-			CourseSearch: new RouterLazyLoad('./pages/courseSearch.js', userLoginData),
-			Schedule: new RouterLazyLoad('./pages/courseSchedule.js', userLoginData),
-			GradeInquiry: new RouterLazyLoad('./pages/stuIdSysGrades.js', userLoginData),
-			CourseSelectionPreference: new RouterLazyLoad('./pages/preferenceAdjust.js', userLoginData),
-			UsefulWebsite: new RouterLazyLoad('./pages/usefulWebsite.js', userLoginData),
-			Profile: new RouterLazyLoad('./pages/profile.js', userLoginData),
+			Home: new RouterLazyLoad('./res/pages/home_v002.min.js'),
+			CourseSearch: new RouterLazyLoad('./res/pages/courseSearch.js', userLoginData),
+			Schedule: new RouterLazyLoad('./res/pages/courseSchedule.js', userLoginData),
+			GradeInquiry: new RouterLazyLoad('./res/pages/stuIdSysGrades.js', userLoginData),
+			CourseSelectionPreference: new RouterLazyLoad('./res/pages/preferenceAdjust.js', userLoginData),
+			UsefulWebsite: new RouterLazyLoad('./res/pages/usefulWebsite.js', userLoginData),
+			Profile: new RouterLazyLoad('./res/pages/profile.js', userLoginData),
 		},
 		footer(
 			div('borderLine'),

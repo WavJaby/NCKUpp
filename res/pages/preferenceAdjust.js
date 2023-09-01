@@ -1,7 +1,7 @@
 'use strict';
 
-import {button, div, h1, mountableStylesheet, span} from '../domHelper_v002.min.js';
-import {fetchApi} from '../lib.js';
+import {button, div, h1, mountableStylesheet, span} from '../lib/domHelper_v002.min.js';
+import {fetchApi} from '../lib/lib.js';
 
 /**
  * @param {QueryRouter} router

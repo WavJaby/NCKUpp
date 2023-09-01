@@ -3,6 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Main;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
@@ -112,6 +113,7 @@ public class Login implements EndpointModule {
                             .cookieStore(entry.getValue())
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy())
+                            .userAgent(Main.USER_AGENT)
                             .execute();
                     result = checkLoginPage.body();
                 } catch (IOException e) {
@@ -263,6 +265,7 @@ public class Login implements EndpointModule {
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
                         .execute();
             } else {
                 // POST
@@ -271,6 +274,7 @@ public class Login implements EndpointModule {
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
                         .execute();
             }
 
@@ -293,6 +297,7 @@ public class Login implements EndpointModule {
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
+                    .userAgent(Main.USER_AGENT)
                     .execute();
             // If redirect to portal (portal not auto login)
             if (!portalPage.url().getHost().equals(courseNcku)) {
@@ -330,6 +335,7 @@ public class Login implements EndpointModule {
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
                         .execute().body();
             }
 
@@ -452,6 +458,7 @@ public class Login implements EndpointModule {
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxy)
+                        .userAgent(Main.USER_AGENT)
                         .execute();
             } catch (IOException e) {
                 logger.errTrace(e);
@@ -515,6 +522,7 @@ public class Login implements EndpointModule {
                         .ignoreContentType(true)
                         .followRedirects(false)
                         .proxy(location.startsWith(courseNckuOrg) ? proxyManager.getProxy() : null)
+                        .userAgent(Main.USER_AGENT)
                         .header("Referer", loginUrl);
                 portalResponse = redirect.execute();
             }
