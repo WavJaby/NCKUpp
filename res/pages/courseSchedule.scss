@@ -79,33 +79,37 @@ $schedule-row-bg-color: #1C1E1F;
         }
 
         > tbody {
+            &.showRoom {
+                > tr.timeRow > td.activate > div > .room {
+                    display: block;
+                }
+            }
+
             // Schedule section row
             > tr {
                 position: relative;
 
-                > td {
-                    &:nth-child(1) {
+                &.timeRow {
+                    > td.timeCode {
                         background: $schedule-row-bg-color;
                         font-size: 20px;
                         position: sticky;
                         left: 0;
 
                         > span {
-                            width: 1em;
+                            width: 20px;
                             display: inline-block;
                             text-align: center;
                         }
                     }
 
-                    // Time split line
-                    &:nth-child(2) {
+                    > td.time {
                         background: $schedule-row-bg-color;
-                        width: 0;
                         font-size: 18px;
-                        padding: 2px 5px;
+                        padding: 2px 5px 0 2px;
                         white-space: pre-wrap;
                         position: sticky;
-                        left: 1em;
+                        left: 20px;
 
                         //> .border {
                         //    background: white;
@@ -118,10 +122,16 @@ $schedule-row-bg-color: #1C1E1F;
                 }
 
                 &.splitLine > td {
+                    background: #b2b2b2;
+                    height: 3px;
+
                     &:nth-child(1) {
-                        background: #b2b2b2;
-                        height: 3px;
-                        padding: 0;
+                        position: sticky;
+                        left: 0;
+                    }
+
+                    &:nth-child(2) {
+                        position: relative;
                         z-index: -1;
                     }
                 }
@@ -129,50 +139,34 @@ $schedule-row-bg-color: #1C1E1F;
                 // Course block
                 > td.activate {
                     padding: 3px 0 3px 4px;
-                }
 
-                > td.activate > div {
-                    font-size: 18px;
-                    padding: 5px;
-                    border-radius: 10px;
-                    text-align: center;
-                    @include box-sizing(border-box);
-                    cursor: pointer;
+                    > div {
+                        font-size: 18px;
+                        padding: 5px;
+                        border-radius: 10px;
+                        text-align: center;
+                        @include box-sizing(border-box);
+                        cursor: pointer;
 
-                    // Course data
-                    &.sure {
-                        height: 100%;
-                        background: $course-block-bg-color;
-                    }
+                        // Course data
+                        &.sure {
+                            height: 100%;
+                            background: $course-block-bg-color;
+                        }
 
-                    > span.room {
-                        display: block;
+                        > .room {
+                            display: none;
+                        }
                     }
                 }
             }
 
             // Undecided time row
             > tr.undecided {
-                > td {
-                    text-align: left;
-                    padding: 0;
-
-                    &:nth-child(2) {
-                        line-height: 3em;
-                        text-align: center;
-                    }
-
-                    div {
-                        background: $course-block-bg-color;
-                        height: 3em;
-                        min-width: 6em;
+                > td.activate {
+                    > div {
                         display: inline-block;
-                        border-radius: 10px;
-                        @include box-sizing(border-box);
-                        padding: 5px;
                         margin-right: 5px;
-                        text-align: center;
-                        cursor: pointer;
                     }
                 }
             }
@@ -184,23 +178,17 @@ $schedule-row-bg-color: #1C1E1F;
         > tbody {
             // Schedule section row
             > tr > td.activate {
-                vertical-align: top;
-                padding-top: 0;
-                padding-bottom: 0;
-
                 > div {
-
-                    &:nth-child(n+2) {
-                        margin-top: 5px;
-                    }
-
                     &.sure {
-                        height: auto;
                         border: 2px #00000000 solid;
                     }
 
                     &.pre {
                         border: 2px gray dashed;
+
+                        &:nth-child(n+2) {
+                            margin-top: 5px;
+                        }
                     }
 
                     &.hover {

@@ -45,6 +45,7 @@
  * @property {float} credits
  * @property {boolean} required
  * @property {(UrSchoolInstructorSimple|string)[]|null} instructors - Only name or full data
+ * @property {int|null|undefined} registerCount - Register count for course. undefined: dept have no register data
  * @property {int} selected
  * @property {int} available
  * @property {CourseDataTime[]|null} time
@@ -202,7 +203,7 @@ const textColor = {
 	orange: '#ff8633',
 	green: '#62cc38'
 };
-const totalColSpan = 16;
+const totalColSpan = 17;
 
 /**
  * @param {QueryRouter} router
@@ -320,6 +321,8 @@ export default function (router, loginState) {
 	 */
 	async function search(rawQuery, saveQuery) {
 		if (searching) return;
+		if (rawQuery instanceof Event)
+			rawQuery = null;
 		const searchTaskID = newSearchTask();
 
 		// get all course ID
@@ -332,7 +335,7 @@ export default function (router, loginState) {
 			urSchoolData = (await getUrSchoolData).data;
 
 		// Get queryData
-		let queryData = rawQuery instanceof Event ? null : rawQuery;
+		let queryData = rawQuery;
 		if (!queryData) {
 			// Generate query from form
 			queryData = [];
@@ -354,6 +357,7 @@ export default function (router, loginState) {
 		}
 		// To query string
 		const queryString = queryData.map(i => i[0] + '=' + encodeURIComponent(i[1])).join('&');
+		const isSearchA9 = queryData.some(i => i[0] === 'dept' && i[1] === 'A9');
 
 		if (queryData.length === 0) {
 			window.messageAlert.addInfo('課程搜尋', '請輸入搜尋資料', 2000);
@@ -373,7 +377,11 @@ export default function (router, loginState) {
 		console.log('Search:', queryString);
 
 		// Fetch data
+		const searchA9Fetch = isSearchA9 ? fetchApi('/A9Registered', 'Get A9 register count', {timeout: 5000}) : null;
 		const result = (await fetchApi('/search?' + queryString, 'Searching', {timeout: 10000}));
+		let registerCountA9 = isSearchA9 ? await searchA9Fetch : null;
+		registerCountA9 = registerCountA9 && registerCountA9.data && registerCountA9.data.list;
+
 		// Search failed
 		if (!result || !result.success || !result.data) {
 			cancelSearchTask(searchTaskID, true);
@@ -390,11 +398,16 @@ export default function (router, loginState) {
 		const courseResult = [];
 		for (const rawCourseData of result.data) {
 			const courseData = parseRawCourseData(rawCourseData, urSchoolData);
+
+			// Add register count if available
+			const registerCount = registerCountA9 ? registerCountA9[courseData.serialNumber] || null : undefined;
+			courseData.registerCount = registerCount && registerCount.count;
 			courseResult.push(courseData);
 
+			// Prepare nckuHub if available
 			if (courseData.serialNumber != null) {
-				let nckuHubID = avalibleNckuHubCourseID.indexOf(courseData.serialNumber) !== -1;
-				if (nckuHubID) nckuHubResult[courseData.serialNumber] = {courseData, signal: new Signal()};
+				if (avalibleNckuHubCourseID.indexOf(courseData.serialNumber) !== -1)
+					nckuHubResult[courseData.serialNumber] = {courseData, signal: new Signal()};
 			}
 		}
 
@@ -710,52 +723,71 @@ export default function (router, loginState) {
 				const expandButton = expandArrowImage.cloneNode();
 				expandButtons.push(toggleCourseInfo);
 
+				// Check if registerCount
+				let registerCount = null;
+				if (data.registerCount !== undefined) {
+					registerCount = td(null, 'registerCount', span('抽籤人數:', 'label'), data.registerCount !== null && text(data.registerCount.toString()));
+				}
+
 				// Course detail
-				let expandableHeightReference, expandableElement;
-				const courseDetail = td(null, null, {colSpan: totalColSpan - 1},
-					expandableElement = div('expandable', expandableHeightReference = div('info',
-						div('splitLine'),
+				const courseDetailColSpan = registerCount ? totalColSpan - 1 : totalColSpan - 2;
+				const expandableElement = div('expandable', div('info',
+					div('splitLine'),
 
-						// Course tags
-						data.tags === null ? null : div('tags',
-							data.tags.map(i => i.link
-								? a(i.name, i.link, null, null, {
-									style: 'background-color:' + i.color,
-									target: '_blank'
-								})
-								: div(null, text(i.name), {style: 'background-color:' + i.color})
-							)
-						),
+					// Course tags
+					data.tags === null ? null : div('tags',
+						data.tags.map(i => i.link
+							? a(i.name, i.link, null, null, {
+								style: 'background-color:' + i.color,
+								target: '_blank'
+							})
+							: div(null, text(i.name), {style: 'background-color:' + i.color})
+						)
+					),
 
-						// Note, limit
-						data.courseNote === null ? null : span(data.courseNote, 'note'),
-						data.courseLimit === null ? null : span(data.courseLimit, 'limit'),
+					// Note, limit
+					data.courseNote === null ? null : span(data.courseNote, 'note'),
+					data.courseLimit === null ? null : span(data.courseLimit, 'limit'),
 
-						// Instructor
-						div('instructor',
-							span('教師姓名:', 'label'),
-							data.instructors === null ? null : data.instructors.map(instructor =>
-								!(instructor instanceof Object)
-									? span(instructor, 'instructorBtnNoInfo')
-									: button('instructorBtn',
-										instructor.name,
-										() => openInstructorDetailWindow(instructor),
-										{
-											onmouseenter: e => instructorInfoBubble.set({
-												target: e.target,
-												offsetY: router.element.scrollTop,
-												data: instructor
-											}),
-											onmouseleave: instructorInfoBubble.hide
-										}
-									)
-							)
-						),
+					// Instructor
+					div('instructor',
+						span('教師姓名:', 'label'),
+						data.instructors === null ? null : data.instructors.map(instructor =>
+							!(instructor instanceof Object)
+								? span(instructor, 'instructorBtnNoInfo')
+								: button('instructorBtn',
+									instructor.name,
+									() => openInstructorDetailWindow(instructor),
+									{
+										onmouseenter: e => instructorInfoBubble.set({
+											target: e.target,
+											offsetY: router.element.scrollTop,
+											data: instructor
+										}),
+										onmouseleave: instructorInfoBubble.hide
+									}
+								)
+						)
+					),
 
-						!data.systemNumber ? null : div('systemNumber', span('課程碼', 'label'), span(data.systemNumber)),
-						!data.attributeCode ? null : div('attributeCode', span('屬性碼', 'label'), span(data.attributeCode)),
-					))
+					!data.systemNumber ? null : div('systemNumber', span('課程碼', 'label'), span(data.systemNumber)),
+					!data.attributeCode ? null : div('attributeCode', span('屬性碼', 'label'), span(data.attributeCode)),
+				));
+				const courseDetail = td(null, null, {colSpan: courseDetailColSpan, orgColSpan: courseDetailColSpan},
+					expandableElement
 				);
+
+				function toggleCourseInfo(forceState) {
+					if (typeof forceState === 'boolean' ? forceState : expandArrowStateClass.contains('expand')) {
+						expandableElement.style.height = expandableElement.firstChild.offsetHeight + 'px';
+						setTimeout(() => expandableElement.style.height = '0');
+						expandArrowStateClass.remove('expand');
+					} else {
+						expandableElement.style.height = expandableElement.firstChild.offsetHeight + 'px';
+						setTimeout(() => expandableElement.style.height = null, 200);
+						expandArrowStateClass.add('expand');
+					}
+				}
 
 				// NCKU Hub info
 				const nckuHubInfo = nckuHubResultData && nckuHubResultData.signal
@@ -775,19 +807,6 @@ export default function (router, loginState) {
 						return td('載入中...', 'nckuHub', {colSpan: 3});
 					})
 					: td('沒有資料', 'nckuHub', {colSpan: 3})
-
-
-				function toggleCourseInfo(forceState) {
-					if (typeof forceState === 'boolean' ? forceState : expandArrowStateClass.contains('expand')) {
-						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
-						setTimeout(() => expandableElement.style.height = '0');
-						expandArrowStateClass.remove('expand');
-					} else {
-						expandableElement.style.height = expandableHeightReference.offsetHeight + 'px';
-						setTimeout(() => expandableElement.style.height = null, 200);
-						expandArrowStateClass.add('expand');
-					}
-				}
 
 				// Open NCKU Hub detail window
 				function openNckuHubDetailWindow() {
@@ -823,6 +842,7 @@ export default function (router, loginState) {
 						),
 						td(null, 'required', span('選必修:', 'label'), text(data.required ? '必修' : '選修')),
 						td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
+						registerCount,
 						td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
 						nckuHubInfo,
 						// Title sections
@@ -842,6 +862,14 @@ export default function (router, loginState) {
 				];
 				courseRenderResult.push([data, courseResult]);
 			}
+
+			// Show register count column if available
+			if (state.courseResult[0].registerCount !== undefined)
+				registerCountLabel.classList.add('show');
+			else
+				registerCountLabel.classList.remove('show');
+
+			// First filter update after result render
 			updateFilter(true);
 		}
 
@@ -921,6 +949,7 @@ export default function (router, loginState) {
 	}
 
 	// Search page
+	const registerCountLabel = th('抽籤人數', 'registerCount', {key: 'registerCount', onclick: sortIntKey, noHide: true});
 	const searchTableHead = thead('noSelect',
 		filter.createElement(),
 		tr(null, th(null, 'resultCount', {colSpan: totalColSpan}, courseSearchResultInfo)),
@@ -929,17 +958,17 @@ export default function (router, loginState) {
 			// th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 			// th('Serial', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
 			// th('Category', 'category', {key: 'category', onclick: sortStringKey}),
-			// th('Grade', 'grade', {key: 'grade', onclick: sortIntKey}),
-			// th('Class', 'class', {key: 'classInfo', onclick: sortStringKey}),
-			// th('Time', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
-			// th('Course name', 'courseName', {key: 'courseName', onclick: sortStringKey}),
-			// th('Required', 'required', {key: 'required', onclick: sortIntKey}),
-			// th('Credits', 'credits', {key: 'credits', onclick: sortIntKey}),
-			// th('Sel/Avail', 'available', {key: 'available', onclick: sortIntKey}),
+			// th('Grade', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
+			// th('Class', 'classInfo', {key: 'classInfo', onclick: sortStringKey}),
+			// th('Time', 'classGroup', {key: 'classGroup', onclick: sortStringKey}),
+			// th('Course name', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
+			// th('Required', 'courseName', {key: 'courseName', onclick: sortStringKey}),
+			// th('Credits', 'required', {key: 'required', onclick: sortIntKey}),
+			// th('Sel/Avail', 'credits', {key: 'credits', onclick: sortIntKey}),
 			// // NckuHub
-			// th('Reward', 'nckuHub', {key: 'got', onclick: sortNckuHubKey}),
-			// th('Sweet', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey}),
-			// th('Cool', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey}),
+			// th('Reward', 'available', {key: 'available', onclick: sortIntKey}),
+			// th('Sweet', 'nckuHub', {key: 'got', onclick: sortNckuHubKey}),
+			// th('Cool', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey}),
 			// // Function buttons
 			// th('Options', 'options'),
 			th('系所', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
@@ -952,11 +981,12 @@ export default function (router, loginState) {
 			th('課程名稱', 'courseName', {key: 'courseName', onclick: sortStringKey}),
 			th('選必修', 'required', {key: 'required', onclick: sortIntKey}),
 			th('學分', 'credits', {key: 'credits', onclick: sortIntKey}),
+			registerCountLabel,
 			th('選/餘', 'available', {key: 'available', onclick: sortIntKey}),
 			// NckuHub
-			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey}),
-			th('甜度', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey}),
-			th('涼度', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey}),
+			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey, noHide: true}),
+			th('甜度', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey, noHide: true}),
+			th('涼度', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey, noHide: true}),
 			// Function buttons
 			th('功能', 'options'),
 		),
@@ -1517,7 +1547,7 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 /**
  * @param {any[]} courseRenderResult
  * @param {function(): HTMLHeadElement} getHeader
- * @return {FilterOption}
+ * @return {FilterOption & {resetHeaderHide: function()}}
  */
 function hideEmptyColumn(courseRenderResult, getHeader) {
 	const checkBoxOuter = checkboxWithName(null, '隱藏空欄位', true, updateHideElement);
@@ -1543,7 +1573,7 @@ function hideEmptyColumn(courseRenderResult, getHeader) {
 
 			let allEmpty = true;
 			for (let [courseData] of courseRenderResult) {
-				if (hCol.key === 'got' || hCol.key === 'sweet' || hCol.key === 'cold') {
+				if (hCol.noHide) {
 					allEmpty = false;
 					break;
 				}
@@ -1575,12 +1605,12 @@ function hideEmptyColumn(courseRenderResult, getHeader) {
 			for (let i of hideElements)
 				i.classList.add('hide');
 			for (let i of courseDetailElements)
-				i.colSpan = totalColSpan - 1 - emptyColIndex.length;
+				i.colSpan = i.orgColSpan - emptyColIndex.length;
 		} else {
 			for (let i of hideElements)
 				i.classList.remove('hide');
 			for (let i of courseDetailElements)
-				i.colSpan = totalColSpan - 1;
+				i.colSpan = i.orgColSpan;
 		}
 	}
 

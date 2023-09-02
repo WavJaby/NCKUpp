@@ -37,7 +37,7 @@ export default function (router, loginState) {
 	// static element
 	const styles = mountableStylesheet('./res/pages/courseSchedule.css');
 	const showClassroomCheckbox = checkboxWithName(null, '顯示教室', false);
-	const showPreScheduleCheckbox = checkboxWithName(null, '顯示預排科目', false);
+	const showPreScheduleCheckbox = checkboxWithName(null, '顯示預排科目', true);
 	const scheduleTableInfo = span(null, 'scheduleTableInfo');
 	const windowRoot = div();
 	const scheduleTable = new ScheduleTable(windowRoot);
@@ -46,6 +46,8 @@ export default function (router, loginState) {
 
 	showClassroomCheckbox.input.onchange = () => scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
 	showPreScheduleCheckbox.input.onchange = () => scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
+	scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
+	scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
 
 	function onRender() {
 		console.log('Course schedule Render');
@@ -176,11 +178,12 @@ function ScheduleTable(windowRoot) {
 	const preScheduleTable = table('courseScheduleTable pre', {'cellPadding': 0});
 	preScheduleTable.style.display = 'none';
 	this.table = div('tableContainer', scheduleTable, preScheduleTable);
+	initTable(scheduleTable);
+	initTable(preScheduleTable);
 
 	let /**@type ?ScheduleData*/ scheduleData = null;
 	let /**@type ?ScheduleData*/ preScheduleData = null;
 
-	const roomNameElements = [];
 	let /**@type{Object.<string, CourseData>}*/courseDetail = {};
 	let tableWidth, tableHeight;
 	let courseSameCell = {};
@@ -204,7 +207,6 @@ function ScheduleTable(windowRoot) {
 	this.dataReset = function () {
 		scheduleData = null;
 		preScheduleData = null;
-		roomNameElements.length = 0;
 		courseDetail = {};
 		courseSameCell = {};
 		preCourseRemoveKey = {};
@@ -339,33 +341,7 @@ function ScheduleTable(windowRoot) {
 			}
 		}
 
-		// Add day undecided
-		if (dayUndecided.length > 0) {
-			const row = scheduleTable.tbody.insertRow();
-			row.className = 'undecided';
-			// Time info
-			const empty = div();
-			empty.style.display = 'none';
-			row.appendChild(empty);
-			const cell = row.insertCell();
-			cell.colSpan = 2;
-			cell.className = 'noSelect';
-			// cell.textContent = 'Undecided';
-			cell.textContent = '時間未定';
-			const daysUndecidedCell = row.insertCell();
-			daysUndecidedCell.colSpan = tableWidth;
-			for (let i = 0; i < dayUndecided.length; i++) {
-				// Build cell
-				const course = dayUndecided[i];
-				const info = course[0];
-				const cell = div(null,
-					span(info.name),
-				);
-				cell.serialID = info.deptID + '-' + info.sn;
-				cell.onclick = cellClick;
-				daysUndecidedCell.appendChild(cell);
-			}
-		}
+		createCourseUndecided(dayUndecided, scheduleTable, false);
 	}
 
 	function initPreScheduleTable() {
@@ -406,12 +382,14 @@ function ScheduleTable(windowRoot) {
 			}
 		}
 
-		// Row background
+		// Full height when
 		for (let i = 0; i < preTableHeight; i++) {
 			for (let j = 0; j < preTableWidth; j++)
 				if (cellTable[i][j].childElementCount === 1)
 					cellTable[i][j].firstElementChild.classList.add('fullHeight');
 		}
+
+		createCourseUndecided(dayUndecidedPre, preScheduleTable, true);
 	}
 
 	this.fetchCourseInfo = function () {
@@ -536,7 +514,7 @@ function ScheduleTable(windowRoot) {
 		for (let i = 0; i < tableWidth + 1; i++) {
 			const cell = headRow.insertCell();
 			cell.textContent = weekTable[i];
-			if (i === 0) cell.colSpan = 2;
+			if (i === 0) cell.colSpan = 3;
 		}
 		headRow.appendChild(td(null, 'background'));
 
@@ -544,19 +522,24 @@ function ScheduleTable(windowRoot) {
 		const rows = new Array(tableHeight);
 		for (let i = 0; i < tableHeight; i++) {
 			rows[i] = table.tBody.insertRow();
+			rows[i].className = 'timeRow';
 			const index = rows[i].insertCell();
-			index.className = 'noSelect';
+			index.className = 'timeCode noSelect';
 			index.appendChild(span(timeTable[i][0]));
 
 			const time = rows[i].insertCell();
-			time.className = 'noSelect';
+			time.className = 'time noSelect';
 			if (timeTable[i][1])
 				time.appendChild(span(timeTable[i][1]));
 			time.appendChild(div('border'));
 
+			// Empty row for split line
+			rows[i].insertCell();
+
 			const splitLine = table.tBody.insertRow();
 			splitLine.className = 'splitLine';
-			splitLine.insertCell().colSpan = tableWidth + 2;
+			splitLine.insertCell().colSpan = 2;
+			splitLine.insertCell().colSpan = 1 + tableWidth;
 		}
 		return rows;
 	}
@@ -570,7 +553,6 @@ function ScheduleTable(windowRoot) {
 		parentCell.className = 'activate';
 		const courseInfo = courseWithTime[0];
 		const serialID = courseInfo.deptID + '-' + courseInfo.sn;
-		courseDetail[serialID] = null;
 
 		const courseCell = div('sure', {serialID: serialID, onclick: cellClick},
 			// span('[' + courseInfo.deptID + ']' + courseInfo.sn + ' '),
@@ -580,12 +562,7 @@ function ScheduleTable(windowRoot) {
 		// Add room
 		for (let k = 1; k < courseWithTime.length; k++) {
 			if (!courseWithTime[k].room) continue;
-			const roomNameElement = span(courseWithTime[k].room, 'room');
-			// Show roomName or not
-			if (!showClassRoom)
-				roomNameElement.style.display = 'none';
-			courseCell.appendChild(roomNameElement);
-			roomNameElements.push(roomNameElement);
+			courseCell.appendChild(span(courseWithTime[k].room, 'room'));
 		}
 		parentCell.appendChild(courseCell);
 		return courseCell;
@@ -619,11 +596,13 @@ function ScheduleTable(windowRoot) {
 		parentCell.className = 'activate';
 		const courseInfo = courseWithTime[0];
 		const serialID = courseInfo.deptID + '-' + courseInfo.sn;
+		if (courseDetail[serialID] === undefined)
+			courseDetail[serialID] = null;
+
 		const courseCell = div(pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
 			span('[' + courseInfo.deptID + ']' + courseInfo.sn + ' '),
 			span(courseInfo.name),
 		);
-		courseDetail[serialID] = null;
 		(courseSameCell[serialID] || (courseSameCell[serialID] = [])).push(courseCell);
 		courseCell.onmouseenter = courseCellHoverStart;
 		courseCell.onmouseleave = courseCellHoverEnd;
@@ -631,22 +610,41 @@ function ScheduleTable(windowRoot) {
 		// Add room
 		for (let k = 1; k < courseWithTime.length; k++) {
 			if (!courseWithTime[k].room) continue;
-			const roomNameElement = span(courseWithTime[k].room, 'room');
-			// Show roomName or not
-			if (!showClassRoom)
-				roomNameElement.style.display = 'none';
-			courseCell.appendChild(roomNameElement);
-			roomNameElements.push(roomNameElement);
+			courseCell.appendChild(span(courseWithTime[k].room, 'room'));
 		}
-
 		parentCell.appendChild(courseCell);
 		return courseCell;
 	}
 
+	function createCourseUndecided(dayUndecided, table, pre) {
+		// Add day undecided
+		if (dayUndecided.length > 0) {
+			const row = table.tBody.insertRow();
+			row.className = 'timeRow undecided';
+			const cell = row.insertCell();
+			cell.colSpan = 3;
+			cell.className = 'timeCode noSelect';
+			// cell.textContent = 'Undecided';
+			cell.textContent = '時間未定';
+			const daysUndecidedCell = row.insertCell();
+			daysUndecidedCell.colSpan = tableWidth;
+			daysUndecidedCell.className = 'activate';
+			for (let i = 0; i < dayUndecided.length; i++) {
+				// Build cell
+				const course = dayUndecided[i];
+				createCourseCellSingle(daysUndecidedCell, course, pre);
+			}
+		}
+	}
+
 	this.showRoomName = function (show) {
-		const display = show ? null : 'none';
-		for (const roomNameElement of roomNameElements)
-			roomNameElement.style.display = display;
+		if (show) {
+			scheduleTable.tBody.classList.add('showRoom');
+			preScheduleTable.tBody.classList.add('showRoom');
+		} else {
+			scheduleTable.tBody.classList.remove('showRoom');
+			preScheduleTable.tBody.classList.remove('showRoom');
+		}
 	}
 
 	this.setTableShow = function (showPre) {
