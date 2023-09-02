@@ -1563,7 +1563,7 @@ function hideEmptyColumn(courseRenderResult, getHeader) {
 			courseDetailElements.push(elements[2].firstElementChild);
 
 			for (const i of emptyColIndex) {
-				hideElements.push(elements[1].children[i]);
+				hideElements.push(elements[1].children[i + 1]);
 			}
 		}
 

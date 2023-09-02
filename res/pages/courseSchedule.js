@@ -447,7 +447,6 @@ function ScheduleTable(windowRoot) {
 		if (!cells)
 			return;
 		for (let cell of cells) {
-			cell.parentElement.classList.add('hover');
 			cell.classList.add('hover');
 		}
 	}
@@ -457,7 +456,6 @@ function ScheduleTable(windowRoot) {
 		if (!cells)
 			return;
 		for (let cell of cells) {
-			cell.parentElement.classList.remove('hover');
 			cell.classList.remove('hover');
 		}
 	}

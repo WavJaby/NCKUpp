@@ -485,7 +485,6 @@ $instructor-info-fade-time: 200ms;
                         min-width: 48%;
                         border-radius: 10px;
                         white-space: pre-wrap;
-                        display: block;
                         float: left;
 
                         &:not(.options) {
@@ -502,6 +501,10 @@ $instructor-info-fade-time: 200ms;
                             display: inline-block;
                             vertical-align: top;
                             margin-right: 2px;
+                        }
+
+                        &.detailedCourseName {
+                            display: block;
                         }
 
                         &.departmentName {
@@ -552,8 +555,8 @@ $instructor-info-fade-time: 200ms;
                             clear: both;
 
                             > button {
-                                margin: 5px 5px 0 5px;
-                                padding: 10px;
+                                margin: 0 5px;
+                                padding: 5px 10px;
                                 display: inline-block;
                             }
                         }
