@@ -63,7 +63,13 @@ export default function (router, loginState) {
 		elementToImage(table, 'courseSchedule capture',
 			['static.css', 'courseSchedule.css']).then(imageData => {
 			downloadScheduleButtonHide.href = imageData;
-			downloadScheduleButtonHide.click();
+
+			const clickEvent = new MouseEvent('click', {
+				view: window,
+				bubbles: true,
+				cancelable: false
+			});
+			downloadScheduleButtonHide.dispatchEvent(clickEvent);
 		});
 	}
 
@@ -751,13 +757,12 @@ async function elementToImage(element, rootClassName, loadedStyleSheet) {
 
 	// Create svg
 	const svgBody = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
-		'<defs><style>' + embedFont + cssStyles + 'body{background:none; z-index:-1;}</style></defs>' +
+		'<defs><style>' + embedFont + cssStyles + 'body{background:none;z-index:-1;margin: 0;}</style></defs>' +
 		'<foreignObject width="100%" height="100%">' +
 		'<body xmlns="http://www.w3.org/1999/xhtml"><div style="width:100%;height:100%" class="' + rootClassName + '">' +
 		element.outerHTML +
 		'</div></body>' +
 		'</foreignObject></svg>';
-	console.log(svgBody);
 
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
