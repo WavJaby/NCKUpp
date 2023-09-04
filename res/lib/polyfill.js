@@ -15,3 +15,9 @@ if (!Object.fromEntries) {
 		return obj;
 	};
 }
+
+if (!String.prototype.startsWith) {
+	String.prototype.startsWith = function (searchString, position) {
+		return this.indexOf(searchString) === position == null ? 0 : position;
+	};
+}

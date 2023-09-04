@@ -29,7 +29,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		options = {};
 	if (options.searchBar == null)
 		options.searchBar = true;
-	if (!options.sortByValue == null)
+	if (options.sortByValue == null)
 		options.sortByValue = true;
 
 	const thisInstance = this;
@@ -77,20 +77,18 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			openSelectMenu();
 	};
 
+	this.onSelectItemChange = null;
+
 	/**
 	 * @param {ItemData[]} itemsData
 	 * @param {boolean} [defaultSelected]
 	 */
 	this.setItems = function (itemsData, defaultSelected) {
-		selectedItems.length = 0;
-		resultBox.value = '';
-		valueOut.value = '';
-		while (itemsContainer.firstChild)
-			itemsContainer.removeChild(itemsContainer.firstChild);
+		clearItems();
 		createItemsElement(itemsContainer, itemsData, !!defaultSelected);
 	};
 
-	this.onSelectItemChange = null;
+	this.clearItems = clearItems;
 
 	this.selectItemByValue = function (values) {
 		if (!options.multiple)
@@ -100,7 +98,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		for (const value of values) {
 			for (const item of items) {
 				if (item.itemValue === value) {
-					selectItem(options.multiple ? item.firstElementChild : item, true);
+					selectItem(item, true);
 					break;
 				}
 			}
@@ -112,6 +110,13 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			return selectedItems.map(i => i[0]);
 		return selectedItems[0][0];
 	};
+
+	function clearItems() {
+		selectedItems.length = 0;
+		resultBox.value = valueOut.value = '';
+		while (itemsContainer.firstChild)
+			itemsContainer.removeChild(itemsContainer.firstChild);
+	}
 
 	function setClearButtonState(state) {
 		clearButton.style.display = state ? 'block' : 'none';
@@ -170,8 +175,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	function selectItem(itemElement, force) {
 		if (itemElement) {
 			if (options.multiple) {
-				const checkBox = itemElement;
-				itemElement = itemElement.parentElement;
+				const /**@type{HTMLInputElement}*/ checkBox = itemElement.firstElementChild.firstElementChild;
 				const index = selectedItems.findIndex(i => i[0] === itemElement.itemValue);
 				// Add item
 				if (checkBox.checked || force) {
@@ -284,7 +288,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			} else {
 				// Create item
 				if (options.multiple) {
-					const checkbox = checkboxWithName(null, item[1], defaultSelected, onItemClick, {itemValue: item[0], itemName: item[1]});
+					const checkbox = checkboxWithName(null, item[1], defaultSelected, onCheckBoxClick);
 					parent.appendChild(li('item multi', checkbox, {itemValue: item[0], itemName: item[1]}));
 					if (defaultSelected)
 						selectedItems.push([item[0], item[1]]);
@@ -296,9 +300,12 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			updateOutputValue();
 	}
 
+	function onCheckBoxClick() {
+		selectItem(this.parentElement.parentElement);
+	}
+
 	function onItemClick() {
-		if (!options.multiple)
-			closeSelectMenu();
+		closeSelectMenu();
 		selectItem(this);
 	}
 }

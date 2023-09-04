@@ -2,7 +2,7 @@ console.log('Using old browser');
 
 var requireToLoad = 4;
 
-loadScript('./res/require.js', onScriptLoad);
+loadScript('./res/lib/require.js', onScriptLoad);
 loadScript('https://unpkg.com/@babel/polyfill@7.12.1/dist/polyfill.min.js', onScriptLoad);
 loadScript('https://unpkg.com/babel-standalone@6.26.0/babel.min.js', function () {
 	loadScript('https://unpkg.com/babel-preset-env-standalone@1.6.2/babel-preset-env.min.js', onScriptLoad);

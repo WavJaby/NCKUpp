@@ -328,7 +328,7 @@ function ScheduleTable(windowRoot) {
 	function initScheduleTable() {
 		// Parse data
 		const {dayTable, dayUndecided} = parseData2DayTable(tableWidth, tableHeight, scheduleData);
-		console.log(dayTable);
+		// console.log(dayTable);
 
 		// Create table
 		initTable(scheduleTable);
@@ -420,7 +420,6 @@ function ScheduleTable(windowRoot) {
 				}
 			}
 		}
-		console.log(dayTable)
 
 
 		// Create table

@@ -649,6 +649,7 @@ export default function (router, loginState) {
 
 	// Filter
 	const hideEmptyColumnTool = hideEmptyColumn(courseRenderResult, () => searchTableHead);
+	const classFilterOption = classFilter(updateFilter, courseRenderResult);
 	const filter = new Filter();
 	/**@type {FilterOption[]}*/
 	const filterOptions = [
@@ -656,7 +657,7 @@ export default function (router, loginState) {
 		hideConflictCourseFilter(updateFilter, loginState),
 		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
 		hidePracticeFilter(updateFilter),
-		classFilter(updateFilter, courseRenderResult),
+		classFilterOption,
 		hideEmptyColumnTool,
 	];
 	filter.setOptions(filterOptions);
@@ -693,8 +694,9 @@ export default function (router, loginState) {
 			courseRenderResult.length = 0;
 			courseRenderResultDisplay.length = 0;
 			expandButtons.length = 0;
-			courseSearchResultInfo.textContent = '搜尋中...';
 			hideEmptyColumnTool.resetHeaderHide();
+			classFilterOption.clear();
+			courseSearchResultInfo.textContent = '搜尋中...';
 			return tbody('loading', td(null, null, {colSpan: totalColSpan},
 				window.loadingElement.cloneNode(true),
 				button('cancelBtn', '取消', () => {
@@ -1499,11 +1501,15 @@ function hidePracticeFilter(onFilterUpdate) {
 /**
  * @param {function()} onFilterUpdate
  * @param {any[]} courseRenderResult
- * @return {FilterOption}
+ * @return {FilterOption & {clear: function()}}
  */
 function classFilter(onFilterUpdate, courseRenderResult) {
 	const selectMenu = new SelectMenu('班別過濾', 'classFilter', 'classFilter', null, {multiple: true});
 	let selectValue = null;
+
+	function clearItems() {
+		selectMenu.clearItems();
+	}
 
 	function updateSelectValue() {
 		selectValue = selectMenu.getSelectedValue();
@@ -1538,6 +1544,7 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 	}
 
 	return {
+		clear: clearItems,
 		onFilterStart: onFilterStart,
 		condition: condition,
 		element: selectMenu.element,
