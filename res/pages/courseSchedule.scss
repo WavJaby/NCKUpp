@@ -1,8 +1,9 @@
 @import '../variables';
 
-$course-block-bg-color: #5985ef;
-$schedule-head-bg-color: #282B2C;
-$schedule-row-bg-color: #1C1E1F;
+$course-block-bg-color: #5985Ef;
+$course-pre-block-bg-color: #464646;
+$schedule-head-bg-color: #282B2CB0;
+$schedule-row-bg-color: #1C1E1FB0;
 
 .courseSchedule {
     > .title {
@@ -27,11 +28,6 @@ $schedule-row-bg-color: #1C1E1F;
         margin: 0 10px;
     }
 
-    // Expend table width when capture image
-    &.capture > .courseScheduleTable {
-        width: 100%;
-    }
-
     > .downloadScheduleBtn {
         background: $button-dark-bg-color;
         cursor: pointer;
@@ -50,7 +46,7 @@ $schedule-row-bg-color: #1C1E1F;
         }
     }
 
-    .courseScheduleTable {
+    table.courseScheduleTable {
         height: 100%;
         border-collapse: collapse;
 
@@ -61,9 +57,21 @@ $schedule-row-bg-color: #1C1E1F;
                 height: 2em;
                 text-align: center;
 
+                > td {
+                    background-color: $schedule-head-bg-color;
+                }
+
                 > td:nth-child(n+2) {
                     min-width: 90px;
                     font-size: 18px;
+                }
+
+                > td:first-child {
+                    border-radius: 20px 0 0 0;
+                }
+
+                > td:last-child {
+                    border-radius: 0 20px 0 0;
                 }
             }
 
@@ -110,14 +118,6 @@ $schedule-row-bg-color: #1C1E1F;
                         white-space: pre-wrap;
                         position: sticky;
                         left: 20px;
-
-                        //> .border {
-                        //    background: white;
-                        //    height: 100%;
-                        //    width: 2px;
-                        //    margin-right: 2px;
-                        //    display: inline-block;
-                        //}
                     }
                 }
 
@@ -150,8 +150,15 @@ $schedule-row-bg-color: #1C1E1F;
 
                         // Course data
                         &.sure {
-                            height: 100%;
                             background: $course-block-bg-color;
+                        }
+
+                        &.pre {
+                            background: $course-pre-block-bg-color;
+                        }
+
+                        &.fullHeight {
+                            height: 100%;
                         }
 
                         > .room {
@@ -159,10 +166,22 @@ $schedule-row-bg-color: #1C1E1F;
                         }
                     }
                 }
+
+                &:last-child > td:first-child {
+                    border-radius: 0 0 0 20px;
+                }
             }
 
             // Undecided time row
             > tr.undecided {
+                > td.timeCode {
+
+                }
+
+                > td.time {
+                    text-align: center;
+                }
+
                 > td.activate {
                     > div {
                         display: inline-block;
@@ -179,28 +198,33 @@ $schedule-row-bg-color: #1C1E1F;
             // Schedule section row
             > tr > td.activate {
                 > div {
+                    > span:first-child {
+                        //display: block;
+                    }
+
+                    &:nth-child(n+2) {
+                        margin-top: 5px;
+                    }
+
                     &.sure {
                         border: 2px #00000000 solid;
                     }
 
                     &.pre {
                         border: 2px gray dashed;
-
-                        &:nth-child(n+2) {
-                            margin-top: 5px;
-                        }
                     }
 
                     &.hover {
                         border-color: greenyellow;
                     }
-
-                    &.fullHeight {
-                        height: 100%;
-                    }
                 }
             }
         }
+    }
+
+    // Expend table width when capture image
+    &.capture > .courseScheduleTable {
+        width: 100%;
     }
 
     .courseInfo {

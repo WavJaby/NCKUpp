@@ -47,7 +47,7 @@ public class ProxyChecker {
             System.out.println(proxyDataList.size());
             // Filter
             long filter1 = System.currentTimeMillis();
-            testProxy(proxyDataList, 300, 800, true, 1, -1, true);
+            testProxy(proxyDataList, 300, 700, true, 1, -1, true);
             proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
             System.out.println(proxyDataList.size());
             System.out.println("Filter use: " + ((System.currentTimeMillis() - filter1) / 1000) + "s");
@@ -66,7 +66,7 @@ public class ProxyChecker {
         System.out.println("Filter2 start");
         System.out.println(proxyDataList.size());
         long filter2 = System.currentTimeMillis();
-        testProxy(proxyDataList, 250, 700, false, 1, -1, true);
+        testProxy(proxyDataList, 250, 800, false, 1, -1, true);
         proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("Filter2 use: " + ((System.currentTimeMillis() - filter2) / 1000) + "s");
         System.out.println("Done");
@@ -77,7 +77,7 @@ public class ProxyChecker {
             System.out.println(proxyDataList.size());
             // Ping
             System.out.println("Ping...");
-            testProxy(proxyDataList, 4, 1000, false, -1, 6, false);
+            testProxy(proxyDataList, 4, 1200, false, -1, 6, false);
             proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
             System.out.println("\nAvailable: " + proxyDataList.size());
             System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
