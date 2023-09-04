@@ -709,9 +709,9 @@ function ScheduleTable(windowRoot) {
 	this.setTableShow = function (showPre) {
 		if (showPre) {
 			scheduleTable.style.display = 'none';
-			preScheduleTable.style.display = null;
+			preScheduleTable.style.display = '';
 		} else {
-			scheduleTable.style.display = null;
+			scheduleTable.style.display = '';
 			preScheduleTable.style.display = 'none';
 		}
 	}

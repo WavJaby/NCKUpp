@@ -203,7 +203,8 @@ function parseScript(script, url, pathEnd) {
 	// script = script.replace(/\/\*ExcludeStart\*\//g, '/*').replace(/require\('\.\//g, 'require(\'' + url.slice(0, pathEnd + 1));
 	var path = url.slice(0, pathEnd + 1);
 	script = script
-		.replace(/import\(/g, 'async_require(\'' + path + '\'+');
+		// .replace(/import\(/g, 'async_require(\'' + path + '\'+');
+		.replace(/import\(/g, 'async_require(');
 
 	if (ieVersion === null || ieVersion === undefined || !window.Babel)
 		return script;

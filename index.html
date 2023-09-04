@@ -67,7 +67,7 @@
 			remoteLog(errorText);
 		});
 
-		var apiEndPoint = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
+		var apiEndPoint = window.location.hostname === 'localhost' || window.location.hostname.indexOf('192.168.') === 0
 			? 'https://' + window.location.hostname + '/api'
 			: 'https://api.simon.chummydns.com/api';
 

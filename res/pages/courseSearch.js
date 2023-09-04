@@ -880,7 +880,7 @@ export default function (router, loginState) {
 		showResultLastIndex = showResultIndexStep - 1;
 		for (let i = 0; i < courseRenderResultDisplay.length; i++) {
 			const item = courseRenderResultDisplay[i];
-			const display = i > showResultLastIndex ? 'none' : null;
+			const display = i > showResultLastIndex ? 'none' : '';
 			item[0].style.display = item[1].style.display = item[2].style.display = display;
 		}
 
@@ -1006,14 +1006,23 @@ export default function (router, loginState) {
 	);
 
 	router.element.addEventListener('scroll', function () {
-		if (courseRenderResultDisplay.length > showResultLastIndex &&
-			courseRenderResultDisplay[showResultLastIndex][0].offsetTop - searchTableHead.offsetTop < router.element.offsetHeight) {
-			const pShowResultLastIndex = showResultLastIndex;
-			showResultLastIndex += showResultIndexStep;
-			for (let i = pShowResultLastIndex + 1; i < courseRenderResultDisplay.length; i++) {
-				const item = courseRenderResultDisplay[i];
-				const display = i > showResultLastIndex ? 'none' : null;
-				item[0].style.display = item[1].style.display = item[2].style.display = display;
+		if (ieVersion) {
+			// console.log(router.element.scrollTop, router.element.firstElementChild.offsetHeight - router.element.offsetHeight);
+		}
+		if (courseRenderResultDisplay.length > showResultLastIndex) {
+			const lastShowedElement = courseRenderResultDisplay[showResultLastIndex][2];
+			const resultTableOffset = searchTableHead.parentElement.offsetTop;
+			const lastShowedElementBottomOffsetTop = lastShowedElement.offsetTop + lastShowedElement.offsetHeight + resultTableOffset;
+			const screenBottomOffsetTop = router.element.scrollTop + router.element.offsetHeight;
+
+			if (screenBottomOffsetTop / lastShowedElementBottomOffsetTop > 0.9) {
+				const pShowResultLastIndex = showResultLastIndex;
+				showResultLastIndex += showResultIndexStep;
+				for (let i = pShowResultLastIndex + 1; i < courseRenderResultDisplay.length; i++) {
+					const item = courseRenderResultDisplay[i];
+					const display = i > showResultLastIndex ? 'none' : '';
+					item[0].style.display = item[1].style.display = item[2].style.display = display;
+				}
 			}
 		}
 	});
