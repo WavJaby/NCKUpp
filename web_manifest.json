@@ -53,14 +53,14 @@
   ],
   "icons": [
     {
-      "src": "/NCKUpp/res/assets/icon/icon_512.png",
-      "sizes": "512x512",
+      "src": "/NCKUpp/res/assets/icon/icon_256.png",
+      "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/NCKUpp/res/assets/icon/icon_512.svg",
-      "sizes": "512x512",
+      "src": "/NCKUpp/res/assets/icon/icon_256.svg",
+      "sizes": "256x256",
       "type": "image/svg+xml",
       "purpose": "any"
     },
