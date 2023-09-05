@@ -23,7 +23,7 @@ export default function (router) {
 	);
 	const siteInfo = div('siteInfo',
 		h1(null, 'title',
-			img('res/assets/icon/icon.svg', ''), span('NCKU'), titleAnimation
+			img('res/assets/icon/icon_64.svg', ''), span('NCKU'), titleAnimation
 		),
 		p(null, 'description',
 			text('集合'),

@@ -1,4 +1,4 @@
-# ![Logo](https://wavjaby.github.io/NCKUpp/res/assets/icon/icon.svg) NCKU++
+# ![Logo](https://wavjaby.github.io/NCKUpp/res/assets/icon/icon_64.svg) NCKU++
 
 更優質的選課網站<br>
 A new site for NCKU course enrollment
