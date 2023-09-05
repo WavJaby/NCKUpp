@@ -28,7 +28,7 @@ import {
 import {metaSet, metaType} from './res/lib/metaTag.js';
 import {fetchApi, isLocalNetwork} from './res/lib/lib.js';
 
-window.askForLoginAlert = () => window.messageAlert.addInfo('Login to use this page', 'Click login button at top right corner to login in', 3000);
+window.askForLoginAlert = () => window.messageAlert.addInfo('需要登入來使用此頁面', '右上角登入按鈕登入', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
 window.pageLoading = new Signal(false);
 
@@ -371,8 +371,8 @@ window.pageLoading = new Signal(false);
 	}
 
 	function LoginWindow(onLoginStateChange) {
-		const username = input('loginField', 'Account', null, {onkeyup, type: 'text'});
-		const password = input('loginField', 'Password', null, {onkeyup, type: 'password'});
+		const username = input('loginField', 'Account', null, {onkeyup, type: 'email', autocomplete: 'username'});
+		const password = input('loginField', 'Password', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
 		let loading = false;
 
 		function onkeyup(e) {

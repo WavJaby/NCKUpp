@@ -650,6 +650,7 @@ export default function (router, loginState) {
 	// Filter
 	const hideEmptyColumnTool = hideEmptyColumn(courseRenderResult, () => searchTableHead);
 	const classFilterOption = classFilter(updateFilter, courseRenderResult);
+	const requireFilterOption = requireFilter(updateFilter);
 	const filter = new Filter();
 	/**@type {FilterOption[]}*/
 	const filterOptions = [
@@ -658,7 +659,7 @@ export default function (router, loginState) {
 		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
 		hidePracticeFilter(updateFilter),
 		classFilterOption,
-		requireFilter(updateFilter),
+		requireFilterOption,
 		hideEmptyColumnTool,
 	];
 	filter.setOptions(filterOptions);
@@ -697,6 +698,7 @@ export default function (router, loginState) {
 			expandButtons.length = 0;
 			hideEmptyColumnTool.resetHeaderHide();
 			classFilterOption.clear();
+			requireFilterOption.reset();
 			courseSearchResultInfo.textContent = '搜尋中...';
 			return tbody('loading', td(null, null, {colSpan: totalColSpan},
 				window.loadingElement.cloneNode(true),
@@ -1563,13 +1565,17 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 
 /**
  * @param {function()} onFilterUpdate
- * @return {FilterOption & {clear: function()}}
+ * @return {FilterOption & {reset: function()}}
  */
 function requireFilter(onFilterUpdate) {
 	const selectMenu = new SelectMenu('選必修過濾', 'requireFilter', 'requireFilter', null, {multiple: true, sortByValue: false});
 	selectMenu.setItems([[true, '必修'], [false, '選修']], true);
 	selectMenu.onSelectItemChange = updateSelectValue;
 	let selectValue = null;
+
+	function reset() {
+		selectMenu.selectItemByValue([true, false]);
+	}
 
 	function updateSelectValue() {
 		selectValue = selectMenu.getSelectedValue();
@@ -1585,6 +1591,7 @@ function requireFilter(onFilterUpdate) {
 	}
 
 	return {
+		reset: reset,
 		condition: condition,
 		element: selectMenu.element,
 	}

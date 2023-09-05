@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#0D1117",
   "theme_color": "#3253de",
-  "description": "NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~",
+  "description": "結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~",
   "display_override": [
     "window-controls-overlay"
   ],
@@ -16,60 +16,77 @@
       "name": "課程查詢",
       "icons": [
         {
-          "src": "/NCKUpp/res/assets/icon/icon_96.png",
+          "src": "/NCKUpp/res/assets/icon/icon_app_96.png",
           "sizes": "96x96",
-          "type": "image/svg+xml"
+          "type": "image/png",
+          "purpose": "maskable"
         },
         {
-          "src": "/NCKUpp/res/assets/icon/icon_96.svg",
+          "src": "/NCKUpp/res/assets/icon/icon_app_96.svg",
           "sizes": "96x96",
-          "type": "image/svg+xml"
+          "type": "image/svg+xml",
+          "purpose": "maskable"
         }
       ],
       "url": "/NCKUpp/?page=CourseSearch",
       "description": "成功大學課程資訊查詢"
+    },
+    {
+      "name": "課表",
+      "icons": [
+        {
+          "src": "/NCKUpp/res/assets/icon/icon_app_96.png",
+          "sizes": "96x96",
+          "type": "image/png",
+          "purpose": "maskable"
+        },
+        {
+          "src": "/NCKUpp/res/assets/icon/icon_app_96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml",
+          "purpose": "maskable"
+        }
+      ],
+      "url": "/NCKUpp/?page=Schedule",
+      "description": "個人課表"
     }
   ],
   "icons": [
     {
-      "src": "/NCKUpp/res/assets/icon/icon_64.png",
-      "sizes": "64x64",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/NCKUpp/res/assets/icon/icon_96.png",
-      "sizes": "96x96",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/NCKUpp/res/assets/icon/icon_128.png",
-      "sizes": "128x128",
-      "type": "image/svg+xml"
-    },
-    {
       "src": "/NCKUpp/res/assets/icon/icon_512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/NCKUpp/res/assets/icon/icon_64.svg",
-      "sizes": "64x64",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/NCKUpp/res/assets/icon/icon_96.svg",
-      "sizes": "96x96",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/NCKUpp/res/assets/icon/icon_128.svg",
-      "sizes": "128x128",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/NCKUpp/res/assets/icon/icon_512.svg",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/NCKUpp/res/assets/icon/icon_app_96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/NCKUpp/res/assets/icon/icon_app_256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/NCKUpp/res/assets/icon/icon_app_96.svg",
+      "sizes": "96x96",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/NCKUpp/res/assets/icon/icon_app_256.svg",
+      "sizes": "256x256",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }
