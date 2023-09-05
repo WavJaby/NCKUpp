@@ -658,6 +658,7 @@ export default function (router, loginState) {
 		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
 		hidePracticeFilter(updateFilter),
 		classFilterOption,
+		requireFilter(updateFilter),
 		hideEmptyColumnTool,
 	];
 	filter.setOptions(filterOptions);
@@ -867,9 +868,9 @@ export default function (router, loginState) {
 
 			// Show register count column if available
 			if (state.courseResult[0].registerCount !== undefined)
-				registerCountLabel.classList.add('show');
+				registerCountLabel.classList.remove('hide');
 			else
-				registerCountLabel.classList.remove('show');
+				registerCountLabel.classList.add('hide');
 
 			// First filter update after result render
 			updateFilter(true);
@@ -1515,6 +1516,7 @@ function hidePracticeFilter(onFilterUpdate) {
 function classFilter(onFilterUpdate, courseRenderResult) {
 	const selectMenu = new SelectMenu('班別過濾', 'classFilter', 'classFilter', null, {multiple: true});
 	let selectValue = null;
+	selectMenu.onSelectItemChange = updateSelectValue;
 
 	function clearItems() {
 		selectMenu.clearItems();
@@ -1539,7 +1541,6 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 
 		selectMenu.setItems(classCategory, true);
 		selectValue = selectMenu.getSelectedValue();
-		selectMenu.onSelectItemChange = updateSelectValue;
 	}
 
 	/**@param{CourseData}courseData*/
@@ -1555,6 +1556,35 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 	return {
 		clear: clearItems,
 		onFilterStart: onFilterStart,
+		condition: condition,
+		element: selectMenu.element,
+	}
+}
+
+/**
+ * @param {function()} onFilterUpdate
+ * @return {FilterOption & {clear: function()}}
+ */
+function requireFilter(onFilterUpdate) {
+	const selectMenu = new SelectMenu('選必修過濾', 'requireFilter', 'requireFilter', null, {multiple: true, sortByValue: false});
+	selectMenu.setItems([[true, '必修'], [false, '選修']], true);
+	selectMenu.onSelectItemChange = updateSelectValue;
+	let selectValue = null;
+
+	function updateSelectValue() {
+		selectValue = selectMenu.getSelectedValue();
+		onFilterUpdate();
+	}
+
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
+		if (!selectValue)
+			return true;
+
+		return selectValue.indexOf(courseData.required) !== -1;
+	}
+
+	return {
 		condition: condition,
 		element: selectMenu.element,
 	}
@@ -1584,8 +1614,10 @@ function hideEmptyColumn(courseRenderResult, getHeader) {
 		courseDetailElements.length = 0;
 		emptyColIndex.length = 0;
 
-		for (let i = 1; i < headerCols.length - 1; i++) {
+		for (let i = 1, j = 0; i < headerCols.length - 1; i++) {
 			const hCol = headerCols[i];
+			if (hCol.classList.contains('hide'))
+				continue;
 
 			let allEmpty = true;
 			for (let [courseData] of courseRenderResult) {
@@ -1593,24 +1625,24 @@ function hideEmptyColumn(courseRenderResult, getHeader) {
 					allEmpty = false;
 					break;
 				}
-				if (courseData[hCol.key]) {
+				if (courseData[hCol.key] !== null) {
 					allEmpty = false;
 					break;
 				}
 			}
 
 			if (allEmpty) {
-				emptyColIndex.push(i);
+				emptyColIndex.push(j);
 				hideElements.push(hCol);
 			}
+			j++;
 		}
 
 		for (let [, elements] of courseRenderResult) {
 			courseDetailElements.push(elements[2].firstElementChild);
 
-			for (const i of emptyColIndex) {
-				hideElements.push(elements[1].children[i + 1]);
-			}
+			for (const i of emptyColIndex)
+				hideElements.push(elements[1].children[i + 2]);
 		}
 
 		updateHideElement();

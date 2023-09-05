@@ -118,6 +118,7 @@ $instructor-info-fade-time: 200ms;
                     font-size: 18px;
                     text-align: left;
                     padding: 2px 5px;
+                    white-space: nowrap;
 
                     > .searchBar {
                         width: 100%;
@@ -143,9 +144,14 @@ $instructor-info-fade-time: 200ms;
 
                     > .selectMenu,
                     > .checkboxWithName {
-                        margin-right: 10px;
+                        margin: 2px 10px 2px 0;
                         display: inline-block;
                         vertical-align: middle;
+                        white-space: normal;
+                    }
+
+                    > .selectMenu {
+                        width: 10em;
                     }
                 }
 
@@ -190,14 +196,6 @@ $instructor-info-fade-time: 200ms;
 
                     &.serialNumber {
                         width: 0;
-                    }
-
-                    &.registerCount {
-                        display: none;
-
-                        &.show {
-                            display: table-cell;
-                        }
                     }
                 }
 
@@ -306,6 +304,7 @@ $instructor-info-fade-time: 200ms;
                 // Option button
                 > .options {
                     border-left: 1px gray solid;
+                    width: 0;
 
                     > button {
                         background-color: $button-dark-bg-color;
@@ -445,11 +444,13 @@ $instructor-info-fade-time: 200ms;
 
         @media only screen and ($small-screen) {
             > thead {
-                > tr:last-child {
+                > tr {
                     display: block;
                     overflow-x: auto;
                     @include calc(width, "100vw - 20px");
+                }
 
+                > tr:last-child {
                     > th {
                         &:not(.expandDownArrow) {
                             background: $button-dark-green-bg-color;
@@ -566,7 +567,7 @@ $instructor-info-fade-time: 200ms;
                             clear: both;
 
                             > button {
-                                margin: 0 5px;
+                                margin: 2px 5px;
                                 padding: 5px 10px;
                                 display: inline-block;
                             }

@@ -41,12 +41,13 @@
     > .content {
         background: #505050;
         width: 100%;
-        margin-top: 5px;
         padding: 10px;
         border-radius: 5px;
-        z-index: 1;
         display: none;
-        position: absolute;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
         @include box-sizing(border-box);
         box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.4);
 

@@ -138,6 +138,14 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		// Have item selected
 		setClearButtonState(selectedItems.length > 0);
 		searchBox.classList.add('open');
+		if (selectMenu.getBoundingClientRect) {
+			const bound = selectMenu.getBoundingClientRect();
+			if (bound.left != null && bound.top != null && bound.width != null && bound.height != null) {
+				searchBox.style.left = bound.left + 'px';
+				searchBox.style.top = (bound.top + bound.height + 5) + 'px';
+				searchBox.style.width = bound.width + 'px';
+			}
+		}
 		window.addEventListener('mouseup', checkClickOutsideSelectMenu);
 
 		if (options.searchBar) {
@@ -160,7 +168,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 
 	function updateOutputValue() {
 		if (options.multiple && options.sortByValue)
-			selectedItems.sort(([a], [b]) => a.localeCompare(b));
+			selectedItems.sort(([a], [b]) => a.toString().localeCompare(b));
 
 		let result = '';
 		for (let i of selectedItems) {
