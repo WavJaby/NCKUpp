@@ -1,9 +1,5 @@
 @import 'variables';
 
-$navbar-bg-color: #161b22;
-$navbar-hover-color: #35383b;
-$navbar-active-color: #49505A;
-
 .root {
     position: relative;
     width: 100%;
@@ -89,7 +85,6 @@ $navbar-active-color: #49505A;
         > li.title {
             background: $navbar-bg-color;
             padding: 0 10px;
-            display: block;
             position: relative;
 
             &:hover {
@@ -124,8 +119,8 @@ $navbar-active-color: #49505A;
         }
     }
 
+    // Links
     > .links > li, > .homePage > li {
-        line-height: $navbar-height;
         cursor: pointer;
         float: left;
         margin: 0;
@@ -135,6 +130,22 @@ $navbar-active-color: #49505A;
             padding: 0 10px;
             display: block;
         }
+    }
+
+    > .links > li {
+        line-height: $navbar-height - $navbar-margin-top;
+        margin: $navbar-margin-top 5px 0 0;
+        border-radius: 10px 10px 0 0;
+
+        > .list {
+            height: $navbar-height - $navbar-margin-top;
+            line-height: $navbar-height - $navbar-margin-top;
+            border-radius: 10px 10px 0 0;
+        }
+    }
+
+    > .homePage > li {
+        line-height: $navbar-height;
     }
 
     li:hover {
@@ -166,7 +177,7 @@ $navbar-active-color: #49505A;
         }
 
         > .links {
-            background: $navbar-bg-color;
+            background: $navbar-menu-bg-color;
             width: 15em;
             max-width: 60%;
             height: 100vh;
@@ -178,13 +189,27 @@ $navbar-active-color: #49505A;
                 @include transform(translateX(0));
             }
 
-            > ul, > li {
+            > li {
+                line-height: $navbar-height;
+                margin: 0;
+                border-radius: 0;
                 float: none;
+
+                > .list {
+                    height: $navbar-height;
+                    line-height: $navbar-height;
+                    width: 100%;
+                    border-radius: 0;
+
+                    > .title {
+                        background: $navbar-menu-bg-color;
+                    }
+                }
             }
         }
 
         li:hover, .list > li.title:hover {
-            background: $navbar-bg-color;
+            background: none;
         }
 
         li:active, .list > li.title:active {

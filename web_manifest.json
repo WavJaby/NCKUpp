@@ -6,7 +6,7 @@
   "scope": "/",
   "display": "standalone",
   "background_color": "#0D1117",
-  "theme_color": "#5985EF",
+  "theme_color": "#3253de",
   "description": "NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、課表、志願排序、成績查詢等功能，讓選課更輕鬆~",
   "display_override": [
     "window-controls-overlay"
