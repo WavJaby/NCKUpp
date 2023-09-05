@@ -5,10 +5,22 @@
   "display": "standalone",
   "background_color": "#0D1117",
   "description": "NCKU++ 結合成大課程查詢系統、NCKU HUB以及Urschool，提供更方便好用的課程查詢介面。整合選課系統、成績查詢、志願排序，讓選課更輕鬆~",
+  "shortcuts" : [
+    {
+      "name": "課程查詢",
+      "url": "https://wavjaby.github.io/NCKUpp/?page=CourseSearch",
+      "description": "成功大學課程資訊查詢"
+    }
+  ],
   "icons": [
     {
-      "src": "res/assets/icon.svg",
+      "src": "res/assets/icon_b.svg",
       "sizes": "64x64",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "res/assets/icon_b_128.svg",
+      "sizes": "128x128",
       "type": "image/svg+xml"
     }
   ]

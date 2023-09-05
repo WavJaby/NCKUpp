@@ -1,7 +1,7 @@
 export const mobileWidth = 700;
 export const isLocalNetwork = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
 const apiEndPoint = isLocalNetwork
-	? 'https://' + window.location.hostname + '/api'
+	? window.location.origin + '/api'
 	: 'https://api.simon.chummydns.com/api';
 
 // const isSafari = navigator.userAgent &&
