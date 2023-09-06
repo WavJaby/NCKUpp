@@ -74,14 +74,15 @@
             margin-bottom: 20px;
 
             > .items > .news {
-                background: #00000050;
+                background: $object-layer1-dark;
+                box-shadow: 0 0 5px 5px $pure-gray-1000;
                 padding: 10px;
                 border-radius: 10px;
                 margin-bottom: 10px;
                 overflow: hidden;
 
                 > .department {
-                    background: $background-color-block;
+                    background: $object-layer2-dark;
                     padding: 5px;
                     border-radius: 10px;
                     margin-bottom: 5px;
@@ -116,7 +117,7 @@
 
         > .bulletinPanel {
             > .items > .bulletin {
-                background: $background-color-block;
+                background: $object-layer1-dark;
                 padding: 5px;
                 border-radius: 10px;
                 margin-bottom: 5px;

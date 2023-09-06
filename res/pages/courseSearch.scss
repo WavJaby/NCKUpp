@@ -1,7 +1,7 @@
 @import '../variables';
 
-$search-result-header-bg-color: #1D2329;
-$search-result-course-block-bg-color: #252b33;
+$search-result-header-bg-color: $pure-gray-900;
+$search-result-course-block-bg-color: $pure-gray-900;
 $search-result-item-spacing: 10px;
 $instructor-info-fade-time: 200ms;
 
@@ -100,6 +100,7 @@ $instructor-info-fade-time: 200ms;
         // Header
         > thead {
             background: $search-result-header-bg-color;
+            //box-shadow: 0 0 5px 5px $pure-gray-1000;
             position: sticky;
             top: 0;
 
@@ -124,6 +125,7 @@ $instructor-info-fade-time: 200ms;
                         width: 100%;
                         display: block;
                         position: relative;
+                        margin-top: 5px;
 
                         > img {
                             width: 1.4em;

@@ -27,6 +27,7 @@
 // Navbar
 .navbar {
     background: $navbar-bg-color;
+    box-shadow: 0 0 5px 5px $pure-gray-1000;
     width: 100%;
     height: $navbar-height;
     position: absolute;
@@ -209,7 +210,7 @@
         }
 
         li:hover, .list > li.title:hover {
-            background: none;
+            background: $navbar-bg-color;
         }
 
         li:active, .list > li.title:active {

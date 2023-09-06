@@ -1,18 +1,31 @@
 $font-size: 20px;
 $font-color: #e8e6e3;
-$font-color2: #d8d6d3;
+$font-color2: #b8b6b3;
+
+$pure-gray-50: #FAFAFA;
+$pure-gray-100: #F5F5F5;
+$pure-gray-200: #EEEEEE;
+$pure-gray-300: #E0E0E0;
+$pure-gray-400: #BDBDBD;
+$pure-gray-500: #9E9E9E;
+$pure-gray-600: #757575;
+$pure-gray-700: #616161;
+$pure-gray-800: #424242;
+$pure-gray-900: #212121;
+$pure-gray-1000: #080808;
 
 $small-screen: 'max-width: 700px';
-$background-color: #0D1117;
-$background-color-block: #1A1D28;
+$background-color: $pure-gray-1000;
+$object-layer1-dark: $pure-gray-900;
+$object-layer2-dark: $pure-gray-800;
 
 $navbar-height: 40px;
 $navbar-margin-top: 5px;
 $navbar-font-color: 40px;
-$navbar-bg-color: #3253de;
-$navbar-hover-color: #5a71ce;
+$navbar-bg-color: $pure-gray-900;
+$navbar-hover-color: $pure-gray-800;
 $navbar-active-color: $background-color;
-$navbar-menu-bg-color: #41475d;
+$navbar-menu-bg-color: $pure-gray-800;
 
 
 $button-bg-color: #5B5B5B;
