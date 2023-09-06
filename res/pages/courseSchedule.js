@@ -124,7 +124,7 @@ export default function (router, loginState) {
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
 			downloadScheduleButton.classList.remove('show');
-			// scheduleTable.dataReset();
+			scheduleTable.clearScheduleData();
 			fetchApi('/courseSchedule', 'Get schedule').then(response => {
 				// Parse normal schedule
 				scheduleTable.setScheduleData(response);
@@ -248,16 +248,6 @@ function ScheduleTable(windowRoot) {
 		return scheduleData != null && preScheduleData != null;
 	};
 
-	this.dataReset = dataReset;
-
-	function dataReset() {
-		scheduleData = null;
-		preScheduleData = null;
-		courseDetail = {};
-		courseSameCell = {};
-		preCourseRemoveKey = {};
-	}
-
 	this.renderTable = function () {
 		initScheduleTable();
 		initPreScheduleTable();
@@ -266,6 +256,49 @@ function ScheduleTable(windowRoot) {
 			if (course.delete)
 				preCourseRemoveKey[course.deptID + '-' + course.sn] = course.delete;
 	};
+
+	this.fetchCourseInfo = function () {
+		// get course info
+		const courseDept = {};
+		for (const serialID in courseDetail) {
+			const dept = serialID.split('-');
+			let deptData = courseDept[dept[0]];
+			if (deptData)
+				deptData.push(dept[1]);
+			else
+				courseDept[dept[0]] = [dept[1]];
+		}
+		const courseFetchArr = [];
+		for (const serialID in courseDept)
+			courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
+		const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
+
+		// fetch data
+		return fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
+			for (const course of i.data)
+				courseDetail[course.sn] = parseRawCourseData(course, null);
+		});
+	};
+
+	this.clear = function () {
+		dataReset();
+		initTable(scheduleTable);
+		initTable(preScheduleTable);
+	};
+
+	this.clearScheduleData = function () {
+		scheduleData = null;
+		preScheduleData = null;
+		courseSameCell = {};
+	}
+
+	function dataReset() {
+		scheduleData = null;
+		preScheduleData = null;
+		courseSameCell = {};
+		courseDetail = {};
+		preCourseRemoveKey = {};
+	}
 
 	function setAndRenderPreScheduleData(response) {
 		preScheduleData = response.data;
@@ -498,35 +531,6 @@ function ScheduleTable(windowRoot) {
 
 		createCourseUndecided(dayUndecidedPre, preScheduleTable, true);
 	}
-
-	this.fetchCourseInfo = function () {
-		// get course info
-		const courseDept = {};
-		for (const serialID in courseDetail) {
-			const dept = serialID.split('-');
-			let deptData = courseDept[dept[0]];
-			if (deptData)
-				deptData.push(dept[1]);
-			else
-				courseDept[dept[0]] = [dept[1]];
-		}
-		const courseFetchArr = [];
-		for (const serialID in courseDept)
-			courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
-		const courseFetchData = encodeURIComponent(courseFetchArr.join('&'));
-
-		// fetch data
-		return fetchApi('/search?serial=' + courseFetchData, 'Get course info').then(i => {
-			for (const course of i.data)
-				courseDetail[course.sn] = parseRawCourseData(course, null);
-		});
-	};
-
-	this.clear = function () {
-		dataReset();
-		initTable(scheduleTable);
-		initTable(preScheduleTable);
-	};
 
 	function courseCellHoverStart() {
 		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialID];
