@@ -82,7 +82,7 @@ export function fetchApi(endpoint, showState, option) {
 					c.split(',').forEach(i => document.cookie = i.replace(/Domain=[\w.]+/, 'Domain=' + window.location.hostname));
 				}
 			}
-			return i.json()
+			return i.json();
 		})
 		// Handle self defined error
 		.then(i => {
@@ -111,7 +111,7 @@ export function fetchApi(endpoint, showState, option) {
 			}
 			if (stateElement)
 				requestState.removeState(stateElement);
-			return null;
+			return {success: false, data: null};
 		});
 }
 

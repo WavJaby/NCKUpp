@@ -35,6 +35,7 @@ public class CourseSchedule implements EndpointModule {
     private static final String TAG = "[Schedule]";
     private static final Logger logger = new Logger(TAG);
     public static final HashMap<String, Integer> dayOfWeekTextToInt = new HashMap<String, Integer>() {{
+        put("未定", -1);
         put("時間未定", -1);
         put("Undecided", -1);
         put("星期一", 0);
@@ -141,7 +142,7 @@ public class CourseSchedule implements EndpointModule {
         return httpHandler;
     }
 
-    private void getPreCourseSchedule(CookieStore cookieStore, ApiResponse response) {
+    public void getPreCourseSchedule(CookieStore cookieStore, ApiResponse response) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos31315")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
@@ -218,7 +219,7 @@ public class CourseSchedule implements EndpointModule {
         response.setData(builder.toString());
     }
 
-    private void postPreCourseSchedule(String postData, CookieStore cookieStore, ApiResponse response) {
+    public void postPreCourseSchedule(String postData, CookieStore cookieStore, ApiResponse response) {
         Map<String, String> form = parseUrlEncodedForm(postData);
         String action = form.get("action");
         String info = form.get("info");
@@ -271,7 +272,7 @@ public class CourseSchedule implements EndpointModule {
         }
     }
 
-    private void getCourseSchedule(CookieStore cookieStore, ApiResponse response) {
+    public void getCourseSchedule(CookieStore cookieStore, ApiResponse response) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)

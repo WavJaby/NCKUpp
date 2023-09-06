@@ -251,10 +251,23 @@ function RouterLazyLoad(url, ...parameter) {
 }
 
 /**
+ * @typedef {Object} PageStorage
+ * @property {function()} storageSave
+ */
+
+/**
+ * @typedef {HTMLElement} PageElement
+ * @property {string} pageId
+ * @property {function()} onRender
+ * @property {function()} onPageOpen
+ * @property {function()} onPageClose
+ */
+
+/**
  * @param {string} titlePrefix
  * @param {Object.<string, string>} pageSuffix
  * @param {string} defaultPageId
- * @param {Object<string, RouterLazyLoad|HTMLElement>} routs
+ * @param {Object.<string, RouterLazyLoad|HTMLElement>} routs
  * @param {HTMLElement} footer
  * @constructor
  */
@@ -263,7 +276,7 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	const thisI = this;
 	const routerRoot = this.element = document.createElement('div');
 	routerRoot.className = 'router';
-	const loadedPage = {};
+	const /**@type{Object.<string, PageElement>}*/loadedPage = {};
 	const pageScrollSave = {};
 	let lastPage, lastPageId = null;
 
@@ -281,6 +294,23 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	this.initFirstPage = function () {
 		openPage(null, true);
 	}
+	/**
+	 * @param {PageElement} page
+	 * @return {PageStorage}
+	 */
+	this.getPageStorage = function (page) {
+		let objData;
+		try {
+			const data = localStorage.getItem(page.pageId);
+			objData = data ? JSON.parse(data) : {};
+		} catch (e) {
+			objData = {};
+		}
+		objData.storageSave = function () {
+			localStorage.setItem(page.pageId, JSON.stringify(this));
+		};
+		return objData;
+	};
 
 	function openPage(pageId, isHistory) {
 		if (!pageId)
@@ -315,12 +345,16 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 				page.loding = true;
 				const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
 				import(baseUrl + page.url).then(function (i) {
-					pageReadyOpen(loadedPage[pageId] = i.default(thisI, ...page.parameters), pageId, isHistory);
+					const /**@type{PageElement}*/pageElement = i.default(thisI, ...page.parameters);
+					pageElement.pageId = pageId;
+					pageReadyOpen(loadedPage[pageId] = pageElement, pageId, isHistory);
 					page.loding = false;
 				});
 			}
-		} else
+		} else {
+			page.pageId = pageId;
 			pageReadyOpen(loadedPage[pageId] = page, pageId, isHistory);
+		}
 	}
 
 	function pageReadyOpen(page, pageId, isHistory) {

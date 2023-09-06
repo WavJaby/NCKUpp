@@ -78,7 +78,11 @@ public class Main {
         registerModule(robotCode, "/api/robotCode");
         Search search = new Search(urSchool, robotCode, proxyManager);
         registerModule(search, "/api/search");
-        Login login = new Login(search, sqLite, proxyManager);
+        CourseFunctionButton courseFunctionButton = new CourseFunctionButton(proxyManager, robotCode);
+        registerModule(courseFunctionButton, "/api/courseFuncBtn");
+        CourseSchedule courseSchedule = new CourseSchedule(proxyManager);
+        registerModule(courseSchedule, "/api/courseSchedule");
+        Login login = new Login(search, courseFunctionButton, courseSchedule, sqLite, proxyManager);
         registerModule(login, "/api/login");
         DeptWatchDog watchDog = new DeptWatchDog(login, sqLite);
         registerModule(watchDog, "/api/watchdog");
@@ -86,9 +90,7 @@ public class Main {
         registerModule(new Profile(login, sqLite), "/api/profile");
         registerModule(new AllDept(search), "/api/alldept");
         registerModule(new HomeInfo(proxyManager), "/api/homeInfo");
-        registerModule(new CourseFunctionButton(proxyManager, robotCode), "/api/courseFuncBtn");
         registerModule(new Logout(proxyManager), "/api/logout");
-        registerModule(new CourseSchedule(proxyManager), "/api/courseSchedule");
         registerModule(new ExtractUrl(proxyManager), "/api/extract");
         registerModule(new PreferenceAdjust(proxyManager), "/api/preferenceAdjust");
         registerModule(new A9Registered(proxyManager), "/api/A9Registered");

@@ -1,0 +1,30 @@
+<svg fill="#FFF" xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 85 85">
+    <path d="
+    M0 10 Q0 0,10 0
+    H35 Q40 0,40 5
+    V15 H25 Q18 15,18 20 Q18 25,25 25 H40
+    V35 Q40 40,35 40
+    H10 Q0 40,0 30
+    Z"/>
+    <g transform="translate(45)">
+        <path d="
+        M15 0 H25 V15 H40 V25 H25 V40 H15 V25 H0 V15 H15 Z
+        "/>
+    </g>
+    <g transform="translate(0 45)">
+        <path d="
+        M15 0 H25 V15 H40 V25 H25 V40 H15 V25 H0 V15 H15 Z
+        "/>
+    </g>
+    <g transform="translate(45 45)">
+        <path d="
+        M0 5 Q0 0,5 0
+        H16 V10 Q16 15,20 15 Q24 15,24 10 V0
+        H35 Q40 0,40 5
+        V16 H32 Q27 16,27 20 Q27 24,32 24 H40
+        V35 Q40 40,35 40
+        H24 V30 Q24 25,20 25 Q16 25,16 30 V40
+        H5 Q0 40,0 35
+        Z"/>
+    </g>
+</svg>

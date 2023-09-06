@@ -75,7 +75,7 @@ public class CourseFunctionButton implements EndpointModule {
         logger.log("Course function button " + (System.currentTimeMillis() - startTime) + "ms");
     };
 
-    private void getFlexTime(String key, CookieStore cookieStore, ApiResponse response) {
+    public void getFlexTime(String key, CookieStore cookieStore, ApiResponse response) {
         try {
             Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=get_flex_time")
                     .header("Connection", "keep-alive")
@@ -140,7 +140,7 @@ public class CourseFunctionButton implements EndpointModule {
         return httpHandler;
     }
 
-    private void postPreKey(String key, CookieStore cookieStore, ApiResponse response) {
+    public void postPreKey(String key, CookieStore cookieStore, ApiResponse response) {
         try {
             Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=add_presub")
                     .header("Connection", "keep-alive")
@@ -165,7 +165,7 @@ public class CourseFunctionButton implements EndpointModule {
         }
     }
 
-    private void postCosData(String key, CookieStore cookieStore, ApiResponse response) {
+    public void postCosData(String key, CookieStore cookieStore, ApiResponse response) {
         try {
             boolean success = false;
             String message = null;

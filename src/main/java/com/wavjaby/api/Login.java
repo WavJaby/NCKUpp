@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
@@ -20,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -36,6 +39,8 @@ public class Login implements EndpointModule {
     private final SQLite sqLite;
     private final Search search;
     private final ProxyManager proxyManager;
+    private final CourseFunctionButton courseFunctionButton;
+    private final CourseSchedule courseSchedule;
     private PreparedStatement addUserLoginData, updateUserLoginData, getUserLoginState;
 
     private final Map<String, CookieStore> loginUserCookie = new ConcurrentHashMap<>();
@@ -80,8 +85,10 @@ public class Login implements EndpointModule {
         }
     }
 
-    public Login(Search search, SQLite sqLite, ProxyManager proxyManager) {
+    public Login(Search search, CourseFunctionButton courseFunctionButton, CourseSchedule courseSchedule, SQLite sqLite, ProxyManager proxyManager) {
         this.search = search;
+        this.courseFunctionButton = courseFunctionButton;
+        this.courseSchedule = courseSchedule;
         this.sqLite = sqLite;
         this.proxyManager = proxyManager;
     }
@@ -104,13 +111,13 @@ public class Login implements EndpointModule {
 
         keepLoginUpdater.scheduleAtFixedRate(() -> {
             for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
-                String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, entry.getValue());
-                search.getAllDeptData(entry.getValue(), null);
+                CookieStore cookieStore = entry.getValue();
+                search.getAllDeptData(cookieStore, null);
                 String result;
                 try {
                     Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
                             .header("Connection", "keep-alive")
-                            .cookieStore(entry.getValue())
+                            .cookieStore(cookieStore)
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy())
                             .userAgent(Main.USER_AGENT)
@@ -120,16 +127,51 @@ public class Login implements EndpointModule {
                     logger.errTrace(e);
                     continue;
                 }
+                UserShortInfo shortInfo = getCourseLoginUserInfo(result, cookieStore);
 
-                UserShortInfo shortInfo = getCourseLoginUserInfo(result, entry.getValue());
                 if (shortInfo != null) {
-                    logger.log(shortInfo.studentID + " is login");
+                    if (shortInfo.studentID.equals("F74114760")) {
+//                        logger.log(shortInfo.studentID + " is login");
+
+                        ApiResponse response = new ApiResponse();
+                        List<Search.CourseData> courseDataList = new ArrayList<>();
+                        search.getQueryCourseData(new Search.SearchQuery("dept=A9", new String[0]), null,
+                                cookieStore, response, courseDataList);
+                        response.setData(null);
+                        logger.log(response.toString());
+                        if (response.isSuccess() && !courseDataList.isEmpty()) {
+                            String preKey = courseDataList.get(0).getBtnPreRegister();
+                            if (preKey != null) {
+                                response = new ApiResponse();
+                                courseFunctionButton.postPreKey(preKey, cookieStore, response);
+                                logger.log(response.toString());
+                            }
+
+                            response = new ApiResponse();
+                            courseSchedule.getPreCourseSchedule(cookieStore, response);
+                            if (response.isSuccess()) {
+                                for (Object o : new JsonObject(response.getData()).getArray("schedule")) {
+                                    JsonObject i = (JsonObject) o;
+                                    if (!(i.getString("deptID") + '-' + i.getString("sn")).equals("A9-001"))
+                                        continue;
+                                    String delete = i.getString("delete");
+                                    if (delete != null) {
+                                        response = new ApiResponse();
+                                        courseSchedule.postPreCourseSchedule("action=delete&info=" + delete, cookieStore, response);
+                                        logger.log(response);
+                                    }
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 } else {
-                    logger.log(PHPSESSID + " is logout");
+                    logger.log(entry.getKey() + " is logout");
                     loginUserCookie.remove(entry.getKey());
                 }
             }
-        }, 0, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
+        }, 1000 * 10, 1000 * 60 * 5, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -592,7 +634,7 @@ public class Login implements EndpointModule {
         String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookie);
         if (PHPSESSID != null) {
             loginDataEdit(studentID, name, deptGradeInfo, PHPSESSID);
-            loginUserCookie.put(PHPSESSID, cookie);
+            loginUserCookie.put(studentID, cookie);
         }
         return new UserShortInfo(studentID, name, deptGradeInfo, academicYear, semester, PHPSESSID);
     }

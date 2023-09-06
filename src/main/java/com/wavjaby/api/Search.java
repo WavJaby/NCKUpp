@@ -214,7 +214,7 @@ public class Search implements EndpointModule {
             this.semEnd = searchQuery.semEnd;
         }
 
-        private SearchQuery(String queryString, String[] cookieIn) {
+        public SearchQuery(String queryString, String[] cookieIn) {
             // Get search ID
             String searchIDs = Cookie.getCookie("searchID", cookieIn);
             if (searchIDs != null) {
@@ -547,6 +547,18 @@ public class Search implements EndpointModule {
 
         public String getForClass() {
             return forClass;
+        }
+
+        public String getBtnAddCourse() {
+            return btnAddCourse;
+        }
+
+        public String getBtnPreRegister() {
+            return btnPreRegister;
+        }
+
+        public String getBtnAddRequest() {
+            return btnAddRequest;
         }
 
         public String getTimeString() {
@@ -1030,8 +1042,8 @@ public class Search implements EndpointModule {
         return httpResponseData;
     }
 
-    private boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum,
-                                       CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
+    public boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum,
+                                      CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
         return getQueryCourseData(searchQuery, getSerialNum, 0, cookieStore, response, courseDataList);
     }
 

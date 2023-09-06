@@ -45,6 +45,10 @@ public class ApiResponse {
         this.success = success;
     }
 
+    public String getData() {
+        return data;
+    }
+
     @Override
     public String toString() {
         JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
