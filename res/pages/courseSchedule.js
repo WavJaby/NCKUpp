@@ -1,7 +1,18 @@
 'use strict';
 
-import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table} from '../lib/domHelper_v002.min.js';
-import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
+import {
+	a,
+	button,
+	checkboxWithName,
+	div,
+	h1,
+	h2,
+	mountableStylesheet,
+	p,
+	span,
+	table
+} from '../lib/domHelper_v002.min.js';
+import {checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
 // static
@@ -83,6 +94,12 @@ export default function (router, loginState) {
 		styles.enable();
 		loginState.addListener(onLoginState);
 		onLoginState(loginState.state);
+
+		if (!checkLocalStorage()) {
+			window.messageAlert.addError('請允許內部儲存', '開啟內部儲存來使用更多功能');
+		} else {
+			loadLastScheduleData();
+		}
 	}
 
 
@@ -107,7 +124,7 @@ export default function (router, loginState) {
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
 			downloadScheduleButton.classList.remove('show');
-			scheduleTable.dataReset();
+			// scheduleTable.dataReset();
 			fetchApi('/courseSchedule', 'Get schedule').then(response => {
 				// Parse normal schedule
 				scheduleTable.setScheduleData(response);
@@ -147,6 +164,10 @@ export default function (router, loginState) {
 				onLoginState(loginState.state);
 			}
 		});
+	}
+
+	function loadLastScheduleData() {
+
 	}
 
 	return div('courseSchedule',
@@ -227,13 +248,15 @@ function ScheduleTable(windowRoot) {
 		return scheduleData != null && preScheduleData != null;
 	};
 
-	this.dataReset = function () {
+	this.dataReset = dataReset;
+
+	function dataReset() {
 		scheduleData = null;
 		preScheduleData = null;
 		courseDetail = {};
 		courseSameCell = {};
 		preCourseRemoveKey = {};
-	};
+	}
 
 	this.renderTable = function () {
 		initScheduleTable();
@@ -500,6 +523,7 @@ function ScheduleTable(windowRoot) {
 	};
 
 	this.clear = function () {
+		dataReset();
 		initTable(scheduleTable);
 		initTable(preScheduleTable);
 	};
@@ -543,7 +567,7 @@ function ScheduleTable(windowRoot) {
 		let holiday = false;
 		for (const i of scheduleData.schedule) for (const j of i.info) {
 			// parse time
-			const parsedTime = timeParse(j.time);
+			const parsedTime = j.time instanceof Int8Array ? j.time : timeParse(j.time);
 
 			// Find table width
 			if (parsedTime[0] > 4)
@@ -569,7 +593,10 @@ function ScheduleTable(windowRoot) {
 		const dayUndecided = [];
 		for (let i = 0; i < tableWidth; i++)
 			dayTable[i] = new Array(tableHeight);
-		for (const eachCourse of scheduleData.schedule)
+		for (const eachCourse of scheduleData.schedule) {
+			const serialID = eachCourse.deptID + '-' + eachCourse.sn;
+			if (courseDetail[serialID] === undefined)
+				courseDetail[serialID] = null;
 			for (const timeLocInfo of eachCourse.info) {
 				// Time undecided
 				if (timeLocInfo.time[0] === -1) {
@@ -588,6 +615,7 @@ function ScheduleTable(windowRoot) {
 				else
 					sectionCourse.push(timeLocInfo);
 			}
+		}
 		for (let i = 0; i < tableWidth; i++)
 			for (let j = 0; j < tableHeight; j++)
 				if (dayTable[i][j])
@@ -650,8 +678,6 @@ function ScheduleTable(windowRoot) {
 		parentCell.className = 'activate';
 		const courseInfo = courseWithTime[0];
 		const serialID = courseInfo.deptID + '-' + courseInfo.sn;
-		if (courseDetail[serialID] === undefined)
-			courseDetail[serialID] = null;
 
 		const courseCell = div(courseInfo.pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
 			showSerialId ? span(courseInfo.deptID + '-' + courseInfo.sn + ' ') : null,

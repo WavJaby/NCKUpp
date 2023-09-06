@@ -17,6 +17,21 @@ export function isMobile() {
 	return window.innerWidth <= mobileWidth
 }
 
+export function checkLocalStorage() {
+	let storage;
+	try {
+		storage = window.localStorage;
+		let testData = '__storage_test__';
+		storage.setItem(testData, testData);
+		storage.removeItem(testData);
+		return true;
+	} catch (e) {
+		return e instanceof window.DOMException &&
+			(e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+			(storage && storage.length !== 0);
+	}
+}
+
 /**
  * @typedef {Object} ApiResponse
  * @property {string} success
