@@ -205,6 +205,10 @@ export default function (router, loginState) {
 			(semester.charAt(semester.length - 1) === '0' ? '上學期' : '下學期');
 	}
 
+	function gradeToText(grade){
+		return grade === -1 ? '無' : grade === -2 ? '成績未到' : grade === -3 ? '通過' : grade;
+	}
+
 	return div('stuIdSysGrades',
 		{onRender, onPageOpen, onPageClose},
 		State(semestersInfo, /**@param{SemesterInfo[]}i*/i => !i ? div()
@@ -263,7 +267,7 @@ export default function (router, loginState) {
 					span(null, 'info', span('學分'), text(': ' + course.credits)),
 					course.gpa === null ? null :
 						span(null, 'info', span('Gpa', null, {title: course.gpa}), text(': ' + gpaPointCalculate(course.gpa))),
-					span(null, 'info', span('分數'), text(': ' + (course.grade === -2 ? '成績未到' : course.grade === -1 ? '無' : course.grade))),
+					span(null, 'info', span('分數'), text(': ' + gradeToText(course.grade))),
 					span(null, 'info', span('課程別'), text(': ' + (course.remark ? course.remark : '無'))),
 					span(null, 'info', span('課程'), text(': ' + course.require)),
 				)

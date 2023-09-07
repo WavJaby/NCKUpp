@@ -189,9 +189,13 @@ public class StudentIdentificationSystem implements EndpointModule {
             String gradeStr = row.get(7).text().trim();
             float gradeFloat;
             try {
-                gradeFloat = gradeStr.equals("通過") ? -1 : gradeStr.equals("抵免") ? -2 : gradeStr.equals("退選") ? -3 : Float.parseFloat(gradeStr);
+                gradeFloat = gradeStr.equals("通過") ? -3
+                        : gradeStr.equals("抵免") ? -4
+                        : gradeStr.equals("退選") ? -5
+                        : gradeStr.equals("優良") ? -6
+                        : Float.parseFloat(gradeStr);
             } catch (NumberFormatException e) {
-                gradeFloat = -4;
+                gradeFloat = -1;
                 logger.errTrace(e);
             }
             grade = gradeFloat;
