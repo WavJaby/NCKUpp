@@ -1,6 +1,6 @@
 @import './variables';
 
-$popupWindow-bg-color: #15181D;
+$popupWindow-bg-color: $pure-gray-900;
 
 .popupWindow {
     background: $overlay-transparent-bg-color;
@@ -30,6 +30,7 @@ $popupWindow-bg-color: #15181D;
             top: 0;
             position: sticky;
             cursor: pointer;
+            z-index: 1;
 
             &:focus {
                 box-shadow: none;

@@ -12,7 +12,7 @@ $instructor-info-fade-time: 200ms;
 
     // Search form
     > .form {
-        padding: 5px;
+        padding: 5px 5px 10px 5px;
 
         > input, > .selectMenu {
             width: 350px;
@@ -100,7 +100,8 @@ $instructor-info-fade-time: 200ms;
         // Header
         > thead {
             background: $search-result-header-bg-color;
-            //box-shadow: 0 0 5px 5px $pure-gray-1000;
+            box-shadow: 0 0 10px 0px $pure-gray-1000;
+            border-radius: 0 0 10px 10px;
             position: sticky;
             top: 0;
 
@@ -510,7 +511,7 @@ $instructor-info-fade-time: 200ms;
                             line-height: 1.7em;
                             min-height: 1.7em;
                             margin: 2px 1%;
-                            padding: 0 2px 0 3px;
+                            padding: 0 5px;
                             text-align: left;
                             @include box-sizing(border-box);
                         }
@@ -636,7 +637,7 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 > div > .rateBox {
-                    background: $search-result-course-block-bg-color;
+                    background: $pure-gray-800;
                     max-width: 7em;
                     margin: auto;
                     border-radius: 10px;
@@ -649,14 +650,15 @@ $instructor-info-fade-time: 200ms;
 
             > .comments {
                 > .commentBlock {
-                    background: $search-result-course-block-bg-color;
+                    background: $pure-gray-800;
                     margin: 10px 5px;
                     border-radius: 10px;
                     padding: 10px;
 
                     > span {
-                        background-color: white;
-                        color: #f35a5a;
+                        background-color: $pure-gray-700;
+                        color: #ff4d4d;
+                        font-size: 18px;
                         padding: 2px 10px;
                         border-radius: 2em;
                         margin-bottom: 10px;
@@ -747,11 +749,12 @@ $instructor-info-fade-time: 200ms;
         }
 
         > .tags > span {
-            background: $button-bg-color;
+            background: $pure-gray-800;
             padding: 5px;
             margin-right: 5px;
             margin-top: 5px;
             display: inline-block;
+            border-radius: 10px;
         }
 
         > .reviewerCount {
@@ -766,7 +769,7 @@ $instructor-info-fade-time: 200ms;
         }
 
         > .comments > .item {
-            background: $search-result-course-block-bg-color;
+            background: $pure-gray-800;
             margin-bottom: 5px;
             margin-top: 5px;
             border-radius: 10px;

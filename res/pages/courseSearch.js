@@ -570,8 +570,8 @@ export default function (router, loginState) {
 		/**@type{[CourseData, HTMLElement][]}*/
 		const courseResult = courseRenderResultFilter;
 		courseRenderResultDisplay.length = courseResult.length;
-		let reverse;
-		if (sortKey !== key) {
+		let reverse = sortArrowClass.contains('reverse');
+		if (sortKey !== key || reverse) {
 			sortKey = key;
 			courseResult.sort(method);
 			sortLastIndex = courseResult.length;
@@ -583,8 +583,10 @@ export default function (router, loginState) {
 			sortArrowClass.remove('reverse');
 			reverse = false;
 			element.appendChild(sortArrow);
-		} else
-			reverse = sortArrowClass.toggle('reverse');
+		} else {
+			reverse = true;
+			sortArrowClass.add('reverse');
+		}
 
 		let i = 0;
 		if (reverse)

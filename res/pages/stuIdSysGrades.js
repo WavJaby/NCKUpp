@@ -1,7 +1,19 @@
 'use strict';
 
-import {button, div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../lib/domHelper_v002.min.js';
+import {
+	button,
+	div,
+	h1,
+	img,
+	mountableStylesheet,
+	ShowIf,
+	Signal,
+	span,
+	State,
+	text
+} from '../lib/domHelper_v002.min.js';
 import {fetchApi} from '../lib/lib.js';
+import PopupWindow from '../popupWindow.js';
 
 /**
  * - SemesterGrade: /stuIdSys?mode=semCourse&semId=SemID
@@ -53,6 +65,7 @@ export default function (router, loginState) {
 	const currentSemestersInfo = new Signal();
 	const semestersInfo = new Signal();
 	const semesterGrades = new Signal();
+	const normalDestImgWindow = new PopupWindow({root: router.element});
 	const normalDestImg = new Signal();
 	let stuIdLoadingCount = 0;
 	let stuIdLoading = false;
@@ -108,7 +121,8 @@ export default function (router, loginState) {
 			currentSemestersInfo.set(null);
 			semestersInfo.set(null);
 			semesterGrades.set(null);
-			normalDestImg.set(null);
+			normalDestImgWindow.windowClose();
+			normalDestImgWindow.setWindowContent(div());
 		}
 	}
 
@@ -146,9 +160,15 @@ export default function (router, loginState) {
 		const courseInfo = this && this.courseInfo || inCourseInfo;
 		if (!courseInfo.imgQuery)
 			return;
-		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(i => {
-			if (i.success) {
-				normalDestImg.set({graph: i.data[0], courseInfo: courseInfo})
+		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(response => {
+			if (response.success) {
+				normalDestImgWindow.setWindowContent(
+					div('normalDestImg',
+						h1(courseInfo.courseName),
+						img('data:image/svg+xml;base64,' + btoa(response.data[0]), '', '', {onload: i => URL.revokeObjectURL(i.target.src)})
+					)
+				);
+				normalDestImgWindow.windowOpen();
 			} else {
 				// // Normal distribution graph not exist
 				// if (i.msg) {
@@ -187,16 +207,6 @@ export default function (router, loginState) {
 
 	return div('stuIdSysGrades',
 		{onRender, onPageOpen, onPageClose},
-		State(normalDestImg, state => !state ? div() : div('graphBackground',
-			div('graphVerticalCenter', div('graph',
-				h1(state.courseInfo.courseName),
-				button('closeButton', null, () => normalDestImg.set(null),
-					div('icon')
-				),
-				img('data:image/svg+xml;base64,' + btoa(state.graph), '', '', {onload: i => URL.revokeObjectURL(i.target.src)})
-			))
-		)),
-
 		State(semestersInfo, /**@param{SemesterInfo[]}i*/i => !i ? div()
 			// If Semesters data, render
 			: div('semesters', i.map(semInfo =>
