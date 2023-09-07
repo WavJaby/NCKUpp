@@ -353,8 +353,8 @@ function ScheduleTable(windowRoot) {
 			return;
 
 		const locationButtons = [];
-		if (data.parsedTime)
-			for (let time of data.parsedTime) {
+		if (data.time)
+			for (let time of data.time) {
 				let timeStr = courseDataTimeToString(time);
 				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
 			}

@@ -393,6 +393,7 @@ export default function (router, loginState) {
 		}
 
 		// Parse result
+		nckuHubLoadingOverlay.classList.add('show');
 		const nckuHubResult = {};
 		/**@type CourseData[]*/
 		const courseResult = [];
@@ -414,10 +415,11 @@ export default function (router, loginState) {
 		// Get NCKU hub data
 		const chunkSize = 20;
 		const courseSerialNumbers = Object.keys(nckuHubResult);
+		let taskCount = Math.ceil(courseSerialNumbers.length / chunkSize);
 		for (let i = 0; i < courseSerialNumbers.length; i += chunkSize) {
 			const chunk = courseSerialNumbers.slice(i, i + chunkSize);
 			fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
-				for (let data of Object.entries(response.data)) {
+				if (response.success && response.data) for (let data of Object.entries(response.data)) {
 					const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubResult[data[0]];
 					/**@type NckuHubRaw*/
 					const nckuHub = data[1];
@@ -434,6 +436,11 @@ export default function (router, loginState) {
 						}, {})
 					};
 					signal.update();
+				}
+
+				// Task done
+				if (--taskCount === 0) {
+					nckuHubLoadingOverlay.classList.remove('show');
 				}
 			});
 		}
@@ -956,6 +963,7 @@ export default function (router, loginState) {
 	}
 
 	// Search page
+	const nckuHubLoadingOverlay = div('loadingOverlay', window.loadingElement.cloneNode(true));
 	const registerCountLabel = th('抽籤人數', 'registerCount', {key: 'registerCount', onclick: sortIntKey, noHide: true});
 	const searchTableHead = thead('noSelect',
 		filter.createElement(),
@@ -991,7 +999,8 @@ export default function (router, loginState) {
 			registerCountLabel,
 			th('選/餘', 'available', {key: 'available', onclick: sortIntKey}),
 			// NckuHub
-			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey, noHide: true}),
+			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey, noHide: true},
+				nckuHubLoadingOverlay),
 			th('甜度', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey, noHide: true}),
 			th('涼度', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey, noHide: true}),
 			// Function buttons
@@ -1570,7 +1579,10 @@ function classFilter(onFilterUpdate, courseRenderResult) {
  * @return {FilterOption & {reset: function()}}
  */
 function requireFilter(onFilterUpdate) {
-	const selectMenu = new SelectMenu('選必修過濾', 'requireFilter', 'requireFilter', null, {multiple: true, sortByValue: false});
+	const selectMenu = new SelectMenu('選必修過濾', 'requireFilter', 'requireFilter', null, {
+		multiple: true,
+		sortByValue: false
+	});
 	selectMenu.setItems([[true, '必修'], [false, '選修']], true);
 	selectMenu.onSelectItemChange = updateSelectValue;
 	let selectValue = null;

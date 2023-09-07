@@ -95,6 +95,27 @@ $instructor-info-fade-time: 200ms;
                     display: none;
                 }
             }
+
+            // Overlay when loading NCKU hub data
+            > .loadingOverlay {
+                background: $overlay-transparent-bg-color;
+                left: 0;
+                top: 0;
+                width: 300%;
+                height: 100%;
+                position: absolute;
+                z-index: 1;
+                pointer-events: none;
+                display: none;
+
+                &.show {
+                    display: block;
+                }
+
+                > .loaderCircle {
+                    height: 100%;
+                }
+            }
         }
 
         // Header
@@ -110,13 +131,25 @@ $instructor-info-fade-time: 200ms;
                 overflow-wrap: anywhere;
             }
 
-            > tr {
-                > .hide {
+            // Course search result label
+            > tr > th {
+                // Label style
+                &:not(:first-child) {
+                    padding: 5px 1px 0 1px;
+                    border-left: lightgrey solid 1px;
+                    position: relative;
+
+                    &:hover {
+                        background: $button-hover-color;
+                    }
+                }
+
+                &.hide {
                     display: none;
                 }
 
                 // Course search result filter
-                > th.filterOptions {
+                &.filterOptions {
                     font-size: 18px;
                     text-align: left;
                     padding: 2px 5px;
@@ -163,58 +196,44 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 // Course search result info text
-                > th.resultCount {
+                &.resultCount {
                     text-align: left;
                     padding-left: 5px;
                 }
 
-                // Course search result label
-                > th {
-                    // Label style
-                    &:not(:first-child) {
-                        padding: 5px 1px 0 1px;
-                        border-left: lightgrey solid 1px;
-                        position: relative;
+                &.expandDownArrow {
+                    width: 0;
+                    padding: 0 2px;
+                }
 
-                        &:hover {
-                            background: $button-hover-color;
-                        }
-                    }
+                > .sortArrow {
+                    position: absolute;
+                    top: -2px;
+                    left: 0;
+                    right: 0;
+                    margin: 0 auto;
+                    height: 0.7em;
+                    pointer-events: none;
+                    @include transition(0.1s transform);
 
-                    &.expandDownArrow {
-                        width: 0;
-                        padding: 0 2px;
-                    }
-
-                    > .sortArrow {
-                        position: absolute;
-                        top: -2px;
-                        left: 0;
-                        right: 0;
-                        margin: 0 auto;
-                        height: 0.7em;
-                        pointer-events: none;
-                        @include transition(0.1s transform);
-
-                        &.reverse {
-                            @include transform(rotate(180deg));
-                        }
-                    }
-
-                    &.serialNumber {
-                        width: 0;
+                    &.reverse {
+                        @include transform(rotate(180deg));
                     }
                 }
 
-                // Round corner
-                &:last-child > th:first-child {
-                    border-bottom-left-radius: 10px;
+                &.serialNumber {
+                    width: 0;
                 }
+            }
 
-                &:last-child > th:last-child {
-                    border-bottom-right-radius: 10px;
-                    padding-right: 10px;
-                }
+            // Round corner
+            &:last-child > th:first-child {
+                border-bottom-left-radius: 10px;
+            }
+
+            &:last-child > th:last-child {
+                border-bottom-right-radius: 10px;
+                padding-right: 10px;
             }
         }
 
