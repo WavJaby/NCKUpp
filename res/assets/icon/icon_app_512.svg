@@ -1,4 +1,5 @@
 <svg fill="#FFF" xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-30 -30 145 145">
+    <rect fill="#000000C0" x="-30" y="-30" width="100%" height="100%"/>
     <path d="
     M0 10 Q0 0,10 0
     H35 Q40 0,40 5

@@ -81,8 +81,14 @@
       "type": "image/svg+xml"
     },
     {
-      "src": "/NCKUpp/res/assets/icon/icon_app_96.png",
-      "sizes": "96x96",
+      "src": "/NCKUpp/res/assets/icon/icon_app_64.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/NCKUpp/res/assets/icon/icon_app_128.png",
+      "sizes": "128x128",
       "type": "image/png",
       "purpose": "maskable"
     },
@@ -99,8 +105,14 @@
       "purpose": "maskable"
     },
     {
-      "src": "/NCKUpp/res/assets/icon/icon_app_96.svg",
-      "sizes": "96x96",
+      "src": "/NCKUpp/res/assets/icon/icon_app_64.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/NCKUpp/res/assets/icon/icon_app_128.svg",
+      "sizes": "128x128",
       "type": "image/svg+xml",
       "purpose": "maskable"
     },
