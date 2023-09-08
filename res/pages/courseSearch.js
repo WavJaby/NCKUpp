@@ -302,16 +302,22 @@ export default function (router, loginState) {
 		multiple: true
 	})
 	const courseSearchForm = div('form',
-		input(null, '序號查詢 A0-000,B0-001', 'serial', {onkeyup, type: 'search'}),
-		input(null, '課程名稱', 'courseName', {onkeyup, type: 'search'}),
+		input(null, '序號查詢 A0-000,B0-001', 'serial', {onkeyup: onSearchFormInput, type: 'search'}),
+		input(null, '課程名稱', 'courseName', {onkeyup: onSearchFormInput, type: 'search'}),
 		deptNameSelectMenu.element,
-		input(null, '教師姓名', 'instructor', {onkeyup, type: 'search'}),
+		input(null, '教師姓名', 'instructor', {onkeyup: onSearchFormInput, type: 'search'}),
 		new SelectMenu('年級', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}).element,
 		dayOfWeekSelectMenu.element,
 		sectionSelectMenu.element,
 		button(null, '搜尋', search),
 		button(null, '關注列表', getWatchCourse),
 	);
+
+	function onSearchFormInput(e) {
+		if (e.key === 'Enter')
+			search();
+	}
+
 	const searchTask = [];
 
 	/**
