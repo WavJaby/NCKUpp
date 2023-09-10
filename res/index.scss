@@ -81,6 +81,7 @@
         overflow: hidden;
         position: relative;
         float: left;
+        z-index: 1;
         @include transition(height 0.15s ease-in);
 
         // List title

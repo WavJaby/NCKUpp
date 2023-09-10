@@ -64,7 +64,7 @@ export function UserGuideTool() {
 				'點教師姓名即可查看評價及評論',
 				true,
 			),
-			urSchoolCommentOpen: hideGuide,
+			urSchoolCommentOpen: closeGuide,
 			urSchoolCommentClose: () => window.messageAlert.addSuccess('教學就這樣啦，希望可以幫到大家🥰', null, 2000),
 		}
 	};
@@ -117,7 +117,6 @@ export function UserGuideTool() {
 			steps.push(() => highlightElement(guide.element, guide.description, guide.scrollTo, next));
 		}
 		steps[steps.length - 1]();
-		console.log(steps);
 	}
 
 	function highlightElement(element, description, scrollIntoView, next) {
