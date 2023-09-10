@@ -5,7 +5,6 @@ import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
 import com.wavjaby.ProxyManager;
-import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
@@ -21,8 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -126,41 +123,44 @@ public class Login implements EndpointModule {
 
                     if (shortInfo != null) {
                         if (shortInfo.studentID.equals("F74114760")) {
-//                        logger.log(shortInfo.studentID + " is login");
-
-                            ApiResponse response = new ApiResponse();
-                            List<Search.CourseData> courseDataList = new ArrayList<>();
-                            search.getQueryCourseData(new Search.SearchQuery("dept=A9", new String[0]), null,
-                                    cookieStore, response, courseDataList);
-                            response.setData(null);
-                            logger.log(response.toString());
-                            if (response.isSuccess() && !courseDataList.isEmpty()) {
-                                String preKey = courseDataList.get(0).getBtnPreRegister();
-                                if (preKey != null) {
-                                    response = new ApiResponse();
-                                    courseFunctionButton.postPreKey(preKey, cookieStore, response);
-                                    logger.log(response.toString());
-                                }
-
-                                response = new ApiResponse();
-                                courseSchedule.getPreCourseSchedule(cookieStore, response);
-                                if (response.isSuccess()) {
-                                    for (Object o : new JsonObject(response.getData()).getArray("schedule")) {
-                                        JsonObject i = (JsonObject) o;
-                                        if (!(i.getString("deptID") + '-' + i.getString("sn")).equals("A9-001"))
-                                            continue;
-                                        String delete = i.getString("delete");
-                                        if (delete != null) {
-                                            response = new ApiResponse();
-                                            courseSchedule.postPreCourseSchedule("action=delete&info=" + delete, cookieStore, response);
-                                            logger.log(response);
-                                        }
-
-                                        break;
-                                    }
-                                }
-                            }
+                            logger.log(shortInfo.studentID + " is login");
                         }
+//                        if (shortInfo.studentID.equals("F74114760")) {
+////                        logger.log(shortInfo.studentID + " is login");
+//
+//                            ApiResponse response = new ApiResponse();
+//                            List<Search.CourseData> courseDataList = new ArrayList<>();
+//                            search.getQueryCourseData(new Search.SearchQuery("dept=A9", new String[0]), null,
+//                                    cookieStore, response, courseDataList);
+//                            response.setData(null);
+//                            logger.log(response.toString());
+//                            if (response.isSuccess() && !courseDataList.isEmpty()) {
+//                                String preKey = courseDataList.get(0).getBtnPreRegister();
+//                                if (preKey != null) {
+//                                    response = new ApiResponse();
+//                                    courseFunctionButton.postPreKey(preKey, cookieStore, response);
+//                                    logger.log(response.toString());
+//                                }
+//
+//                                response = new ApiResponse();
+//                                courseSchedule.getPreCourseSchedule(cookieStore, response);
+//                                if (response.isSuccess()) {
+//                                    for (Object o : new JsonObject(response.getData()).getArray("schedule")) {
+//                                        JsonObject i = (JsonObject) o;
+//                                        if (!(i.getString("deptID") + '-' + i.getString("sn")).equals("A9-001"))
+//                                            continue;
+//                                        String delete = i.getString("delete");
+//                                        if (delete != null) {
+//                                            response = new ApiResponse();
+//                                            courseSchedule.postPreCourseSchedule("action=delete&info=" + delete, cookieStore, response);
+//                                            logger.log(response);
+//                                        }
+//
+//                                        break;
+//                                    }
+//                                }
+//                            }
+//                        }
                     } else {
                         logger.log(entry.getKey() + " is logout");
                         loginUserCookie.remove(entry.getKey());

@@ -55,12 +55,14 @@ export function UserGuideTool() {
 			nckuHubSort: () => highlightElement(
 				document.querySelector('body > div > div.router > div > table > tbody > tr:nth-child(2) > td.nckuHub'),
 				'點擊 NCKU HUB 評分即可查看課程心得 (如果無資料可以先搜尋通識課程看看😊)',
+				true,
 			),
 			nckuHubCommentOpen: hideGuide,
 			nckuHubCommentEmpty: closeGuide,
 			nckuHubCommentClose: () => highlightElement(
 				document.querySelector('body > div > div.router > div > table > tbody > tr > td > div > div > div.instructor > button.instructorBtn'),
 				'點教師姓名即可查看評價及評論',
+				true,
 			),
 			urSchoolCommentOpen: hideGuide,
 			urSchoolCommentClose: () => window.messageAlert.addSuccess('教學就這樣啦，希望可以幫到大家🥰', null, 2000),
@@ -126,7 +128,7 @@ export function UserGuideTool() {
 		guideMask.classList.add('show');
 
 		if (scrollIntoView && element.scrollIntoView)
-			element.scrollIntoView();
+			element.scrollIntoView({block: 'end', inline: 'nearest'});
 		if (!next)
 			guideNextBtn.classList.add('hide');
 		else
@@ -162,10 +164,22 @@ export function UserGuideTool() {
 			if (window.innerWidth - right < 300)
 				right = 0;
 			guideMaskTextBlock.style.right = right + 'px';
-		} else
+			guideMaskTextBlock.style.left = null;
+		} else {
+			guideMaskTextBlock.style.right = null;
 			guideMaskTextBlock.style.left = left + 'px';
+		}
 
-		guideMaskTextBlock.style.top = (bound.top + bound.height + 10) + 'px';
+		const top = bound.top + bound.height + 10;
+		if (top / window.innerHeight > 0.6) {
+			let bottom = window.innerHeight - bound.top + 10;
+			guideMaskTextBlock.style.top = null;
+			guideMaskTextBlock.style.bottom = bottom + 'px';
+		} else {
+			guideMaskTextBlock.style.top = top + 'px';
+			guideMaskTextBlock.style.bottom = null;
+		}
+
 		guideDescription.textContent = description;
 	}
 
