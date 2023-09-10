@@ -92,8 +92,8 @@ public class StudentIdentificationSystem implements EndpointModule {
             String averageScoreStr = row.get(10).text().trim();
             averageScore = averageScoreStr.isEmpty() ? -1 : Float.parseFloat(averageScoreStr);
 
-            String classRankingStr = row.get(11).text().trim();
-            if (classRankingStr.equals("　"))
+            String classRankingStr = row.get(11).text().trim().replace("　", "");
+            if (classRankingStr.isEmpty())
                 classRanking = classRankingTotal = -1;
             else {
                 String[] classRankingArr = classRankingStr.split("／", 2);
@@ -111,8 +111,8 @@ public class StudentIdentificationSystem implements EndpointModule {
                 this.classRankingTotal = classRankingTotal;
             }
 
-            String deptRankingStr = row.get(12).text().trim();
-            if (classRankingStr.equals("　"))
+            String deptRankingStr = row.get(12).text().trim().replace("　", "");
+            if (deptRankingStr.isEmpty())
                 deptRanking = deptRankingTotal = -1;
             else {
                 String[] deptRankingArr = deptRankingStr.split("／", 2);
@@ -123,7 +123,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                     if (deptRankingArr.length > 1 && !deptRankingArr[1].isEmpty())
                         deptRankingTotal = Integer.parseInt(deptRankingArr[1]);
                 } catch (NumberFormatException e) {
-                    logger.err(classRankingStr);
+                    logger.err(deptRankingStr);
                     logger.errTrace(e);
                 }
                 this.deptRanking = deptRanking;

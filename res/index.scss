@@ -30,8 +30,8 @@
     box-shadow: 0px -4px 15px 5px $pure-gray-1000;
     width: 100%;
     height: $navbar-height;
-    //position: absolute;
-    //z-index: 100;
+    position: absolute;
+    z-index: 100;
     white-space: nowrap;
 
     > .hamburgerMenu {
@@ -57,7 +57,6 @@
         position: fixed;
         top: $navbar-height;
         display: none;
-        z-index: 1;
     }
 
     > .homePage {
@@ -81,7 +80,6 @@
         overflow: hidden;
         position: relative;
         float: left;
-        z-index: 1;
         @include transition(height 0.15s ease-in);
 
         // List title
@@ -186,7 +184,6 @@
             height: 100vh;
             display: block;
             position: fixed;
-            z-index: 1;
             @include transform(translateX(-100%));
             @include transition(transform 0.15s);
 
@@ -330,7 +327,7 @@ footer {
     width: 100%;
     top: $navbar-height;
     bottom: 0;
-    position: fixed;
+    position: absolute;
     margin: 0;
     overflow: auto;
 }

@@ -36,7 +36,7 @@ export default function (router) {
 			img('./res/assets/page_home/add_course_function.png'),
 			h2('支援預排、加選', 'title'),
 			p('登入後可跟選課網站連動，進行預排、單科加選等操作'),
-			p('單科加選一律以成大系統為主，若用於搶課未成功本網站一概不負責)', 'small')
+			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
 		)
 	);
 	const siteInfo = div('siteInfo',
