@@ -192,7 +192,7 @@ import {
 	th,
 	thead,
 	tr
-} from '../lib/domHelper_v002.min.js';
+} from '../lib/domHelper_v003.min.js';
 
 import SelectMenu from '../selectMenu.js';
 import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
@@ -208,9 +208,10 @@ const totalColSpan = 17;
 /**
  * @param {QueryRouter} router
  * @param {Signal} loginState
+ * @param {UserGuideTool} userGuideTool
  * @return {HTMLDivElement}
  */
-export default function (router, loginState) {
+export default function (router, loginState, userGuideTool) {
 	console.log('Course search Init');
 	const styles = mountableStylesheet('./res/pages/courseSearch.css');
 	const expandArrowImage = img('./res/assets/down_arrow_icon.svg', 'Expand button');
@@ -218,6 +219,7 @@ export default function (router, loginState) {
 
 	const searchResultSignal = new Signal({loading: false, courseResult: null, nckuHubResult: null});
 	const instructorInfoBubble = InstructorInfoBubble();
+	const userGuideTrigger = userGuideTool.pageTrigger.CourseSearch;
 
 	// Element
 	const courseSearchResultInfo = span();
@@ -381,6 +383,7 @@ export default function (router, loginState) {
 		// Update queryString
 		lastQueryString = queryString;
 		console.log('Search:', queryString);
+		userGuideTrigger.searchStart();
 
 		// Fetch data
 		const searchA9Fetch = isSearchA9 ? fetchApi('/A9Registered', 'Get A9 register count', {timeout: 5000}) : null;
@@ -636,6 +639,8 @@ export default function (router, loginState) {
 			sortResultItem(key, this, ([a], [b]) => {
 				return sortNumberKeyOrder(a.nckuhub, b.nckuhub, keys);
 			});
+
+			userGuideTrigger.nckuHubSort();
 		}
 	}
 
@@ -758,10 +763,10 @@ export default function (router, loginState) {
 					data.tags === null ? null : div('tags',
 						data.tags.map(i => i.link
 							? a(i.name, i.link, null, null, {
-								style: 'background-color:' + i.color,
+								style: 'background:' + i.color,
 								target: '_blank'
 							})
-							: div(null, text(i.name), {style: 'background-color:' + i.color})
+							: div(null, text(i.name), {style: 'background:' + i.color})
 						)
 					),
 
@@ -814,10 +819,13 @@ export default function (router, loginState) {
 					? State(nckuHubResultData.signal, () => {
 						if (data.nckuhub) {
 							if (data.nckuhub.noData)
-								return td('沒有資料', 'nckuHub', {colSpan: 3});
+								return td('沒有資料', 'nckuHub', {colSpan: 3, onclick: userGuideTrigger.nckuHubCommentEmpty});
 							const options = {colSpan: 3, onclick: openNckuHubDetailWindow};
 							if (data.nckuhub.rate_count === 0)
-								return td('沒有評分', 'nckuHub', options);
+								return td(null, 'nckuHub', options,
+									div(null, span('收穫', 'label'), span('--', null, {style: 'color:' + textColor.orange})),
+									div(null, span('甜度', 'label'), span('--', null, {style: 'color:' + textColor.orange})),
+									div(null, span('涼度', 'label'), span('--', null, {style: 'color:' + textColor.orange})));
 							return td(null, 'nckuHub', options,
 								div(null, span('收穫', 'label'), nckuHubScoreToSpan(data.nckuhub.got)),
 								div(null, span('甜度', 'label'), nckuHubScoreToSpan(data.nckuhub.sweet)),
@@ -826,12 +834,12 @@ export default function (router, loginState) {
 						}
 						return td('載入中...', 'nckuHub', {colSpan: 3});
 					})
-					: td('沒有資料', 'nckuHub', {colSpan: 3})
+					: td('沒有資料', 'nckuHub', {colSpan: 3, onclick: userGuideTrigger.nckuHubCommentEmpty})
 
 				// Open NCKU Hub detail window
 				function openNckuHubDetailWindow() {
-					if (!data.nckuhub) return;
 					nckuHubDetailWindow.set(data);
+					userGuideTrigger.nckuHubCommentOpen();
 				}
 
 				// render result item
@@ -891,6 +899,8 @@ export default function (router, loginState) {
 
 			// First filter update after result render
 			updateFilter(true);
+
+			setTimeout(userGuideTrigger.resultRender, 1000);
 		}
 
 		// Update display element
@@ -916,6 +926,7 @@ export default function (router, loginState) {
 			const instructor = response.data;
 			instructor.info = info;
 			instructorDetailWindow.set(instructor);
+			userGuideTrigger.urSchoolCommentOpen();
 		});
 	}
 
@@ -1047,8 +1058,8 @@ export default function (router, loginState) {
 		}
 	});
 
-	const instructorDetailWindow = new InstructorDetailWindow(courseSearch);
-	const nckuHubDetailWindow = new NckuHubDetailWindow(courseSearch);
+	const instructorDetailWindow = new InstructorDetailWindow(courseSearch, userGuideTrigger);
+	const nckuHubDetailWindow = new NckuHubDetailWindow(courseSearch, userGuideTrigger);
 	const flexTimeWindow = new FlexTimeWindow(courseSearch);
 
 	return courseSearch;
@@ -1068,7 +1079,7 @@ function instructorInfoElement(instructor) {
 						td(instructor.recommend, getColor(instructor.recommend)),
 						td(instructor.reward, getColor(instructor.reward)),
 						td(instructor.articulate, getColor(instructor.articulate)),
-						th(instructor.pressure, getColor(5 - instructor.pressure)),
+						th(instructor.pressure, getColor(6 - instructor.pressure)),
 						td(instructor.sweet, getColor(instructor.sweet))
 					),
 				)
@@ -1119,8 +1130,8 @@ function InstructorInfoBubble() {
 	return offsetElement;
 }
 
-function InstructorDetailWindow(courseSearch) {
-	const popupWindow = new PopupWindow({root: courseSearch});
+function InstructorDetailWindow(courseSearch, userGuideTrigger) {
+	const popupWindow = new PopupWindow({root: courseSearch, onclose: userGuideTrigger.urSchoolCommentClose});
 	this.set = function (/**@param{UrSchoolInstructor}instructor*/instructor) {
 		const instructorInfo = instructorInfoElement(instructor.info);
 		popupWindow.setWindowContent(div('instructorDetailWindow',
@@ -1159,8 +1170,8 @@ function getColor(number) {
 	return number < 2 ? 'red' : number < 4 ? 'yellow' : 'blue';
 }
 
-function NckuHubDetailWindow(courseSearch) {
-	const popupWindow = new PopupWindow({root: courseSearch});
+function NckuHubDetailWindow(courseSearch, userGuideTrigger) {
+	const popupWindow = new PopupWindow({root: courseSearch, onclose: userGuideTrigger.nckuHubCommentClose});
 
 	this.set = function (/**@param{CourseData}courseData*/courseData) {
 		const nckuHub = courseData.nckuhub;

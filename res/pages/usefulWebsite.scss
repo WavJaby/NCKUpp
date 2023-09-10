@@ -20,7 +20,7 @@
             min-height: 150px;
             border-radius: 10px;
             padding: 10px;
-            @include box-sizing(border-box);
+            @include box-sizing-border;
             counter-increment: grid-item;
 
             &:hover {

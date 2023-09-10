@@ -23,7 +23,7 @@
         cursor: pointer;
         display: block;
         padding: 10px;
-        @include box-sizing(border-box);
+        @include box-sizing-border;
         border-radius: 10px;
         margin: 5px 0 0 5px;
 

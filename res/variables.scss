@@ -70,10 +70,19 @@ $icon-search: url($source-root + 'search_icon.svg');
     #{$prop}: -webkit-calc(#{$values});
 }
 
-@mixin box-sizing($value) {
-    box-sizing: $value;
-    -moz-box-sizing: $value;
-    -webkit-box-sizing: $value;
+@mixin box-sizing-border {
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
+
+@mixin hide-scroll-bar {
+    // Hide scrollbar for Chrome, Safari and Opera
+    &::-webkit-scrollbar {
+        display: none;
+    }
+    -ms-overflow-style: none; // IE and Edge
+    scrollbar-width: none; // Firefox
 }
 
 @mixin cursor-grabbing {

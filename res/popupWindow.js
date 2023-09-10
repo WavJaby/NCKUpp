@@ -1,8 +1,9 @@
-import {button, div} from './lib/domHelper_v002.min.js';
+import {button, div} from './lib/domHelper_v003.min.js';
 
 /**
  * @typedef PopupWindowOption
  * @property {HTMLElement} [root] Root element for window. Default document.body
+ * @property {function()} [onclose]
  */
 
 /**
@@ -32,6 +33,8 @@ export default function PopupWindow(options) {
 
 	function windowClose() {
 		options.root.removeChild(popupWindow);
+		if (options.onclose)
+			options.onclose();
 		window.removeEventListener('keyup', onkeyup);
 	}
 

@@ -20,7 +20,7 @@ body {
 
 // Button
 button {
-    background-color: $button-bg-color;
+    background: $button-bg-color;
     color: $font-color;
     border: none;
     padding: 5px 10px;
@@ -30,11 +30,11 @@ button {
     font-size: $font-size;
 
     &:hover {
-        background-color: $button-hover-color;
+        background: $button-hover-color;
     }
 
     &:active {
-        background-color: $button-active-color;
+        background: $button-active-color;
     }
 }
 
@@ -45,13 +45,13 @@ textarea:focus, select:focus, input:focus, button:focus {
 }
 
 input {
-    background-color: $button-bg-color;
+    background: $button-bg-color;
     color: $font-color;
     border: none;
     margin: 0;
     padding: 5px;
     border-radius: 5px;
-    @include box-sizing(border-box);
+    @include box-sizing-border;
     text-decoration: none;
     font-size: $font-size;
 

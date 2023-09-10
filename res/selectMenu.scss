@@ -48,7 +48,7 @@
         z-index: 1;
         left: 0;
         top: 0;
-        @include box-sizing(border-box);
+        @include box-sizing-border;
         box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.4);
 
         &.open {
@@ -133,7 +133,7 @@
                 padding: 0;
                 // Multi selection
                 > .checkboxWithName {
-                    @include box-sizing(border-box);
+                    @include box-sizing-border;
                     width: 100%;
                     line-height: 2em;
                     padding: 0 10px;

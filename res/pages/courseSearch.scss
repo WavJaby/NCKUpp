@@ -121,7 +121,7 @@ $instructor-info-fade-time: 200ms;
         // Header
         > thead {
             background: $search-result-header-bg-color;
-            box-shadow: 0 0 10px 0px $pure-gray-1000;
+            box-shadow: 0 0 10px 0 $pure-gray-1000;
             border-radius: 0 0 10px 10px;
             position: sticky;
             top: 0;
@@ -153,7 +153,6 @@ $instructor-info-fade-time: 200ms;
                     font-size: 18px;
                     text-align: left;
                     padding: 2px 5px;
-                    white-space: nowrap;
 
                     > .searchBar {
                         width: 100%;
@@ -187,7 +186,7 @@ $instructor-info-fade-time: 200ms;
                     }
 
                     > .selectMenu {
-                        width: 10em;
+                        width: 15em;
                     }
 
                     > .requireFilter {
@@ -227,11 +226,11 @@ $instructor-info-fade-time: 200ms;
             }
 
             // Round corner
-            &:last-child > th:first-child {
+            > tr:last-child > th:first-child {
                 border-bottom-left-radius: 10px;
             }
 
-            &:last-child > th:last-child {
+            > tr:last-child > th:last-child {
                 border-bottom-right-radius: 10px;
                 padding-right: 10px;
             }
@@ -289,7 +288,7 @@ $instructor-info-fade-time: 200ms;
                         width: 100%;
                         height: 100%;
                         display: table;
-                        @include box-sizing(border-box);
+                        @include box-sizing-border;
                         white-space: pre-wrap;
 
                         > span {
@@ -318,7 +317,7 @@ $instructor-info-fade-time: 200ms;
                     white-space: pre-wrap;
 
                     > button {
-                        background-color: $button-dark-bg-color;
+                        background: $button-dark-bg-color;
                         display: inline-block;
                         cursor: pointer;
                         border-radius: 10px;
@@ -333,7 +332,7 @@ $instructor-info-fade-time: 200ms;
                     width: 0;
 
                     > button {
-                        background-color: $button-dark-bg-color;
+                        background: $button-dark-bg-color;
                         margin-bottom: 2px;
                         padding: 2px 5px;
                         font-size: 18px;
@@ -341,7 +340,7 @@ $instructor-info-fade-time: 200ms;
                         cursor: pointer;
 
                         &:hover {
-                            background-color: $button-dark-green-bg-color;
+                            background: $button-dark-green-bg-color;
                         }
                     }
                 }
@@ -474,6 +473,10 @@ $instructor-info-fade-time: 200ms;
                     display: block;
                     overflow-x: auto;
                     @include calc(width, "100vw - 20px");
+
+                    > th.filterOptions {
+                        white-space: nowrap;
+                    }
                 }
 
                 > tr:last-child {
@@ -532,7 +535,7 @@ $instructor-info-fade-time: 200ms;
                             margin: 2px 1%;
                             padding: 0 5px;
                             text-align: left;
-                            @include box-sizing(border-box);
+                            @include box-sizing-border;
                         }
 
                         > .label {
@@ -580,7 +583,7 @@ $instructor-info-fade-time: 200ms;
                                 margin: 0 3px 0 0;
                                 height: 1.7em;
                                 vertical-align: top;
-                                @include box-sizing(border-box);
+                                @include box-sizing-border;
                             }
                         }
 
@@ -588,7 +591,7 @@ $instructor-info-fade-time: 200ms;
                             width: 100%;
                             margin: 5px 0;
                             padding: 0 5px;
-                            @include box-sizing(border-box);
+                            @include box-sizing-border;
                             border-left: none;
                             clear: both;
 
@@ -675,7 +678,7 @@ $instructor-info-fade-time: 200ms;
                     padding: 10px;
 
                     > span {
-                        background-color: $pure-gray-700;
+                        background: $pure-gray-700;
                         color: #ff4d4d;
                         font-size: 18px;
                         padding: 2px 10px;
@@ -706,7 +709,7 @@ $instructor-info-fade-time: 200ms;
             max-width: 500px;
             padding: 5px;
             border-radius: 10px;
-            @include box-sizing(border-box);
+            @include box-sizing-border;
             white-space: pre-wrap;
             word-break: break-word;
             bottom: 0;
@@ -837,7 +840,7 @@ $instructor-info-fade-time: 200ms;
                 text-align: center;
 
                 > th {
-                    background-color: #04AA6D;
+                    background: #04AA6D;
                     border: 1px solid #ddd;
                     padding: 5px 10px;
                 }

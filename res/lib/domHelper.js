@@ -256,11 +256,15 @@ function RouterLazyLoad(url, ...parameter) {
  */
 
 /**
- * @typedef {HTMLElement} PageElement
+ * @typedef PageElementFunction
  * @property {string} pageId
  * @property {function()} onRender
  * @property {function()} onPageOpen
  * @property {function()} onPageClose
+ */
+
+/**
+ * @typedef {HTMLElement & PageElementFunction} PageElement
  */
 
 /**
@@ -278,7 +282,8 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	routerRoot.className = 'router';
 	const /**@type{Object.<string, PageElement>}*/loadedPage = {};
 	const pageScrollSave = {};
-	let lastPage, lastPageId = null;
+	let /**@type{?PageElement}*/lastPage = null;
+	let /**@type{?string}*/lastPageId = null;
 
 	urlSearchDataUpdate();
 	urlHashDataUpdate();
@@ -293,7 +298,8 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	this.openPage = openPage;
 	this.initFirstPage = function () {
 		openPage(null, true);
-	}
+	};
+
 	/**
 	 * @param {PageElement} page
 	 * @return {PageStorage}
@@ -310,6 +316,13 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 			localStorage.setItem(page.pageId, JSON.stringify(this));
 		};
 		return objData;
+	};
+
+	/**
+	 * @return {string}
+	 */
+	this.getCurrentPage = function () {
+		return lastPageId;
 	};
 
 	function openPage(pageId, isHistory) {

@@ -1,12 +1,14 @@
 @import '../variables';
 
-.router > .home {
-
+.home {
     > .siteInfo {
+        height: 100vh;
         text-align: center;
         position: sticky;
         top: 0;
-        z-index: -1;
+        overflow: auto;
+        padding-bottom: 200px;
+        @include box-sizing-border;
 
         > .title {
             display: inline-block;
@@ -43,6 +45,7 @@
         > .description {
             font-size: 25px;
             line-height: 2em;
+            margin-bottom: 20px;
 
             > img {
                 max-height: 1.6em;
@@ -51,18 +54,164 @@
                 display: inline-block;
             }
         }
+
+        > .toCourseSearchLink {
+            font-size: 30px;
+            white-space: nowrap;
+            display: block;
+
+            &::before {
+                color: greenyellow;
+                content: '>';
+                margin: 0 5px 0 0;
+            }
+
+            &::after {
+                color: greenyellow;
+                content: '<';
+                margin: 0 0 0 5px;
+            }
+
+            > span {
+                margin: 0;
+                animation: LinkAnimation forwards infinite 1000ms;
+            }
+
+            @keyframes LinkAnimation {
+                50% {
+                    margin: 0 10px;
+                }
+            }
+        }
+
+        > .introduction {
+            max-width: 100%;
+            padding: 5px;
+            display: inline-block;
+            overflow: auto;
+            white-space: nowrap;
+            vertical-align: top;
+            @include hide-scroll-bar;
+            @include box-sizing-border;
+
+            > .block {
+                background: $pure-gray-900;
+                width: 450px;
+                //max-width: 100%;
+                border-radius: 20px;
+                overflow: hidden;
+                padding: 10px;
+                margin: 5px;
+                display: inline-block;
+                vertical-align: top;
+                @include box-sizing-border;
+
+                @media only screen and ($small-screen) {
+                    width: 400px;
+                }
+
+                > img {
+                    float: left;
+                    width: 150px;
+                    height: 150px;
+                    border-radius: 100%;
+                    margin-right: 5px;
+                    border: white 2px solid;
+                }
+
+                > .title {
+                    font-size: 30px;
+                    margin: 10px 0;
+                    white-space: pre-wrap;
+                }
+
+                > p {
+                    font-size: 18px;
+                }
+
+                > p.small {
+                    color: $pure-gray-600;
+                    font-size: 14px;
+                }
+            }
+        }
+    }
+
+    > .scrollDownIndicator {
+        background: linear-gradient(#00000000, $background-color);
+        width: 100%;
+        height: 100px;
+        position: absolute;
+        padding: 0 15%;
+        bottom: 0;
+        cursor: pointer;
+        @include box-sizing-border;
+
+        > .scrollDownArrow {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            bottom: 50px;
+            animation: ScrollDownArrowAnimation forwards infinite 2000ms;
+            @include transition(opacity 200ms);
+        }
+
+        @keyframes ScrollDownArrowAnimation {
+            50% {
+                bottom: 40px;
+            }
+        }
+
+        > .title {
+            line-height: 45px;
+            font-size: 35px;
+            position: absolute;
+            left: 15%;
+            right: 15%;
+            bottom: 0;
+            margin: 0 auto;
+            text-align: center;
+            white-space: nowrap;
+            @include transition(right 500ms);
+        }
+
+        @media only screen and ($small-screen) {
+            padding: 5px 5px 0 5px;
+
+            > .title {
+                left: 5px;
+                right: 5px;
+            }
+        }
+
+        &.toLeft {
+            > .scrollDownArrow {
+                opacity: 0;
+            }
+
+            > .title {
+                right: 100%;
+            }
+        }
     }
 
     > .panels {
         background: $background-color;
-        padding: 5px 15% 0 15%;
+        margin-top: -$navbar-height;
+        padding: 0 15% 15%;
+        position: relative;
 
         @media only screen and ($small-screen) {
-            padding: 5px 5px 0 5px;
+            padding: 0 5px 0 5px;
         }
 
         .title {
             margin: 0;
+            line-height: 45px;
+            font-size: 35px;
         }
 
         .splitLine {

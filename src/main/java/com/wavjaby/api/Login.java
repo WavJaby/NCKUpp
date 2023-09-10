@@ -111,10 +111,9 @@ public class Login implements EndpointModule {
 
         keepLoginUpdater.scheduleAtFixedRate(() -> {
             for (Map.Entry<String, CookieStore> entry : loginUserCookie.entrySet()) {
-                CookieStore cookieStore = entry.getValue();
-                search.getAllDeptData(cookieStore, null);
-                String result;
                 try {
+                    CookieStore cookieStore = entry.getValue();
+                    String result;
                     Connection.Response checkLoginPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=portal")
                             .header("Connection", "keep-alive")
                             .cookieStore(cookieStore)
@@ -123,52 +122,51 @@ public class Login implements EndpointModule {
                             .userAgent(Main.USER_AGENT)
                             .execute();
                     result = checkLoginPage.body();
-                } catch (IOException e) {
-                    logger.errTrace(e);
-                    continue;
-                }
-                UserShortInfo shortInfo = getCourseLoginUserInfo(result, cookieStore);
+                    UserShortInfo shortInfo = getCourseLoginUserInfo(result, cookieStore);
 
-                if (shortInfo != null) {
-                    if (shortInfo.studentID.equals("F74114760")) {
+                    if (shortInfo != null) {
+                        if (shortInfo.studentID.equals("F74114760")) {
 //                        logger.log(shortInfo.studentID + " is login");
 
-                        ApiResponse response = new ApiResponse();
-                        List<Search.CourseData> courseDataList = new ArrayList<>();
-                        search.getQueryCourseData(new Search.SearchQuery("dept=A9", new String[0]), null,
-                                cookieStore, response, courseDataList);
-                        response.setData(null);
-                        logger.log(response.toString());
-                        if (response.isSuccess() && !courseDataList.isEmpty()) {
-                            String preKey = courseDataList.get(0).getBtnPreRegister();
-                            if (preKey != null) {
+                            ApiResponse response = new ApiResponse();
+                            List<Search.CourseData> courseDataList = new ArrayList<>();
+                            search.getQueryCourseData(new Search.SearchQuery("dept=A9", new String[0]), null,
+                                    cookieStore, response, courseDataList);
+                            response.setData(null);
+                            logger.log(response.toString());
+                            if (response.isSuccess() && !courseDataList.isEmpty()) {
+                                String preKey = courseDataList.get(0).getBtnPreRegister();
+                                if (preKey != null) {
+                                    response = new ApiResponse();
+                                    courseFunctionButton.postPreKey(preKey, cookieStore, response);
+                                    logger.log(response.toString());
+                                }
+
                                 response = new ApiResponse();
-                                courseFunctionButton.postPreKey(preKey, cookieStore, response);
-                                logger.log(response.toString());
-                            }
+                                courseSchedule.getPreCourseSchedule(cookieStore, response);
+                                if (response.isSuccess()) {
+                                    for (Object o : new JsonObject(response.getData()).getArray("schedule")) {
+                                        JsonObject i = (JsonObject) o;
+                                        if (!(i.getString("deptID") + '-' + i.getString("sn")).equals("A9-001"))
+                                            continue;
+                                        String delete = i.getString("delete");
+                                        if (delete != null) {
+                                            response = new ApiResponse();
+                                            courseSchedule.postPreCourseSchedule("action=delete&info=" + delete, cookieStore, response);
+                                            logger.log(response);
+                                        }
 
-                            response = new ApiResponse();
-                            courseSchedule.getPreCourseSchedule(cookieStore, response);
-                            if (response.isSuccess()) {
-                                for (Object o : new JsonObject(response.getData()).getArray("schedule")) {
-                                    JsonObject i = (JsonObject) o;
-                                    if (!(i.getString("deptID") + '-' + i.getString("sn")).equals("A9-001"))
-                                        continue;
-                                    String delete = i.getString("delete");
-                                    if (delete != null) {
-                                        response = new ApiResponse();
-                                        courseSchedule.postPreCourseSchedule("action=delete&info=" + delete, cookieStore, response);
-                                        logger.log(response);
+                                        break;
                                     }
-
-                                    break;
                                 }
                             }
                         }
+                    } else {
+                        logger.log(entry.getKey() + " is logout");
+                        loginUserCookie.remove(entry.getKey());
                     }
-                } else {
-                    logger.log(entry.getKey() + " is logout");
-                    loginUserCookie.remove(entry.getKey());
+                } catch (IOException e) {
+                    logger.errTrace(e);
                 }
             }
         }, 1000 * 10, 1000 * 60 * 5, TimeUnit.MILLISECONDS);

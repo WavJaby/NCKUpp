@@ -1,3 +1,109 @@
-.userGuide {
+@import './variables';
 
+$guide-button-bg-color: #8461e5;
+$guide-button-hover-bg-color: #916ef6;
+
+.userGuide {
+    > .userGuideButton {
+        background: $guide-button-bg-color;
+        $width: 130px;
+        $height: 40px;
+        width: $width;
+        height: $height;
+        border-radius: 20px 0 0 20px;
+        padding: 0;
+        text-align: left;
+        position: fixed;
+        right: $height - $width;
+        bottom: 30px;
+        box-shadow: 0 3px 5px 0 $pure-gray-1000;
+        cursor: pointer;
+        @include transition(right 100ms);
+
+        > img {
+            height: 30px;
+            width: 30px;
+            padding: 5px;
+        }
+
+        > span {
+            line-height: $height;
+            font-size: 20px;
+            vertical-align: top;
+        }
+
+        &:hover {
+            right: 0;
+        }
+    }
+
+    > .guideMask {
+        display: none;
+
+        &.show {
+            display: block;
+        }
+
+        > .mask {
+            background: #000000C0;
+            position: fixed;
+
+            &.maskTop, &.maskBottom {
+                width: 100vw;
+                height: 100vh;
+            }
+
+            &.maskLeft, &.maskRight {
+                width: 100vw;
+            }
+        }
+
+        > .maskSquare {
+            position: fixed;
+            border: white 2px solid;
+            margin: -2px 0 0 -2px;
+            pointer-events: none;
+            border-radius: 7px;
+            //@include box-sizing-border;
+        }
+
+        > .textBlock {
+            background: $pure-gray-800;
+            font-size: 18px;
+            padding: 5px;
+            border: white 1px solid;
+            border-radius: 10px;
+            position: fixed;
+
+            > button {
+                cursor: pointer;
+                border-radius: 50px;
+                box-shadow: none;
+
+                &.nextBtn {
+                    background: $guide-button-bg-color;
+                    float: right;
+
+                    &:hover {
+                        background: $guide-button-hover-bg-color;
+                    }
+
+                    &.hide {
+                        visibility: hidden;
+                        height: 20px;
+                    }
+                }
+
+                &.closeBtn {
+                    color: $pure-gray-400;
+                    background: none;
+                    font-size: 14px;
+                    padding: 5px;
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                }
+            }
+        }
+    }
 }

@@ -49,7 +49,7 @@ $popupWindow-bg-color: $pure-gray-900;
             height: 100%;
             position: static;
             border-radius: 0;
-            @include box-sizing(border-box);
+            @include box-sizing-border;
             padding: 2px;
 
             > .closeButton > .icon {

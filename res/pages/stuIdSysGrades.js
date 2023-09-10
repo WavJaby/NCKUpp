@@ -1,17 +1,6 @@
 'use strict';
 
-import {
-	button,
-	div,
-	h1,
-	img,
-	mountableStylesheet,
-	ShowIf,
-	Signal,
-	span,
-	State,
-	text
-} from '../lib/domHelper_v002.min.js';
+import {div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../lib/domHelper_v003.min.js';
 import {fetchApi} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
@@ -66,7 +55,6 @@ export default function (router, loginState) {
 	const semestersInfo = new Signal();
 	const semesterGrades = new Signal();
 	const normalDestImgWindow = new PopupWindow({root: router.element});
-	const normalDestImg = new Signal();
 	let stuIdLoadingCount = 0;
 	let stuIdLoading = false;
 
@@ -205,7 +193,7 @@ export default function (router, loginState) {
 			(semester.charAt(semester.length - 1) === '0' ? '上學期' : '下學期');
 	}
 
-	function gradeToText(grade){
+	function gradeToText(grade) {
 		return grade === -1 ? '無' : grade === -2 ? '成績未到' : grade === -3 ? '通過' : grade;
 	}
 

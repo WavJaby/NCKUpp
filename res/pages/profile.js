@@ -1,4 +1,4 @@
-import {div, mountableStylesheet} from '../lib/domHelper_v002.min.js';
+import {div, mountableStylesheet} from '../lib/domHelper_v003.min.js';
 
 /**
  * @param {QueryRouter} router

@@ -23,7 +23,7 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/lib/domHelper_v002.min.js';
+} from './res/lib/domHelper_v003.min.js';
 
 import {metaSet, metaType} from './res/lib/metaTag.js';
 import {fetchApi, isLocalNetwork} from './res/lib/lib.js';
@@ -52,7 +52,6 @@ window.pageLoading = new Signal(false);
 			() => console.log("StorageAccess granted"),
 			() => console.log("StorageAccess denied")
 		);
-	const userGuide = new UserGuideTool();
 
 	// debug
 	const debugModeEnable = isLocalNetwork || window.localStorage && !!localStorage.getItem('debug');
@@ -74,6 +73,7 @@ window.pageLoading = new Signal(false);
 		console.log('Debug disable');
 
 	// main code
+	const userGuideTool = new UserGuideTool();
 	const pageIdName = {
 		// search: 'Search',
 		// schedule: 'Schedule',
@@ -92,8 +92,8 @@ window.pageLoading = new Signal(false);
 	const showLoginWindow = new Signal(false);
 	const queryRouter = new QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
-			Home: new RouterLazyLoad('./res/pages/home_v002.min.js'),
-			CourseSearch: new RouterLazyLoad('./res/pages/courseSearch.js', userLoginData),
+			Home: new RouterLazyLoad('./res/pages/home_v003.min.js'),
+			CourseSearch: new RouterLazyLoad('./res/pages/courseSearch.js', userLoginData, userGuideTool),
 			Schedule: new RouterLazyLoad('./res/pages/courseSchedule.js', userLoginData),
 			GradeInquiry: new RouterLazyLoad('./res/pages/stuIdSysGrades.js', userLoginData),
 			CourseSelectionPreference: new RouterLazyLoad('./res/pages/preferenceAdjust.js', userLoginData),
@@ -123,6 +123,7 @@ window.pageLoading = new Signal(false);
 			),
 		)
 	);
+	userGuideTool.setRouter(queryRouter);
 	enableGoogleAnalytics(debugModeEnable);
 
 	const pageButtons = {};
@@ -192,7 +193,7 @@ window.pageLoading = new Signal(false);
 		),
 		// Pages
 		queryRouter.element,
-		userGuide.element,
+		userGuideTool.element,
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert.element,
@@ -203,9 +204,9 @@ window.pageLoading = new Signal(false);
 	window.onload = () => {
 		console.log('Window onload');
 		font.mount();
-		queryRouter.initFirstPage();
 		while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
 		document.body.appendChild(root);
+		queryRouter.initFirstPage();
 	};
 
 	// functions
@@ -349,10 +350,12 @@ window.pageLoading = new Signal(false);
 		}
 
 		function removeMessageBox(messageBox) {
+			if (messageBox.removeAnimationTimeout)
+				return;
 			clearTimeout(messageBox.removeTimeout);
 			messageBox.style.opacity = '0';
 			messageBox.style.marginTop = (-messageBox.offsetHeight - 10) + 'px';
-			setTimeout(() => {
+			messageBox.removeAnimationTimeout = setTimeout(() => {
 				messageBoxRoot.removeChild(messageBox);
 			}, 500);
 		}

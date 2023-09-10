@@ -29,12 +29,12 @@
             padding: 5px;
             border-radius: 10px;
             text-align: left;
-            @include box-sizing(border-box);
+            @include box-sizing-border;
             overflow: hidden;
             font-size: 16px;
 
             > .removeBtn {
-                background-color: $button-dark-bg-color;
+                background: $button-dark-bg-color;
                 border-radius: 7px;
                 margin-left: 10px;
                 padding: 2px 5px;
@@ -42,7 +42,7 @@
                 cursor: pointer;
 
                 &:hover {
-                    background-color: $button-dark-red-bg-color;
+                    background: $button-dark-red-bg-color;
                 }
             }
         }
@@ -96,7 +96,7 @@
     }
 
     > .saveOrderBtn {
-        background-color: $button-dark-bg-color;
+        background: $button-dark-bg-color;
         border-radius: 20px;
         margin: 10px auto;
         display: none;
@@ -106,7 +106,7 @@
         }
 
         &:hover {
-            background-color: $button-dark-green-bg-color;
+            background: $button-dark-green-bg-color;
         }
     }
 }

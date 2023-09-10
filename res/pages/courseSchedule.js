@@ -1,6 +1,6 @@
 'use strict';
 
-import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table} from '../lib/domHelper_v002.min.js';
+import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table} from '../lib/domHelper_v003.min.js';
 import {checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 

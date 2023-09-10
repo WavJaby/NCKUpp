@@ -20,7 +20,7 @@
             height: 30px;
             width: 30px;
             padding: 5px;
-            @include box-sizing(border-box);
+            @include box-sizing-border;
             display: inline-block;
         }
 
