@@ -4,15 +4,25 @@ import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
-public class ProxyManager {
+import static com.wavjaby.lib.Lib.getFileFromPath;
+import static com.wavjaby.lib.Lib.readFileToString;
+
+public class ProxyManager implements Module {
     private static final String TAG = "[ProxyManager]";
     private static final Logger logger = new Logger(TAG);
+    private final PropertiesReader properties;
+    private final List<ProxyData> proxies = new ArrayList<>();
+    private File proxyFile;
+    private long proxyFileLastModified;
     private ProxyData proxy;
+    private int proxyIndex;
+    private boolean useProxy;
 
     public static class ProxyData extends ProxyInfo {
         public final String ip;
@@ -112,32 +122,82 @@ public class ProxyManager {
     }
 
     ProxyManager(PropertiesReader properties) {
-        if (!properties.getPropertyBoolean("useProxy", true))
+        this.properties = properties;
+    }
+
+    @Override
+    public void start() {
+        proxyFile = getFileFromPath("./proxy.txt", false);
+        useProxy = properties.getPropertyBoolean("useProxy", true);
+        if (useProxy)
+            updateProxy();
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    @Override
+    public String getTag() {
+        return TAG;
+    }
+
+    /**
+     * @return true if new proxy updated
+     */
+    private boolean updateProxy() {
+        // Check last modify
+        long lastModified = proxyFile.lastModified();
+        if (proxyFileLastModified == lastModified)
+            return false;
+        proxyFileLastModified = lastModified;
+
+        // Read proxy file
+        String proxiesString = readFileToString(proxyFile, false, StandardCharsets.UTF_8);
+        if (proxiesString != null) {
+            List<ProxyData> oldProxy = new ArrayList<>();
+            List<ProxyData> newProxy = new ArrayList<>();
+            String[] proxiesStr = proxiesString.split("\r?\n");
+            // Read new proxy
+            for (String proxyStr : proxiesStr) {
+                if (proxyStr.isEmpty())
+                    continue;
+                ProxyData newProxyData = new ProxyData(proxyStr, "local");
+                if (proxies.contains(newProxyData))
+                    oldProxy.add(newProxyData);
+                else
+                    newProxy.add(newProxyData);
+            }
+            // Proxy file empty
+            if (oldProxy.isEmpty() && newProxy.isEmpty())
+                return false;
+
+            // Update proxy
+            synchronized (proxies) {
+                proxies.clear();
+                proxies.addAll(oldProxy);
+                proxies.addAll(newProxy);
+            }
+        }
+        if (!proxies.isEmpty()) {
+            proxyIndex = 0;
+            proxy = proxies.get(proxyIndex);
+            logger.log("Using proxy: " + proxy.toUrl());
+            return true;
+        }
+        return false;
+    }
+
+    public void nextProxy() {
+        if (!useProxy || updateProxy() || proxies.isEmpty())
             return;
 
-        String proxiesString = null;
-        try {
-            File proxyTxtFile = new File("proxy.txt");
-            if (proxyTxtFile.exists())
-                proxiesString = new String(Files.readAllBytes(proxyTxtFile.toPath()));
-        } catch (IOException e) {
-            logger.errTrace(e);
-        }
-        ProxyData proxyData;
-        if (proxiesString != null) {
-            String[] proxies = proxiesString.split("\r?\n");
-            if (proxies[0].length() == 0)
-                proxyData = null;
-            else
-                proxyData = new ProxyData(proxies[0], "local");
-        } else
-            proxyData = null;
+        if (++proxyIndex >= proxies.size())
+            proxyIndex = 0;
 
-        if (proxyData != null) {
-            logger.log("Using proxy: " + proxyData.toUrl());
-            proxy = proxyData;
-        } else
-            proxy = null;
+        proxy = proxies.get(proxyIndex);
+        logger.log("Using proxy: " + proxy.toUrl());
     }
 
     public Proxy getProxy() {
@@ -147,6 +207,8 @@ public class ProxyManager {
     }
 
     public ProxyData getProxyData() {
+        if (proxy == null)
+            return null;
         return proxy;
     }
 

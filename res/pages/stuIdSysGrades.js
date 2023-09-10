@@ -109,8 +109,6 @@ export default function (router, loginState) {
 			currentSemestersInfo.set(null);
 			semestersInfo.set(null);
 			semesterGrades.set(null);
-			normalDestImgWindow.windowClose();
-			normalDestImgWindow.setWindowContent(div());
 		}
 	}
 

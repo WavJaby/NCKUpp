@@ -61,8 +61,10 @@ public class Main {
         if (!cacheFolder.exists())
             if (!cacheFolder.mkdir())
                 logger.err("Cache folder can not create");
-        Runtime.getRuntime().addShutdownHook(new Thread(this::stopAll));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stopModules));
+
         ProxyManager proxyManager = new ProxyManager(serverSettings);
+        registerModule(proxyManager);
 
         SQLite sqLite = new SQLite();
         registerModule(sqLite);
@@ -109,8 +111,14 @@ public class Main {
 //        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
 
         // Stop
-        new Scanner(System.in).nextLine();
-        stopAll();
+        Scanner scanner = new Scanner(System.in);
+        String command;
+        while (!(command = scanner.nextLine()).isEmpty()) {
+            if (command.equals("np"))
+                proxyManager.nextProxy();
+        }
+
+        stopModules();
     }
 
     private void startModules() {
@@ -128,7 +136,7 @@ public class Main {
         }
     }
 
-    private void stopAll() {
+    private void stopModules() {
         if (!running) return;
         running = false;
         for (Module module : modules.values()) {

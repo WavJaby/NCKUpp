@@ -33,9 +33,14 @@ export default function (router) {
 			p('可以自由選擇篩選條件，提供衝堂、精確節次、班別等篩選器')
 		),
 		div('block',
+			img('./res/assets/page_home/schedule_download_function.png'),
+			h2('課表下載', 'title'),
+			p('提供預排課表檢視，課表下載功能，下載漂亮的課表🥰')
+		),
+		div('block',
 			img('./res/assets/page_home/add_course_function.png'),
-			h2('支援預排、加選', 'title'),
-			p('登入後可跟選課網站連動，進行預排、單科加選等操作'),
+			h2('支援預排、選課', 'title'),
+			p('登入後可跟選課網站連動，進行預排、志願登記、單科加選等操作'),
 			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
 		)
 	);
@@ -164,12 +169,12 @@ export default function (router) {
 		if (introduction.scrollLeft === 0)
 			introductionAnimationDirection = false;
 		else if (introduction.scrollWidth - introduction.clientWidth - introduction.scrollLeft < 1) {
-			// introductionAnimationDirection = true;
-			if (introduction.scrollTo) {
-				introductionAnimationPause = true;
-				introduction.scrollTo({left: 0, behavior: 'smooth'});
-			} else
-				introduction.scrollLeft = 0;
+			introductionAnimationDirection = true;
+			introductionAnimationPause = true;
+			// if (introduction.scrollTo) {
+			// 	introduction.scrollTo({left: 0, behavior: 'smooth'});
+			// } else
+			// 	introduction.scrollLeft = 0;
 		}
 
 		if (pageOpened)

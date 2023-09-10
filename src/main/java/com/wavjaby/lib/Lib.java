@@ -175,7 +175,7 @@ public class Lib {
         try {
             return readInputStreamToString(Files.newInputStream(file.toPath()), charset);
         } catch (IOException e) {
-            logger.err(e);
+            logger.errTrace(e);
             return null;
         }
     }

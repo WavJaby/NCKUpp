@@ -514,7 +514,7 @@ export default function (router, loginState, userGuideTool) {
 
 	function getWatchCourse() {
 		if (!loginState.state || !loginState.state.login) {
-			window.askForLoginAlert();
+			window.messageAlert.addInfo('需要登入來使用關注功能', '右上角登入按鈕登入', 3000)
 			return;
 		}
 		fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
