@@ -64,8 +64,12 @@ export function UserGuideTool() {
 				'點教師姓名即可查看評價及評論',
 				true,
 			),
-			urSchoolCommentOpen: closeGuide,
-			urSchoolCommentClose: () => window.messageAlert.addSuccess('教學就這樣啦，希望可以幫到大家🥰', null, 2000),
+			urSchoolCommentOpen: hideGuide,
+			urSchoolCommentClose: () => {
+				if (guiding)
+					window.messageAlert.addSuccess('教學就這樣啦，希望可以幫到大家🥰', null, 2000);
+				closeGuide();
+			},
 		}
 	};
 
