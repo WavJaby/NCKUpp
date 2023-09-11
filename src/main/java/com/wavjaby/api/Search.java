@@ -567,11 +567,11 @@ public class Search implements EndpointModule {
 
             StringBuilder builder = new StringBuilder();
             for (TimeData i : timeList) {
-                if (i.detailedTimeData != null) continue;
+                if (i.detailedTimeData != null || i.dayOfWeek == null) continue;
                 if (builder.length() > 0)
                     builder.append(',');
 
-                builder.append('[').append(i.dayOfWeek).append(']');
+                builder.append('[').append(i.dayOfWeek + 1).append(']');
                 if (i.sectionStart != null) {
                     if (i.sectionEnd != null)
                         builder.append(i.sectionStart).append('~').append(i.sectionEnd);
@@ -1272,18 +1272,20 @@ public class Search implements EndpointModule {
                 .requestBody(postData.toString())
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .header("X-Requested-With", "XMLHttpRequest");
+        boolean enQuery;
         String body;
         try {
             body = request.execute().body();
-//            logger.log(postData.toString());
-            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
-
         } catch (IOException e) {
             logger.errTrace(e);
             if (response != null)
                 response.errorNetwork(e);
             return null;
         }
+
+        enQuery = body.startsWith("&m=en_query");
+        if (enQuery)
+            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
 
         if (body.equals("0")) {
             if (response != null)
@@ -1298,6 +1300,11 @@ public class Search implements EndpointModule {
         if (body.equals("&m=en_query")) {
             if (response != null)
                 response.errorParse("Can not create save query");
+            return null;
+        }
+        if (!enQuery) {
+            if (response != null)
+                response.errorNetwork("Course NCKU Error");
             return null;
         }
         return new SaveQueryToken(urlOrigin, body, postCookieStore);

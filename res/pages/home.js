@@ -50,7 +50,7 @@ export default function (router) {
 		),
 		p(null, 'description',
 			text('集合'),
-			img('res/assets/courseNcku_logo.png', '國立成功大學課程資訊及選課系統'),
+			img('res/assets/NCKU_course_system_logo.png', '國立成功大學課程資訊及選課系統'),
 			img('res/assets/nckuHub_logo.svg', 'NCKUHub'),
 			img('res/assets/UrSchool_logo.png', 'UrSchool'),
 			br(),

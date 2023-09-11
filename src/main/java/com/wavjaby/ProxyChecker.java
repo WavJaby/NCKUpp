@@ -201,6 +201,11 @@ public class ProxyChecker {
         Semaphore checkConnectionLock = new Semaphore(threadCount * 2, true);
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
         final boolean conforming = conformTry != -1;
+//        final String testUrl = conforming
+//                ? "https://course.ncku.edu.tw/index.php"
+//                : "https://api.simon.chummydns.com/api/ip";
+////                            : "https://ifconfig.me/ip";
+        final String testUrl = "https://api.simon.chummydns.com/api/ip";
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(onProxyTestStart());
@@ -226,10 +231,6 @@ public class ProxyChecker {
                 String errorMsg = null, data = null;
                 int maxTryCount = Math.max(maxTry, conformTry);
                 for (int tryCount = 0; tryCount < maxTryCount; tryCount++) {
-                    String testUrl = conforming
-                            ? "https://course.ncku.edu.tw/index.php"
-                            : "https://api.simon.chummydns.com/api/ip";
-//                            : "https://ifconfig.me/ip";
                     ProxyTestResult result = null;
                     latency = -1;
                     timeout = false;
@@ -360,6 +361,7 @@ public class ProxyChecker {
                     data = readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
                 } else
                     error = "ResponseCode Error";
+                conn.disconnect();
             } catch (Exception e) {
                 error = e.getMessage();
                 if (error == null)

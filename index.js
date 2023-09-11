@@ -105,7 +105,7 @@ window.pageLoading = new Signal(false);
 			div('source',
 				h2('資料來源'),
 				a(null, 'https://course.ncku.edu.tw/', 'noSelect', null, {target: '_blank'},
-					img('res/assets/courseNcku_logo.png', '國立成功大學課程資訊及選課系統', 'noDrag')
+					img('res/assets/NCKU_course_system_logo.png', '國立成功大學課程資訊及選課系統', 'noDrag')
 				),
 				a(null, 'https://nckuhub.com/', 'noSelect', null, {target: '_blank'},
 					img('res/assets/nckuHub_logo.svg', 'NCKUHub', 'noDrag')

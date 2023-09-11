@@ -430,38 +430,38 @@ function ScheduleTable(windowRoot) {
 
 		// Create table
 		initTable(scheduleTable);
-		const rows = createScheduleTable(scheduleTable, dayUndecided.length > 0, tableWidth, tableHeight);
+		createScheduleTable(scheduleTable, dayTable, dayUndecided.length > 0, tableWidth, tableHeight);
 
-		// Add course cell
-		const rowSize = new Int32Array(tableHeight);
-		for (let i = 0; i < tableWidth; i++) {
-			for (let j = 0; j < tableHeight; j++) {
-				const dayCourse = dayTable[i][j];
-				if (!dayCourse) continue;
-				const course = dayCourse[0];
-				// Fill time section
-				if (i - rowSize[j] > 0)
-					rows[j].insertCell().colSpan = i - rowSize[j];
-
-				// Build cell
-				const cell = rows[j].insertCell();
-				createCourseCell(cell, course, false).classList.add('fullHeight');
-
-				// Add space
-				if (course[1].parsedTime.length === 3) {
-					const length = course[1].parsedTime[2] - course[1].parsedTime[1] + 1;
-					cell.rowSpan = length * 2 - 1;
-					rowSize[j] = i + 1;
-					for (let k = 1; k < length; k++) {
-						// fill space
-						if (i - rowSize[j + k] > 0)
-							rows[j + k].insertCell().colSpan = i - rowSize[j + k];
-						rowSize[j + k] = i + 1;
-					}
-				} else if (course[1].parsedTime.length === 2)
-					rowSize[j] = i + 1;
-			}
-		}
+		// // Add course cell
+		// const rowSize = new Int32Array(tableHeight);
+		// for (let i = 0; i < tableWidth; i++) {
+		// 	for (let j = 0; j < tableHeight; j++) {
+		// 		const dayCourse = dayTable[i][j];
+		// 		if (!dayCourse) continue;
+		// 		const course = dayCourse[0];
+		// 		// Fill time section
+		// 		if (i - rowSize[j] > 0)
+		// 			rows[j].insertCell().colSpan = i - rowSize[j];
+		//
+		// 		// Build cell
+		// 		const cell = rows[j].insertCell();
+		// 		createCourseCell(cell, course, false).classList.add('fullHeight');
+		//
+		// 		// Add space
+		// 		if (course[1].parsedTime.length === 3) {
+		// 			const length = course[1].parsedTime[2] - course[1].parsedTime[1] + 1;
+		// 			cell.rowSpan = length * 2 - 1;
+		// 			rowSize[j] = i + 1;
+		// 			for (let k = 1; k < length; k++) {
+		// 				// fill space
+		// 				if (i - rowSize[j + k] > 0)
+		// 					rows[j + k].insertCell().colSpan = i - rowSize[j + k];
+		// 				rowSize[j + k] = i + 1;
+		// 			}
+		// 		} else if (course[1].parsedTime.length === 2)
+		// 			rowSize[j] = i + 1;
+		// 	}
+		// }
 
 		createCourseUndecided(dayUndecided, scheduleTable, false);
 	}
@@ -497,79 +497,9 @@ function ScheduleTable(windowRoot) {
 			}
 		}
 
-		// Extract course data
-		for (let i = 0; i < preTableWidth; i++) {
-			for (let j = 0; j < preTableHeight; j++) {
-				const courseTimeData = dayTable[i][j];
-				if (!courseTimeData)
-					continue;
-				// Course in section
-				for (const courseData of courseTimeData) {
-					const courseTime = courseData[1].parsedTime;
-					if (j !== courseTime[1])
-						continue;
-					const length = courseTime[2] - courseTime[1] + 1;
-					// Fill time
-					for (let k = 1; k < length; k++) {
-						let courseTimeDataNext = dayTable[i][j + k];
-						if (!courseTimeDataNext) courseTimeDataNext = dayTable[i][j + k] = [];
-						courseTimeDataNext.push(courseData);
-					}
-				}
-			}
-		}
-
-
 		// Create table
 		initTable(preScheduleTable);
-		const rows = createScheduleTable(preScheduleTable, dayUndecided.length > 0, preTableWidth, preTableHeight);
-		/**@type{HTMLTableCellElement[][]}*/
-		const cellTable = new Array(preTableWidth);
-		// Create table body
-		for (let i = 0; i < preTableWidth; i++) {
-			cellTable[i] = new Array(preTableHeight);
-			for (let j = 0; j < preTableHeight; j++) {
-				// Create empty cell
-				cellTable[i][j] = rows[j].insertCell();
-			}
-		}
-
-		// Put course
-		for (let dayOfWeek = 0; dayOfWeek < preTableWidth; dayOfWeek++) {
-			for (let sectionTime = 0; sectionTime < preTableHeight; sectionTime++) {
-				const sectionCourseListCol = dayTable[dayOfWeek];
-				const sectionCourseList = sectionCourseListCol[sectionTime];
-				if (!sectionCourseList)
-					continue;
-
-				for (let sectionCourse of sectionCourseList) {
-					const courseTime = sectionCourse[1].parsedTime;
-					if (sectionTime !== courseTime[1])
-						continue;
-					const cellTableCol = cellTable[courseTime[0]];
-					const parentCell = cellTableCol[courseTime[1]];
-					const timeLength = courseTime[2] - courseTime[1] + 1;
-					createCourseCell(parentCell, sectionCourse, true);
-					for (let i = 1; i < timeLength; i++) {
-						const sectionCourseListNext = sectionCourseListCol[sectionTime + i];
-						const parentCellNext = cellTableCol[courseTime[1] + i];
-						if (sectionCourseList.length === 1 &&
-							(!sectionCourseListNext || sectionCourseListNext.length === 1 && sectionCourseListNext[0] === sectionCourse)) {
-							parentCell.rowSpan += 2;
-							parentCellNext.parentElement.removeChild(parentCellNext);
-						} else
-							createCourseCell(parentCellNext, sectionCourse, true);
-					}
-				}
-			}
-		}
-
-		// Full height when
-		for (let i = 0; i < preTableWidth; i++) {
-			for (let j = 0; j < preTableHeight; j++)
-				if (cellTable[i][j].childElementCount === 1)
-					cellTable[i][j].firstElementChild.classList.add('fullHeight');
-		}
+		createScheduleTable(preScheduleTable, dayTable, dayUndecided.length > 0, preTableWidth, preTableHeight);
 
 		createCourseUndecided(dayUndecidedPre, preScheduleTable, true);
 	}
@@ -664,20 +594,34 @@ function ScheduleTable(windowRoot) {
 		}
 		for (let i = 0; i < tableWidth; i++)
 			for (let j = 0; j < tableHeight; j++)
-				if (dayTable[i][j])
-					dayTable[i][j] = Object.values(dayTable[i][j]);
+				if (dayTable[i][j]) {
+					const courseTimeData = dayTable[i][j] = Object.values(dayTable[i][j]);
+					// Course in section
+					for (const courseData of courseTimeData) {
+						const courseTime = courseData[1].parsedTime;
+						if (j !== courseTime[1])
+							continue;
+						const length = courseTime[2] - courseTime[1] + 1;
+						// Fill time, push room info
+						for (let k = 1; k < length; k++) {
+							let courseTimeDataNext = dayTable[i][j + k];
+							if (!courseTimeDataNext) courseTimeDataNext = dayTable[i][j + k] = [];
+							courseTimeDataNext.push(courseData);
+						}
+					}
+				}
 
 		return {dayTable: dayTable, dayUndecided: dayUndecided};
 	}
 
 	/**
 	 * @param {HTMLTableElement} table
+	 * @param {[CourseWithTime][][]} dayTable
 	 * @param {boolean} haveDayUndecided
 	 * @param {int} tableWidth
 	 * @param {int} tableHeight
-	 * @return {HTMLTableRowElement[]}
 	 */
-	function createScheduleTable(table, haveDayUndecided, tableWidth, tableHeight) {
+	function createScheduleTable(table, dayTable, haveDayUndecided, tableWidth, tableHeight) {
 		const headRow = table.tHead.insertRow();
 		headRow.className = 'noSelect';
 		for (let i = 0; i < tableWidth + 1; i++) {
@@ -711,7 +655,56 @@ function ScheduleTable(windowRoot) {
 				splitLine.insertCell().colSpan = 1 + tableWidth;
 			}
 		}
-		return rows;
+
+		// Create course cell
+		/**@type{HTMLTableCellElement[][]}*/
+		const cellTable = new Array(tableWidth);
+		// Create table body
+		for (let i = 0; i < tableWidth; i++) {
+			cellTable[i] = new Array(tableHeight);
+			for (let j = 0; j < tableHeight; j++) {
+				// Create empty cell
+				cellTable[i][j] = rows[j].insertCell();
+			}
+		}
+
+		// Put course
+		for (let dayOfWeek = 0; dayOfWeek < tableWidth; dayOfWeek++) {
+			for (let sectionTime = 0; sectionTime < tableHeight; sectionTime++) {
+				const sectionCourseListCol = dayTable[dayOfWeek];
+				const sectionCourseList = sectionCourseListCol[sectionTime];
+				if (!sectionCourseList)
+					continue;
+				// Section course list
+				for (let sectionCourse of sectionCourseList) {
+					const courseTime = sectionCourse[1].parsedTime;
+					if (sectionTime !== courseTime[1])
+						continue;
+					const cellTableCol = cellTable[courseTime[0]];
+					const parentCell = cellTableCol[courseTime[1]];
+					const timeLength = courseTime[2] - courseTime[1] + 1;
+					createCourseCell(parentCell, sectionCourse, true);
+					for (let i = 1; i < timeLength; i++) {
+						const sectionCourseListNext = sectionCourseListCol[sectionTime + i];
+						const parentCellNext = cellTableCol[courseTime[1] + i];
+						// If current and next section only have one course, expand row
+						if (sectionCourseList.length === 1 &&
+							(!sectionCourseListNext || sectionCourseListNext.length === 1 && sectionCourseListNext[0] === sectionCourse)) {
+							parentCell.rowSpan += 2;
+							parentCellNext.parentElement.removeChild(parentCellNext);
+						} else
+							createCourseCell(parentCellNext, sectionCourse, true);
+					}
+				}
+			}
+		}
+
+		// Full height when
+		for (let i = 0; i < tableWidth; i++) {
+			for (let j = 0; j < tableHeight; j++)
+				if (cellTable[i][j].childElementCount === 1)
+					cellTable[i][j].firstElementChild.classList.add('fullHeight');
+		}
 	}
 
 	/**

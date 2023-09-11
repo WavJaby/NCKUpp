@@ -193,6 +193,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                         : gradeStr.equals("抵免") ? -4
                         : gradeStr.equals("退選") ? -5
                         : gradeStr.equals("優良") ? -6
+                        : gradeStr.equals("不通") ? -7
                         : Float.parseFloat(gradeStr);
             } catch (NumberFormatException e) {
                 gradeFloat = -1;
@@ -227,7 +228,14 @@ public class StudentIdentificationSystem implements EndpointModule {
             courseName = row.get(4).text().trim();
             credits = Float.parseFloat(row.get(5).text().trim());
             String grade_ = row.get(6).text().trim();
-            grade = grade_.equals("成績未到") ? -2 : Float.parseFloat(grade_);
+            float gradeFloat;
+            try {
+                gradeFloat = grade_.equals("成績未到") ? -2 : Float.parseFloat(grade_);
+            } catch (NumberFormatException e) {
+                gradeFloat = -1;
+                logger.errTrace(e);
+            }
+            grade = gradeFloat;
 
             gpa = null;
 

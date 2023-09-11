@@ -1,22 +1,30 @@
 package com.wavjaby;
 
 import com.wavjaby.lib.PropertiesReader;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import static com.wavjaby.lib.Lib.getFileFromPath;
-import static com.wavjaby.lib.Lib.readFileToString;
+import static com.wavjaby.lib.Lib.*;
 
 public class ProxyManager implements Module {
     private static final String TAG = "[ProxyManager]";
     private static final Logger logger = new Logger(TAG);
+    private static final int TEST_TIMEOUT = 4000;
     private final PropertiesReader properties;
+    private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory("ProxyChecker"));
     private final List<ProxyData> proxies = new ArrayList<>();
     private File proxyFile;
     private long proxyFileLastModified;
@@ -125,17 +133,42 @@ public class ProxyManager implements Module {
         this.properties = properties;
     }
 
+    private final Runnable proxyCheckFunc = () -> {
+        final String testUrl = "https://api.simon.chummydns.com/api/ip";
+
+        for (int i = 0; i < 2; i++) {
+            try {
+                HttpURLConnection conn = (HttpURLConnection) new URL(testUrl).openConnection(proxy.toProxy());
+                conn.setConnectTimeout(TEST_TIMEOUT);
+                conn.setReadTimeout(TEST_TIMEOUT);
+                conn.setUseCaches(false);
+                conn.setRequestProperty("Connection", "close");
+
+                if (conn.getResponseCode() == 200) {
+                    readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
+                    // Success
+                    return;
+                }
+                conn.disconnect();
+            } catch (IOException ignore) {
+                nextProxy();
+            }
+        }
+    };
+
     @Override
     public void start() {
         proxyFile = getFileFromPath("./proxy.txt", false);
         useProxy = properties.getPropertyBoolean("useProxy", true);
-        if (useProxy)
+        if (useProxy) {
             updateProxy();
+            service.scheduleWithFixedDelay(proxyCheckFunc, 1000, 5000, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
     public void stop() {
-
+        executorShutdown(service, 5000, "ProxyChecker");
     }
 
     @Override
@@ -198,6 +231,16 @@ public class ProxyManager implements Module {
 
         proxy = proxies.get(proxyIndex);
         logger.log("Using proxy: " + proxy.toUrl());
+    }
+
+    public void getUsingProxy() {
+        if (!useProxy)
+            logger.log("Proxy not enable");
+        else if (proxy == null)
+            logger.log("No proxy");
+        else
+            logger.log("Using proxy: " + proxy.toUrl());
+
     }
 
     public Proxy getProxy() {

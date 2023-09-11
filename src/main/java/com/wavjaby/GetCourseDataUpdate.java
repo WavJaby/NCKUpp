@@ -204,7 +204,7 @@ public class GetCourseDataUpdate implements Runnable {
                         if (lastCourseDataList != null)
                             diff.addAll(getDifferent(lastCourseDataList, newCourseDataList));
                         deptCourseDataList.put(dept, newCourseDataList);
-                        logger.log("Dept " + dept + " done");
+//                        logger.log("Dept " + dept + " done");
                     }
                 }
                 taskLeft.countDown();
@@ -246,8 +246,8 @@ public class GetCourseDataUpdate implements Runnable {
                     break;
                 case UPDATE:
                     Search.CourseData cosData = i.courseData;
-                    logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() + "\n" +
-                            "available: " + i.availableDiff + ", select: " + i.selectDiff);
+                    logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName());
+//                            "available: " + i.availableDiff + ", select: " + i.selectDiff);
 
                     String url = null;
                     try {
@@ -293,7 +293,7 @@ public class GetCourseDataUpdate implements Runnable {
                                     )
                                     .add(new JsonObject()
                                             .put("name", "組別")
-                                            .put("value", String.valueOf(cosData.getForClass()))
+                                            .put("value", cosData.getForClass() == null ? "無" : String.valueOf(cosData.getForClass()))
                                             .put("inline", true)
                                     )
                             );

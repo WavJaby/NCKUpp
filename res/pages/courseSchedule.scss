@@ -89,6 +89,8 @@ $schedule-row-bg-color: #1C1E1FB0;
         > tbody {
             &.showRoom {
                 > tr.timeRow > td.activate > div > .room {
+                    color: $font-color2;
+                    font-size: 16px;
                     display: block;
                 }
             }

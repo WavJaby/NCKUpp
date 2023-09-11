@@ -116,6 +116,8 @@ public class Main {
         while (!(command = scanner.nextLine()).isEmpty()) {
             if (command.equals("np"))
                 proxyManager.nextProxy();
+            if (command.equals("p"))
+                proxyManager.getUsingProxy();
         }
 
         stopModules();
