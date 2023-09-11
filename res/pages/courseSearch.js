@@ -670,6 +670,7 @@ export default function (router, loginState, userGuideTool) {
 	// Filter
 	const hideEmptyColumnTool = hideEmptyColumn(courseRenderResult, () => searchTableHead);
 	const classFilterOption = classFilter(updateFilter, courseRenderResult);
+	const categoryFilterOption = categoryFilter(updateFilter, courseRenderResult);
 	const requireFilterOption = requireFilter(updateFilter);
 	const filter = new Filter();
 	/**@type {FilterOption[]}*/
@@ -679,6 +680,7 @@ export default function (router, loginState, userGuideTool) {
 		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
 		hidePracticeFilter(updateFilter),
 		classFilterOption,
+		categoryFilterOption,
 		requireFilterOption,
 		hideEmptyColumnTool,
 	];
@@ -1546,6 +1548,7 @@ function hidePracticeFilter(onFilterUpdate) {
 function classFilter(onFilterUpdate, courseRenderResult) {
 	const selectMenu = new SelectMenu('班別過濾', 'classFilter', 'classFilter', null, {multiple: true});
 	let selectValue = null;
+	let isEmpty = false;
 	selectMenu.onSelectItemChange = updateSelectValue;
 
 	function clearItems() {
@@ -1562,12 +1565,23 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 			return;
 
 		let classCategory = [];
+		let courseNoClassInfo = false;
 		for (const [i] of courseRenderResult) {
-			if (i.classInfo && classCategory.indexOf(i.classInfo) === -1)
+			if (!i.classInfo)
+				courseNoClassInfo = true;
+			else if (classCategory.indexOf(i.classInfo) === -1)
 				classCategory.push(i.classInfo);
 		}
 		classCategory = classCategory.map(i => [i, i]);
-		classCategory.push(['', '無班別']);
+		if (classCategory.length > 0 && courseNoClassInfo)
+			classCategory.push([null, '無班別']);
+
+		// Class info empty
+		isEmpty = classCategory.length === 0;
+		if (isEmpty) {
+			selectMenu.element.style.display = 'none';
+		} else
+			selectMenu.element.style.display = '';
 
 		selectMenu.setItems(classCategory, true);
 		selectValue = selectMenu.getSelectedValue();
@@ -1575,12 +1589,81 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 
 	/**@param{CourseData}courseData*/
 	function condition([courseData]) {
-		if (!selectValue)
+		if (!selectValue || isEmpty)
 			return true;
+		if (selectValue.length === 0)
+			return false;
 		if (!courseData.classInfo)
-			return selectValue.indexOf('') !== -1;
+			return selectValue.indexOf(null) !== -1;
 
 		return selectValue.indexOf(courseData.classInfo) !== -1;
+	}
+
+	return {
+		clear: clearItems,
+		onFilterStart: onFilterStart,
+		condition: condition,
+		element: selectMenu.element,
+	}
+}
+
+/**
+ * @param {function()} onFilterUpdate
+ * @param {any[]} courseRenderResult
+ * @return {FilterOption & {clear: function()}}
+ */
+function categoryFilter(onFilterUpdate, courseRenderResult) {
+	const selectMenu = new SelectMenu('類別過濾', 'categoryFilter', 'categoryFilter', null, {multiple: true});
+	let selectValue = null;
+	let isEmpty = false;
+	selectMenu.onSelectItemChange = updateSelectValue;
+
+	function clearItems() {
+		selectMenu.clearItems();
+	}
+
+	function updateSelectValue() {
+		selectValue = selectMenu.getSelectedValue();
+		onFilterUpdate();
+	}
+
+	function onFilterStart(firstRenderAfterSearch) {
+		if (!firstRenderAfterSearch)
+			return;
+
+		let classCategory = [];
+		let courseNoClassInfo = false;
+		for (const [i] of courseRenderResult) {
+			if (!i.category)
+				courseNoClassInfo = true;
+			else if (classCategory.indexOf(i.category) === -1)
+				classCategory.push(i.category);
+		}
+		classCategory = classCategory.map(i => [i, i]);
+		if (classCategory.length > 0 && courseNoClassInfo)
+			classCategory.push([null, '無類別']);
+
+		// Category info empty
+		isEmpty = classCategory.length === 0;
+		if (isEmpty) {
+			selectMenu.element.style.display = 'none';
+		} else
+			selectMenu.element.style.display = '';
+
+		selectMenu.setItems(classCategory, true);
+		selectValue = selectMenu.getSelectedValue();
+	}
+
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
+		if (!selectValue || isEmpty)
+			return true;
+		if (selectValue.length === 0)
+			return false;
+		if (!courseData.category)
+			return selectValue.indexOf(null) !== -1;
+
+		return selectValue.indexOf(courseData.category) !== -1;
 	}
 
 	return {
