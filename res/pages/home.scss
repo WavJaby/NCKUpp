@@ -15,9 +15,14 @@
             border-bottom: solid 2px;
             margin-bottom: 20px;
 
-            > img {
-                height: 100px;
-                margin-right: 20px;
+            > div.rippleable {
+                display: inline-block;
+                margin-right: 10px;
+
+                > img {
+                    height: 100px;
+                    vertical-align: bottom;
+                }
             }
 
             > span {
@@ -284,5 +289,28 @@
                 }
             }
         }
+    }
+}
+
+.rippleable {
+    position: relative;
+    overflow: hidden;
+
+    > .ripple {
+        background-color: #{$background-color}60;
+        border-radius: 50%;
+        position: absolute;
+        animation: ripple 600ms linear;
+        @include transform(scale(0));
+    }
+}
+
+@keyframes ripple {
+    80% {
+        opacity: 1;
+    }
+    100% {
+        @include transform(scale(3));
+        opacity: 0;
     }
 }

@@ -5,9 +5,14 @@ A new site for NCKU course enrollment
 
 ### [To NCKU++](https://wavjaby.github.io/NCKUpp/)
 
-## API usage
+---
 
-### Api Response Object
+## API Documentation
+
+API endpoint<br>
+https://api.simon.chummydns.com/api
+
+### Response Object
 
 ```
 {
@@ -20,8 +25,6 @@ A new site for NCKU course enrollment
 }
 ```
 
-Api URL: https://api.simon.chummydns.com/api
-
 <details>
 <summary><code>GET</code> <code><b>/search</b></code> <code>Search course data</code></summary>
 
@@ -31,23 +34,30 @@ Api URL: https://api.simon.chummydns.com/api
 > |--------------|----------|-----------|-----------------------------------------------------------|
 > | `courseName` | optional | string    | Course name                                               |
 > | `instructor` | optional | string    | Instructor name                                           |
-> | `dayOfWeek`  | optional | int       | Day of week 1~7                                           |
+> | `dayOfWeek`  | optional | int[]     | Day of week [0~6]                                         |
 > | `dept`       | optional | string    | Department ID                                             |
 > | `grade`      | optional | string    | Course for grade                                          |
-> | `section`    | optional | int[]     | Section of day [1~16]                                     |
+> | `section`    | optional | int[]     | Section of day [0~15]                                     |
 > | `serial`     | optional | UrlEncode | Serial IDs {DEPT_ID}={SERIAL},{SERIAL}&{DEPT_ID}={SERIAL} |
 
-At least one parameter needs to be provided
+##### Example
+
+/search?dept=A9 <br>
+/search?dayOfWeek=0,1&section=3,4 <br>
+
+> [!WARNING]  
+> Multiple dayOfWeek will make response time longer and likely to cause network error
+
 </details>
 
 
 <details>
-<summary><code>GET</code> <code><b>/alldept</b></code> <code>Get all department</code></summary>
+<summary><code>GET</code> <code><b>/alldept</b></code> <code>Get all department ID</code></summary>
 </details>
 
 
 <details>
-<summary><code>GET</code> <code><b>/nckuhub</b></code> <code>Get nckuhub data</code></summary>
+<summary><code>GET</code> <code><b>/nckuhub</b></code> <code>Get NCKU HUB data</code></summary>
 
 ##### Parameters
 
@@ -55,23 +65,20 @@ At least one parameter needs to be provided
 > |------|----------|-----------|------------------|
 > | `id` | optional | string    | Course serial ID |
 
-No parameter provide, will return NCKUHUB_ID corresponding to the CourseSerialID
+Give id and return NCKU HUB rating and comments
+If no id provide, return available CourseSerialID <br>
+
 </details>
 
 
 <details>
-<summary><code>GET</code> <code><b>/login</b></code> <code>Get login state</code></summary>
+<summary><code>GET</code> <code><b>/login</b></code> <code>Check login state</code></summary>
 
 ##### Parameters
 
-> | name   | type    | data type | description                            |
-> |--------|---------|-----------|----------------------------------------|
-> | `mode` | require | string    | Login mode, legal value: course, stuId |
-
-##### Login mode
-
-* course: Course NCKU
-* stuId: StudentIdentification
+> | name   | type     | data type | description                                                                                         |
+> |--------|----------|-----------|-----------------------------------------------------------------------------------------------------|
+> | `mode` | require  | string    | Login mode, legal value: course, stuId <br/> course: Course NCKU <br/> stuId: StudentIdentification |
 
 </details>
 
@@ -81,20 +88,29 @@ No parameter provide, will return NCKUHUB_ID corresponding to the CourseSerialID
 
 ##### Parameters
 
-> | name   | type     | data type | description                            |
-> |--------|----------|-----------|----------------------------------------|
-> | `mode` | require  | string    | Login mode, legal value: course, stuId |
+> | name   | type     | data type | description                                                                                         |
+> |--------|----------|-----------|-----------------------------------------------------------------------------------------------------|
+> | `mode` | require  | string    | Login mode, legal value: course, stuId <br/> course: Course NCKU <br/> stuId: StudentIdentification |
 
-##### Login mode
+##### Payload
 
-* course: Course NCKU
-* stuId: StudentIdentification
-
-##### Content
+Content-Type: application/x-www-form-urlencoded
 
 ```
 username=[Account]&password=[Password]
 ```
+
+</details>
+
+
+<details>
+<summary><code>GET</code> <code><b>/courseSchedule</b></code> <code>Get course schedule</code></summary>
+
+##### Parameters
+
+> | name  | type     | data type | description                             |
+> |-------|----------|-----------|-----------------------------------------|
+> | `pre` | optional | boolean   | If pre equals true, return pre-schedule |
 
 </details>
 

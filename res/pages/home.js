@@ -44,9 +44,19 @@ export default function (router) {
 			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
 		)
 	);
+	// 腸太郎萬歲 \o/ \o/ \o/
+	const owo = img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', '');
+	let clickCount = 0;
+	const siteIcon = img('res/assets/icon/icon_64.svg', '');
+	const iconImageParent = div('rippleable', {
+		onclick: e => {
+			if (++clickCount === 10) iconImageParent.replaceChild(owo, siteIcon);
+			createRipple(e);
+		}
+	}, siteIcon);
 	const siteInfo = div('siteInfo',
 		h1(null, 'title',
-			img('res/assets/icon/icon_64.svg', ''), span('NCKU'), titleAnimation
+			iconImageParent, span('NCKU'), titleAnimation
 		),
 		p(null, 'description',
 			text('集合'),
@@ -90,8 +100,12 @@ export default function (router) {
 
 	let introductionHover = false;
 	let introductionScrollTarget = 0;
-	introduction.onmouseenter = function () {introductionHover = true;};
-	introduction.onmouseleave = function () {introductionHover = false;};
+	introduction.onmouseenter = function () {
+		introductionHover = true;
+	};
+	introduction.onmouseleave = function () {
+		introductionHover = false;
+	};
 
 	function onRender() {
 		console.log('Home Render');
@@ -257,6 +271,36 @@ export default function (router) {
 		for (const i in bulletin) {
 			bulletinItems.appendChild(a(bulletinTitleMap[i], bulletin[i], 'bulletin', null, {target: '_blank'}));
 		}
+	}
+
+	function createRipple(event) {
+		const target = event.currentTarget;
+		const ripple = document.createElement('div');
+		const diameter = Math.max(target.clientWidth, target.clientHeight);
+		const radius = diameter / 2;
+		ripple.style.width = ripple.style.height = `${diameter}px`;
+
+		const bound = target.getBoundingClientRect && target.getBoundingClientRect();
+		if (bound) {
+			ripple.style.top = (event.pageY - (bound.top + radius)) + 'px';
+			ripple.style.left = (event.pageX - (bound.left + radius)) + 'px';
+		} else
+			ripple.style.top = ripple.style.left = '0';
+		ripple.classList.add('ripple');
+
+		const ripples = target.getElementsByClassName('ripple');
+		const now = Date.now && Date.now() || -1;
+		ripple.createTime = now;
+		const oldNode = [];
+		for (const i of ripples) {
+			if (now === -1 || now - i.createTime > 600)
+				oldNode.push(i);
+		}
+		for (let i of oldNode) {
+			i.parentElement.removeChild(i);
+		}
+
+		target.appendChild(ripple);
 	}
 
 	return div('home',
