@@ -276,9 +276,8 @@ export default function (router) {
 	function createRipple(event) {
 		const target = event.currentTarget;
 		const ripple = document.createElement('div');
-		const diameter = Math.max(target.clientWidth, target.clientHeight);
-		const radius = diameter / 2;
-		ripple.style.width = ripple.style.height = `${diameter}px`;
+		const radius = Math.sqrt(target.clientWidth * target.clientWidth + target.clientHeight * target.clientHeight);
+		ripple.style.width = ripple.style.height = radius * 2 + 'px';
 
 		const bound = target.getBoundingClientRect && target.getBoundingClientRect();
 		if (bound) {

@@ -306,11 +306,11 @@
 }
 
 @keyframes ripple {
-    80% {
+    50% {
         opacity: 1;
     }
     100% {
-        @include transform(scale(3));
+        @include transform(scale(1));
         opacity: 0;
     }
 }

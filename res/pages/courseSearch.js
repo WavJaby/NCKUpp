@@ -262,8 +262,10 @@ export default function (router, loginState, userGuideTool) {
 			getWatchCourse();
 			search();
 		} else {
-			if (state)
+			if (state) {
+				window.messageAlert.addError('鄰近選課期，可能需要登入才能使用搜尋功能', '使用右上角按鈕進行登入', 10000);
 				window.messageAlert.addInfo('登入啟用更多功能', '登入後即可將課程加入關注列表、加入預排、加入志願、單科加選等功能', 10000);
+			}
 			watchList = null;
 		}
 	}
@@ -870,7 +872,7 @@ export default function (router, loginState, userGuideTool) {
 						td(null, 'courseName',
 							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'}, span(data.courseName))
 						),
-						td(null, 'required', span('選必修:', 'label'), text(data.required ? '必修' : '選修')),
+						td(null, 'required', span('選必修:', 'label'), data.required === null ? null : text(data.required ? '必修' : '選修')),
 						td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
 						registerCount,
 						td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
@@ -1698,9 +1700,8 @@ function requireFilter(onFilterUpdate) {
 
 	/**@param{CourseData}courseData*/
 	function condition([courseData]) {
-		if (!selectValue)
+		if (!selectValue || courseData.required == null)
 			return true;
-
 		return selectValue.indexOf(courseData.required) !== -1;
 	}
 
