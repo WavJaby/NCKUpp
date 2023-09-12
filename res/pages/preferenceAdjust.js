@@ -121,8 +121,9 @@ export default function (router, loginState) {
 			const currentTab = adjustListTabs.appendChild(div('tab', {adjustList: adjustList},
 				h1(tab.name, 'title noSelect'),
 				expectA9Reg,
-				adjustList.element)
-			);
+				adjustList.element,
+				// button('showInSearch', '在課程搜尋中顯示', showInSearch, {serialIds: tab.items.map(i => i.sn)})
+			));
 			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {tab: currentTab}));
 
 			if (!lastTab) {
@@ -133,12 +134,15 @@ export default function (router, loginState) {
 		}
 	}
 
+	function showInSearch() {
+		console.log(this.serialIds);
+	}
+
 	function saveExpectA9RegVal() {
 		// console.log(this.input.value);
 
 		const form = 'mode=' + this.mode + '&expectA9RegVal=' + this.input.value;
 		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
-			updatePreferenceAdjust();
 			if (response.success) {
 				window.messageAlert.addSuccess('設定通識期望抽中科目數成功', response.msg, 5000);
 			} else
