@@ -38,6 +38,7 @@ export function checkLocalStorage() {
  * @property {string[]} err
  * @property {string[]} warn
  * @property {string} msg
+ * @property {int} code
  * @property {any} data
  */
 

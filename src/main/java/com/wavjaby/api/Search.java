@@ -236,27 +236,37 @@ public class Search implements EndpointModule {
             this.getAll = "ALL".equals(deptNo);
 
             // Get with time
-            String queryTime = query.get("queryTime"), historySearchError = null;
-            this.historySearch = queryTime != null;
+            String queryTimeBegin = query.get("timeBegin"), queryTimeEnd = query.get("timeEnd"), historySearchError = null;
+            this.historySearch = queryTimeBegin != null || queryTimeEnd != null;
             int yearBegin = -1, semBegin = -1, yearEnd = -1, semEnd = -1;
             if (this.historySearch) {
-                String[] cache = queryTime.split(",");
-                if (cache.length != 4) {
-                    int len = cache.length == 1 && cache[0].isEmpty() ? 0 : cache.length;
-                    historySearchError = "\"" + queryTime + "\" (Only give " + len + " value instead of 4)";
+                if (queryTimeBegin == null || queryTimeEnd == null) {
+                    historySearchError = "History search should include \"timeBegin\" and \"timeEnd\"";
                 } else {
-                    int pos = 0;
-                    try {
-                        yearBegin = Integer.parseInt(cache[0]);
-                        pos++;
-                        semBegin = Integer.parseInt(cache[1]);
-                        pos++;
-                        yearEnd = Integer.parseInt(cache[2]);
-                        pos++;
-                        semEnd = Integer.parseInt(cache[3]);
-                    } catch (NumberFormatException e) {
-                        yearBegin = -1;
-                        historySearchError = "\"" + queryTime + "\" (Invalid value at " + pos + ")";
+                    int startSplit = queryTimeBegin.indexOf('-');
+                    if (startSplit == -1) {
+                        historySearchError = "\"timeBegin\" formatError";
+                    } else {
+                        try {
+                            yearBegin = Integer.parseInt(queryTimeBegin.substring(0, startSplit));
+                            semBegin = Integer.parseInt(queryTimeBegin.substring(startSplit + 1));
+                        } catch (NumberFormatException e) {
+                            yearBegin = -1;
+                            historySearchError = "\"timeBegin\" formatError";
+                        }
+                    }
+
+                    int endSplit = queryTimeEnd.indexOf('-');
+                    if (endSplit == -1) {
+                        historySearchError = "\"timeEnd\" formatError";
+                    } else {
+                        try {
+                            yearEnd = Integer.parseInt(queryTimeEnd.substring(0, endSplit));
+                            semEnd = Integer.parseInt(queryTimeEnd.substring(endSplit + 1));
+                        } catch (NumberFormatException e) {
+                            yearBegin = -1;
+                            historySearchError = "\"timeEnd\" formatError";
+                        }
                     }
                 }
             }
@@ -1175,26 +1185,24 @@ public class Search implements EndpointModule {
                 // Required
                 String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
                 String[] requests = new String[]{
-                        urlOrigin + "/js/bootstrap-select/css/bootstrap-select.min.css?" + date,
-                        urlOrigin + "/js/jquery-ui-1.11.4.custom/jquery-ui.min.css?" + date,
-                        urlOrigin + "/js/fontawesome/css/solid.min.css?" + date,
-                        urlOrigin + "/js/fontawesome/css/regular.min.css?" + date, // 20230624
-                        urlOrigin + "/js/fontawesome/css/fontawesome.min.css?" + date,
-                        urlOrigin + "/js/fontawesome/css/fontawesome.min.css?" + date,
-                        urlOrigin + "/js/epack/css/font-awesome.min.css?" + date,
-                        urlOrigin + "/js/epack/css/elements/list.css?" + date,
-                        urlOrigin + "/js/epack/css/elements/note.css?" + date,  // 20230625
-
-                        urlOrigin + "/js/modernizr-custom.js?" + date,
-                        urlOrigin + "/js/bootstrap-select/js/bootstrap-select.min.js?" + date,
-                        urlOrigin + "/js/jquery.cookie.js?" + date,
-                        urlOrigin + "/js/common.js?" + date,
-                        urlOrigin + "/js/mis_grid.js?" + date,
-                        urlOrigin + "/js/jquery-ui-1.11.4.custom/jquery-ui.min.js?" + date,
-                        urlOrigin + "/js/performance.now-polyfill.js?" + date,
-                        urlOrigin + "/js/mdb-sortable/js/addons/jquery-ui-touch-punch.min.js?" + date,
-                        urlOrigin + "/js/jquery.taphold.js?" + date, // 20230625
-                        urlOrigin + "/js/jquery.patch.js?" + date,
+//                        urlOrigin + "/js/modernizr-custom.js?" + date,
+//                        urlOrigin + "/js/bootstrap-select/css/bootstrap-select.min.css?" + date,
+//                        urlOrigin + "/js/bootstrap-select/js/bootstrap-select.min.js?" + date,
+//                        urlOrigin + "/js/jquery.cookie.js?" + date,
+                        urlOrigin + "/js/common.js?" + date, // 20230912
+//                        urlOrigin + "/js/mis_grid.js?" + date,
+//                        urlOrigin + "/js/jquery-ui/jquery-ui.min.css?" + date,
+//                        urlOrigin + "/js/jquery-ui/jquery-ui.min.js?" + date,
+//                        urlOrigin + "/js/fontawesome/css/solid.min.css?" + date,
+//                        urlOrigin + "/js/fontawesome/css/regular.min.css?" + date, // 20230624
+//                        urlOrigin + "/js/fontawesome/css/fontawesome.min.css?" + date,
+//                        urlOrigin + "/js/epack/css/font-awesome.min.css?" + date,
+//                        urlOrigin + "/js/epack/css/elements/list.css?" + date,
+//                        urlOrigin + "/js/epack/css/elements/note.css?" + date, // 20230625
+//                        urlOrigin + "/js/performance.now-polyfill.js?" + date,
+//                        urlOrigin + "/js/mdb-sortable/js/addons/jquery-ui-touch-punch.min.js?" + date,
+                        urlOrigin + "/js/jquery.taphold.js?" + date, // 20230625, 20230912
+//                        urlOrigin + "/js/jquery.patch.js?" + date,
                 };
                 for (String url : requests) {
 //                    logger.log("get require: " + url.substring(urlOrigin.length()));

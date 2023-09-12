@@ -538,7 +538,8 @@ export default function (router, loginState, userGuideTool) {
 	/**@this{{courseData: CourseData, key: string}}*/
 	function sendCosData() {
 		const title = this.courseData.courseName + ' 加入';
-		fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.key)}`, 'Send course data').then(i => {
+		const cosdata = encodeURIComponent(this.key);
+		fetchApi('/courseFuncBtn?cosdata=' + cosdata, 'Send course data').then(i => {
 			if (i.success)
 				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
 			else {
@@ -550,16 +551,61 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	/**@this{{courseData: CourseData, key: string}}*/
+	function sendPreReg() {
+		const prekey = encodeURIComponent(this.key);
+		const serialId = this.courseData.serialNumber;
+
+		const title = this.courseData.courseName + ' 加入志願';
+		fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data').then(addPreResponse => {
+			// Add pre-schedule success or already added
+			const preScheduleNormal = addPreResponse.code === 1000 || addPreResponse.code === 4002;
+
+			// Get pre-register list
+			return fetchApi(`/coursePreRegister?mode=genEdu`, 'Get pre-register').then(({success, data}) => {
+				if (!success) {
+					window.messageAlert.addError(title + '失敗', '請再嘗試一次', 5000);
+					return;
+				}
+				const course = data.courseList.find(i => i.serialId === serialId);
+				if (!course) {
+					window.messageAlert.addError(title + '失敗', preScheduleNormal ? '該課程已在志願登記中' : '請嘗試重新整理', 5000);
+					return;
+				}
+				const action = data.action;
+				const preSkip = data.preSkip;
+				fetchApi(`/coursePreRegister?mode=genEdu`, 'Send pre-register', {
+					method: 'POST',
+					body: `prechk=${course.prechk}&cosdata=${course.cosdata}&action=${action}&preSkip=${preSkip}`
+				}).then(response => {
+					if (!response.success) {
+						const d = div();
+						d.innerHTML = response.msg;
+						window.messageAlert.addErrorElement(title + '失敗', d, 20000);
+						return
+					}
+					window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
+
+					// Already in pre-schedule, add it back after success
+					if (addPreResponse.code === 4002)
+						fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data');
+				});
+			});
+		});
+	}
+
+	/**@this{{courseData: CourseData, key: string}}*/
 	function sendPreKey() {
 		const title = this.courseData.courseName + ' 加入預排';
-		fetchApi(`/courseFuncBtn?prekey=${encodeURIComponent(this.key)}`, 'Send key data').then(i => {
-			if (i.success)
-				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
-			else {
+		const prekey = encodeURIComponent(this.key);
+		fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data').then(response => {
+			if (!response.success) {
 				const d = div();
-				d.innerHTML = i.msg;
+				d.innerHTML = response.msg;
 				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
+				return;
 			}
+
+			window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
 		});
 	}
 
@@ -891,7 +937,7 @@ export default function (router, loginState, userGuideTool) {
 							!data.preRegister ? null :
 								button(null, '加入預排', sendPreKey, {courseData: data, key: data.preRegister}),
 							!data.preferenceEnter ? null :
-								button(null, '加入志願', sendCosData, {courseData: data, key: data.preferenceEnter}),
+								button(null, '加入志願', sendPreReg, {courseData: data, key: data.preRegister}),
 							!data.addCourse ? null :
 								button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
 						),

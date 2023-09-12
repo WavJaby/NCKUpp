@@ -7,6 +7,7 @@ import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ApiCode;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
@@ -159,6 +160,11 @@ public class CourseFunctionButton implements EndpointModule {
 
             if (!postResult.getBoolean("result"))
                 response.errorCourseNCKU();
+
+            // Already in pre course
+            if (msg.equals("該課程已在預選清單中") || msg.equals("This course is included in the preliminary course schedule."))
+                response.setResponseCode(ApiCode.COURSE_NCKU_ALREADY_ERROR);
+
         } catch (IOException e) {
             logger.errTrace(e);
             response.errorNetwork(e);
@@ -226,11 +232,6 @@ public class CourseFunctionButton implements EndpointModule {
                 response.errorCourseNCKU();
             if (message == null || message.isEmpty())
                 message = "Unknown error";
-//            else {
-//                message = message.replace("<br>", "\\n");
-//                int start = message.indexOf('>'), end = message.lastIndexOf('<');
-//                if (start != -1 && end != -1) message = message.substring(start + 1, end);
-//            }
             response.setMessageDisplay(message);
         } catch (IOException e) {
             logger.errTrace(e);

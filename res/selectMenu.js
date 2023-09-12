@@ -64,17 +64,15 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		createItemsElement(itemsContainer, items, false);
 
 	selectMenu.onclick = function (e) {
-		if (!(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLLabelElement))
-			e.preventDefault();
-	};
-
-	resultBox.onclick = function () {
-		// Close search box
-		if (searchBox.classList.contains('open'))
-			closeSelectMenu();
-		// Open search box
-		else
-			openSelectMenu();
+		e.preventDefault();
+		if (e.target === resultBox || e.target === selectMenu) {
+			// Close search box
+			if (searchBox.classList.contains('open'))
+				closeSelectMenu();
+			// Open search box
+			else
+				openSelectMenu();
+		}
 	};
 
 	this.onSelectItemChange = null;

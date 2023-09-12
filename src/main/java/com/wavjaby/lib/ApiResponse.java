@@ -137,6 +137,10 @@ public class ApiResponse {
         err.add("Error from " + Main.courseNcku);
     }
 
+    public void setResponseCode(ApiCode code) {
+        responseCode = code;
+    }
+
     public int getResponseCode() {
         if (responseCode == ApiCode.UNSUPPORTED_HTTP_METHOD)
             return 405; // Method Not Allowed

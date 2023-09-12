@@ -109,7 +109,8 @@ public class Main {
         startModules();
         logger.log("Ready");
 
-//        GetCourseDataUpdate getCourseDataUpdate = new GetCourseDataUpdate(search, watchDog, serverSettings);
+        if (serverSettings.getPropertyBoolean("getCourseUpdate", false))
+            new GetCourseDataUpdate(search, watchDog, serverSettings);
 
         // Stop
         Scanner scanner = new Scanner(System.in);

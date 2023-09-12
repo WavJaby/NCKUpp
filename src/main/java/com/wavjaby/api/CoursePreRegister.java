@@ -28,7 +28,7 @@ import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
 public class CoursePreRegister implements EndpointModule {
-    private static final String TAG = "[CoursePreRegister]";
+    private static final String TAG = "[PreRegister]";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
@@ -83,6 +83,9 @@ public class CoursePreRegister implements EndpointModule {
         @ApiRequestParser.Required
         @ApiRequestParser.Payload
         private String action;
+        @ApiRequestParser.Required
+        @ApiRequestParser.Payload
+        private String preSkip;
     }
 
     private void getCoursePreRegisterList(String rawQuery, ApiResponse response, CookieStore cookieStore) {
@@ -100,25 +103,36 @@ public class CoursePreRegister implements EndpointModule {
             if (body == null)
                 return;
 
-            Element action = body.getElementById("cos21362_action");
-            if (action == null) {
-                response.errorParse("PreRegisterList action key not found");
-                return;
-            }
-            JsonObjectStringBuilder result = new JsonObjectStringBuilder();
-            result.append("action", action.ownText().trim());
-
             String pageError = checkCourseNckuPageError(body);
             if (pageError != null) {
                 if (pageError.startsWith("目前尚無志願課程預排資料") ||
                         pageError.startsWith("No elective courses in your preliminary course schedule")) {
-                    response.setData(result.appendRaw("courseList", "[]").toString());
+                    response.setData(new JsonObjectStringBuilder()
+                            .append("action")
+                            .appendRaw("courseList", "[]")
+                            .toString());
                     return;
                 }
                 response.setMessageDisplay(pageError);
                 response.errorCourseNCKU();
                 return;
             }
+
+            JsonObjectStringBuilder result = new JsonObjectStringBuilder();
+
+            Element action = body.getElementById("cos21362_action");
+            if (action == null) {
+                response.errorParse("PreRegisterList action key not found");
+                return;
+            }
+            result.append("action", action.ownText().trim());
+
+            Element preSkip = body.getElementById("pre_duph_skip");
+            if (preSkip == null) {
+                response.errorParse("PreRegisterList pre skip not found");
+                return;
+            }
+            result.append("preSkip", !preSkip.ownText().trim().isEmpty());
 
             Element mainTable = body.getElementById("main-table");
             if (mainTable == null) {
@@ -180,28 +194,36 @@ public class CoursePreRegister implements EndpointModule {
             return;
 
         if (request.mode.equals("genEdu")) {
-            long time = (System.currentTimeMillis() / 1000);
             String prechk = request.prechk;
             String cosdata = request.cosdata;
             String action = request.action;
+            boolean preSkip = request.preSkip.equals("true");
 
             try {
-                Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215&m=pre_duph_chk&time=" + time)
-                        .header("Connection", "keep-alive")
-                        .cookieStore(cookieStore)
-                        .ignoreContentType(true)
-                        .proxy(proxyManager.getProxy())
-                        .userAgent(Main.USER_AGENT)
-                        .method(Connection.Method.POST)
-                        .requestBody("prechk=" + URLEncoder.encode(prechk, "UTF-8") + "&time=" + time)
-                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                        .header("X-Requested-With", "XMLHttpRequest")
-                        .execute();
-                if (post.statusCode() != 200) {
-                    response.errorParse("PreRegisterList course prechk not found");
-                    return;
+                if (!preSkip) {
+                    long time = (System.currentTimeMillis() / 1000);
+                    Connection.Response post = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21215&m=pre_duph_chk&time=" + time)
+                            .header("Connection", "keep-alive")
+                            .cookieStore(cookieStore)
+                            .ignoreContentType(true)
+                            .proxy(proxyManager.getProxy())
+                            .userAgent(Main.USER_AGENT)
+                            .method(Connection.Method.POST)
+                            .requestBody("prechk=" + prechk + "&time=" + time)
+                            .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                            .header("X-Requested-With", "XMLHttpRequest")
+                            .execute();
+
+                    JsonObject postResult = new JsonObject(post.body());
+                    if (postResult.getBoolean("status")) {
+                        String msg = postResult.getString("msg");
+                        response.setMessageDisplay(msg);
+                        return;
+                    }
+                    preSkip = postResult.containsKey("empty999") && postResult.getBoolean("empty999");
                 }
 
+                long time = (System.currentTimeMillis() / 1000);
                 Connection.Response postCourse = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21362&m=" + action)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
@@ -209,16 +231,20 @@ public class CoursePreRegister implements EndpointModule {
                         .proxy(proxyManager.getProxy())
                         .userAgent(Main.USER_AGENT)
                         .method(Connection.Method.POST)
-                        .requestBody("&time=" + time + "cosdata=" + URLEncoder.encode(cosdata, "UTF-8"))
+                        .requestBody("time=" + time + "&cosdata=" + cosdata)
                         .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                         .header("X-Requested-With", "XMLHttpRequest")
                         .execute();
 
                 JsonObject postResult = new JsonObject(postCourse.body());
                 String msg = postResult.getString("msg");
+                logger.log(msg);
                 response.setMessageDisplay(msg);
+                response.setData(new JsonObjectStringBuilder()
+                        .append("preSkip", preSkip)
+                        .toString());
 
-                if (!postResult.getBoolean("result"))
+                if (!postResult.getBoolean("status"))
                     response.errorCourseNCKU();
 
             } catch (IOException e) {

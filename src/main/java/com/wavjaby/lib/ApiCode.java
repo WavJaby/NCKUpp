@@ -22,6 +22,7 @@ public enum ApiCode {
     // Api error
     LOGIN_REQUIRE(4000),
     COURSE_NCKU_ERROR(4001),
+    COURSE_NCKU_ALREADY_ERROR(4002),
     API_ERROR(4999),
 
 
