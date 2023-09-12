@@ -84,12 +84,13 @@ public class PreferenceAdjust implements EndpointModule {
         Map<String, String> form = parseUrlEncodedForm(postData);
         String mode = form.get("mode");
         String type = form.get("type");
+        String expectA9RegVal = form.get("expectA9RegVal");
         if (mode == null || mode.isEmpty()) {
             response.errorBadPayload("Payload form require \"mode\"");
             return;
         }
-        if (type == null || type.isEmpty()) {
-            response.errorBadPayload("Payload form require \"type\"");
+        if ((type == null || type.isEmpty()) && (expectA9RegVal == null || expectA9RegVal.isEmpty())) {
+            response.errorBadPayload("Payload form require least one of \"type\" or \"expectA9RegVal\"");
             return;
         }
 
@@ -105,6 +106,9 @@ public class PreferenceAdjust implements EndpointModule {
             payload.append("time=").append(System.currentTimeMillis() / 1000)
                     .append("&type=").append(type)
                     .append("&item=").append(removeItem);
+        } else if (expectA9RegVal != null && !expectA9RegVal.isEmpty()) {
+            payload.append("time=").append(System.currentTimeMillis() / 1000)
+                    .append("&desire=").append(expectA9RegVal);
         } else {
             response.errorBadPayload("Payload form require \"modifyItems\" or \"removeItem\"");
             return;
@@ -154,7 +158,9 @@ public class PreferenceAdjust implements EndpointModule {
         // Get action key
         Element action = body.getElementById("cos21342_action");
         Element remove = body.getElementById("cos21342_remove");
-        Element group2action = body.getElementById("cos_group2_action");
+        Element expectA9Reg = body.getElementById("cos21342_a9will3rd");
+        Element expectA9RegVal = body.getElementById("a9will3rd_val");
+//        Element group2action = body.getElementById("cos_group2_action");
         if (action == null) {
             response.errorParse("Action key not found");
             return;
@@ -162,6 +168,9 @@ public class PreferenceAdjust implements EndpointModule {
         if (remove == null) {
             response.errorParse("Action remove key not found");
             return;
+        }
+        if (expectA9Reg == null || expectA9RegVal == null) {
+            response.addWarn("Action expectA9Reg key not found");
         }
 
         // All data need adjust
@@ -174,7 +183,6 @@ public class PreferenceAdjust implements EndpointModule {
         JsonObjectStringBuilder result = new JsonObjectStringBuilder();
         result.append("action", action.text().trim());
         result.append("remove", remove.text().trim());
-        result.append("group2action", group2action.text().trim());
         JsonArrayStringBuilder tabs = new JsonArrayStringBuilder();
 
         // Get list item
@@ -283,6 +291,10 @@ public class PreferenceAdjust implements EndpointModule {
                 );
             }
             adjustList.append("items", items);
+            if (id.startsWith("A9") && expectA9Reg != null && expectA9RegVal != null) {
+                adjustList.append("expectA9Reg", expectA9Reg.text().trim());
+                adjustList.append("expectA9RegVal", expectA9RegVal.text().trim());
+            }
             tabs.append(adjustList);
         }
         result.append("tabs", tabs);

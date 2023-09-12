@@ -116,6 +116,17 @@ p {
     cursor: pointer;
 }
 
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: inner-spin-button !important;
+    width: 30px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    height: 100%;
+}
+
 // A link
 a, a:visited, a:hover, a:active {
     color: inherit;

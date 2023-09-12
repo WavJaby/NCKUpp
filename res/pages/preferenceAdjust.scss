@@ -9,9 +9,7 @@
         }
     }
 
-    > .tabs > .adjustList {
-        text-align: center;
-        position: relative;
+    > .tabs > .tab {
         display: none;
 
         &.show {
@@ -21,75 +19,106 @@
         > .title {
             margin: 0;
             padding-top: 10px;
+            text-align: center;
         }
 
-        // List items
-        .item > .courseBlock {
-            background: #252b33;
-            padding: 5px;
-            border-radius: 10px;
-            text-align: left;
-            @include box-sizing-border;
-            overflow: hidden;
-            font-size: 16px;
+        > .expectA9Reg {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 18px;
 
-            > .removeBtn {
-                background: $button-dark-bg-color;
-                border-radius: 7px;
-                margin-left: 10px;
-                padding: 2px 5px;
-                float: right;
-                cursor: pointer;
+            > .description, > .value {
+                margin-right: 10px;
+                display: inline-block;
+                vertical-align: middle;
+            }
 
-                &:hover {
-                    background: $button-dark-red-bg-color;
-                }
+            > .value {
+                width: 3em;
+            }
+
+            > .saveValBtn {
+                border-radius: 10px;
+                padding: 5px 10px;
+                display: inline-block;
+                vertical-align: middle;
             }
         }
 
-        // List item holder
-        > .body {
-            display: inline-block;
+        > .adjustList {
+            text-align: center;
             position: relative;
-            touch-action: none;
-            -ms-touch-action: none;
-            vertical-align: top;
 
-            // When adjusting items
-            &.adjusting > .itemHolder {
-                > .item {
-                    position: absolute;
-                    @include transition(top 100ms);
-                }
-            }
+            // List items
+            .item > .courseBlock {
+                background: #252b33;
+                padding: 5px;
+                border-radius: 10px;
+                text-align: left;
+                @include box-sizing-border;
+                overflow: hidden;
+                font-size: 16px;
 
-            > .itemHolder {
-                width: 100%;
-                margin-bottom: 5px;
+                > .removeBtn {
+                    background: $button-dark-bg-color;
+                    border-radius: 7px;
+                    margin-left: 10px;
+                    padding: 2px 5px;
+                    float: right;
+                    cursor: pointer;
 
-                > .item {
-                    width: 100%;
-                    @include cursor-grab;
-
-                    &.grabbing {
-                        opacity: 0.3
+                    &:hover {
+                        background: $button-dark-red-bg-color;
                     }
                 }
             }
-        }
 
-        // Item grab by mouse
-        > .adjustItemHolder {
-            position: relative;
+            // List item holder
+            > .body {
+                display: inline-block;
+                position: relative;
+                touch-action: none;
+                -ms-touch-action: none;
+                vertical-align: top;
 
-            > .item {
-                z-index: 1;
-                @include cursor-grabbing;
-                position: absolute;
-                box-shadow: 1px 1px 3px 1px $background-color;
+                // When adjusting items
+                &.adjusting > .itemHolder {
+                    > .item {
+                        position: absolute;
+                        @include transition(top 100ms);
+                    }
+                }
 
-                &.moveBack {
-                    @include transition((top 100ms, left 100ms));
+                > .itemHolder {
+                    width: 100%;
+                    margin-bottom: 5px;
+
+                    > .item {
+                        width: 100%;
+                        @include cursor-grab;
+
+                        &.grabbing {
+                            opacity: 0.3
+                        }
+                    }
+                }
+            }
+
+            // Item grab by mouse
+            > .adjustItemHolder {
+                position: relative;
+
+                > .item {
+                    z-index: 1;
+                    @include cursor-grabbing;
+                    position: absolute;
+                    box-shadow: 1px 1px 3px 1px $background-color;
+                    border-radius: 10px;
+
+
+                    &.moveBack {
+                        @include transition((top 100ms, left 100ms));
+                    }
                 }
             }
         }

@@ -1,6 +1,6 @@
 'use strict';
 
-import {button, div, h1, mountableStylesheet, span} from '../lib/domHelper_v003.min.js';
+import {button, div, h1, input, mountableStylesheet, span} from '../lib/domHelper_v003.min.js';
 import {fetchApi} from '../lib/lib.js';
 
 /**
@@ -17,7 +17,7 @@ export default function (router, loginState) {
 	const dayOfWeek = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 	let saveItemOrderCountdown = null, saveItemOrderTimeLeft = 0;
 	let preferenceAdjustLoading = false;
-	let /**@type{AdjustList}*/lastSelectTab = null;
+	let lastTab = null;
 	let actionKey = null, removeKey = null;
 
 	const adjustListTabButtons = div('tabsBtn');
@@ -76,11 +76,13 @@ export default function (router, loginState) {
 	}
 
 	function renderAdjustList(state) {
-		lastSelectTab = null;
+		lastTab = null;
 		while (adjustListTabButtons.firstChild)
 			adjustListTabButtons.removeChild(adjustListTabButtons.firstChild);
-		while (adjustListTabs.firstChild)
+		while (adjustListTabs.firstChild) {
+			adjustListTabs.firstChild.adjustList.disable();
 			adjustListTabs.removeChild(adjustListTabs.firstChild);
+		}
 
 		if (!state)
 			return;
@@ -88,8 +90,21 @@ export default function (router, loginState) {
 		// console.log(state);
 		actionKey = state.action;
 		removeKey = state.remove;
+
 		const tabs = state.tabs;
 		for (const tab of tabs) {
+			console.log(tab)
+			let expectA9Reg = null;
+			// Multiple A9 reg
+			if (tab.expectA9Reg != null && tab.expectA9RegVal != null) {
+				const inputVal = input('value', null, null, {value: tab.expectA9RegVal, type: 'number'});
+				expectA9Reg = div('expectA9Reg',
+					span('第三階段通識期望抽中科目數: ', 'description'),
+					inputVal,
+					button('saveValBtn', '儲存', saveExpectA9RegVal, {input: inputVal, mode: tab.expectA9Reg}),
+				);
+			}
+
 			const adjustList = new AdjustList();
 			adjustList.typeKey = tab.type;
 			const items = tab.items.map(i => div('courseBlock', {key: i.key},
@@ -102,16 +117,33 @@ export default function (router, loginState) {
 			));
 			adjustList.onchange = adjustListOnChange;
 			adjustList.ongrab = saveItemOrderCountdownStop;
-			adjustList.setTitle(tab.name);
 			adjustList.setItems(items);
-			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {adjustList: adjustList}));
-			adjustListTabs.appendChild(adjustList.element);
+			const currentTab = adjustListTabs.appendChild(div('tab', {adjustList: adjustList},
+				h1(tab.name, 'title noSelect'),
+				expectA9Reg,
+				adjustList.element)
+			);
+			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {tab: currentTab}));
 
-			if (!lastSelectTab) {
-				lastSelectTab = adjustList;
-				adjustList.show();
+			if (!lastTab) {
+				lastTab = currentTab;
+				lastTab.classList.add('show');
+				adjustList.enable();
 			}
 		}
+	}
+
+	function saveExpectA9RegVal() {
+		// console.log(this.input.value);
+
+		const form = 'mode=' + this.mode + '&expectA9RegVal=' + this.input.value;
+		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
+			updatePreferenceAdjust();
+			if (response.success) {
+				window.messageAlert.addSuccess('設定通識期望抽中科目數成功', response.msg, 5000);
+			} else
+				window.messageAlert.addError('設定通識期望抽中科目數失敗', response.msg, 5000);
+		});
 	}
 
 	function removeCourse() {
@@ -136,22 +168,27 @@ export default function (router, loginState) {
 		if (saveItemOrderCountdown) {
 			return;
 		}
-		if (lastSelectTab)
-			lastSelectTab.hide();
-		lastSelectTab = this.adjustList;
-		lastSelectTab.show();
+		if (lastTab === this)
+			return;
+		if (lastTab) {
+			lastTab.classList.remove('show');
+			lastTab.adjustList.disable();
+		}
+		lastTab = this.tab;
+		lastTab.classList.add('show');
+		lastTab.adjustList.enable();
 	}
 
 	function saveItemOrder() {
 		saveItemOrderCountdownStop();
 		saveItemOrderButton.classList.remove('show');
 		const orderKeys = [];
-		lastSelectTab.updateItemIndex();
-		const items = lastSelectTab.getItems();
+		lastAdjustList.updateItemIndex();
+		const items = lastAdjustList.getItems();
 		for (const item of items)
 			orderKeys.push(item.key);
 		const itemsStr = orderKeys.join(',');
-		const typeKey = lastSelectTab.typeKey;
+		const typeKey = lastAdjustList.typeKey;
 		const form = 'mode=' + actionKey + '&type=' + typeKey + '&modifyItems=' + itemsStr;
 		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
 			if (response.success) {
@@ -197,12 +234,10 @@ export default function (router, loginState) {
  */
 function AdjustList() {
 	const thisInstance = this;
-	const adjustItemTitle = h1(null, 'title noSelect');
 	const adjustItemHolder = div('adjustItemHolder');
 	/**@type{HTMLDivElement}*/
 	const adjustListBody = div('body');
 	const element = this.element = div('adjustList',
-		adjustItemTitle,
 		adjustItemHolder,
 		adjustListBody,
 	);
@@ -210,26 +245,20 @@ function AdjustList() {
 	let movingItem = null, grabbingItem = null;
 	let startGrabbingOffsetX, startGrabbingOffsetY;
 
-	this.show = function () {
+	this.enable = function () {
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('touchmove', onMouseMove);
 		window.addEventListener('mouseup', onMouseUp);
 		window.addEventListener('touchend', onMouseUp);
 		window.addEventListener('touchcancel', onMouseUp);
-		element.classList.add('show');
 	};
 
-	this.hide = function () {
-		element.classList.remove('show');
+	this.disable = function () {
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('touchmove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
 		window.removeEventListener('touchend', onMouseUp);
 		window.removeEventListener('touchcancel', onMouseUp);
-	};
-
-	this.setTitle = function (title) {
-		adjustItemTitle.textContent = title;
 	};
 
 	this.setItems = function (items) {
