@@ -128,7 +128,7 @@ public class Search implements EndpointModule {
             addRemoveCookieToHeader("searchID", "/", req);
 
         apiResponse.sendResponse(req);
-        logger.log("Search " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -1452,7 +1452,7 @@ public class Search implements EndpointModule {
             // Parse semester if history search
             String courseData_semester = null;
             if (historySearch) {
-                String semester = section.get(0).text().trim();
+                String semester = section.get(0).ownText().trim();
                 int split = semester.indexOf('-');
                 if (split != -1)
                     courseData_semester = semester.substring(0, split) +
@@ -1462,7 +1462,7 @@ public class Search implements EndpointModule {
 
             // get serial number
             List<Node> section1 = section.get(sectionOffset + 1).childNodes();
-            String serialNumber = ((Element) section1.get(0)).text().trim();
+            String serialNumber = ((Element) section1.get(0)).ownText().trim();
             if (getSerialNumber != null) {
                 String serialNumberStr = serialNumber.substring(serialNumber.indexOf('-') + 1);
                 // Skip if we don't want
@@ -1634,7 +1634,7 @@ public class Search implements EndpointModule {
                                 timeCacheMapRoomNo = attribute.substring(roomNoStart + 1, roomNoEnd);
                         }
                         if (node instanceof Element)
-                            timeCacheMapRoomName = ((Element) node).text().trim();
+                            timeCacheMapRoomName = ((Element) node).ownText().trim();
                         continue;
                     }
                 }

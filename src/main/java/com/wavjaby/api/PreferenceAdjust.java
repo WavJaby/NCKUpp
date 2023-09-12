@@ -77,7 +77,7 @@ public class PreferenceAdjust implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Preference adjust " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void updatePreferenceAdjustList(String postData, ApiResponse response, CookieStore cookieStore) {
@@ -146,11 +146,9 @@ public class PreferenceAdjust implements EndpointModule {
         if (body == null)
             return;
 
-        // Get if error
-        Element error = body.getElementById("error");
-        Element errorText;
-        if (error != null && (errorText = error.getElementsByClass("note-desc").first()) != null) {
-            response.setMessageDisplay(errorText.text().trim());
+        String pageError = checkCourseNckuPageError(body);
+        if (pageError != null) {
+            response.setMessageDisplay(pageError);
             response.errorCourseNCKU();
             return;
         }
@@ -181,8 +179,8 @@ public class PreferenceAdjust implements EndpointModule {
         }
 
         JsonObjectStringBuilder result = new JsonObjectStringBuilder();
-        result.append("action", action.text().trim());
-        result.append("remove", remove.text().trim());
+        result.append("action", action.ownText().trim());
+        result.append("remove", remove.ownText().trim());
         JsonArrayStringBuilder tabs = new JsonArrayStringBuilder();
 
         // Get list item
@@ -228,7 +226,7 @@ public class PreferenceAdjust implements EndpointModule {
                     response.errorParse("Adjust list item course name not found");
                     return;
                 }
-                String rawCourseName = courseNameElement.text().trim();
+                String rawCourseName = courseNameElement.ownText().trim();
                 int split = rawCourseName.indexOf('】');
                 if (split == -1) {
                     response.errorParse("Adjust list item wrong format: " + rawCourseName);
@@ -292,8 +290,8 @@ public class PreferenceAdjust implements EndpointModule {
             }
             adjustList.append("items", items);
             if (id.startsWith("A9") && expectA9Reg != null && expectA9RegVal != null) {
-                adjustList.append("expectA9Reg", expectA9Reg.text().trim());
-                adjustList.append("expectA9RegVal", expectA9RegVal.text().trim());
+                adjustList.append("expectA9Reg", expectA9Reg.ownText().trim());
+                adjustList.append("expectA9RegVal", expectA9RegVal.ownText().trim());
             }
             tabs.append(adjustList);
         }

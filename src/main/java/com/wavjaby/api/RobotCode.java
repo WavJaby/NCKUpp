@@ -105,7 +105,7 @@ public class RobotCode implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Crack RobotCode " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

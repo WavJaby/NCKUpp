@@ -80,7 +80,7 @@ public class Profile implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
 
         apiResponse.sendResponse(req);
-        logger.log("Get profile " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void updateUserProfile(String courseSerial, String studentID, String PHPSESSID, ApiResponse response) {

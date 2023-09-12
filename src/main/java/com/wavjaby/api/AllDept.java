@@ -77,7 +77,7 @@ public class AllDept implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Get all dept " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

@@ -269,7 +269,7 @@ export default function (router, loginState, userGuideTool) {
 			search();
 		} else {
 			if (state) {
-				window.messageAlert.addError('鄰近選課期，可能需要登入才能使用搜尋功能', '使用右上角按鈕進行登入', 10000);
+				// window.messageAlert.addError('鄰近選課期，可能需要登入才能使用搜尋功能', '使用右上角按鈕進行登入', 10000);
 				window.messageAlert.addInfo('登入啟用更多功能', '登入後即可將課程加入關注列表、加入預排、加入志願、單科加選等功能', 10000);
 			}
 			watchList = null;

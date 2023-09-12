@@ -30,7 +30,7 @@ public class WebSocket implements EndpointModule, SocketServerEvent {
     private final HttpHandler httpHandler = req -> {
         long startTime = System.currentTimeMillis();
         server.addClient(req);
-        logger.log("Web socket " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

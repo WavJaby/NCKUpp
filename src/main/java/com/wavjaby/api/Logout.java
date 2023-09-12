@@ -56,7 +56,7 @@ public class Logout implements EndpointModule {
         addRemoveCookieToHeader("stuSysLoginData", "/", req);
 
         apiResponse.sendResponse(req);
-        logger.log("Logout " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

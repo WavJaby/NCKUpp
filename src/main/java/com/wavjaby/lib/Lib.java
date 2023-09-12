@@ -104,6 +104,19 @@ public class Lib {
         }
     }
 
+    public static String checkCourseNckuPageError(Element body) {
+        // Get if error
+        Element error = body.getElementById("error");
+        if (error == null || error.parent() == null || error.parent().attr("style").equals("display:none;"))
+            return null;
+
+        Element errorText;
+        if ((errorText = error.getElementsByClass("note-desc").first()) != null) {
+            return errorText.text().trim();
+        }
+        return null;
+    }
+
     public static void executorShutdown(ExecutorService service, long timeoutMillis, String name) {
         service.shutdown();
         try {

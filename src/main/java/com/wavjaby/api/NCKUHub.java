@@ -106,7 +106,7 @@ public class NCKUHub implements EndpointModule {
         getNckuHubCourseInfo(queryString, apiResponse);
 
         apiResponse.sendResponse(req);
-        logger.log("Get NCKU Hub " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

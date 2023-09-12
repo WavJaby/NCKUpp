@@ -99,7 +99,7 @@ public class A9Registered implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Get A9Registered " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void getA9Registered(CookieStore cookieStore, ApiResponse response) {
@@ -159,8 +159,8 @@ public class A9Registered implements EndpointModule {
                     response.errorParse("DataTable row parse error");
                     return;
                 }
-                String serial = col.get(1).text().trim() + '-' + col.get(2).text().trim();
-                registeredCountList.appendRaw(serial, new CourseData(col.get(4).text().trim(), Integer.parseInt(col.get(6).text().trim())).toString());
+                String serial = col.get(1).ownText().trim() + '-' + col.get(2).ownText().trim();
+                registeredCountList.appendRaw(serial, new CourseData(col.get(4).ownText().trim(), Integer.parseInt(col.get(6).ownText().trim())).toString());
             }
             result.append("list", registeredCountList);
             result.append("lastUpdate", lastUpdateTime = parsedTimeSec);

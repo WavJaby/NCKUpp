@@ -50,7 +50,7 @@ public class ClientDebugLog implements EndpointModule {
 
         apiResponse.sendResponse(req);
 
-        logger.log("ClientDebugLog " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

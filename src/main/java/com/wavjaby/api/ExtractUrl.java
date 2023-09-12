@@ -58,7 +58,7 @@ public class ExtractUrl implements EndpointModule {
             apiResponse.errorBadQuery("Query require one of \"moodle\" or \"location\"");
 
         apiResponse.sendResponse(req);
-        logger.log("Extract url " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

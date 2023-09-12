@@ -156,7 +156,7 @@ public class UrSchool implements EndpointModule {
 
         apiResponse.sendResponse(req);
 
-        logger.log("Get UrSchool " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

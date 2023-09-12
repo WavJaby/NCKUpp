@@ -81,7 +81,7 @@ public class UsefulWebsite implements EndpointModule {
 
         apiResponse.sendResponse(req);
 
-        logger.log("Get useful website " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

@@ -40,7 +40,7 @@ public class Template implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Get template " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

@@ -284,7 +284,7 @@ public class StudentIdentificationSystem implements EndpointModule {
         packStudentIdSysLoginStateCookie(req, loginState, cookieStore);
 
         apiResponse.sendResponse(req);
-        logger.log("Get student id system " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -293,7 +293,6 @@ public class StudentIdentificationSystem implements EndpointModule {
     }
 
     private void studentIdSysGet(String rawQuery, CookieStore cookieStore, ApiResponse response) {
-
         Map<String, String> query = parseUrlEncodedForm(rawQuery);
         String mode = query.get("mode");
         if (mode == null) {
@@ -326,7 +325,7 @@ public class StudentIdentificationSystem implements EndpointModule {
 
             String[] cache = imageQueryRaw.split(",", 4);
             if (cache.length != 4) {
-                int len = cache.length == 1 && cache[0].length() == 0 ? 0 : cache.length;
+                int len = cache.length == 1 && cache[0].isEmpty() ? 0 : cache.length;
                 response.errorBadQuery("\"" + imageQueryRaw + "\" (Only give " + len + " value instead of 4)");
                 return;
             }
@@ -429,7 +428,6 @@ public class StudentIdentificationSystem implements EndpointModule {
         }
 
         // Get current semester table
-        tbody = null;
         try {
             Connection conn = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/" + url)
                     .header("Connection", "keep-alive")

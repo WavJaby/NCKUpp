@@ -72,7 +72,7 @@ public class CourseFunctionButton implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Course function button " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     public void getFlexTime(String key, CookieStore cookieStore, ApiResponse response) {
@@ -120,11 +120,11 @@ public class CourseFunctionButton implements EndpointModule {
                     return;
                 }
                 JsonObjectStringBuilder timeData = new JsonObjectStringBuilder();
-                String date = cols.get(0).text().trim();
+                String date = cols.get(0).ownText().trim();
                 int dateSub = date.indexOf('(');
                 timeData.append("date", dateSub != -1 ? date.substring(0, dateSub) : date);
-                timeData.append("timeStart", cols.get(1).text().trim());
-                timeData.append("timeEnd", cols.get(2).text().trim());
+                timeData.append("timeStart", cols.get(1).ownText().trim());
+                timeData.append("timeEnd", cols.get(2).ownText().trim());
 
                 timeList.append(timeData);
             }

@@ -238,7 +238,7 @@ public class Login implements EndpointModule {
         ApiResponse apiResponse = new ApiResponse();
         login(req, apiResponse);
         apiResponse.sendResponse(req);
-        logger.log("Login " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void login(HttpExchange req, ApiResponse response) {
@@ -330,7 +330,7 @@ public class Login implements EndpointModule {
                 return;
             }
 
-            logger.log("Login use portal");
+//            logger.log("Login use portal");
             // Use portal
             Connection.Response portalPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
                     .header("Connection", "keep-alive")

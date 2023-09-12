@@ -483,7 +483,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
             for (Element tr : tbody.getElementsByTag("tr")) {
                 Elements tds = tr.children();
                 // Check support https
-                if (tds.get(6).text().equalsIgnoreCase("yes") || allowHttp) {
+                if (tds.get(6).ownText().equalsIgnoreCase("yes") || allowHttp) {
                     ProxyManager.ProxyData proxyData = new ProxyManager.ProxyData(tds.get(0).text(), Integer.parseInt(tds.get(1).text()), "https", proxyUrl);
                     newData.put(proxyData.toUrl(), proxyData);
                 }

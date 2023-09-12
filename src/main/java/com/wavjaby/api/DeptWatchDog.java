@@ -21,7 +21,7 @@ import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 import static com.wavjaby.lib.Lib.readRequestBody;
 
 public class DeptWatchDog implements EndpointModule {
-    private static final String TAG = "[DeptWatchDog]";
+    private static final String TAG = "[WatchDog]";
     private static final Logger logger = new Logger(TAG);
     private final SQLite sqLite;
     private final Login login;
@@ -177,7 +177,7 @@ public class DeptWatchDog implements EndpointModule {
         packCourseLoginStateCookie(req, loginState, cookieStore);
         apiResponse.sendResponse(req);
 
-        logger.log("Done in " + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
     };
 
     private void addWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse response) {
