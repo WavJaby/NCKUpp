@@ -2,6 +2,7 @@
 
 import {button, div, h1, input, mountableStylesheet, span} from '../lib/domHelper_v003.min.js';
 import {fetchApi} from '../lib/lib.js';
+import {courseSearch} from './courseSearch.js';
 
 /**
  * @param {QueryRouter} router
@@ -122,7 +123,7 @@ export default function (router, loginState) {
 				h1(tab.name, 'title noSelect'),
 				expectA9Reg,
 				adjustList.element,
-				// button('showInSearch', '在課程搜尋中顯示', showInSearch, {serialIds: tab.items.map(i => i.sn)})
+				button('showInSearch', '在課程搜尋中顯示', showInSearch, {serialIds: tab.items.map(i => i.sn)})
 			));
 			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {tab: currentTab}));
 
@@ -135,7 +136,8 @@ export default function (router, loginState) {
 	}
 
 	function showInSearch() {
-		console.log(this.serialIds);
+		const rawQuery = [['serial', this.serialIds.join(',')]];
+		router.openPage('CourseSearch', false, () => courseSearch(rawQuery));
 	}
 
 	function saveExpectA9RegVal() {
@@ -187,6 +189,7 @@ export default function (router, loginState) {
 		saveItemOrderCountdownStop();
 		saveItemOrderButton.classList.remove('show');
 		const orderKeys = [];
+		const lastAdjustList = lastTab.adjustList;
 		lastAdjustList.updateItemIndex();
 		const items = lastAdjustList.getItems();
 		for (const item of items)

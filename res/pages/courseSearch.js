@@ -205,6 +205,12 @@ const textColor = {
 };
 const totalColSpan = 17;
 
+export function courseSearch(rawQuery) {
+	courseSearchFunction(rawQuery);
+}
+
+let courseSearchFunction;
+
 /**
  * @param {QueryRouter} router
  * @param {Signal} loginState
@@ -238,7 +244,7 @@ export default function (router, loginState, userGuideTool) {
 			if (response == null || !response.success || !response.data)
 				return;
 			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.name, i.dept]));
-			loadLastSearch();
+			loadLastSearch(false);
 		});
 	}
 
@@ -246,7 +252,7 @@ export default function (router, loginState, userGuideTool) {
 		console.log('Course search Open');
 		styles.enable();
 		if (isHistory)
-			loadLastSearch();
+			loadLastSearch(true);
 
 		loginState.addListener(onLoginState);
 	}
@@ -270,7 +276,7 @@ export default function (router, loginState, userGuideTool) {
 		}
 	}
 
-	function loadLastSearch() {
+	function loadLastSearch(performSearch) {
 		const rawQuery = window.urlHashData['searchRawQuery'];
 
 		for (const node of courseSearchForm.getElementsByTagName('input')) {
@@ -291,7 +297,7 @@ export default function (router, loginState, userGuideTool) {
 				node.value = '';
 		}
 
-		if (rawQuery && rawQuery.length > 0)
+		if (performSearch && rawQuery && rawQuery.length > 0)
 			search(rawQuery, false);
 	}
 
@@ -323,6 +329,7 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	const searchTask = [];
+	courseSearchFunction = search;
 
 	/**
 	 * @param {string[][]} [rawQuery] [key, value][]

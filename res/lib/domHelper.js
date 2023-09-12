@@ -325,7 +325,7 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 		return lastPageId;
 	};
 
-	function openPage(pageId, isHistory) {
+	function openPage(pageId, isHistory, onPageOpen) {
 		if (!pageId)
 			pageId = urlSearchData.get('page') || defaultPageId;
 
@@ -338,14 +338,16 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 			pageId = defaultPageId;
 
 		// Get page
-		getAndLoadPage(pageId, isHistory);
+		getAndLoadPage(pageId, isHistory, onPageOpen);
 	}
 
-	function getAndLoadPage(pageId, isHistory) {
+	function getAndLoadPage(pageId, isHistory, onPageOpen) {
 		let page = loadedPage[pageId];
 		// Page is loaded
 		if (page) {
 			pageReadyOpen(page, pageId, isHistory);
+			if (onPageOpen)
+				onPageOpen();
 			return;
 		}
 
@@ -362,11 +364,15 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 					pageElement.pageId = pageId;
 					pageReadyOpen(loadedPage[pageId] = pageElement, pageId, isHistory);
 					page.loding = false;
+					if (onPageOpen)
+						onPageOpen();
 				});
 			}
 		} else {
 			page.pageId = pageId;
 			pageReadyOpen(loadedPage[pageId] = page, pageId, isHistory);
+			if (onPageOpen)
+				onPageOpen();
 		}
 	}
 
