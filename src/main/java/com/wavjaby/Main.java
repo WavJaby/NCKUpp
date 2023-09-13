@@ -116,10 +116,17 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         String command;
         while (!(command = scanner.nextLine()).isEmpty()) {
-            if (command.equals("np"))
-                proxyManager.nextProxy();
-            if (command.equals("p"))
-                proxyManager.getUsingProxy();
+            switch (command) {
+                case "np":
+                    proxyManager.nextProxy();
+                    break;
+                case "up":
+                    proxyManager.updateProxy();
+                    break;
+                case "p":
+                    proxyManager.getUsingProxy();
+                    break;
+            }
         }
 
         stopModules();

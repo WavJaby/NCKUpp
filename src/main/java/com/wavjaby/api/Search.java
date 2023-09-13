@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 import static com.wavjaby.Main.*;
 import static com.wavjaby.api.IP.getClientIP;
 import static com.wavjaby.lib.ApiThrottle.checkIpThrottle;
+import static com.wavjaby.lib.ApiThrottle.doneIpThrottle;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Lib.*;
@@ -100,6 +101,7 @@ public class Search implements EndpointModule {
     }
 
     private final HttpHandler httpHandler = req -> {
+        String ip = getClientIP(req);
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
 
@@ -121,13 +123,14 @@ public class Search implements EndpointModule {
             apiResponse.errorBadQuery("Query \"" + rawQuery + "\" Require least 1 of \"dept\", \"serial\", \"courseName\", \"instructor\", \"grade\", \"dayOfWeek\", \"section\"");
         } else {
             // Check throttle
-            if (!checkIpThrottle(getClientIP(req))) {
+            if (!checkIpThrottle(ip)) {
                 req.sendResponseHeaders(429, 0);
                 req.close();
 //                logger.log(getClientIP(req) + " Throttle");
                 return;
             }
-
+            logger.log(ip);
+            // Search
             search(searchQuery, apiResponse, cookieStore);
         }
 
@@ -139,7 +142,7 @@ public class Search implements EndpointModule {
             addRemoveCookieToHeader("searchID", "/", req);
 
         apiResponse.sendResponse(req);
-        logger.log(getClientIP(req) + ' ' + (System.currentTimeMillis() - startTime) + "ms");
+        logger.log(ip + ' ' + doneIpThrottle(ip) + ' ' + apiResponse.isSuccess() + ' ' + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override

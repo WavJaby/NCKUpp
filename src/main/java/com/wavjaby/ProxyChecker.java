@@ -47,7 +47,7 @@ public class ProxyChecker {
             System.out.println(proxyDataList.size());
             // Filter
             long filter1 = System.currentTimeMillis();
-            testProxy(proxyDataList, 300, 700, true, 1, -1, true);
+            testProxy(proxyDataList, 300, 500, true, 1, -1, true);
             proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
             System.out.println(proxyDataList.size());
             System.out.println("Filter use: " + ((System.currentTimeMillis() - filter1) / 1000) + "s");
@@ -66,7 +66,7 @@ public class ProxyChecker {
         System.out.println("Filter2 start");
         System.out.println(proxyDataList.size());
         long filter2 = System.currentTimeMillis();
-        testProxy(proxyDataList, 250, 900, false, 1, -1, true);
+        testProxy(proxyDataList, 250, 1500, false, 1, -1, true);
         proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("Filter2 use: " + ((System.currentTimeMillis() - filter2) / 1000) + "s");
         System.out.println("Done");
@@ -77,7 +77,7 @@ public class ProxyChecker {
             System.out.println(proxyDataList.size());
             // Ping
             System.out.println("Ping...");
-            testProxy(proxyDataList, 4, 2000, false, -1, 6, false);
+            testProxy(proxyDataList, 4, 3000, false, -1, 3, false);
             proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
             System.out.println("\nAvailable: " + proxyDataList.size());
             System.out.println("Used: " + ((System.currentTimeMillis() - start) / 1000) + "s");
@@ -109,7 +109,12 @@ public class ProxyChecker {
     }
 
     private void fetchProxies(boolean allowHttp, Map<String, ProxyManager.ProxyData> proxyDataList) {
-        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        pool.submit(() -> getCheckerProxy(allowHttp, now.format(DateTimeFormatter.ISO_LOCAL_DATE), proxyDataList));
+        pool.submit(() -> getCheckerProxy(allowHttp, now.minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE), proxyDataList));
+        pool.submit(() -> getCheckerProxy(allowHttp, now.minusDays(2).format(DateTimeFormatter.ISO_LOCAL_DATE), proxyDataList));
 
         pool.submit(() -> {
             try {
@@ -170,16 +175,11 @@ public class ProxyChecker {
         if (allowHttp)
             pool.submit(() -> getTextTypeProxyList("https://openproxylist.xyz/http.txt", "http", proxyDataList));
 
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        pool.submit(() -> getCheckerProxy(allowHttp, now.format(DateTimeFormatter.ISO_LOCAL_DATE), proxyDataList));
-        pool.submit(() -> getCheckerProxy(allowHttp, now.minus(1, ChronoUnit.DAYS).format(DateTimeFormatter.ISO_LOCAL_DATE), proxyDataList));
-        pool.submit(() -> getCheckerProxy(allowHttp, now.minus(2, ChronoUnit.DAYS).format(DateTimeFormatter.ISO_LOCAL_DATE), proxyDataList));
-
-        pool.submit(() -> getGeonodeProxyList("socks4", 3, proxyDataList));
-        pool.submit(() -> getGeonodeProxyList("socks5", 3, proxyDataList));
-        pool.submit(() -> getGeonodeProxyList("https", 3, proxyDataList));
-        if (allowHttp)
-            pool.submit(() -> getGeonodeProxyList("http", 3, proxyDataList));
+//        pool.submit(() -> getGeonodeProxyList("socks4", 3, proxyDataList));
+//        pool.submit(() -> getGeonodeProxyList("socks5", 3, proxyDataList));
+//        pool.submit(() -> getGeonodeProxyList("https", 3, proxyDataList));
+//        if (allowHttp)
+//            pool.submit(() -> getGeonodeProxyList("http", 3, proxyDataList));
 
 
         pool.submit(() -> getTextTypeProxyList("https://raw.githubusercontent.com/jetkai/proxy-list/main/archive/txt/proxies-socks4.txt", "socks4", proxyDataList));
@@ -426,7 +426,7 @@ public class ProxyChecker {
             System.err.println("Error\t" + proxyUrl);
         }
         proxyDataList.putAll(newData);
-        System.out.println(newData.size() + "\t" + proxyUrl);
+        // System.out.println(newData.size() + "\t" + proxyUrl);
     }
 
     private void getProxyScrapeProxy(String protocol, int timeout, Map<String, ProxyManager.ProxyData> proxyDataList) {
@@ -461,7 +461,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
                         continue;
                     proxyDataList.put(i.getKey(), i.getValue());
                 }
-                System.out.println(newData.size() + "\t" + url);
+                // System.out.println(newData.size() + "\t" + url);
             } else
                 System.out.println(spysOneProxyFile.getName() + " empty");
         } else
@@ -492,7 +492,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
             System.err.println("Error\t" + proxyUrl);
         }
         proxyDataList.putAll(newData);
-        System.out.println(newData.size() + "\t" + proxyUrl);
+        // System.out.println(newData.size() + "\t" + proxyUrl);
     }
 
     private void getGeonodeProxyList(String protocol, int maxPage, Map<String, ProxyManager.ProxyData> proxyDataList) {
@@ -521,7 +521,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
             if (page * 500 > data.getInt("total"))
                 break;
         }
-        System.out.println(newData.size() + "\t" + proxyUrlPrefix);
+        // System.out.println(newData.size() + "\t" + proxyUrlPrefix);
         proxyDataList.putAll(newData);
     }
 
@@ -555,7 +555,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
             ProxyManager.ProxyData proxyData = new ProxyManager.ProxyData(ip, port, protocol, proxyUrl);
             newData.put(proxyData.toUrl(), proxyData);
         }
-        System.out.println(newData.size() + "\t" + proxyUrl);
+        // System.out.println(newData.size() + "\t" + proxyUrl);
         for (Map.Entry<String, ProxyManager.ProxyData> i : newData.entrySet()) {
             if (!proxyDataList.containsKey(i.getKey()))
                 proxyDataList.putAll(newData);
@@ -573,7 +573,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
                 newData.put(proxyData.toUrl(), proxyData);
             }
             proxyDataList.putAll(newData);
-            System.out.println(newData.size() + "\tlocal");
+            // System.out.println(newData.size() + "\tlocal");
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -134,9 +134,9 @@ public class ProxyManager implements Module {
     }
 
     private final Runnable proxyCheckFunc = () -> {
-        final String testUrl = "https://api.simon.chummydns.com/api/ip";
+        final String testUrl = "https://course.ncku.edu.tw/index.php";
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < proxies.size(); i++) {
             try {
                 HttpURLConnection conn = (HttpURLConnection) new URL(testUrl).openConnection(proxy.toProxy());
                 conn.setConnectTimeout(TEST_TIMEOUT);
@@ -151,7 +151,10 @@ public class ProxyManager implements Module {
                 }
                 conn.disconnect();
             } catch (IOException ignore) {
-                nextProxy();
+                // Next proxy
+                if (++proxyIndex >= proxies.size())
+                    proxyIndex = 0;
+                proxy = proxies.get(proxyIndex + i);
             }
         }
     };
@@ -177,13 +180,17 @@ public class ProxyManager implements Module {
     }
 
     /**
-     * @return true if new proxy updated
+     *
      */
-    private boolean updateProxy() {
+    public void updateProxy() {
         // Check last modify
         long lastModified = proxyFile.lastModified();
-        if (proxyFileLastModified == lastModified)
-            return false;
+        if (proxyFileLastModified == lastModified) {
+            proxyIndex = 0;
+            proxy = proxies.get(proxyIndex);
+            logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
+            return;
+        }
         proxyFileLastModified = lastModified;
 
         // Read proxy file
@@ -203,8 +210,10 @@ public class ProxyManager implements Module {
                     newProxy.add(newProxyData);
             }
             // Proxy file empty
-            if (oldProxy.isEmpty() && newProxy.isEmpty())
-                return false;
+            if (oldProxy.isEmpty() && newProxy.isEmpty()) {
+                logger.log("Proxy file empty, Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
+                return;
+            }
 
             // Update proxy
             synchronized (proxies) {
@@ -216,21 +225,19 @@ public class ProxyManager implements Module {
         if (!proxies.isEmpty()) {
             proxyIndex = 0;
             proxy = proxies.get(proxyIndex);
-            logger.log("Using proxy: " + proxy.toUrl());
-            return true;
+            logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
         }
-        return false;
     }
 
     public void nextProxy() {
-        if (!useProxy || updateProxy() || proxies.isEmpty())
+        if (!useProxy || proxies.isEmpty())
             return;
 
         if (++proxyIndex >= proxies.size())
             proxyIndex = 0;
 
         proxy = proxies.get(proxyIndex);
-        logger.log("Using proxy: " + proxy.toUrl());
+        logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
     }
 
     public void getUsingProxy() {

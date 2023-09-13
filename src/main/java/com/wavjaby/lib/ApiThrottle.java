@@ -4,7 +4,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ApiThrottle {
-    private static final int FETCH_PER_MIN = 20;
+    private static final int FETCH_PER_MIN = 15;
+    private static final int FETCH_MIN_INTERVAL = 300;
 
     public static class ClientInfo {
         public long lastCleanFetchTime;
@@ -16,24 +17,29 @@ public class ApiThrottle {
             fetchCount = 0;
         }
 
-        public void addFetchCount() {
-            fetchCount++;
-        }
-
         public boolean checkPass() {
+            fetchCount++;
             long now = System.currentTimeMillis();
             long timePass = now - lastFetchTime;
-            lastFetchTime = now;
 
-            if (timePass > 60000f / FETCH_PER_MIN * 1.1f) {
-                fetchCount -= (int) (timePass / FETCH_PER_MIN);
+            // Reset after a min
+            if (now - lastCleanFetchTime > 60000) {
                 lastCleanFetchTime = now;
                 return true;
             }
 
-            if (now - lastCleanFetchTime > 60000) {
-                lastCleanFetchTime = now;
-                fetchCount = 0;
+            // Throttle
+            if (timePass < FETCH_MIN_INTERVAL) {
+                return false;
+            }
+
+            lastFetchTime = now;
+
+            if (timePass > 60000f / FETCH_PER_MIN) {
+                fetchCount -= (int) (timePass / FETCH_PER_MIN);
+                if (fetchCount < 0)
+                    fetchCount = 0;
+                return true;
             }
 
             // Throttle
@@ -43,6 +49,10 @@ public class ApiThrottle {
             }
 
             return true;
+        }
+
+        public void endRequest() {
+            lastFetchTime = System.currentTimeMillis();
         }
     }
 
@@ -55,8 +65,15 @@ public class ApiThrottle {
             clients.put(ip, new ClientInfo(System.currentTimeMillis()));
             return true;
         }
-        clientInfo.addFetchCount();
-
         return clientInfo.checkPass();
+    }
+
+    public static int doneIpThrottle(String ip) {
+        ClientInfo clientInfo = clients.get(ip);
+        if (clientInfo == null)
+            return 0;
+
+        clientInfo.endRequest();
+        return clientInfo.fetchCount;
     }
 }
