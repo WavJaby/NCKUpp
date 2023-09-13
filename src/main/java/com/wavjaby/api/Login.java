@@ -318,7 +318,7 @@ public class Login implements EndpointModule {
                         .execute();
             }
 
-            // check login state
+            // checkPass login state
             String checkResult = checkLoginPage.body();
             UserShortInfo shortInfo;
             if ((get || checkLoginPage.url().toString().endsWith("/index.php?c=portal")) &&
@@ -366,7 +366,7 @@ public class Login implements EndpointModule {
             }
             String result = loginCheck.body();
 
-            // check if force login
+            // checkPass if force login
             if (result.contains("/index.php?c=auth&m=force_login")) {
                 logger.log("Force login");
                 response.addWarn("Force login");
@@ -379,7 +379,7 @@ public class Login implements EndpointModule {
                         .execute().body();
             }
 
-            // check login state
+            // checkPass login state
             logger.log("Check login state");
             shortInfo = getCourseLoginUserInfo(result, cookieStore);
             if (shortInfo == null) {
@@ -417,9 +417,9 @@ public class Login implements EndpointModule {
                         .execute();
             }
 
-            // check login state
+            // checkPass login state
             String checkResult = checkLoginPage.body();
-            // check if already login
+            // checkPass if already login
             if (checkResult.lastIndexOf("logouts.asp") != -1) {
                 // POST and already login
                 if (!get)
@@ -473,7 +473,7 @@ public class Login implements EndpointModule {
     }
 
     private Connection.Response checkPortalLogin(Connection.Response portalPage, CookieStore cookieStore, ApiResponse response, Proxy proxy) {
-        // check if portal login error
+        // checkPass if portal login error
         if (portalPage.url().getHost().equals(portalNcku)) {
             String loginPage = portalPage.body();
             int errorStart = loginPage.indexOf("id=\"errorText\""), errorEnd;

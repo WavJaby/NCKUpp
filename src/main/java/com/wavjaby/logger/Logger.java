@@ -21,21 +21,21 @@ public class Logger {
     }
 
     public <T> void log(T message) {
-        if (progressBars.size() > 0)
+        if (!progressBars.isEmpty())
             System.out.print('\r' + getTimeStamp() + tag + ' ' + message + '\n' + renderProgressBar() + '>');
         else
             System.out.print('\r' + getTimeStamp() + tag + ' ' + message + "\n>");
     }
 
     public <T> void warn(T message) {
-        if (progressBars.size() > 0)
+        if (!progressBars.isEmpty())
             System.out.print('\r' + getTimeStamp() + tag + ' ' + message + '\n' + renderProgressBar() + '>');
         else
             System.out.print('\r' + getTimeStamp() + tag + ' ' + message + "\n>");
     }
 
     public <T> void err(T message) {
-        if (progressBars.size() > 0)
+        if (!progressBars.isEmpty())
             System.err.print('\r' + getTimeStamp() + tag + ' ' + message + '\n' + renderProgressBar() + '>');
         else
             System.err.print('\r' + getTimeStamp() + tag + ' ' + message + "\n>");
@@ -57,7 +57,7 @@ public class Logger {
                 builder.append("\tat ").append(traceElement).append('\n');
         }
 
-        if (progressBars.size() > 0)
+        if (!progressBars.isEmpty())
             builder.append(renderProgressBar()).append('>');
         else
             builder.append('>');

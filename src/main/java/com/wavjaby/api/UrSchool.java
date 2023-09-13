@@ -165,7 +165,7 @@ public class UrSchool implements EndpointModule {
     }
 
     private void getInstructorInfo(String id, String mode, ApiResponse response) {
-        // check if in cache
+        // checkPass if in cache
         Object[] cacheData = instructorCache.get(id + '-' + mode);
         if (cacheData != null && (System.currentTimeMillis() - ((long) cacheData[0])) < CACHE_UPDATE_INTERVAL) {
 //            logger.log(id + '-' + mode + " use cache");

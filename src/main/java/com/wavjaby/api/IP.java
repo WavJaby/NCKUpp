@@ -1,6 +1,7 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.logger.Logger;
@@ -29,18 +30,8 @@ public class IP implements EndpointModule {
     }
 
     private final HttpHandler httpHandler = req -> {
-        String remoteIp;
         try {
-            Headers headers = req.getRequestHeaders();
-            String remoteIps = headers.getFirst("X-forwarded-for");
-            if (remoteIps == null) {
-                InetSocketAddress socketAddress = req.getRemoteAddress();
-                InetAddress inaddr = socketAddress.getAddress();
-                remoteIp = inaddr.getHostAddress();
-            } else {
-                remoteIp = remoteIps.substring(remoteIps.lastIndexOf(',') + 1);
-            }
-            byte[] dataByte = remoteIp.getBytes();
+            byte[] dataByte = getClientIP(req).getBytes();
 
             req.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
 
@@ -56,6 +47,18 @@ public class IP implements EndpointModule {
         }
 //        logger.log(remoteIp);
     };
+
+    public static String getClientIP(HttpExchange req) {
+        Headers headers = req.getRequestHeaders();
+        String remoteIps = headers.getFirst("X-forwarded-for");
+        if (remoteIps == null) {
+            InetSocketAddress socketAddress = req.getRemoteAddress();
+            InetAddress inaddr = socketAddress.getAddress();
+            return inaddr.getHostAddress();
+        } else {
+            return remoteIps.substring(remoteIps.lastIndexOf(',') + 1);
+        }
+    }
 
     @Override
     public HttpHandler getHttpHandler() {

@@ -123,6 +123,7 @@ public class Main {
         }
 
         stopModules();
+        logger.log("Server stopped");
     }
 
     private void startModules() {

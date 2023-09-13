@@ -37,6 +37,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.wavjaby.Main.*;
+import static com.wavjaby.api.IP.getClientIP;
+import static com.wavjaby.lib.ApiThrottle.checkIpThrottle;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Lib.*;
@@ -117,8 +119,17 @@ public class Search implements EndpointModule {
             apiResponse.errorBadQuery("Query \"queryTime\" is invalid: " + searchQuery.historySearchError);
         } else if (searchQuery.noQuery()) {
             apiResponse.errorBadQuery("Query \"" + rawQuery + "\" Require least 1 of \"dept\", \"serial\", \"courseName\", \"instructor\", \"grade\", \"dayOfWeek\", \"section\"");
-        } else
+        } else {
+            // Check throttle
+            if (!checkIpThrottle(getClientIP(req))) {
+                req.sendResponseHeaders(429, 0);
+                req.close();
+//                logger.log(getClientIP(req) + " Throttle");
+                return;
+            }
+
             search(searchQuery, apiResponse, cookieStore);
+        }
 
         // set cookie
         packCourseLoginStateCookie(req, loginState, cookieStore);
@@ -128,7 +139,7 @@ public class Search implements EndpointModule {
             addRemoveCookieToHeader("searchID", "/", req);
 
         apiResponse.sendResponse(req);
-        logger.log((System.currentTimeMillis() - startTime) + "ms");
+        logger.log(getClientIP(req) + ' ' + (System.currentTimeMillis() - startTime) + "ms");
     };
 
     @Override
@@ -1292,8 +1303,8 @@ public class Search implements EndpointModule {
         }
 
         enQuery = body.startsWith("&m=en_query");
-        if (enQuery)
-            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
+//        if (enQuery)
+//            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
 
         if (body.equals("0")) {
             if (response != null)
@@ -1359,7 +1370,7 @@ public class Search implements EndpointModule {
         } catch (InterruptedException e) {
             logger.errTrace(e);
         }
-        // Submit cos pre check
+        // Submit cos pre checkPass
         cosPreCheckPool.submit(() -> {
             try {
                 cosPreCheck(originUrl.toString(), pageBody, cookieStore, null, proxyManager);
@@ -1563,7 +1574,7 @@ public class Search implements EndpointModule {
                             }
                         tagColor = String.valueOf(tagColormap.get(tagType));
                         if (tagColor == null) {
-                            logger.log("Unknown tag color: " + tagType);
+                            logger.warn("Unknown tag color: " + tagType);
                             tagColor = "0";
                         }
                     }

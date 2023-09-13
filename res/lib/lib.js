@@ -76,6 +76,12 @@ export function fetchApi(endpoint, showState, option) {
 
 	return fetch(apiEndPoint + endpoint, option)
 		.then(i => {
+			if (i.status === 429) {
+				window.messageAlert.addError(
+					'傳送請求過於頻繁',
+					'請稍後再試');
+				return {success: false, data: null};
+			}
 			if (isSafari) {
 				let c = i.headers.get('Content-type');
 				if (c) {
@@ -89,12 +95,12 @@ export function fetchApi(endpoint, showState, option) {
 		.then(i => {
 			if (abortTimeout)
 				clearTimeout(abortTimeout);
-			if (!i.success && !i.msg)
+			if (stateElement)
+				requestState.removeState(stateElement);
+			if (i.success == null && !i.msg)
 				window.messageAlert.addError(
 					'Api response error',
 					i.err.join('\n'), 2000);
-			if (stateElement)
-				requestState.removeState(stateElement);
 			return i;
 		})
 		.catch(e => {
