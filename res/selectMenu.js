@@ -64,7 +64,8 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		createItemsElement(itemsContainer, items, false);
 
 	selectMenu.onclick = function (e) {
-		e.preventDefault();
+		if (!(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLLabelElement))
+			e.preventDefault();
 		if (e.target === resultBox || e.target === selectMenu) {
 			// Close search box
 			if (searchBox.classList.contains('open'))

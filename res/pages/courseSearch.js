@@ -203,13 +203,9 @@ const textColor = {
 	orange: '#ff8633',
 	green: '#62cc38'
 };
-const totalColSpan = 17;
+const totalColSpan = 18;
 
-export function courseSearch(rawQuery) {
-	courseSearchFunction(rawQuery);
-}
-
-let courseSearchFunction;
+export let courseSearch;
 
 /**
  * @param {QueryRouter} router
@@ -226,6 +222,7 @@ export default function (router, loginState, userGuideTool) {
 	const searchResultSignal = new Signal({loading: false, courseResult: null, nckuHubResult: null});
 	const instructorInfoBubble = InstructorInfoBubble();
 	const userGuideTrigger = userGuideTool.pageTrigger.CourseSearch;
+	courseSearch = search;
 
 	// Element
 	const courseSearchResultInfo = span();
@@ -329,7 +326,7 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	const searchTask = [];
-	courseSearchFunction = search;
+	let nckuHubLoadingTaskCount = 0;
 
 	/**
 	 * @param {string[][]} [rawQuery] [key, value][]
@@ -341,6 +338,7 @@ export default function (router, loginState, userGuideTool) {
 		if (rawQuery instanceof Event)
 			rawQuery = null;
 		const searchTaskID = newSearchTask();
+		nckuHubLoadingOverlayHide();
 
 		// get all course ID
 		const getAvailableNckuHubID = avalibleNckuHubCourseID === null ? fetchApi('/nckuhub', 'Get NCKU Hub id') : null;
@@ -411,7 +409,7 @@ export default function (router, loginState, userGuideTool) {
 		}
 
 		// Parse result
-		nckuHubLoadingOverlay.classList.add('show');
+		nckuHubLoadingOverlayShow();
 		const nckuHubResult = {};
 		/**@type CourseData[]*/
 		const courseResult = [];
@@ -433,10 +431,11 @@ export default function (router, loginState, userGuideTool) {
 		// Get NCKU hub data
 		const chunkSize = 20;
 		const courseSerialNumbers = Object.keys(nckuHubResult);
-		let taskCount = Math.ceil(courseSerialNumbers.length / chunkSize);
+		nckuHubLoadingTaskCount = Math.ceil(courseSerialNumbers.length / chunkSize);
 		for (let i = 0; i < courseSerialNumbers.length; i += chunkSize) {
 			const chunk = courseSerialNumbers.slice(i, i + chunkSize);
 			fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
+				// If success
 				if (response.success && response.data) for (let data of Object.entries(response.data)) {
 					const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubResult[data[0]];
 					/**@type NckuHubRaw*/
@@ -457,8 +456,8 @@ export default function (router, loginState, userGuideTool) {
 				}
 
 				// Task done
-				if (--taskCount === 0) {
-					nckuHubLoadingOverlay.classList.remove('show');
+				if (--nckuHubLoadingTaskCount === 0) {
+					nckuHubLoadingOverlayHide();
 				}
 			});
 		}
@@ -470,6 +469,18 @@ export default function (router, loginState, userGuideTool) {
 			searchTask.splice(i, 1);
 		searchResultSignal.set({loading: false, failed: false, courseResult, nckuHubResult: nckuHubResult});
 		searching = false;
+	}
+
+	function nckuHubLoadingOverlayShow() {
+		nckuHubLoadingOverlay[0].classList.add('show');
+		nckuHubLoadingOverlay[1].classList.add('show');
+		nckuHubLoadingOverlay[2].classList.add('show');
+	}
+
+	function nckuHubLoadingOverlayHide() {
+		nckuHubLoadingOverlay[0].classList.remove('show');
+		nckuHubLoadingOverlay[1].classList.remove('show');
+		nckuHubLoadingOverlay[2].classList.remove('show');
 	}
 
 	function newSearchTask() {
@@ -685,6 +696,8 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	function sortNckuHubKey() {
+		if (nckuHubLoadingTaskCount !== 0)
+			return;
 		if (courseRenderResult.length > 0) {
 			const key = this.key;
 			const keys = ['sweet', 'cold', 'got'];
@@ -901,9 +914,9 @@ export default function (router, loginState, userGuideTool) {
 
 				// render result item
 				const courseResult = [
-					tr('courseBlockSpacing'),
+					tr('courseBlockSpacing', {style: 'display:none'}),
 					// Info
-					tr('courseInfoBlock',
+					tr('courseInfoBlock', {style: 'display:none'},
 						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
 						td(null, 'detailedCourseName',
 							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'},
@@ -928,7 +941,8 @@ export default function (router, loginState, userGuideTool) {
 						td(null, 'required', span('選必修:', 'label'), data.required === null ? null : text(data.required ? '必修' : '選修')),
 						td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
 						registerCount,
-						td(null, 'available', span('選/餘:', 'label'), createSelectAvailableStr(data)),
+						td(null, 'available', span('已選:', 'label'), data.selected === null ? null : span(data.selected)),
+						td(null, 'available', span('餘額:', 'label'), createSelectAvailableStr(data)),
 						nckuHubInfo,
 						// Title sections
 						td(null, 'options', {rowSpan: 2},
@@ -943,7 +957,7 @@ export default function (router, loginState, userGuideTool) {
 						),
 					),
 					// Details
-					tr('courseDetailBlock', courseDetail)
+					tr('courseDetailBlock', {style: 'display:none'}, courseDetail,)
 				];
 				courseRenderResult.push([data, courseResult]);
 			}
@@ -963,10 +977,10 @@ export default function (router, loginState, userGuideTool) {
 		// Update display element
 		courseSearchResultInfo.textContent = '搜尋到 ' + courseRenderResultDisplay.length + ' 個結果, 點擊欄位即可排序';
 		showResultLastIndex = showResultIndexStep - 1;
-		for (let i = 0; i < courseRenderResultDisplay.length; i++) {
+		const len = Math.min(showResultLastIndex + 1, courseRenderResultDisplay.length);
+		for (let i = 0; i < len; i++) {
 			const item = courseRenderResultDisplay[i];
-			const display = i > showResultLastIndex ? 'none' : '';
-			item[0].style.display = item[1].style.display = item[2].style.display = display;
+			item[0].style.display = item[1].style.display = item[2].style.display = '';
 		}
 
 		return tbody(null, courseRenderResultDisplay);
@@ -1019,7 +1033,6 @@ export default function (router, loginState, userGuideTool) {
 	function createSelectAvailableStr(courseData) {
 		if (courseData.selected === null && courseData.available === null)
 			return null;
-		const selected = courseData.selected === null ? '' : courseData.selected;
 		const available = courseData.available === null ? ''
 			: courseData.available === -1 ? '不限'
 				: courseData.available === -2 ? '洽系所'
@@ -1027,17 +1040,21 @@ export default function (router, loginState, userGuideTool) {
 		// Colored text
 		if (courseData.available !== null) {
 			if (courseData.available === 0)
-				return span(selected + '/' + available, null, {style: 'color:' + textColor.red});
+				return span(available, null, {style: 'color:' + textColor.red});
 			else if (courseData.available > 40)
-				return span(selected + '/', null, span(available, null, {style: 'color:' + textColor.green}));
+				return span(null, null, span(available, null, {style: 'color:' + textColor.green}));
 			else if (courseData.available > 0)
-				return span(selected + '/', null, span(available, null, {style: 'color:' + textColor.orange}));
+				return span(null, null, span(available, null, {style: 'color:' + textColor.orange}));
 		}
-		return span(selected + '/' + available);
+		return span(available);
 	}
 
 	// Search page
-	const nckuHubLoadingOverlay = div('loadingOverlay', window.loadingElement.cloneNode(true));
+	const nckuHubLoadingOverlay = [
+		div('loadingOverlay', window.loadingElement.cloneNode(true)),
+		div('loadingOverlay', window.loadingElement.cloneNode(true)),
+		div('loadingOverlay', window.loadingElement.cloneNode(true)),
+	];
 	const registerCountLabel = th('抽籤人數', 'registerCount', {key: 'registerCount', onclick: sortIntKey, noHide: true});
 	const searchTableHead = thead('noSelect',
 		filter.createElement(),
@@ -1071,18 +1088,18 @@ export default function (router, loginState, userGuideTool) {
 			th('選必修', 'required', {key: 'required', onclick: sortIntKey}),
 			th('學分', 'credits', {key: 'credits', onclick: sortIntKey}),
 			registerCountLabel,
-			th('選/餘', 'available', {key: 'available', onclick: sortIntKey}),
+			th('已選', 'selected', {key: 'selected', onclick: sortIntKey}),
+			th('餘額', 'available', {key: 'available', onclick: sortIntKey}),
 			// NckuHub
-			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey, noHide: true},
-				nckuHubLoadingOverlay),
-			th('甜度', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey, noHide: true}),
-			th('涼度', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey, noHide: true}),
+			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey, noHide: true}, nckuHubLoadingOverlay[0]),
+			th('甜度', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey, noHide: true}, nckuHubLoadingOverlay[1]),
+			th('涼度', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey, noHide: true}, nckuHubLoadingOverlay[2]),
 			// Function buttons
 			th('功能', 'options'),
 		),
 	);
 
-	const courseSearch = div('courseSearch',
+	const courseSearchPageElement = div('courseSearch',
 		{onRender, onPageClose, onPageOpen},
 		h1('課程查詢', 'title'),
 		courseSearchForm,
@@ -1115,11 +1132,11 @@ export default function (router, loginState, userGuideTool) {
 		}
 	});
 
-	const instructorDetailWindow = new InstructorDetailWindow(courseSearch, userGuideTrigger);
-	const nckuHubDetailWindow = new NckuHubDetailWindow(courseSearch, userGuideTrigger);
-	const flexTimeWindow = new FlexTimeWindow(courseSearch);
+	const instructorDetailWindow = new InstructorDetailWindow(courseSearchPageElement, userGuideTrigger);
+	const nckuHubDetailWindow = new NckuHubDetailWindow(courseSearchPageElement, userGuideTrigger);
+	const flexTimeWindow = new FlexTimeWindow(courseSearchPageElement);
 
-	return courseSearch;
+	return courseSearchPageElement;
 };
 
 /**
@@ -1629,7 +1646,7 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 		}
 		classCategory = classCategory.map(i => [i, i]);
 		if (classCategory.length > 0 && courseNoClassInfo)
-			classCategory.push([null, '無班別']);
+			classCategory.push(['', '無班別']);
 
 		// Class info empty
 		isEmpty = classCategory.length === 0;
@@ -1649,7 +1666,7 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 		if (selectValue.length === 0)
 			return false;
 		if (!courseData.classInfo)
-			return selectValue.indexOf(null) !== -1;
+			return selectValue.indexOf('') !== -1;
 
 		return selectValue.indexOf(courseData.classInfo) !== -1;
 	}
@@ -1696,7 +1713,7 @@ function categoryFilter(onFilterUpdate, courseRenderResult) {
 		}
 		classCategory = classCategory.map(i => [i, i]);
 		if (classCategory.length > 0 && courseNoClassInfo)
-			classCategory.push([null, '無類別']);
+			classCategory.push(['', '無類別']);
 
 		// Category info empty
 		isEmpty = classCategory.length === 0;
@@ -1716,7 +1733,7 @@ function categoryFilter(onFilterUpdate, courseRenderResult) {
 		if (selectValue.length === 0)
 			return false;
 		if (!courseData.category)
-			return selectValue.indexOf(null) !== -1;
+			return selectValue.indexOf('') !== -1;
 
 		return selectValue.indexOf(courseData.category) !== -1;
 	}

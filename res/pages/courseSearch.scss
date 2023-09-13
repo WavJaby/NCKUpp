@@ -101,11 +101,9 @@ $instructor-info-fade-time: 200ms;
                 background: $overlay-transparent-bg-color;
                 left: 0;
                 top: 0;
-                width: 300%;
+                width: 100%;
                 height: 100%;
                 position: absolute;
-                z-index: 1;
-                pointer-events: none;
                 display: none;
 
                 &.show {
@@ -115,6 +113,12 @@ $instructor-info-fade-time: 200ms;
                 > .loaderCircle {
                     width: 1.5em;
                     height: 1.5em;
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    top: 0;
+                    bottom: 0;
+                    margin: auto;
                 }
             }
         }
@@ -282,6 +286,10 @@ $instructor-info-fade-time: 200ms;
                     white-space: pre-wrap;
                 }
 
+                > .required, > .credits, > .registerCount, > .selected, > .available {
+                    width: 0;
+                }
+
                 > .detailedCourseName, > .courseName {
                     padding: 0;
 
@@ -303,10 +311,8 @@ $instructor-info-fade-time: 200ms;
                     }
                 }
 
-                > .courseName {
-                    > a {
-                        padding: 5px 2px;
-                    }
+                > .courseName > a {
+                    padding: 5px 2px;
                 }
 
                 > .detailedCourseName {
@@ -492,6 +498,10 @@ $instructor-info-fade-time: 200ms;
                             border-radius: 5px;
                             display: inline-block;
                             border: none;
+                        }
+
+                        &.nckuHub > .loadingOverlay {
+                            border-radius: 5px;
                         }
 
                         &.expandDownArrow {
