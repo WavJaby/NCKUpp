@@ -117,6 +117,7 @@ public class Login implements EndpointModule {
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy())
                             .userAgent(Main.USER_AGENT)
+                            .timeout(5000)
                             .execute();
                     result = checkLoginPage.body();
                     UserShortInfo shortInfo = getCourseLoginUserInfo(result, cookieStore);
@@ -165,8 +166,8 @@ public class Login implements EndpointModule {
                         logger.log(entry.getKey() + " is logout");
                         loginUserCookie.remove(entry.getKey());
                     }
-                } catch (IOException e) {
-                    logger.errTrace(e);
+                } catch (IOException ignore) {
+//                    logger.errTrace(e);
                 }
             }
         }, 1000 * 10, 1000 * 60 * 5, TimeUnit.MILLISECONDS);

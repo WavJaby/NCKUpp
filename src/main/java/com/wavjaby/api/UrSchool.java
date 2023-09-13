@@ -2,6 +2,7 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Main;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
@@ -184,8 +185,8 @@ public class UrSchool implements EndpointModule {
                             .header("Connection", "keep-alive")
                             .ignoreContentType(true)
                             .cookieStore(urSchoolCookie)
-                            .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
-                            .timeout(10 * 1000)
+                            .userAgent(Main.USER_AGENT)
+                            .timeout(10000)
                             .execute();
                     ioExp = null;
                     break;
@@ -455,8 +456,8 @@ public class UrSchool implements EndpointModule {
                     .header("Connection", "keep-alive")
                     .ignoreContentType(true)
                     .cookieStore(urSchoolCookie)
-                    .userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36")
-                    .timeout(20 * 1000);
+                    .userAgent(Main.USER_AGENT)
+                    .timeout(10000);
             String resultBody;
             while (true) {
                 try {

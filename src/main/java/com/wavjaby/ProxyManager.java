@@ -163,6 +163,7 @@ public class ProxyManager implements Module {
     public void start() {
         proxyFile = getFileFromPath("./proxy.txt", false);
         useProxy = properties.getPropertyBoolean("useProxy", true);
+
         if (useProxy) {
             updateProxy();
             service.scheduleWithFixedDelay(proxyCheckFunc, 1000, 5000, TimeUnit.MILLISECONDS);

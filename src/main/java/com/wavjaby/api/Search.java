@@ -124,9 +124,9 @@ public class Search implements EndpointModule {
         } else {
             // Check throttle
             if (!checkIpThrottle(ip)) {
-                req.sendResponseHeaders(429, 0);
-                req.close();
 //                logger.log(getClientIP(req) + " Throttle");
+                apiResponse.errorTooManyRequests();
+                apiResponse.sendResponse(req);
                 return;
             }
             logger.log(ip);
@@ -902,7 +902,8 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .userAgent(Main.USER_AGENT);
+                .userAgent(Main.USER_AGENT)
+                .timeout(5000);
         HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
         if (!httpResponseData.isSuccess()) {
             if (response != null)
@@ -935,8 +936,14 @@ public class Search implements EndpointModule {
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .userAgent(USER_AGENT);
-        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
+                .userAgent(USER_AGENT)
+                .timeout(5000);
+        HttpResponseData httpResponseData = null;
+        for (int i = 0; i < 5; i++) {
+            httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
+            if (httpResponseData.state == ResponseState.SUCCESS)
+                break;
+        }
         if (httpResponseData.state != ResponseState.SUCCESS)
             return null;
         String body = httpResponseData.data;
@@ -1056,7 +1063,7 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .userAgent(Main.USER_AGENT)
-                .timeout(8000)
+                .timeout(9000)
                 .maxBodySize(20 * 1024 * 1024);
         HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, deptToken.cookieStore);
 
@@ -1292,6 +1299,7 @@ public class Search implements EndpointModule {
                 .userAgent(Main.USER_AGENT)
                 .method(Connection.Method.POST)
                 .requestBody(postData.toString())
+                .timeout(9000)
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .header("X-Requested-With", "XMLHttpRequest");
         boolean enQuery;
@@ -1340,7 +1348,7 @@ public class Search implements EndpointModule {
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .userAgent(Main.USER_AGENT)
-                .timeout(8000)
+                .timeout(9000)
                 .maxBodySize(20 * 1024 * 1024);
         HttpResponseData httpResponseData = sendRequestAndCheckRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
 

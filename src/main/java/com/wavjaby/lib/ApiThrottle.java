@@ -4,8 +4,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ApiThrottle {
-    private static final int FETCH_PER_MIN = 15;
-    private static final int FETCH_MIN_INTERVAL = 300;
+    public static final int FETCH_PER_MIN = 15;
+    public static final int FETCH_INTERVAL = 60000 / FETCH_PER_MIN;
+//    public static final int FETCH_MIN_INTERVAL = 200;
 
     public static class ClientInfo {
         public long lastCleanFetchTime;
@@ -22,23 +23,23 @@ public class ApiThrottle {
             long now = System.currentTimeMillis();
             long timePass = now - lastFetchTime;
 
-            // Reset after a min
-            if (now - lastCleanFetchTime > 60000) {
-                lastCleanFetchTime = now;
-                return true;
-            }
+//            // Reset after a min
+//            if (now - lastCleanFetchTime > 60000) {
+//                lastCleanFetchTime = now;
+//                lastFetchTime = now;
+//                return true;
+//            }
 
-            // Throttle
-            if (timePass < FETCH_MIN_INTERVAL) {
-                return false;
-            }
+//            // Throttle
+//            if (timePass < FETCH_MIN_INTERVAL) {
+//                return false;
+//            }
 
-            lastFetchTime = now;
-
-            if (timePass > 60000f / FETCH_PER_MIN) {
-                fetchCount -= (int) (timePass / FETCH_PER_MIN);
+            if (timePass > FETCH_INTERVAL) {
+                fetchCount -= (int) (timePass / FETCH_INTERVAL);
                 if (fetchCount < 0)
                     fetchCount = 0;
+                lastFetchTime = now;
                 return true;
             }
 

@@ -19,7 +19,6 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -504,7 +503,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
             try {
                 String proxyGet = HttpConnection.connect(proxyUrl)
                         .ignoreContentType(true)
-                        .timeout(30000)
+                        .timeout(10000)
                         .execute().body();
                 data = new JsonObject(proxyGet);
             } catch (IOException e) {
@@ -532,7 +531,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
         try {
             String proxyGet = HttpConnection.connect(proxyUrl)
                     .ignoreContentType(true)
-                    .timeout(30000)
+                    .timeout(10000)
                     .execute().body();
             data = new JsonArray(proxyGet);
         } catch (IOException e) {

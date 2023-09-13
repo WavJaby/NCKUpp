@@ -236,7 +236,7 @@ public class RobotCode implements EndpointModule {
         ProxyManager.ProxyData proxy = proxyManager.getProxyData();
         if (proxy != null) {
             if (proxy.protocol.startsWith("http"))
-                builder.append(proxy.toIp());
+                builder.append("http://").append(proxy.toIp());
             else
                 builder.append(proxy.protocol).append("://").append(proxy.toIp());
         }

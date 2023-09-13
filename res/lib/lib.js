@@ -76,12 +76,8 @@ export function fetchApi(endpoint, showState, option) {
 
 	return fetch(apiEndPoint + endpoint, option)
 		.then(i => {
-			if (i.status === 429) {
-				window.messageAlert.addError(
-					'傳送請求過於頻繁',
-					'請稍後再試');
-				return {success: false, data: null};
-			}
+			if (i.status === 429)
+				window.messageAlert.addError('傳送請求過於頻繁', '請稍後再試', 2000);
 			if (isSafari) {
 				let c = i.headers.get('Content-type');
 				if (c) {

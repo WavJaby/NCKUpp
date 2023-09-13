@@ -25,19 +25,19 @@ export default function (router, loginState) {
 	const adjustListTabs = div('tabs');
 
 	function onRender() {
-		console.log('Course schedule Render');
+		console.log('Preference adjust Render');
 		styles.mount();
 	}
 
 	function onPageOpen() {
-		console.log('Course schedule Open');
+		console.log('Preference adjust Open');
 		styles.enable();
 		onLoginState(loginState.state);
 		loginState.addListener(onLoginState);
 	}
 
 	function onPageClose() {
-		console.log('Course schedule Close');
+		console.log('Preference adjust Close');
 		styles.disable();
 		loginState.removeListener(onLoginState);
 	}

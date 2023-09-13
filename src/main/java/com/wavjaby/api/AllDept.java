@@ -44,8 +44,8 @@ public class AllDept implements EndpointModule {
         CookieStore cookieStore = new CookieManager().getCookieStore();
         cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
         Search.AllDeptGroupData allDept = search.getAllDeptGroupData(cookieStore);
-        logger.log("Get " + allDept.getDeptCount() + " dept");
-        if (allDept.getDeptCount() > 0) {
+        if (allDept != null && allDept.getDeptCount() > 0) {
+            logger.log("Get " + allDept.getDeptCount() + " dept");
             deptGroup = allDept.toString();
             try {
                 FileWriter fileWriter = new FileWriter(allDeptFile);

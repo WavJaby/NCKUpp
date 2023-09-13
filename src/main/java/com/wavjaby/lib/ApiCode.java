@@ -17,6 +17,7 @@ public enum ApiCode {
     BAD_QUERY(3001),
     BAD_PAYLOAD(3002),
     COOKIE_ERROR(3003),
+    TOO_MANY_REQUESTS(3004),
     CLIENT_DATA_ERROR(3999),
 
     // Api error

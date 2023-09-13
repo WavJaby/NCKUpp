@@ -243,6 +243,7 @@ export default function (router, loginState, userGuideTool) {
 			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.name, i.dept]));
 			loadLastSearch(false);
 		});
+		loadLastSearch(true);
 	}
 
 	function onPageOpen(isHistory) {

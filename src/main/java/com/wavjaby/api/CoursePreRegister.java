@@ -18,7 +18,6 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import static com.wavjaby.Main.courseNckuOrg;
@@ -135,7 +134,7 @@ public class CoursePreRegister implements EndpointModule {
             result.append("preSkip", !preSkip.ownText().trim().isEmpty());
 
             Element tbody = getTbody(body, response);
-            if(tbody == null)
+            if (tbody == null)
                 return;
 
             JsonArrayStringBuilder course = new JsonArrayStringBuilder();
@@ -213,7 +212,7 @@ public class CoursePreRegister implements EndpointModule {
             result.append("action", action.ownText().trim());
 
             Element tbody = getTbody(body, response);
-            if(tbody == null)
+            if (tbody == null)
                 return;
 
             JsonArrayStringBuilder course = new JsonArrayStringBuilder();
@@ -254,7 +253,7 @@ public class CoursePreRegister implements EndpointModule {
         }
     }
 
-    private Element getTbody(Element body, ApiResponse response){
+    private Element getTbody(Element body, ApiResponse response) {
         Element mainTable = body.getElementById("main-table");
         if (mainTable == null) {
             response.errorParse("PreRegisterList table not found");

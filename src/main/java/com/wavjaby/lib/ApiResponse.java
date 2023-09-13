@@ -137,6 +137,13 @@ public class ApiResponse {
         err.add("Error from " + Main.courseNcku);
     }
 
+    public void errorTooManyRequests() {
+        responseCode = ApiCode.TOO_MANY_REQUESTS;
+        success = false;
+        err.add("Too many requests");
+        msg = "Too many requests";
+    }
+
     public void setResponseCode(ApiCode code) {
         responseCode = code;
     }
@@ -146,6 +153,8 @@ public class ApiResponse {
             return 405; // Method Not Allowed
         if (responseCode == ApiCode.LOGIN_REQUIRE)
             return 403; // Forbidden
+        if (responseCode == ApiCode.TOO_MANY_REQUESTS)
+            return 429; // Too many requests
 
         return responseCode.code <= ApiCode.NORMAL.code ? 200
                 : responseCode.code <= ApiCode.SERVER_ERROR.code ? 500

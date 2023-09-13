@@ -175,7 +175,7 @@ public class CourseFunctionButton implements EndpointModule {
         try {
             boolean success = false;
             String message = null;
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 5; i++) {
                 // Get ticket
                 String postData;
                 postData = "time=" + (System.currentTimeMillis() / 1000) + "&cosdata=" + URLEncoder.encode(key, "UTF-8");
