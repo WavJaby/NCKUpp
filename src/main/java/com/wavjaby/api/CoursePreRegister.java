@@ -134,16 +134,9 @@ public class CoursePreRegister implements EndpointModule {
             }
             result.append("preSkip", !preSkip.ownText().trim().isEmpty());
 
-            Element mainTable = body.getElementById("main-table");
-            if (mainTable == null) {
-                response.errorParse("PreRegisterList table not found");
+            Element tbody = getTbody(body, response);
+            if(tbody == null)
                 return;
-            }
-            Element tbody = mainTable.getElementsByTag("tbody").first();
-            if (tbody == null) {
-                response.errorParse("PreRegisterList tbody not found");
-                return;
-            }
 
             JsonArrayStringBuilder course = new JsonArrayStringBuilder();
             for (Element row : tbody.children()) {
@@ -185,7 +178,94 @@ public class CoursePreRegister implements EndpointModule {
             }
             result.append("courseList", course);
             response.setData(result.toString());
+        } else if (request.mode.equals("course")) {
+            Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21322")
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .followRedirects(false)
+                    .proxy(proxyManager.getProxy());
+            Element body = checkCourseNckuLoginRequiredPage(conn, response, false);
+            if (body == null)
+                return;
+
+            String pageError = checkCourseNckuPageError(body);
+            if (pageError != null) {
+                if (pageError.startsWith("目前尚無一般課程預排資料") ||
+                        pageError.startsWith("No general courses in your preliminary course schedule")) {
+                    response.setData(new JsonObjectStringBuilder()
+                            .append("action")
+                            .appendRaw("courseList", "[]")
+                            .toString());
+                    return;
+                }
+                response.setMessageDisplay(pageError);
+                response.errorCourseNCKU();
+                return;
+            }
+
+            JsonObjectStringBuilder result = new JsonObjectStringBuilder();
+
+            Element action = body.getElementById("cos21322_action");
+            if (action == null) {
+                response.errorParse("PreRegisterList action key not found");
+                return;
+            }
+            result.append("action", action.ownText().trim());
+
+            Element tbody = getTbody(body, response);
+            if(tbody == null)
+                return;
+
+            JsonArrayStringBuilder course = new JsonArrayStringBuilder();
+            for (Element row : tbody.children()) {
+                Elements cols = row.children();
+                if (cols.size() < 10) {
+                    response.errorParse("PreRegisterList table row error");
+                    return;
+                }
+
+                String serialId = cols.get(1).ownText().trim() + '-' + cols.get(2).ownText().trim();
+                String name = cols.get(3).ownText().trim();
+                Element register = cols.get(9).firstElementChild();
+                if (register == null) {
+                    response.errorParse("PreRegisterList course register button not found");
+                    return;
+                }
+                String onclickStr = register.attr("onclick");
+                int start, end;
+                if ((start = onclickStr.indexOf('\'')) == -1 ||
+                        (end = onclickStr.indexOf('\'', start + 1)) == -1) {
+                    response.errorParse("PreRegisterList course cosdata not found");
+                    return;
+                }
+                String cosdata = onclickStr.substring(start + 1, end);
+
+
+                course.append(new JsonObjectStringBuilder()
+                        .append("serialId", serialId)
+                        .append("name", name)
+                        .append("cosdata", cosdata)
+                );
+            }
+            result.append("courseList", course);
+            response.setData(result.toString());
+        } else {
+            response.errorBadQuery("Invalid mode: \"" + request.mode + '"');
         }
+    }
+
+    private Element getTbody(Element body, ApiResponse response){
+        Element mainTable = body.getElementById("main-table");
+        if (mainTable == null) {
+            response.errorParse("PreRegisterList table not found");
+            return null;
+        }
+        Element tbody = mainTable.getElementsByTag("tbody").first();
+        if (tbody == null) {
+            response.errorParse("PreRegisterList tbody not found");
+            return null;
+        }
+        return tbody;
     }
 
     private void postCoursePreRegisterList(String rawQuery, String payload, ApiResponse response, CookieStore cookieStore) {
