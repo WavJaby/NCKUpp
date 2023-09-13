@@ -97,7 +97,7 @@ export function fetchApi(endpoint, showState, option) {
 				clearTimeout(abortTimeout);
 			if (stateElement)
 				requestState.removeState(stateElement);
-			if (i.success && !i.msg)
+			if (!i.success && !i.msg)
 				window.messageAlert.addError(
 					'Api response error',
 					i.err.join('\n'), 2000);
