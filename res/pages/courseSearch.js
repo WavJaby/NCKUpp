@@ -195,7 +195,7 @@ import {
 } from '../lib/domHelper_v003.min.js';
 
 import SelectMenu from '../selectMenu.js';
-import {courseDataTimeToString, fetchApi, parseRawCourseData} from '../lib/lib.js';
+import {addPreSchedule, courseDataTimeToString, fetchApi, getPreSchedule, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
 const textColor = {
@@ -566,9 +566,6 @@ export default function (router, loginState, userGuideTool) {
 			this.textContent = '加入關注';
 			watchList.splice(serialIndex, 1);
 		}
-		result.then(i => {
-			console.log(i);
-		});
 	}
 
 	function getWatchCourse() {
@@ -586,27 +583,26 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	/**@this{{courseData: CourseData, key: string}}*/
-	function sendCosData() {
+	function addCourse() {
 		const title = this.courseData.courseName + ' 加入';
-		const cosdata = encodeURIComponent(this.key);
-		fetchApi('/courseFuncBtn?cosdata=' + cosdata, 'Send course data').then(i => {
-			if (i.success)
-				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
-			else {
-				const d = div();
-				d.innerHTML = i.msg;
-				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
+		fetchApi('/courseFuncBtn?cosdata=' + encodeURIComponent(this.key), 'Add course').then(i => {
+			if (!i.success) {
+				window.messageAlert.addError(title + '失敗', i.msg, 20000);
+				return;
 			}
+
+			window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
 		});
 	}
 
 	/**@this{{courseData: CourseData, key: string}}*/
-	function sendPreReg() {
-		const prekey = encodeURIComponent(this.key);
-		const serialNumber = this.courseData.serialNumber;
+	function addPreferenceEnter() {
+		const courseData = this.courseData;
+		const serialNumber = courseData.serialNumber;
+		const preferenceEnterKey = this.key;
 
 		const title = this.courseData.courseName + ' 加入志願';
-		fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data').then(addPreResponse => {
+		fetchApi('/courseFuncBtn?prekey=' + encodeURIComponent(preferenceEnterKey), 'Add pre-schedule').then(addPreResponse => {
 			// Add pre-schedule success or already added
 			const preScheduleNormal = addPreResponse.code === 1000 || addPreResponse.code === 4002;
 
@@ -617,46 +613,46 @@ export default function (router, loginState, userGuideTool) {
 					return;
 				}
 				const course = data.courseList.find(i => i.serialNumber === serialNumber);
+				// Course not in pre-register list
 				if (!course) {
-					window.messageAlert.addError(title + '失敗', preScheduleNormal ? '該課程已在志願登記中' : '請嘗試重新整理', 5000);
+					window.messageAlert.addError(title + '失敗', preScheduleNormal ? '該課程已在志願登記中' : '請重新整理再嘗試一次', 5000);
+					// Add pre-schedule because preference enter, remove it after failed
+					if (addPreResponse.code === 1000) {
+						getPreSchedule(function (data) {
+							if (!data.schedule) return;
+							const course = data.schedule.find(i => i.serialNumber === serialNumber);
+							if (course && course.delete) removePreSchedule(courseData, course.delete);
+						});
+					}
 					return;
 				}
-				const action = data.action;
-				const preSkip = data.preSkip;
-				fetchApi(`/courseRegister?mode=genEdu`, 'Send pre-register', {
+				// Add course to preference enter list
+				fetchApi(`/courseRegister?mode=genEdu`, 'Add preference', {
 					method: 'POST',
-					body: `prechk=${course.prechk}&cosdata=${course.cosdata}&action=${action}&preSkip=${preSkip}`
+					body: `prechk=${course.prechk}&cosdata=${course.cosdata}&action=${data.action}&preSkip=${data.preSkip}`
 				}).then(response => {
 					if (!response.success) {
-						const d = div();
-						d.innerHTML = response.msg;
-						window.messageAlert.addErrorElement(title + '失敗', d, 10000);
+						window.messageAlert.addError(title + '失敗', response.msg, 10000);
 						return;
 					}
+
 					window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
 
-					// Already in pre-schedule, add it back after success
+					// Course already in pre-schedule, add it back after success
 					if (addPreResponse.code === 4002)
-						fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data');
+						addPreSchedule(courseData, preferenceEnterKey);
 				});
 			});
 		});
 	}
 
 	/**@this{{courseData: CourseData, key: string}}*/
-	function sendPreKey() {
+	function addPreScheduleButtonClick() {
 		const title = this.courseData.courseName + ' 加入預排';
-		const prekey = encodeURIComponent(this.key);
-		fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data').then(response => {
-			if (!response.success) {
-				const d = div();
-				d.innerHTML = response.msg;
-				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
-				return;
-			}
-
-			window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
-		});
+		addPreSchedule(this.courseData, this.key,
+			function (msg) {window.messageAlert.addSuccess(title + '成功', msg, 5000);},
+			function (msg) {window.messageAlert.addError(title + '失敗', msg, 20000);}
+		);
 	}
 
 	// Render result
@@ -988,11 +984,11 @@ export default function (router, loginState, userGuideTool) {
 							!data.serialNumber || !loginState.state || !loginState.state.login ? null :
 								button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
 							!data.preRegister ? null :
-								button(null, '加入預排', sendPreKey, {courseData: data, key: data.preRegister}),
+								button(null, '加入預排', addPreScheduleButtonClick, {courseData: data, key: data.preRegister}),
 							!data.preferenceEnter ? null :
-								button(null, '加入志願', sendPreReg, {courseData: data, key: data.preRegister}),
+								button(null, '加入志願', addPreferenceEnter, {courseData: data, key: data.preRegister}),
 							!data.addCourse ? null :
-								button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
+								button(null, '單科加選', addCourse, {courseData: data, key: data.addCourse}),
 						),
 					),
 					// Details
@@ -1498,12 +1494,12 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 					const usedTime = [];
 					for (const i of response.data.schedule) {
 						for (const time of i.time) {
-                            if(time.sectionStart === null)
-                                continue;
-                            if(time.sectionEnd === null)
-                                time.sectionEnd = time.sectionStart;
-                            usedTime.push(time);
-                        }
+							if (time.sectionStart === null)
+								continue;
+							if (time.sectionEnd === null)
+								time.sectionEnd = time.sectionStart;
+							usedTime.push(time);
+						}
 					}
 					timeData = usedTime;
 					fetchingData = false;

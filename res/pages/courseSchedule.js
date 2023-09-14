@@ -1,24 +1,24 @@
 'use strict';
 
 import {
-    a,
-    button,
-    checkboxWithName,
-    div,
-    h1,
-    h2,
-    mountableStylesheet,
-    p,
-    span,
-    table,
-    tbody,
-    td,
-    text,
-    th,
-    thead,
-    tr
+	a,
+	button,
+	checkboxWithName,
+	div,
+	h1,
+	h2,
+	mountableStylesheet,
+	p,
+	span,
+	table,
+	tbody,
+	td,
+	text,
+	th,
+	thead,
+	tr
 } from '../lib/domHelper_v003.min.js';
-import {checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData} from '../lib/lib.js';
+import {addPreSchedule, checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 import {createSelectAvailableStr, createSyllabusUrl} from './courseSearch.js';
 
@@ -59,8 +59,8 @@ export default function (router, loginState) {
 	const showPreScheduleCheckbox = checkboxWithName(null, '顯示預排', false);
 	const scheduleTableInfo = span(null, 'scheduleTableInfo');
 	const windowRoot = div();
-	const scheduleTable = new ScheduleTable(windowRoot);
-	const courseTable = new CourseTable(windowRoot);
+	const scheduleTable = new ScheduleTable(windowRoot, updatePreScheduleData);
+	const courseTable = new CourseTable(windowRoot, updatePreScheduleData);
 	const downloadScheduleButton = button('downloadScheduleBtn', '下載課表');
 	const downloadScheduleButtonHide = a(null, null, null, {style: 'display:none'});
 	let scheduleLoading = false, scheduleLoadingQueue = false, scheduleLoadingTaskCount = 0;
@@ -96,21 +96,21 @@ export default function (router, loginState) {
 	function onRender() {
 		console.log('Course schedule Render');
 		styles.mount();
+
+		if (!checkLocalStorage()) {
+			window.messageAlert.addError('請允許內部儲存', '開啟內部儲存來使用更多功能');
+			return;
+		}
+
 		pageStorage = router.getPageStorage(this);
 		// Check save version
 		const pageVersion = 0;
 		if (pageStorage.data['saveVersion'] !== pageVersion) {
-			for (const i in pageStorage.data)
-				delete pageStorage.data[i];
-			pageStorage.data['saveVersion'] = pageVersion;
+			pageStorage.data = {saveVersion: pageVersion};
 			pageStorage.save();
 		}
 
-		if (!checkLocalStorage()) {
-			window.messageAlert.addError('請允許內部儲存', '開啟內部儲存來使用更多功能');
-		} else {
-			loadLastScheduleData();
-		}
+		loadLastScheduleData();
 	}
 
 	function onPageOpen() {
@@ -141,7 +141,7 @@ export default function (router, loginState) {
 			// Update data
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
-			scheduleLoadingTaskCount = 5;
+			scheduleLoadingTaskCount = 2;
 			if (!scheduleTable.dataReady())
 				downloadScheduleButton.classList.remove('show');
 			scheduleTable.clearScheduleData();
@@ -159,7 +159,7 @@ export default function (router, loginState) {
 				updateScheduleInfo(scheduleData);
 				checkScheduleDataAndRender(false);
 			});
-			fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(response => {
+			fetchApi('/courseSchedule?pre=true', 'Get pre-schedule').then(response => {
 				scheduleLoadingTaskCount--;
 				if (!response.success || !response.data) {
 					scheduleLoading = false;
@@ -173,7 +173,6 @@ export default function (router, loginState) {
 				checkScheduleDataAndRender(false);
 			});
 			fetchApi('/courseRegister?mode=course', 'Get course register table').then(response => {
-				scheduleLoadingTaskCount--;
 				if (!response.success || !response.data) {
 					scheduleLoading = false;
 					return;
@@ -181,11 +180,9 @@ export default function (router, loginState) {
 				const genCourseData = response.data;
 				pageStorage.data['savedCurrentGenCourseData'] = genCourseData;
 				courseTable.setGenCourseData(genCourseData);
-				courseTable.renderTable();
-				// checkCourseDataAndRender(false);
+				checkCourseDataAndRender();
 			});
 			fetchApi('/courseRegister?mode=genEdu', 'Get gen-edu register table').then(response => {
-				scheduleLoadingTaskCount--;
 				if (!response.success || !response.data) {
 					scheduleLoading = false;
 					return;
@@ -193,17 +190,15 @@ export default function (router, loginState) {
 				const genEduCourseData = response.data;
 				pageStorage.data['savedCurrentGenEduCourseData'] = genEduCourseData;
 				courseTable.setGenEduCourseData(genEduCourseData);
-				courseTable.renderTable();
-				// checkCourseDataAndRender(false);
+				checkCourseDataAndRender();
 			});
 			fetchApi('/A9Registered', 'Get A9 register count').then(response => {
-				scheduleLoadingTaskCount--;
 				if (!response.success || !response.data) {
 					scheduleLoading = false;
 					return;
 				}
 				courseTable.setA9Registered(response.data);
-				courseTable.renderTable();
+				checkCourseDataAndRender();
 			});
 		} else {
 			if (state) {
@@ -255,6 +250,13 @@ export default function (router, loginState) {
 		}
 	}
 
+	function checkCourseDataAndRender() {
+		if (!courseTable.dataReady())
+			return;
+
+		courseTable.renderTable();
+	}
+
 	function checkScheduleLoadingDone() {
 		if (scheduleLoadingTaskCount !== 0)
 			return;
@@ -291,10 +293,19 @@ export default function (router, loginState) {
 		const genCourseData = pageStorage.data['savedCurrentGenCourseData'];
 		const genEduCourseData = pageStorage.data['savedCurrentGenEduCourseData'];
 		if (genCourseData && genEduCourseData) {
-			courseTable.setGenCourseData(genCourseData);
-			courseTable.setGenEduCourseData(genEduCourseData);
-			courseTable.renderTable();
+			// 	courseTable.setGenCourseData(genCourseData);
+			// 	courseTable.setGenEduCourseData(genEduCourseData);
+			// 	courseTable.renderTable();
 		}
+	}
+
+	function updatePreScheduleData() {
+		fetchApi('/courseSchedule?pre=true', 'Get pre-schedule').then(response => {
+			if (!response.success || !response.data)
+				return;
+			scheduleTable.setAndRenderPreScheduleData(response.data);
+			courseTable.setPreScheduleData(response.data);
+		});
 	}
 
 	return div('courseSchedule',
@@ -308,19 +319,20 @@ export default function (router, loginState) {
 		scheduleTableInfo,
 		scheduleTable.table,
 		downloadScheduleButton,
-		// courseTable.element,
+		courseTable.element,
 		windowRoot,
 	);
 };
 
 /**
  * @param {Element} windowRoot
+ * @param updatePreScheduleData
  * @constructor
  */
-function CourseTable(windowRoot) {
+function CourseTable(windowRoot, updatePreScheduleData) {
 	const courseListBody = tbody();
 	this.element = table('courseTable',
-		thead(null,
+		thead(null, tr(null,
 			th('系所', 'departmentName'),
 			th('系-序號', 'serialNumber'),
 			th('類別', 'category'),
@@ -336,89 +348,85 @@ function CourseTable(windowRoot) {
 			th('餘額', 'available'),
 			// Function buttons
 			th('功能', 'options'),
-		),
+		)),
 		courseListBody
 	);
 	let genCourseData = null;
 	let genEduCourseData = null;
-	let setPreScheduleDeleteKey = {};
-	let a9Registered = {};
+	let /**@type ?ScheduleData*/ preScheduleData = null;
+	let a9Registered = null;
 	let /**@type{Object.<string, CourseData>}*/ courseDetail = {};
-	let preRegAction = null, preRegPreSkip = null;
+	let preRegAction = null, regAction = null, preRegPreSkip = null;
 
 	this.setGenCourseData = function (data) {
-		genCourseData = data;
+		regAction = data.action;
+		genCourseData = {};
+		for (let i of data.courseList) {
+			genCourseData[i.serialNumber] = i;
+		}
 	};
 
 	this.setGenEduCourseData = function (data) {
 		preRegAction = data.action;
 		preRegPreSkip = data.preSkip;
-		genEduCourseData = data;
+		genEduCourseData = {};
+		for (let i of data.courseList) {
+			genEduCourseData[i.serialNumber] = i;
+		}
 	};
 
 	this.setPreScheduleData = function (data) {
-		console.log(data)
-		setPreScheduleDeleteKey = {};
-		for (let scheduleCourse of data.schedule) {
-			setPreScheduleDeleteKey[scheduleCourse.serialNumber] = scheduleCourse.delete;
-		}
+		preScheduleData = data;
+		updateTable();
 	}
 
 	this.setA9Registered = function (data) {
-		if (data.list)
-			a9Registered = data.list;
+		a9Registered = data.list;
 	};
-
-	this.renderTable = updateTable;
 
 	this.setCourseDetailData = function (courseDetailData) {
 		courseDetail = courseDetailData;
 		updateTable();
 	};
 
+	this.renderTable = updateTable;
+
 	this.clearCourseData = function () {
 		genCourseData = null;
 		genEduCourseData = null;
-		setPreScheduleDeleteKey = {};
-		a9Registered = {};
-		courseDetail = {};
+		preScheduleData = null;
+		a9Registered = null;
+		// courseDetail = {};
 	};
 
 	this.dataReady = function () {
-		return genCourseData != null && genEduCourseData != null;
+		return genCourseData != null && genEduCourseData != null && a9Registered != null;
 	};
 
 	function updateTable() {
 		while (courseListBody.firstChild)
 			courseListBody.firstChild.parentElement.removeChild(courseListBody.firstChild);
-		// console.trace(genCourseData, genEduCourseData);
+		// console.log(genCourseData, genEduCourseData);
+		console.log('Course table update');
 
-		if (genCourseData) for (const simpleCourseData of genCourseData.courseList)
+		if (preScheduleData) for (const preSchedule of preScheduleData.schedule)
 			courseListBody.appendChild(
-				renderCourseBlock(simpleCourseData,
-					courseDetail[simpleCourseData.serialNumber] || {},
-					a9Registered[simpleCourseData.serialNumber],
-					setPreScheduleDeleteKey[simpleCourseData.serialNumber])
-			);
-
-		if (genEduCourseData) for (const simpleCourseData of genEduCourseData.courseList)
-			courseListBody.appendChild(
-				renderCourseBlock(simpleCourseData,
-					courseDetail[simpleCourseData.serialNumber] || {},
-					a9Registered[simpleCourseData.serialNumber],
-					setPreScheduleDeleteKey[simpleCourseData.serialNumber])
+				renderCourseBlock(preSchedule,
+					genCourseData && genCourseData[preSchedule.serialNumber] || genEduCourseData && genEduCourseData[preSchedule.serialNumber] || {},
+					courseDetail[preSchedule.serialNumber] || {},
+					a9Registered && a9Registered[preSchedule.serialNumber],
+					preSchedule.delete)
 			);
 	}
 
-	function renderCourseBlock(courseData, detail, a9Registered, deleteKey) {
-		const courseName = detail.courseName || courseData.courseName;
-		const category = detail.category || courseData.category;
-		const serialNumber = detail.serialNumber || courseData.serialNumber;
-		const credits = detail.credits || courseData.credits;
+	function renderCourseBlock(preSchedule, regCourseData, detail, a9Registered, deleteKey) {
+		const courseName = detail.courseName || preSchedule.courseName;
+		const serialNumber = detail.serialNumber || preSchedule.serialNumber;
+		const credits = detail.credits || preSchedule.credits;
 		return tr(null,
 			td(detail.departmentName, 'departmentName'),
 			td(serialNumber, 'serialNumber'),
-			td(null, 'category', category && text(category)),
+			td(null, 'category', detail.category && text(detail.category)),
 			td(null, 'grade', detail.courseGrade && text(detail.courseGrade.toString())),
 			td(null, 'classInfo', detail.classInfo && text(detail.classInfo)),
 			td(null, 'classGroup', detail.classGroup && text(detail.classGroup)),
@@ -437,57 +445,84 @@ function CourseTable(windowRoot) {
 			td(null, 'registerCount', a9Registered == null ? null : text(a9Registered.count.toString())),
 			td(null, 'selected', detail.selected == null ? null : span(detail.selected)),
 			td(null, 'available', detail.available == null ? null : createSelectAvailableStr(detail)),
-			td(null, 'functionBtn', courseData.cosdata && (courseData.prechk == null
-				? button(null, '單科加選', sendCourseReg, {courseData: courseData, key: courseData.cosdata})
-				: button(null, '加入志願', sendPreReg, {courseData: courseData, prechk: courseData.prechk, key: courseData.cosdata})),
-				deleteKey && button('deleteBtn', '刪除', deletePreSchedule, {key: deleteKey})
+			td(null, 'functionBtn', regCourseData.cosdata && (regCourseData.prechk == null
+				? button(null, '單科加選', addCourse, {courseData: preSchedule, key: regCourseData.cosdata, preKey: detail.preRegister})
+				: button(null, '加入志願', addPreferenceEnter, {
+					courseData: preSchedule,
+					prechk: regCourseData.prechk,
+					key: regCourseData.cosdata,
+					preKey: detail.preRegister
+				})),
+				deleteKey && button('deleteBtn', '刪除', removePreScheduleButtonClick, {courseData: preSchedule, key: deleteKey})
 			)
 		);
 	}
 
-	function sendPreReg() {
-		const title = this.courseData.courseName + ' 加入志願';
-		fetchApi(`/courseRegister?mode=genEdu`, 'Send pre-register', {
+	function addPreferenceEnter() {
+		const button = this;
+		const courseData = this.courseData;
+		const preScheduleKey = this.preKey;
+		const title = courseData.courseName + ' 加入志願';
+		fetchApi(`/courseRegister?mode=genEdu`, 'Add preference', {
 			method: 'POST',
 			body: `prechk=${this.prechk}&cosdata=${this.key}&action=${preRegAction}&preSkip=${preRegPreSkip}`
 		}).then(response => {
-			const d = div();
-			d.innerHTML = response.msg;
+			preRegAction = response.data.action;
 			if (!response.success) {
-				window.messageAlert.addErrorElement(title + '失敗', d, 10000);
+				window.messageAlert.addError(title + '失敗', response.msg, 10000);
 				return;
 			}
-			window.messageAlert.addSuccessElement(title + '成功', d, 5000);
-			updateCourseTable();
+			window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
+			button.style.display = 'none';
+			// Add course back after preference enter
+			addPreSchedule(courseData, preScheduleKey);
 		});
 	}
 
-	function sendCourseReg() {
-
+	function addCourse() {
+		const button = this;
+		const courseData = this.courseData;
+		const preScheduleKey = this.preKey;
+		const title = courseData.courseName + ' 單科加選';
+		fetchApi(`/courseRegister?mode=course`, 'Add course', {
+			method: 'POST',
+			body: `action=${regAction}&cosdata=${this.key}`
+		}).then(response => {
+			regAction = response.data.action;
+			if (!response.success) {
+				window.messageAlert.addError(title + '失敗', response.msg, 10000);
+				return;
+			}
+			window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
+			button.style.display = 'none';
+			// Add course back after preference enter
+			addPreSchedule(courseData, preScheduleKey);
+		});
 	}
 
-	function updateCourseTable() {
+	function removePreScheduleButtonClick() {
+		const removeKey = this.key;
+		const courseData = this.courseData;
 
-	}
+		const deleteConform = confirm('是否要刪除 ' + courseData.courseName);
+		if (!deleteConform)
+			return;
 
-	function deletePreSchedule() {
-
+		const prefix = '預排刪除 ';
+		removePreSchedule(courseData, removeKey,
+			function (msg, courseName) {
+				updatePreScheduleData();
+				window.messageAlert.addSuccess(prefix + courseName, msg, 5000);
+			},
+			function (msg, courseName) {
+				window.messageAlert.addError(prefix + courseName, msg, 5000);
+			}
+		);
 	}
 }
 
 /**
  * @typedef {[ScheduleCourse, CourseDataTime]} CourseWithTime
- */
-
-/**
- * @typedef ScheduleCourse
- * @property {string} serialNumber
- * @property {string} courseName
- * @property {boolean} required
- * @property {float} credits
- * @property {CourseDataTime[]} time
- * @property {string} [delete] Delete action key
- * @property {boolean} [pre] Is pre-schedule
  */
 
 /**
@@ -501,9 +536,10 @@ function CourseTable(windowRoot) {
 
 /**
  * @param {Element} windowRoot
+ * @param {function()} updatePreScheduleData
  * @constructor
  */
-function ScheduleTable(windowRoot) {
+function ScheduleTable(windowRoot, updatePreScheduleData) {
 	const courseInfoWindow = new PopupWindow({root: windowRoot});
 	const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
 	const preScheduleTable = table('courseScheduleTable pre', {'cellPadding': 0});
@@ -534,6 +570,15 @@ function ScheduleTable(windowRoot) {
 				preCourseRemoveKey[course.serialNumber] = course.delete;
 	};
 
+	this.setAndRenderPreScheduleData = function (data) {
+		preScheduleData = data;
+		initPreScheduleTable();
+	}
+
+	this.setCourseDetailData = function (courseDetailData) {
+		courseDetail = courseDetailData;
+	};
+
 	this.dataReady = function () {
 		return scheduleData != null && preScheduleData != null;
 	};
@@ -546,8 +591,8 @@ function ScheduleTable(windowRoot) {
 	this.getSearchQuery = function () {
 		// get course info
 		const courseDept = {};
-		for (const serialID in courseDetail) {
-			const dept = serialID.split('-');
+		for (const serialNumber in courseDetail) {
+			const dept = serialNumber.split('-');
 			let deptData = courseDept[dept[0]];
 			if (deptData)
 				deptData.push(dept[1]);
@@ -555,13 +600,9 @@ function ScheduleTable(windowRoot) {
 				courseDept[dept[0]] = [dept[1]];
 		}
 		const courseFetchArr = [];
-		for (const serialID in courseDept)
-			courseFetchArr.push(serialID + '=' + courseDept[serialID].join(','));
+		for (const serialNumber in courseDept)
+			courseFetchArr.push(serialNumber + '=' + courseDept[serialNumber].join(','));
 		return encodeURIComponent(courseFetchArr.join('&'));
-	};
-
-	this.setCourseDetailData = function (courseDetailData) {
-		courseDetail = courseDetailData;
 	};
 
 	this.clear = function () {
@@ -583,13 +624,8 @@ function ScheduleTable(windowRoot) {
 		preCourseRemoveKey = {};
 	}
 
-	function setAndRenderPreScheduleData(response) {
-		preScheduleData = response.data;
-		initPreScheduleTable();
-	}
-
 	function cellClick() {
-		const data = courseDetail[this.serialID];
+		const data = courseDetail[this.serialNumber];
 		if (!data)
 			return;
 
@@ -600,16 +636,12 @@ function ScheduleTable(windowRoot) {
 				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
 			}
 		courseInfoWindow.setWindowContent(div('courseInfo',
-			preCourseRemoveKey[this.serialID] && button('delete', '刪除', removePreCourse, {serialID: this.serialID}),
+			preCourseRemoveKey[this.serialNumber] && button('delete', '刪除', removePreScheduleButtonClick, {serialNumber: this.serialNumber}),
 			h2(data.serialNumber + ' ' + data.courseName),
 			data.instructors.map(i => span(i + ' ')),
 			p(data.courseNote),
 			button(null, 'moodle', openCourseMoodle, {moodleQuery: data.moodle}),
 			locationButtons,
-			!data.preferenceEnter ? null :
-				button(null, '加入志願', sendCosData, {courseData: data, key: data.preferenceEnter}),
-			!data.addCourse ? null :
-				button(null, '單科加選', sendCosData, {courseData: data, key: data.addCourse}),
 		));
 		courseInfoWindow.windowOpen();
 	}
@@ -628,40 +660,26 @@ function ScheduleTable(windowRoot) {
 		});
 	}
 
-	/**@this{{courseData: CourseData, key: string}}*/
-	function sendCosData() {
-		const title = this.courseData.courseName + ' 加入';
-		fetchApi(`/courseFuncBtn?cosdata=${encodeURIComponent(this.key)}`, 'Send course data').then(i => {
-			if (i.success)
-				window.messageAlert.addSuccess(title + '成功', i.msg, 5000);
-			else {
-				const d = div();
-				d.innerHTML = i.msg;
-				window.messageAlert.addErrorElement(title + '失敗', d, 20000);
-			}
-		});
-	}
+	/**@this{{serialNumber: string}}*/
+	function removePreScheduleButtonClick() {
+		const removeKey = preCourseRemoveKey[this.serialNumber];
+		const courseData = courseDetail[this.serialNumber];
 
-	function removePreCourse() {
-		const key = preCourseRemoveKey[this.serialID];
-		const detail = courseDetail[this.serialID];
-
-		const suffix = '[' + detail.serialNumber + '] ' + detail.courseName;
-		const deleteConform = confirm('是否要刪除 ' + suffix);
+		const deleteConform = confirm('是否要刪除 ' + courseData.courseName);
 		if (!deleteConform)
 			return;
 
-		const title = '預排刪除 ' + suffix;
-		fetchApi('/courseSchedule?pre=true', 'Delete pre schedule',
-			{method: 'post', body: 'action=delete&info=' + key}
-		).then(response => {
-			if (response.success) {
-				window.messageAlert.addSuccess(title, response.msg, 5000);
-				fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(setAndRenderPreScheduleData);
+		const prefix = '預排刪除 ';
+		removePreSchedule(courseData, removeKey,
+			function (msg, courseName) {
+				updatePreScheduleData();
 				courseInfoWindow.windowClose();
-			} else
-				window.messageAlert.addError(title, response.msg, 5000);
-		});
+				window.messageAlert.addSuccess(prefix + courseName, msg, 5000);
+			},
+			function (msg, courseName) {
+				window.messageAlert.addError(prefix + courseName, msg, 5000);
+			}
+		);
 	}
 
 	function initScheduleTable() {
@@ -704,7 +722,7 @@ function ScheduleTable(windowRoot) {
 		// 	}
 		// }
 
-		createCourseUndecided(dayUndecided, scheduleTable, false);
+		createCourseUndecided(dayUndecided, scheduleTable);
 	}
 
 	function initPreScheduleTable() {
@@ -724,6 +742,7 @@ function ScheduleTable(windowRoot) {
 			courseData[0].pre = true;
 			dayUndecided.push(courseData);
 		}
+		// console.log(dayUndecided)
 		for (let i = 0; i < preTableWidth; i++) {
 			for (let j = 0; j < preTableHeight; j++) {
 				const courseTimeDataPre = dayTablePre[i][j];
@@ -742,11 +761,11 @@ function ScheduleTable(windowRoot) {
 		initTable(preScheduleTable);
 		createScheduleTable(preScheduleTable, dayTable, dayUndecided.length > 0, preTableWidth, preTableHeight);
 
-		createCourseUndecided(dayUndecidedPre, preScheduleTable, true);
+		createCourseUndecided(dayUndecided, preScheduleTable);
 	}
 
 	function courseCellHoverStart() {
-		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialID];
+		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialNumber];
 		if (!cells)
 			return;
 		for (let cell of cells) {
@@ -755,7 +774,7 @@ function ScheduleTable(windowRoot) {
 	}
 
 	function courseCellHoverEnd() {
-		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialID];
+		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialNumber];
 		if (!cells)
 			return;
 		for (let cell of cells) {
@@ -806,9 +825,9 @@ function ScheduleTable(windowRoot) {
 		for (let i = 0; i < tableWidth; i++)
 			dayTable[i] = new Array(tableHeight);
 		for (const eachCourse of scheduleData.schedule) {
-			const serialID = eachCourse.serialNumber;
-			if (courseDetail[serialID] === undefined)
-				courseDetail[serialID] = null;
+			const serialNumber = eachCourse.serialNumber;
+			if (courseDetail[serialNumber] === undefined)
+				courseDetail[serialNumber] = null;
 			for (const timeLocInfo of eachCourse.time) {
 				// Time undecided
 				if (timeLocInfo.dayOfWeek === null || timeLocInfo.sectionStart === null) {
@@ -946,20 +965,20 @@ function ScheduleTable(windowRoot) {
 	/**
 	 * @param {HTMLTableCellElement} parentCell
 	 * @param {CourseWithTime} courseWithTime
-	 * @param {boolean} showSerialId
+	 * @param {boolean} showSerialNumber
 	 * @return {HTMLDivElement}
 	 */
-	function createCourseCell(parentCell, courseWithTime, showSerialId) {
+	function createCourseCell(parentCell, courseWithTime, showSerialNumber) {
 		parentCell.className = 'activate';
 		const courseInfo = courseWithTime[0];
-		const serialID = courseInfo.serialNumber;
+		const serialNumber = courseInfo.serialNumber;
 
-		const courseCell = div(courseInfo.pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
-			showSerialId ? span(courseInfo.serialNumber + ' ') : null,
+		const courseCell = div(courseInfo.pre ? 'pre' : 'sure', {serialNumber: serialNumber, onclick: cellClick},
+			showSerialNumber ? span(courseInfo.serialNumber + ' ') : null,
 			span(courseInfo.courseName),
 		);
-		if (showSerialId) {
-			(courseSameCell[serialID] || (courseSameCell[serialID] = [])).push(courseCell);
+		if (showSerialNumber) {
+			(courseSameCell[serialNumber] || (courseSameCell[serialNumber] = [])).push(courseCell);
 			courseCell.onmouseenter = courseCellHoverStart;
 			courseCell.onmouseleave = courseCellHoverEnd;
 		}
@@ -973,7 +992,7 @@ function ScheduleTable(windowRoot) {
 		return courseCell;
 	}
 
-	function createCourseUndecided(dayUndecided, table, pre) {
+	function createCourseUndecided(dayUndecided, table) {
 		// Add day undecided
 		if (dayUndecided.length > 0) {
 			const row = table.tBody.insertRow();
@@ -992,7 +1011,7 @@ function ScheduleTable(windowRoot) {
 			for (let i = 0; i < dayUndecided.length; i++) {
 				// Build cell
 				const course = dayUndecided[i];
-				createCourseCell(daysUndecidedCell, course, pre);
+				createCourseCell(daysUndecidedCell, course, course.pre);
 			}
 		}
 	}

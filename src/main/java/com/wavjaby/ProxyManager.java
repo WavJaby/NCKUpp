@@ -155,6 +155,7 @@ public class ProxyManager implements Module {
                 if (++proxyIndex >= proxies.size())
                     proxyIndex = 0;
                 proxy = proxies.get(proxyIndex + i);
+                logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
             }
         }
     };

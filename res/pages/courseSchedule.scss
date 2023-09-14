@@ -238,4 +238,53 @@ $schedule-row-bg-color: #1C1E1FB0;
             cursor: pointer;
         }
     }
+
+    > .courseTable {
+        //width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+
+        > thead {
+            > tr > th {
+                border: 1px solid;
+            }
+        }
+
+        > tbody {
+            > tr {
+                > td {
+                    min-width: 2em;
+                    border: 1px solid;
+                }
+
+                > .serialNumber, > .courseName {
+                    white-space: nowrap;
+                }
+
+                > .courseTime {
+                    > button {
+                        border-radius: 10px;
+                        display: inline-block;
+
+                        &:not(&:first-child) {
+                            margin-left: 10px;
+                        }
+                    }
+                }
+
+                > .functionBtn {
+                    white-space: nowrap;
+
+                    > button {
+                        border-radius: 10px;
+                        display: inline-block;
+
+                        &:not(&:first-child) {
+                            margin-left: 10px;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

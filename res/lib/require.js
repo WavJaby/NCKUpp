@@ -145,7 +145,6 @@ function async_require(url) {
 	var cache = requireCache[parsedUrl];
 	if (cache)
 		return new Promise(function (resolve) {
-			console.log(cache)
 			resolve(cache);
 		});
 

@@ -230,7 +230,9 @@ public class StudentIdentificationSystem implements EndpointModule {
             String grade_ = row.get(6).text().trim();
             float gradeFloat;
             try {
-                gradeFloat = grade_.equals("成績未到") ? -2 : Float.parseFloat(grade_);
+                gradeFloat = grade_.equals("成績未到") ? -2
+                        : grade_.equals("退選") ? -5
+                        : Float.parseFloat(grade_);
             } catch (NumberFormatException e) {
                 gradeFloat = -1;
                 logger.errTrace(e);

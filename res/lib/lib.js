@@ -118,19 +118,62 @@ export function fetchApi(endpoint, showState, option) {
 		});
 }
 
-export function timeParse(timeStr) {
-	const time = timeStr.split(',');
-	const parsedTime = new Int8Array(3);
+/**
+ * @typedef ScheduleCourse
+ * @property {string} serialNumber
+ * @property {string} courseName
+ * @property {boolean} required
+ * @property {float} credits
+ * @property {CourseDataTime[]} time
+ * @property {string} [delete] Delete action key
+ * @property {boolean} [pre] Is pre-schedule
+ */
 
-	parsedTime[0] = parseInt(time[0]);
-	if (time.length > 1)
-		parsedTime[1] = parseInt(time[1]);
-	if (time.length > 2)
-		parsedTime[2] = parseInt(time[2]);
-	// Make section end equals to section start
-	else if (time.length > 1)
-		parsedTime[2] = parsedTime[1];
-	return parsedTime;
+/**
+ * @param {CourseData} courseData
+ * @param {string} removeKey
+ * @param {function(message: string, courseName: string)} [onSuccess]
+ * @param {function(message: string, courseName: string)} [onFailed]
+ */
+export function removePreSchedule(courseData, removeKey, onSuccess, onFailed) {
+	const courseName = '[' + courseData.serialNumber + '] ' + courseData.courseName;
+	fetchApi('/courseSchedule?pre=true', 'Delete pre schedule',
+		{method: 'post', body: 'action=delete&info=' + removeKey}
+	).then(response => {
+		if (response.success)
+			onSuccess && onSuccess(response.msg, courseName);
+		else
+			onFailed && onFailed(response.msg, courseName);
+	});
+}
+
+/**
+ * @param {CourseData} courseData
+ * @param {string} preScheduleKey
+ * @param {function(message: string, courseName: string)} [onSuccess]
+ * @param {function(message: string, courseName: string)} [onFailed]
+ */
+export function addPreSchedule(courseData, preScheduleKey, onSuccess, onFailed) {
+	const courseName = '[' + courseData.serialNumber + '] ' + courseData.courseName;
+	fetchApi('/courseFuncBtn?prekey=' + encodeURIComponent(preScheduleKey), 'Add pre-schedule').then(response => {
+		if (response.success)
+			onSuccess && onSuccess(response.msg, courseName);
+		else
+			onFailed && onFailed(response.msg, courseName);
+	});
+}
+
+/**
+ * @param {function(preScheduleData: {schedule: ScheduleCourse[]})} [onSuccess]
+ * @param {function(message: string)} [onFailed]
+ */
+export function getPreSchedule(onSuccess, onFailed) {
+	fetchApi('/courseSchedule?pre=true', 'Get pre-schedule').then(response => {
+		if (response.success)
+			onSuccess && onSuccess(response.data);
+		else
+			onFailed && onFailed(response.msg);
+	});
 }
 
 // [default, success, info, primary, warning, danger]

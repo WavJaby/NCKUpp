@@ -30,9 +30,11 @@ public class CourseRegister implements EndpointModule {
     private static final String TAG = "[PreRegister]";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
+    private final RobotCode robotCode;
 
-    public CourseRegister(ProxyManager proxyManager) {
+    public CourseRegister(ProxyManager proxyManager, RobotCode robotCode) {
         this.proxyManager = proxyManager;
+        this.robotCode = robotCode;
     }
 
     @Override
@@ -75,16 +77,14 @@ public class CourseRegister implements EndpointModule {
 
         @ApiRequestParser.Required
         @ApiRequestParser.Payload
-        private String prechk;
-        @ApiRequestParser.Required
-        @ApiRequestParser.Payload
-        private String cosdata;
-        @ApiRequestParser.Required
-        @ApiRequestParser.Payload
         private String action;
         @ApiRequestParser.Required
         @ApiRequestParser.Payload
+        private String cosdata;
+        @ApiRequestParser.Payload
         private String preSkip;
+        @ApiRequestParser.Payload
+        private String prechk;
     }
 
     private void getCoursePreRegisterList(String rawQuery, ApiResponse response, CookieStore cookieStore) {
@@ -312,19 +312,84 @@ public class CourseRegister implements EndpointModule {
                         .execute();
 
                 JsonObject postResult = new JsonObject(postCourse.body());
-                String msg = postResult.getString("msg");
-                logger.log(msg);
-                response.setMessageDisplay(msg);
-                response.setData(new JsonObjectStringBuilder()
-                        .append("preSkip", preSkip)
-                        .toString());
+                action = postResult.getString("addid");
 
+                String message = postResult.getString("msg");
                 if (!postResult.getBoolean("status"))
                     response.errorCourseNCKU();
-
+                if (message == null || message.isEmpty())
+                    message = "Unknown error";
+                logger.log(message);
+                response.setMessageDisplay(message);
+                response.setData(new JsonObjectStringBuilder()
+                        .append("preSkip", preSkip)
+                        .append("action", action)
+                        .toString());
             } catch (IOException e) {
                 logger.errTrace(e);
+                response.errorNetwork(e);
             }
+        } else if (request.mode.equals("course")) {
+            long time = (System.currentTimeMillis() / 1000);
+            String action = request.action;
+            String cosdata = request.cosdata;
+            try {
+                Connection.Response postCourse = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21322&m=" + action)
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
+                        .method(Connection.Method.POST)
+                        .requestBody("time=" + time + "&cosdata=" + cosdata)
+                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                        .header("X-Requested-With", "XMLHttpRequest")
+                        .execute();
+                JsonObject postResult = new JsonObject(postCourse.body());
+                action = postResult.getString("addid");
+
+                String message = postResult.getString("msg");
+                boolean success = postResult.getBoolean("status");
+                if (postResult.containsKey("need_captcha") && postResult.getBoolean("need_captcha")) {
+                    for (int i = 0; i < 5; i++) {
+                        String code = robotCode.getCode(courseNckuOrg + "/index.php?c=cos21322&m=captcha", cookieStore, RobotCode.Mode.SINGLE, RobotCode.WordType.HEX);
+                        time = (System.currentTimeMillis() / 1000);
+                        Connection.Response postCourseCode = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21322&m=" + action)
+                                .header("Connection", "keep-alive")
+                                .cookieStore(cookieStore)
+                                .ignoreContentType(true)
+                                .proxy(proxyManager.getProxy())
+                                .userAgent(Main.USER_AGENT)
+                                .method(Connection.Method.POST)
+                                .requestBody("time=" + time + "&cosdata=" + cosdata + "&code=" + code)
+                                .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                                .header("X-Requested-With", "XMLHttpRequest")
+                                .execute();
+                        JsonObject postCourseCodeResult = new JsonObject(postCourseCode.body());
+                        action = postCourseCodeResult.getString("addid");
+
+                        message = postCourseCodeResult.getString("msg");
+                        if (postCourseCodeResult.getBoolean("status")) {
+                            success = true;
+                            break;
+                        }
+                        if (!message.contains("CAPTCHA") && !message.contains("驗證碼"))
+                            break;
+                        logger.log("Retry");
+                    }
+                }
+                if (!success)
+                    response.errorCourseNCKU();
+                if (message == null || message.isEmpty())
+                    message = "Unknown error";
+                response.setMessageDisplay(message);
+                response.setData(new JsonObjectStringBuilder().append("action", action).toString());
+            } catch (IOException e) {
+                logger.errTrace(e);
+                response.errorNetwork(e);
+            }
+        } else {
+            response.errorBadQuery("Invalid mode: \"" + request.mode + '"');
         }
     }
 
