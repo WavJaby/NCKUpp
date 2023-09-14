@@ -1,8 +1,20 @@
 'use strict';
 
-import {a, button, checkboxWithName, div, h1, h2, mountableStylesheet, p, span, table} from '../lib/domHelper_v003.min.js';
-import {checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
+import {
+	a,
+	button,
+	checkboxWithName,
+	div,
+	h1,
+	h2,
+	mountableStylesheet,
+	p,
+	span,
+	table, tbody, td, text, th, thead, tr
+} from '../lib/domHelper_v003.min.js';
+import {checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
+import {createSelectAvailableStr, createSyllabusUrl} from './courseSearch.js';
 
 // static
 const weekTable = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -42,9 +54,10 @@ export default function (router, loginState) {
 	const scheduleTableInfo = span(null, 'scheduleTableInfo');
 	const windowRoot = div();
 	const scheduleTable = new ScheduleTable(windowRoot);
+	const courseTable = new CourseTable(windowRoot);
 	const downloadScheduleButton = button('downloadScheduleBtn', '下載課表');
 	const downloadScheduleButtonHide = a(null, null, null, {style: 'display:none'});
-	let scheduleLoading = false, scheduleLoadingQueue = false;
+	let scheduleLoading = false, scheduleLoadingQueue = false, scheduleLoadingTaskCount = 0;
 
 	showClassroomCheckbox.input.onchange = () => scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
 	showPreScheduleCheckbox.input.onchange = () => scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
@@ -114,10 +127,13 @@ export default function (router, loginState) {
 			// Update data
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
+			scheduleLoadingTaskCount = 5;
 			if (!scheduleTable.dataReady())
 				downloadScheduleButton.classList.remove('show');
 			scheduleTable.clearScheduleData();
+			courseTable.clearCourseData();
 			fetchApi('/courseSchedule', 'Get schedule').then(response => {
+				scheduleLoadingTaskCount--;
 				if (!response.success || !response.data) {
 					scheduleLoading = false;
 					return;
@@ -130,6 +146,7 @@ export default function (router, loginState) {
 				checkScheduleDataAndRender(false);
 			});
 			fetchApi('/courseSchedule?pre=true', 'Get pre schedule').then(response => {
+				scheduleLoadingTaskCount--;
 				if (!response.success || !response.data) {
 					scheduleLoading = false;
 					return;
@@ -138,7 +155,41 @@ export default function (router, loginState) {
 				const preScheduleData = response.data;
 				pageStorage['savedCurrentPreSchedule'] = preScheduleData;
 				scheduleTable.setPreScheduleData(preScheduleData);
+				courseTable.setPreScheduleData(preScheduleData);
 				checkScheduleDataAndRender(false);
+			});
+			fetchApi('/courseRegister?mode=course', 'Get course register table').then(response => {
+				scheduleLoadingTaskCount--;
+				if (!response.success || !response.data) {
+					scheduleLoading = false;
+					return;
+				}
+				const genCourseData = response.data;
+				pageStorage['savedCurrentGenCourseData'] = genCourseData;
+				courseTable.setGenCourseData(genCourseData);
+				courseTable.renderTable();
+				// checkCourseDataAndRender(false);
+			});
+			fetchApi('/courseRegister?mode=genEdu', 'Get gen-edu register table').then(response => {
+				scheduleLoadingTaskCount--;
+				if (!response.success || !response.data) {
+					scheduleLoading = false;
+					return;
+				}
+				const genEduCourseData = response.data;
+				pageStorage['savedCurrentGenEduCourseData'] = genEduCourseData;
+				courseTable.setGenEduCourseData(genEduCourseData);
+				courseTable.renderTable();
+				// checkCourseDataAndRender(false);
+			});
+			fetchApi('/A9Registered', 'Get A9 register count').then(response => {
+				scheduleLoadingTaskCount--;
+				if (!response.success || !response.data) {
+					scheduleLoading = false;
+					return;
+				}
+				courseTable.setA9Registered(response.data);
+				courseTable.renderTable();
 			});
 		} else {
 			if (state) {
@@ -162,29 +213,37 @@ export default function (router, loginState) {
 			return;
 
 		scheduleTable.renderTable();
-		downloadScheduleButton.classList.add('show');
 		pageStorage.storageSave();
+		downloadScheduleButton.classList.add('show');
 
 		// Try load course detail from page storage
 		const courseDetailRaw = pageStorage['savedCurrentCourseDetailRaw'];
 		if (firstRender && courseDetailRaw) {
-			scheduleTable.setCourseDetailData(parseCourseDetail(courseDetailRaw));
-			scheduleLoadingDone();
+			const courseData = parseCourseDetail(courseDetailRaw);
+			scheduleTable.setCourseDetailData(courseData);
+			courseTable.setCourseDetailData(courseData);
+			checkScheduleLoadingDone();
 		} else {
+			scheduleLoadingTaskCount++;
 			// Fetch course data
 			fetchApi('/search?serial=' + scheduleTable.getSearchQuery(), 'Get course info').then(response => {
 				// Update course data
 				if (response.success && response.data) {
 					pageStorage['savedCurrentCourseDetailRaw'] = response.data;
 					pageStorage.storageSave();
-					scheduleTable.setCourseDetailData(parseCourseDetail(response.data));
+					const courseData = parseCourseDetail(response.data);
+					scheduleTable.setCourseDetailData(courseData);
+					courseTable.setCourseDetailData(courseData);
 				}
-				scheduleLoadingDone();
+				scheduleLoadingTaskCount--;
+				checkScheduleLoadingDone();
 			});
 		}
 	}
 
-	function scheduleLoadingDone() {
+	function checkScheduleLoadingDone() {
+		if (scheduleLoadingTaskCount !== 0)
+			return;
 		// Reset loading
 		scheduleLoading = false;
 		// Fetch again if queue
@@ -207,10 +266,20 @@ export default function (router, loginState) {
 		if (scheduleData && preScheduleData) {
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
-			scheduleTable.setScheduleData(scheduleData);
+			scheduleLoadingTaskCount = 0;
 			updateScheduleInfo(scheduleData);
+			scheduleTable.setScheduleData(scheduleData);
 			scheduleTable.setPreScheduleData(preScheduleData);
+			courseTable.setPreScheduleData(preScheduleData);
 			checkScheduleDataAndRender(true);
+		}
+
+		const genCourseData = pageStorage['savedCurrentGenCourseData'];
+		const genEduCourseData = pageStorage['savedCurrentGenEduCourseData'];
+		if (genCourseData && genEduCourseData) {
+			courseTable.setGenCourseData(genCourseData);
+			courseTable.setGenEduCourseData(genEduCourseData);
+			courseTable.renderTable();
 		}
 	}
 
@@ -225,30 +294,184 @@ export default function (router, loginState) {
 		scheduleTableInfo,
 		scheduleTable.table,
 		downloadScheduleButton,
+		// courseTable.element,
 		windowRoot,
 	);
 };
 
 /**
- * @typedef {[ScheduleCourse, ...ScheduleCourseTimeInfo]} CourseWithTime
+ * @param {Element} windowRoot
+ * @constructor
  */
+function CourseTable(windowRoot) {
+	const courseListBody = tbody();
+	this.element = table('courseTable',
+		thead(null,
+			th('系所', 'departmentName'),
+			th('系-序號', 'serialNumber'),
+			th('類別', 'category'),
+			th('年級', 'grade'),
+			th('班別', 'classInfo'),
+			th('組別', 'classGroup'),
+			th('時間', 'courseTime'),
+			th('課程名稱', 'courseName'),
+			th('選必修', 'required'),
+			th('學分', 'credits'),
+			th('抽籤人數', 'registerCount'),
+			th('已選', 'selected'),
+			th('餘額', 'available'),
+			// Function buttons
+			th('功能', 'options'),
+		),
+		courseListBody
+	);
+	let genCourseData = null;
+	let genEduCourseData = null;
+	let setPreScheduleDeleteKey = {};
+	let a9Registered = {};
+	let /**@type{Object.<string, CourseData>}*/ courseDetail = {};
+	let preRegAction = null, preRegPreSkip = null;
+
+	this.setGenCourseData = function (data) {
+		genCourseData = data;
+	};
+
+	this.setGenEduCourseData = function (data) {
+		preRegAction = data.action;
+		preRegPreSkip = data.preSkip;
+		genEduCourseData = data;
+	};
+
+	this.setPreScheduleData = function (data) {
+		console.log(data)
+		setPreScheduleDeleteKey = {};
+		for (let scheduleCourse of data.schedule) {
+			setPreScheduleDeleteKey[scheduleCourse.serialNumber] = scheduleCourse.delete;
+		}
+	}
+
+	this.setA9Registered = function (data) {
+		if (data.list)
+			a9Registered = data.list;
+	};
+
+	this.renderTable = updateTable;
+
+	this.setCourseDetailData = function (courseDetailData) {
+		courseDetail = courseDetailData;
+		updateTable();
+	};
+
+	this.clearCourseData = function () {
+		genCourseData = null;
+		genEduCourseData = null;
+		setPreScheduleDeleteKey = {};
+		a9Registered = {};
+		courseDetail = {};
+	};
+
+	this.dataReady = function () {
+		return genCourseData != null && genEduCourseData != null;
+	};
+
+	function updateTable() {
+		while (courseListBody.firstChild)
+			courseListBody.firstChild.parentElement.removeChild(courseListBody.firstChild);
+		// console.trace(genCourseData, genEduCourseData);
+
+		if (genCourseData) for (const simpleCourseData of genCourseData.courseList)
+			courseListBody.appendChild(
+				renderCourseBlock(simpleCourseData,
+					courseDetail[simpleCourseData.serialNumber] || {},
+					a9Registered[simpleCourseData.serialNumber],
+					setPreScheduleDeleteKey[simpleCourseData.serialNumber])
+			);
+
+		if (genEduCourseData) for (const simpleCourseData of genEduCourseData.courseList)
+			courseListBody.appendChild(
+				renderCourseBlock(simpleCourseData,
+					courseDetail[simpleCourseData.serialNumber] || {},
+					a9Registered[simpleCourseData.serialNumber],
+					setPreScheduleDeleteKey[simpleCourseData.serialNumber])
+			);
+	}
+
+	function renderCourseBlock(courseData, detail, a9Registered, deleteKey) {
+		const courseName = detail.courseName || courseData.courseName;
+		const category = detail.category || courseData.category;
+		const serialNumber = detail.serialNumber || courseData.serialNumber;
+		const credits = detail.credits || courseData.credits;
+		return tr(null,
+			td(detail.departmentName, 'departmentName'),
+			td(serialNumber, 'serialNumber'),
+			td(null, 'category', category && text(category)),
+			td(null, 'grade', detail.courseGrade && text(detail.courseGrade.toString())),
+			td(null, 'classInfo', detail.classInfo && text(detail.classInfo)),
+			td(null, 'classGroup', detail.classGroup && text(detail.classGroup)),
+			td(null, 'courseTime',
+				detail.time && detail.time.map(i =>
+					i.flexTimeDataKey
+						? button(null, '詳細時間', null, {key: i.flexTimeDataKey, courseData: detail})
+						: button(null, courseDataTimeToString(i))
+				) || detail.timeString && text(detail.timeString)
+			),
+			td(null, 'courseName',
+				a(null, createSyllabusUrl(detail.semester, detail.systemNumber), null, null, {target: '_blank'}, span(courseName))
+			),
+			td(null, 'required', detail.required == null ? null : text(detail.required ? '必修' : '選修')),
+			td(null, 'credits', credits == null ? null : text(credits.toString())),
+			td(null, 'registerCount', a9Registered == null ? null : text(a9Registered.count.toString())),
+			td(null, 'selected', detail.selected == null ? null : span(detail.selected)),
+			td(null, 'available', detail.available == null ? null : createSelectAvailableStr(detail)),
+			td(null, 'functionBtn', courseData.cosdata && (courseData.prechk == null
+				? button(null, '單科加選', sendCourseReg, {courseData: courseData, key: courseData.cosdata})
+				: button(null, '加入志願', sendPreReg, {courseData: courseData, prechk: courseData.prechk, key: courseData.cosdata})),
+				deleteKey && button('deleteBtn', '刪除', deletePreSchedule, {key: deleteKey})
+			)
+		);
+	}
+
+	function sendPreReg() {
+		const title = this.courseData.courseName + ' 加入志願';
+		fetchApi(`/courseRegister?mode=genEdu`, 'Send pre-register', {
+			method: 'POST',
+			body: `prechk=${this.prechk}&cosdata=${this.key}&action=${preRegAction}&preSkip=${preRegPreSkip}`
+		}).then(response => {
+			const d = div();
+			d.innerHTML = response.msg;
+			if (!response.success) {
+				window.messageAlert.addErrorElement(title + '失敗', d, 10000);
+				return;
+			}
+			window.messageAlert.addSuccessElement(title + '成功', d, 5000);
+			updateCourseTable();
+		});
+	}
+
+	function sendCourseReg() {
+
+	}
+
+	function updateCourseTable() {
+
+	}
+
+	function deletePreSchedule() {
+
+	}
+}
 
 /**
- * @typedef ScheduleCourseTimeInfo
- * @property {string} type
- * @property {string} roomID
- * @property {string} room
- * @property {string} time
- * @property {int[]} [parsedTime]
+ * @typedef {[ScheduleCourse, CourseDataTime]} CourseWithTime
  */
 
 /**
  * @typedef ScheduleCourse
- * @property {string} deptID
- * @property {string} sn
- * @property {string} name
+ * @property {string} serialNumber
+ * @property {string} courseName
  * @property {boolean} required
  * @property {float} credits
+ * @property {CourseDataTime[]} time
  * @property {string} [delete] Delete action key
  * @property {boolean} [pre] Is pre-schedule
  */
@@ -262,6 +485,10 @@ export default function (router, loginState) {
  * @property {ScheduleCourse[]} schedule
  */
 
+/**
+ * @param {Element} windowRoot
+ * @constructor
+ */
 function ScheduleTable(windowRoot) {
 	const courseInfoWindow = new PopupWindow({root: windowRoot});
 	const scheduleTable = table('courseScheduleTable', {'cellPadding': 0});
@@ -290,7 +517,7 @@ function ScheduleTable(windowRoot) {
 
 		for (const course of preScheduleData.schedule)
 			if (course.delete)
-				preCourseRemoveKey[course.deptID + '-' + course.sn] = course.delete;
+				preCourseRemoveKey[course.serialNumber] = course.delete;
 	};
 
 	this.dataReady = function () {
@@ -541,18 +768,13 @@ function ScheduleTable(windowRoot) {
 	function timeTxt2IntAndGetTableSize(scheduleData) {
 		let nightTime = false;
 		let holiday = false;
-		for (const i of scheduleData.schedule) for (const j of i.info) {
-			// parse time
-			const parsedTime = timeParse(j.time);
-
+		for (const i of scheduleData.schedule) for (const time of i.time) {
 			// Find table width
-			if (parsedTime[0] > 4)
+			if (time.dayOfWeek > 4)
 				holiday = true;
-			if (parsedTime.length > 1 && parsedTime[1] > nightTimeStart || parsedTime.length > 2 && parsedTime[2] > nightTimeStart)
+			if (time.sectionStart !== null && time.sectionStart > nightTimeStart ||
+				time.sectionEnd !== null && time.sectionEnd > nightTimeStart)
 				nightTime = true;
-
-			// Save parsed time
-			j.parsedTime = parsedTime;
 		}
 		return [holiday ? 7 : 5, nightTime ? 17 : 11]
 	}
@@ -570,24 +792,24 @@ function ScheduleTable(windowRoot) {
 		for (let i = 0; i < tableWidth; i++)
 			dayTable[i] = new Array(tableHeight);
 		for (const eachCourse of scheduleData.schedule) {
-			const serialID = eachCourse.deptID + '-' + eachCourse.sn;
+			const serialID = eachCourse.serialNumber;
 			if (courseDetail[serialID] === undefined)
 				courseDetail[serialID] = null;
-			for (const timeLocInfo of eachCourse.info) {
+			for (const timeLocInfo of eachCourse.time) {
 				// Time undecided
-				if (timeLocInfo.parsedTime[0] === -1) {
+				if (timeLocInfo.dayOfWeek === null || timeLocInfo.sectionStart === null) {
 					dayUndecided.push([eachCourse, timeLocInfo]);
 					continue;
 				}
 
 				// Add course to timetable
-				let section = dayTable[timeLocInfo.parsedTime[0]][timeLocInfo.parsedTime[1]];
+				let section = dayTable[timeLocInfo.dayOfWeek][timeLocInfo.sectionStart];
 				if (!section)
-					section = dayTable[timeLocInfo.parsedTime[0]][timeLocInfo.parsedTime[1]] = {};
+					section = dayTable[timeLocInfo.dayOfWeek][timeLocInfo.sectionStart] = {};
 
-				let sectionCourse = section[eachCourse.deptID + '-' + eachCourse.sn];
+				let sectionCourse = section[eachCourse.serialNumber];
 				if (!sectionCourse)
-					sectionCourse = section[eachCourse.deptID + '-' + eachCourse.sn] = [eachCourse, timeLocInfo];
+					sectionCourse = section[eachCourse.serialNumber] = [eachCourse, timeLocInfo];
 				else
 					sectionCourse.push(timeLocInfo);
 			}
@@ -595,13 +817,13 @@ function ScheduleTable(windowRoot) {
 		for (let i = 0; i < tableWidth; i++)
 			for (let j = 0; j < tableHeight; j++)
 				if (dayTable[i][j]) {
-					const courseTimeData = dayTable[i][j] = Object.values(dayTable[i][j]);
+					const /**@type{CourseWithTime[]}*/ courseTimeData = dayTable[i][j] = Object.values(dayTable[i][j]);
 					// Course in section
 					for (const courseData of courseTimeData) {
-						const courseTime = courseData[1].parsedTime;
-						if (j !== courseTime[1])
+						const courseTime = courseData[1];
+						if (j !== courseTime.sectionStart)
 							continue;
-						const length = courseTime[2] - courseTime[1] + 1;
+						const length = courseTime.sectionEnd - courseTime.sectionStart + 1;
 						// Fill time, push room info
 						for (let k = 1; k < length; k++) {
 							let courseTimeDataNext = dayTable[i][j + k];
@@ -677,16 +899,16 @@ function ScheduleTable(windowRoot) {
 					continue;
 				// Section course list
 				for (let sectionCourse of sectionCourseList) {
-					const courseTime = sectionCourse[1].parsedTime;
-					if (sectionTime !== courseTime[1])
+					const courseTime = sectionCourse[1];
+					if (sectionTime !== courseTime.sectionStart)
 						continue;
-					const cellTableCol = cellTable[courseTime[0]];
-					const parentCell = cellTableCol[courseTime[1]];
-					const timeLength = courseTime[2] - courseTime[1] + 1;
+					const cellTableCol = cellTable[courseTime.dayOfWeek];
+					const parentCell = cellTableCol[courseTime.sectionStart];
+					const timeLength = courseTime.sectionEnd - courseTime.sectionStart + 1;
 					createCourseCell(parentCell, sectionCourse, true);
 					for (let i = 1; i < timeLength; i++) {
 						const sectionCourseListNext = sectionCourseListCol[sectionTime + i];
-						const parentCellNext = cellTableCol[courseTime[1] + i];
+						const parentCellNext = cellTableCol[courseTime.sectionStart + i];
 						// If current and next section only have one course, expand row
 						if (sectionCourseList.length === 1 &&
 							(!sectionCourseListNext || sectionCourseListNext.length === 1 && sectionCourseListNext[0] === sectionCourse)) {
@@ -716,11 +938,11 @@ function ScheduleTable(windowRoot) {
 	function createCourseCell(parentCell, courseWithTime, showSerialId) {
 		parentCell.className = 'activate';
 		const courseInfo = courseWithTime[0];
-		const serialID = courseInfo.deptID + '-' + courseInfo.sn;
+		const serialID = courseInfo.serialNumber;
 
 		const courseCell = div(courseInfo.pre ? 'pre' : 'sure', {serialID: serialID, onclick: cellClick},
-			showSerialId ? span(courseInfo.deptID + '-' + courseInfo.sn + ' ') : null,
-			span(courseInfo.name),
+			showSerialId ? span(courseInfo.serialNumber + ' ') : null,
+			span(courseInfo.courseName),
 		);
 		if (showSerialId) {
 			(courseSameCell[serialID] || (courseSameCell[serialID] = [])).push(courseCell);
@@ -730,8 +952,8 @@ function ScheduleTable(windowRoot) {
 
 		// Add room
 		for (let k = 1; k < courseWithTime.length; k++) {
-			if (!courseWithTime[k].room) continue;
-			courseCell.appendChild(span(courseWithTime[k].room, 'room'));
+			if (!courseWithTime[k].classroomName) continue;
+			courseCell.appendChild(span(courseWithTime[k].classroomName, 'room'));
 		}
 		parentCell.appendChild(courseCell);
 		return courseCell;

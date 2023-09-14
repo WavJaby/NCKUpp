@@ -26,12 +26,12 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
-public class CoursePreRegister implements EndpointModule {
+public class CourseRegister implements EndpointModule {
     private static final String TAG = "[PreRegister]";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
-    public CoursePreRegister(ProxyManager proxyManager) {
+    public CourseRegister(ProxyManager proxyManager) {
         this.proxyManager = proxyManager;
     }
 
@@ -145,8 +145,8 @@ public class CoursePreRegister implements EndpointModule {
                     return;
                 }
 
-                String serialId = cols.get(1).ownText().trim() + '-' + cols.get(2).ownText().trim();
-                String name = cols.get(3).ownText().trim();
+                JsonObjectStringBuilder courseData = new JsonObjectStringBuilder();
+                parseCourseData(cols, courseData);
                 Element register = cols.get(9).firstElementChild();
                 if (register == null) {
                     response.errorParse("PreRegisterList course register button not found");
@@ -168,9 +168,7 @@ public class CoursePreRegister implements EndpointModule {
                 String prechk = onclickStr.substring(start + 1, end);
 
 
-                course.append(new JsonObjectStringBuilder()
-                        .append("serialId", serialId)
-                        .append("name", name)
+                course.append(courseData
                         .append("cosdata", cosdata)
                         .append("prechk", prechk)
                 );
@@ -223,8 +221,9 @@ public class CoursePreRegister implements EndpointModule {
                     return;
                 }
 
-                String serialId = cols.get(1).ownText().trim() + '-' + cols.get(2).ownText().trim();
-                String name = cols.get(3).ownText().trim();
+                JsonObjectStringBuilder courseData = new JsonObjectStringBuilder();
+                parseCourseData(cols, courseData);
+
                 Element register = cols.get(9).firstElementChild();
                 if (register == null) {
                     response.errorParse("PreRegisterList course register button not found");
@@ -239,10 +238,7 @@ public class CoursePreRegister implements EndpointModule {
                 }
                 String cosdata = onclickStr.substring(start + 1, end);
 
-
-                course.append(new JsonObjectStringBuilder()
-                        .append("serialId", serialId)
-                        .append("name", name)
+                course.append(courseData
                         .append("cosdata", cosdata)
                 );
             }
@@ -330,6 +326,25 @@ public class CoursePreRegister implements EndpointModule {
                 logger.errTrace(e);
             }
         }
+    }
+
+    private void parseCourseData(Elements cols, JsonObjectStringBuilder courseData) {
+        courseData.append("serialNumber", cols.get(1).ownText().trim() + '-' + cols.get(2).ownText().trim());
+        courseData.append("courseName", cols.get(3).ownText().trim());
+
+        String require = cols.get(4).ownText().trim();
+        if (require.isEmpty())
+            courseData.append("require");
+        else
+            courseData.append("require", require.equals("必修") || require.equals("Required"));
+
+        String credits = cols.get(5).ownText().trim();
+        if (credits.isEmpty())
+            courseData.append("credits");
+        else
+            courseData.append("credits", Float.parseFloat(credits));
+
+        courseData.append("category", cols.get(6).ownText().trim());
     }
 
     @Override

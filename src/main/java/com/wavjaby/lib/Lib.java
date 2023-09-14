@@ -104,6 +104,29 @@ public class Lib {
         }
     }
 
+    public static String checkCourseNckuLoginRequiredPageStr(Connection connection, ApiResponse response, boolean useWarn) {
+        try {
+            Connection.Response res = connection.execute();
+            if (res.statusCode() == 301) {
+                String location = res.header("location");
+                if (location != null && location.endsWith("index.php?auth")) {
+                    if (useWarn) {
+                        response.addWarn("Not login");
+                        return res.body();
+                    } else
+                        response.errorLoginRequire();
+                } else
+                    response.errorParse("Redirect but unknown location");
+                return null;
+            }
+            return res.body();
+        } catch (IOException e) {
+            logger.errTrace(e);
+            response.errorNetwork(e);
+            return null;
+        }
+    }
+
     public static String checkCourseNckuPageError(Element body) {
         // Get if error
         Element error = body.getElementById("error");

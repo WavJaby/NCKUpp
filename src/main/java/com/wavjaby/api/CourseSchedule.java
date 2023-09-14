@@ -16,7 +16,6 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -186,9 +185,8 @@ public class CourseSchedule implements EndpointModule {
             }
 
             JsonObject course = new JsonObject();
-            course.put("deptID", col.get(0).text());
-            course.put("sn", col.get(1).text());
-            course.put("name", col.get(2).text());
+            course.put("serialNumber", col.get(0).text() + '-' + col.get(1).text());
+            course.put("courseName", col.get(2).text());
             course.put("credits", Float.parseFloat(col.get(3).text()));
 
             // Parse time
@@ -197,12 +195,12 @@ public class CourseSchedule implements EndpointModule {
                 if (!(i instanceof TextNode))
                     continue;
                 String time = ((TextNode) i).text().trim();
-                StringBuilder builder = new StringBuilder();
                 // Parse section
-                CourseSchedule.parseTimeStr(builder, time, response);
-                timeArr.add(new JsonObjectStringBuilder().append("time", builder.toString()));
+                JsonObject result = new JsonObject();
+                parseTimeStr(result, time, response);
+                timeArr.add(result);
             }
-            course.put("info", timeArr);
+            course.put("time", timeArr);
 
             course.put("addTime", col.get(5).text());
             course.put("remark", col.get(6).text());
@@ -251,13 +249,18 @@ public class CourseSchedule implements EndpointModule {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos31315&m=" + action)
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
+                .followRedirects(false)
                 .proxy(proxyManager.getProxy())
                 .ignoreContentType(true)
                 .method(Connection.Method.POST)
                 .requestBody(postPayload);
 
+        String body = checkCourseNckuLoginRequiredPageStr(conn, response, false);
+        if (body == null)
+            return;
+
         try {
-            JsonObject postResult = new JsonObject(conn.execute().body());
+            JsonObject postResult = new JsonObject(body);
             String msg = postResult.getString("msg");
             if (!postResult.containsKey("result") || !postResult.getBoolean("result"))
                 response.errorCourseNCKU();
@@ -266,9 +269,6 @@ public class CourseSchedule implements EndpointModule {
             logger.errTrace(e);
             if (response != null)
                 response.errorParse("Response Json parse error: " + e.getMessage());
-        } catch (IOException e) {
-            logger.errTrace(e);
-            response.errorNetwork(e);
         }
     }
 
@@ -321,8 +321,8 @@ public class CourseSchedule implements EndpointModule {
         if (eachCourse == null)
             return;
 
-        JsonArray courseInfo = null;
-        String lastSN = null;
+        JsonArray timeInfo = null;
+        String lastSN = null, category;
         JsonArray courseScheduleData = new JsonArray();
         for (Element row : eachCourse) {
             if (row.childNodeSize() < 10) {
@@ -330,38 +330,28 @@ public class CourseSchedule implements EndpointModule {
                 return;
             }
             Elements rowElements = row.children();
+            category = rowElements.get(6).text();
 
             String sn = rowElements.get(0).text();
             if (!sn.equals(lastSN)) {
                 lastSN = sn;
                 JsonObject course = new JsonObject();
-                course.put("deptID", rowElements.get(1).text());
-                course.put("sn", rowElements.get(2).text());
-                course.put("name", rowElements.get(3).text());
+                course.put("serialNumber", rowElements.get(1).text() + '-' + rowElements.get(2).text());
+                course.put("courseName", rowElements.get(3).text());
                 String requiredStr = rowElements.get(4).text();
                 course.put("required", requiredStr.equals("必修") || requiredStr.equals("REQUIRED"));
                 course.put("credits", Float.parseFloat(rowElements.get(5).text()));
-                course.put("info", courseInfo = new JsonArray());
+                course.put("time", timeInfo = new JsonArray());
+                course.put("category", category);
                 courseScheduleData.add(course);
             }
 
             JsonObject info = new JsonObject();
-            info.put("type", rowElements.get(6).text());
 
             // parse time
             Element timeElement = rowElements.get(7);
-            // Time in link
-            StringBuilder builder = new StringBuilder();
-            Element timeElementChild = timeElement.firstElementChild();
-            if (timeElementChild != null && timeElementChild.tagName().equals("div")) {
-                builder.append("-1");
-            }
-            // Parse time text
-            else {
-                String time = timeElement.text();
-                parseTimeStr(builder, time, response);
-            }
-            info.put("time", builder.toString());
+            parseTimeStr(info, timeElement.text(), response);
+
             String room = rowElements.get(8).text();
             int roomIdEnd = room.indexOf(' ');
             if (!room.isEmpty() && roomIdEnd == -1) {
@@ -374,10 +364,10 @@ public class CourseSchedule implements EndpointModule {
                         room.charAt(roomIdEnd + 1) == '(' ? roomIdEnd + 2 : roomIdEnd,
                         room.charAt(room.length() - 1) == ')' ? room.length() - 1 : room.length());
 
-            info.put("roomID", roomID);
-            info.put("room", room);
+            info.put("classroomID", roomID);
+            info.put("classroomName", room);
 
-            courseInfo.add(info);
+            timeInfo.add(info);
         }
 
         JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
@@ -390,24 +380,29 @@ public class CourseSchedule implements EndpointModule {
         response.setData(builder.toString());
     }
 
-    static void parseTimeStr(StringBuilder builder, String time, ApiResponse response) {
+    static void parseTimeStr(JsonObject result, String time, ApiResponse response) {
+        if (time.endsWith("未定") || time.equals("unconfirm") || time.equals("Undecided")) {
+            result.put("dayOfWeek", null).put("sectionStart", null).put("sectionEnd", null);
+            return;
+        }
         int dayEnd = time.indexOf(' ');
         String day = dayEnd == -1 ? time : time.substring(0, dayEnd);
         Integer date = dayOfWeekTextToInt.get(day);
         if (date == null) {
             response.addWarn(TAG + "Course Time parse error, unknown date: " + day);
-            date = -1;
         }
+        result.put("dayOfWeek", date);
         if (dayEnd != -1 && time.length() > dayEnd + 1) {
-            builder.append(date).append(',');
             int timeSplit = time.indexOf('~');
-            if (timeSplit == -1)
-                builder.append(sectionCharToByte(time.charAt(dayEnd + 1)));
-            else
-                builder.append(sectionCharToByte(time.charAt(dayEnd + 1))).append(',')
-                        .append(sectionCharToByte(time.charAt(timeSplit + 1)));
+            if (timeSplit == -1) {
+                result.put("sectionStart", sectionCharToByte(time.charAt(dayEnd + 1)));
+                result.put("sectionEnd", null);
+            } else {
+                result.put("sectionStart", sectionCharToByte(time.charAt(dayEnd + 1)));
+                result.put("sectionEnd", sectionCharToByte(time.charAt(timeSplit + 1)));
+            }
         } else
-            builder.append(date);
+            result.put("sectionStart", null).put("sectionEnd", null);
     }
 
     private Elements getCourseListTable(Element body, ApiResponse response) {

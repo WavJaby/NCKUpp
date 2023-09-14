@@ -195,7 +195,7 @@ import {
 } from '../lib/domHelper_v003.min.js';
 
 import SelectMenu from '../selectMenu.js';
-import {courseDataTimeToString, fetchApi, parseRawCourseData, timeParse} from '../lib/lib.js';
+import {courseDataTimeToString, fetchApi, parseRawCourseData} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
 const textColor = {
@@ -206,6 +206,44 @@ const textColor = {
 const totalColSpan = 18;
 
 export let courseSearch;
+
+export function createSelectAvailableStr(courseData) {
+	if (courseData.selected === null && courseData.available === null)
+		return null;
+	const available = courseData.available === null ? ''
+		: courseData.available === -1 ? '不限'
+			: courseData.available === -2 ? '洽系所'
+				: courseData.available.toString();
+	// Colored text
+	if (courseData.available !== null) {
+		if (courseData.available === 0)
+			return span(available, null, {style: 'color:' + textColor.red});
+		else if (courseData.available > 40)
+			return span(null, null, span(available, null, {style: 'color:' + textColor.green}));
+		else if (courseData.available > 0)
+			return span(null, null, span(available, null, {style: 'color:' + textColor.orange}));
+	}
+	return span(available);
+}
+
+export function createSyllabusUrl(yearSem, sysNumClassCode) {
+	if (yearSem == null || sysNumClassCode == null)
+		return null;
+
+	const year = yearSem.substring(0, yearSem.length - 1).padStart(4, '0');
+	const sem = yearSem.charAt(yearSem.length - 1) === '0' ? '1' : '2';
+
+	let systemNumber = sysNumClassCode, classCode = '';
+	const index = sysNumClassCode.indexOf('-');
+	if (index !== -1) {
+		systemNumber = sysNumClassCode.substring(0, index);
+		classCode = sysNumClassCode.substring(index + 1);
+	}
+
+	return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
+		'&co_no=' + systemNumber +
+		'&class_code=' + classCode;
+}
 
 /**
  * @param {QueryRouter} router
@@ -394,7 +432,7 @@ export default function (router, loginState, userGuideTool) {
 		userGuideTrigger.searchStart();
 
 		// Fetch data
-		const searchA9Fetch = isSearchA9 ? fetchApi('/A9Registered', 'Get A9 register count', {timeout: 5000}) : null;
+		const searchA9Fetch = isSearchA9 ? fetchApi('/A9Registered', 'Get A9 register count', {timeout: 10000}) : null;
 		const result = (await fetchApi('/search?' + queryString, 'Searching', {timeout: 10000}));
 		let registerCountA9 = isSearchA9 ? await searchA9Fetch : null;
 		registerCountA9 = registerCountA9 && registerCountA9.data && registerCountA9.data.list;
@@ -565,7 +603,7 @@ export default function (router, loginState, userGuideTool) {
 	/**@this{{courseData: CourseData, key: string}}*/
 	function sendPreReg() {
 		const prekey = encodeURIComponent(this.key);
-		const serialId = this.courseData.serialNumber;
+		const serialNumber = this.courseData.serialNumber;
 
 		const title = this.courseData.courseName + ' 加入志願';
 		fetchApi('/courseFuncBtn?prekey=' + prekey, 'Send pre data').then(addPreResponse => {
@@ -573,27 +611,27 @@ export default function (router, loginState, userGuideTool) {
 			const preScheduleNormal = addPreResponse.code === 1000 || addPreResponse.code === 4002;
 
 			// Get pre-register list
-			return fetchApi(`/coursePreRegister?mode=genEdu`, 'Get pre-register').then(({success, data}) => {
+			return fetchApi(`/courseRegister?mode=genEdu`, 'Get pre-register').then(({success, data}) => {
 				if (!success) {
 					window.messageAlert.addError(title + '失敗', '請再嘗試一次', 5000);
 					return;
 				}
-				const course = data.courseList.find(i => i.serialId === serialId);
+				const course = data.courseList.find(i => i.serialNumber === serialNumber);
 				if (!course) {
 					window.messageAlert.addError(title + '失敗', preScheduleNormal ? '該課程已在志願登記中' : '請嘗試重新整理', 5000);
 					return;
 				}
 				const action = data.action;
 				const preSkip = data.preSkip;
-				fetchApi(`/coursePreRegister?mode=genEdu`, 'Send pre-register', {
+				fetchApi(`/courseRegister?mode=genEdu`, 'Send pre-register', {
 					method: 'POST',
 					body: `prechk=${course.prechk}&cosdata=${course.cosdata}&action=${action}&preSkip=${preSkip}`
 				}).then(response => {
 					if (!response.success) {
 						const d = div();
 						d.innerHTML = response.msg;
-						window.messageAlert.addErrorElement(title + '失敗', d, 20000);
-						return
+						window.messageAlert.addErrorElement(title + '失敗', d, 10000);
+						return;
 					}
 					window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
 
@@ -822,7 +860,7 @@ export default function (router, loginState, userGuideTool) {
 				// Check if registerCount
 				let registerCount = null;
 				if (data.registerCount !== undefined) {
-					registerCount = td(null, 'registerCount', span('抽籤人數:', 'label'), data.registerCount !== null && text(data.registerCount.toString()));
+					registerCount = td(null, 'registerCount', span('抽籤人數:', 'label'), data.registerCount === null ? null : text(data.registerCount.toString()));
 				}
 
 				// Course detail
@@ -942,7 +980,7 @@ export default function (router, loginState, userGuideTool) {
 						td(null, 'required', span('選必修:', 'label'), data.required === null ? null : text(data.required ? '必修' : '選修')),
 						td(null, 'credits', span('學分:', 'label'), data.credits === null ? null : text(data.credits.toString())),
 						registerCount,
-						td(null, 'available', span('已選:', 'label'), data.selected === null ? null : span(data.selected)),
+						td(null, 'selected', span('已選:', 'label'), data.selected === null ? null : span(data.selected)),
 						td(null, 'available', span('餘額:', 'label'), createSelectAvailableStr(data)),
 						nckuHubInfo,
 						// Title sections
@@ -1013,41 +1051,6 @@ export default function (router, loginState, userGuideTool) {
 
 			flexTimeWindow.set([courseData, response.data]);
 		});
-	}
-
-	function createSyllabusUrl(yearSem, sysNumClassCode) {
-		const year = yearSem.substring(0, yearSem.length - 1).padStart(4, '0');
-		const sem = yearSem.charAt(yearSem.length - 1) === '0' ? '1' : '2';
-
-		let systemNumber = sysNumClassCode, classCode = '';
-		const index = sysNumClassCode.indexOf('-');
-		if (index !== -1) {
-			systemNumber = sysNumClassCode.substring(0, index);
-			classCode = sysNumClassCode.substring(index + 1);
-		}
-
-		return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
-			'&co_no=' + systemNumber +
-			'&class_code=' + classCode;
-	}
-
-	function createSelectAvailableStr(courseData) {
-		if (courseData.selected === null && courseData.available === null)
-			return null;
-		const available = courseData.available === null ? ''
-			: courseData.available === -1 ? '不限'
-				: courseData.available === -2 ? '洽系所'
-					: courseData.available.toString();
-		// Colored text
-		if (courseData.available !== null) {
-			if (courseData.available === 0)
-				return span(available, null, {style: 'color:' + textColor.red});
-			else if (courseData.available > 40)
-				return span(null, null, span(available, null, {style: 'color:' + textColor.green}));
-			else if (courseData.available > 0)
-				return span(null, null, span(available, null, {style: 'color:' + textColor.orange}));
-		}
-		return span(available);
 	}
 
 	// Search page
@@ -1447,7 +1450,7 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 	const checkBoxOuter = checkboxWithName(null, '隱藏衝堂', false, hideConflictFilterChange);
 	const checkBox = checkBoxOuter.input;
 	let fetchingData = false;
-	let timeData = null;
+	let /**@type{CourseDataTime[]}*/timeData = null;
 
 	/**@param{CourseData}courseData*/
 	function condition([courseData]) {
@@ -1461,12 +1464,12 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 			const sectionEnd = cosTime.sectionEnd ? cosTime.sectionEnd : sectionStart;
 
 			for (const usedCosTime of timeData) {
-				if (cosTime.dayOfWeek !== usedCosTime[0])
+				if (cosTime.dayOfWeek !== usedCosTime.dayOfWeek)
 					continue;
 
-				if (sectionStart >= usedCosTime[1] && sectionStart <= usedCosTime[2] ||
-					sectionEnd >= usedCosTime[1] && sectionEnd <= usedCosTime[2] ||
-					sectionStart <= usedCosTime[1] && sectionEnd >= usedCosTime[2])
+				if (sectionStart >= usedCosTime.sectionStart && sectionStart <= usedCosTime.sectionEnd ||
+					sectionEnd >= usedCosTime.sectionStart && sectionEnd <= usedCosTime.sectionEnd ||
+					sectionStart <= usedCosTime.sectionStart && sectionEnd >= usedCosTime.sectionEnd)
 					return false;
 			}
 		}
@@ -1494,12 +1497,17 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
 					// Parse time data
 					const usedTime = [];
 					for (const i of response.data.schedule) {
-						for (const info of i.info)
-							usedTime.push(timeParse(info.time));
+						for (const time of i.time) {
+                            if(time.sectionStart === null)
+                                continue;
+                            if(time.sectionEnd === null)
+                                time.sectionEnd = time.sectionStart;
+                            usedTime.push(time);
+                        }
 					}
 					timeData = usedTime;
 					fetchingData = false;
-					console.log(usedTime);
+					// console.log(usedTime);
 
 					onFilterUpdate();
 				});

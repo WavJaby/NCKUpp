@@ -118,7 +118,11 @@ public class Search implements EndpointModule {
         } else if (searchQuery.serialNumberEmpty()) {
             apiResponse.errorBadQuery("Query \"serial\" is empty");
         } else if (searchQuery.historySearchInvalid()) {
-            apiResponse.errorBadQuery("Query \"queryTime\" is invalid: " + searchQuery.historySearchError);
+            apiResponse.errorBadQuery("History search query invalid: " + searchQuery.historySearchError);
+        } else if (searchQuery.dayOfWeekError()) {
+            apiResponse.errorBadQuery("Query \"dayOfWeek\" is invalid: " + searchQuery.dayOfWeekError);
+        } else if (searchQuery.sectionOfDayError()) {
+            apiResponse.errorBadQuery("Query \"section\" is invalid: " + searchQuery.sectionOfDayError);
         } else if (searchQuery.noQuery()) {
             apiResponse.errorBadQuery("Query \"" + rawQuery + "\" Require least 1 of \"dept\", \"serial\", \"courseName\", \"instructor\", \"grade\", \"dayOfWeek\", \"section\"");
         } else {
@@ -157,8 +161,10 @@ public class Search implements EndpointModule {
         final String courseName;        // 課程名稱
         final String instructor;        // 教師姓名
         final String grade;             // 年級 1 ~ 4
-        final String[] dayOfWeek;         // 星期 [0 ~ 6]
-        final String[] sectionOfDay;      // 節次 [0 ~ 15]
+        final byte[] dayOfWeek;         // 星期 [0 ~ 6]
+        final String dayOfWeekError;
+        final byte[] sectionOfDay;      // 節次 [0 ~ 15]
+        final String sectionOfDayError;
 
         final boolean getAll;
 
@@ -177,20 +183,22 @@ public class Search implements EndpointModule {
             this.courseName = courseData.courseName;
             this.instructor = courseData.instructors == null ? null : courseData.instructors[0];
             this.grade = courseData.forGrade == null ? null : String.valueOf(courseData.forGrade);
-            String dayOfWeek = null, sectionOfDay = null;
+            Byte dayOfWeek = null, sectionOfDay = null;
             if (courseData.timeList != null) {
                 for (CourseData.TimeData time : courseData.timeList) {
                     if (time.sectionStart == null) continue;
-                    dayOfWeek = String.valueOf(time.dayOfWeek);
-                    sectionOfDay = String.valueOf(time.sectionStart);
+                    dayOfWeek = time.dayOfWeek;
+                    sectionOfDay = time.sectionStart;
                     break;
                 }
                 // if no section
                 if (dayOfWeek == null)
-                    dayOfWeek = String.valueOf(courseData.timeList[0].dayOfWeek);
+                    dayOfWeek = courseData.timeList[0].dayOfWeek;
             }
-            this.dayOfWeek = new String[]{dayOfWeek};
-            this.sectionOfDay = new String[]{sectionOfDay};
+            this.dayOfWeek = dayOfWeek == null ? null : new byte[]{dayOfWeek};
+            this.dayOfWeekError = null;
+            this.sectionOfDay = sectionOfDay == null ? null : new byte[]{sectionOfDay};
+            this.sectionOfDayError = null;
 
             this.getAll = false;
             this.getSerial = false;
@@ -211,7 +219,9 @@ public class Search implements EndpointModule {
             this.instructor = searchQuery.instructor;
             this.grade = searchQuery.grade;
             this.dayOfWeek = searchQuery.dayOfWeek == null ? null : searchQuery.dayOfWeek.clone();
+            this.dayOfWeekError = searchQuery.dayOfWeekError;
             this.sectionOfDay = searchQuery.sectionOfDay == null ? null : searchQuery.sectionOfDay.clone();
+            this.sectionOfDayError = searchQuery.sectionOfDayError;
 
             this.getAll = searchQuery.getAll;
             this.getSerial = searchQuery.getSerial;
@@ -334,20 +344,44 @@ public class Search implements EndpointModule {
             this.serialIdNumber = serialIdNumber;
 
             // Normal parameters
-            this.deptNo = this.getAll ? null : deptNo;      // 系所 XX
-            this.courseName = query.get("courseName");      // 課程名稱
-            this.instructor = query.get("instructor");      // 教師姓名
-            this.grade = query.get("grade");                // 年級 1 ~ 4
-            String dayOfWeek = query.get("dayOfWeek");        // 星期 [0 ~ 6]
-            String sectionOfDay = query.get("section");       // 節次 [0 ~ 15]
-            if (dayOfWeek == null && sectionOfDay != null)
-                this.dayOfWeek = new String[]{"0", "1", "2", "3", "4", "5", "6"};
-            else if (dayOfWeek != null) {
-                this.dayOfWeek = dayOfWeek.split(",");
-            } else
-                this.dayOfWeek = null;
+            this.deptNo = this.getAll ? null : deptNo;          // 系所 XX
+            this.courseName = query.get("courseName");          // 課程名稱
+            this.instructor = query.get("instructor");          // 教師姓名
+            this.grade = query.get("grade");                    // 年級 1 ~ 4
+            String dayOfWeekQuery = query.get("dayOfWeek");     // 星期 [0 ~ 6]
+            String sectionOfDayQuery = query.get("section");    // 節次 [0 ~ 15]
 
-            this.sectionOfDay = sectionOfDay == null ? null : simpleSplit(sectionOfDay, ',');
+            byte[] dayOfWeek = null;
+            String dayOfWeekError = null;
+            if (dayOfWeekQuery == null && sectionOfDayQuery != null)
+                dayOfWeek = new byte[]{0, 1, 2, 3, 4, 5, 6};
+            else if (dayOfWeekQuery != null) {
+                String[] dayOfWeekArr = simpleSplit(dayOfWeekQuery, ',');
+                dayOfWeek = new byte[dayOfWeekArr.length];
+                try {
+                    for (int i = 0; i < dayOfWeekArr.length; i++)
+                        dayOfWeek[i] = Byte.parseByte(dayOfWeekArr[i]);
+                } catch (NumberFormatException e) {
+                    dayOfWeekError = "\"dayOfWeek\" formatError";
+                }
+            }
+            this.dayOfWeek = dayOfWeek;
+            this.dayOfWeekError = dayOfWeekError;
+
+            String sectionOfDayError = null;
+            byte[] sectionOfDay = null;
+            if (sectionOfDayQuery != null) {
+                String[] sectionOfDayArr = simpleSplit(sectionOfDayQuery, ',');
+                sectionOfDay = new byte[sectionOfDayArr.length];
+                try {
+                    for (int i = 0; i < sectionOfDay.length; i++)
+                        sectionOfDay[i] = Byte.parseByte(sectionOfDayArr[i]);
+                } catch (NumberFormatException e) {
+                    sectionOfDayError = "\"sectionOfDay\" formatError";
+                }
+            }
+            this.sectionOfDay = sectionOfDay;
+            this.sectionOfDayError = sectionOfDayError;
         }
 
         boolean noQuery() {
@@ -367,6 +401,14 @@ public class Search implements EndpointModule {
 
         public boolean serialNumberInvalid() {
             return getSerial && getSerialError != null;
+        }
+
+        public boolean dayOfWeekError() {
+            return dayOfWeekError != null;
+        }
+
+        public boolean sectionOfDayError() {
+            return sectionOfDayError != null;
         }
 
         public boolean historySearchInvalid() {
@@ -1270,15 +1312,15 @@ public class Search implements EndpointModule {
                 if (searchQuery.instructor != null)
                     postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
                 if (searchQuery.dayOfWeek != null)
-                    postData.append("&wk=").append(Integer.parseInt(searchQuery.dayOfWeek[dayOfWeekIndex]) + 1);
+                    postData.append("&wk=").append(searchQuery.dayOfWeek[dayOfWeekIndex] + 1);
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
                 if (searchQuery.sectionOfDay != null) {
                     StringBuilder b = new StringBuilder();
-                    for (String i : searchQuery.sectionOfDay) {
+                    for (byte i : searchQuery.sectionOfDay) {
                         if (b.length() > 0)
                             b.append("%2C");
-                        b.append(Integer.parseInt(i) + 1);
+                        b.append(i + 1);
                     }
                     postData.append("&cl=").append(b);
                 }

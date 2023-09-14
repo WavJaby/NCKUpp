@@ -324,6 +324,10 @@ window.pageLoading = new Signal(false);
 			createMessageBox('success', title, description, null, removeTimeout);
 		}
 
+		this.addSuccessElement = function (title, htmlElement, removeTimeout) {
+			createMessageBox('success', title, null, htmlElement, removeTimeout);
+		}
+
 		function onMessageBoxTap() {
 			removeMessageBox(this);
 		}

@@ -205,8 +205,8 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 			i = i.split(',');
 			return {
 				dayOfWeek: parseInt(i[0]),
-				sectionStart: i[1].length === 0 ? null : i[1],
-				sectionEnd: i[2].length === 0 ? null : i[2],
+				sectionStart: i[1].length === 0 ? null : parseInt(i[1]),
+				sectionEnd: i[2].length === 0 ? null : parseInt(i[2]),
 				deptID: i[3].length === 0 ? null : i[3],
 				classroomID: i[4].length === 0 ? null : i[4],
 				classroomName: i[5].length === 0 ? null : i[5]

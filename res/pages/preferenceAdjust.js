@@ -136,7 +136,7 @@ export default function (router, loginState) {
 	}
 
 	function showInSearch() {
-		const rawQuery = [['serial', this.serialIds.join(',')]];
+		const rawQuery = [['serial', this.serialIds.join(',')], ['dept', 'A9']];
 		router.openPage('CourseSearch', false, () => courseSearch(rawQuery));
 	}
 
