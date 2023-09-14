@@ -252,7 +252,8 @@ function RouterLazyLoad(url, ...parameter) {
 
 /**
  * @typedef {Object} PageStorage
- * @property {function()} storageSave
+ * @property {function()} save
+ * @property {Object.<string,any>} data
  */
 
 /**
@@ -305,17 +306,17 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 	 * @return {PageStorage}
 	 */
 	this.getPageStorage = function (page) {
-		let objData;
+		const pageStorage = {
+			save: function () {localStorage.setItem(page.pageId, JSON.stringify(this.data));},
+			data: null,
+		};
 		try {
 			const data = localStorage.getItem(page.pageId);
-			objData = data ? JSON.parse(data) : {};
+			pageStorage.data = data ? JSON.parse(data) : {};
 		} catch (e) {
-			objData = {};
+			pageStorage.data = {};
 		}
-		objData.storageSave = function () {
-			localStorage.setItem(page.pageId, JSON.stringify(this));
-		};
-		return objData;
+		return pageStorage;
 	};
 
 	/**

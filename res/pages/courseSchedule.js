@@ -1,16 +1,22 @@
 'use strict';
 
 import {
-	a,
-	button,
-	checkboxWithName,
-	div,
-	h1,
-	h2,
-	mountableStylesheet,
-	p,
-	span,
-	table, tbody, td, text, th, thead, tr
+    a,
+    button,
+    checkboxWithName,
+    div,
+    h1,
+    h2,
+    mountableStylesheet,
+    p,
+    span,
+    table,
+    tbody,
+    td,
+    text,
+    th,
+    thead,
+    tr
 } from '../lib/domHelper_v003.min.js';
 import {checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
@@ -91,6 +97,14 @@ export default function (router, loginState) {
 		console.log('Course schedule Render');
 		styles.mount();
 		pageStorage = router.getPageStorage(this);
+		// Check save version
+		const pageVersion = 0;
+		if (pageStorage.data['saveVersion'] !== pageVersion) {
+			for (const i in pageStorage.data)
+				delete pageStorage.data[i];
+			pageStorage.data['saveVersion'] = pageVersion;
+			pageStorage.save();
+		}
 
 		if (!checkLocalStorage()) {
 			window.messageAlert.addError('請允許內部儲存', '開啟內部儲存來使用更多功能');
@@ -140,7 +154,7 @@ export default function (router, loginState) {
 				}
 				// Parse normal schedule
 				const scheduleData = response.data;
-				pageStorage['savedCurrentSchedule'] = scheduleData;
+				pageStorage.data['savedCurrentSchedule'] = scheduleData;
 				scheduleTable.setScheduleData(scheduleData);
 				updateScheduleInfo(scheduleData);
 				checkScheduleDataAndRender(false);
@@ -153,7 +167,7 @@ export default function (router, loginState) {
 				}
 				// Parse pre schedule
 				const preScheduleData = response.data;
-				pageStorage['savedCurrentPreSchedule'] = preScheduleData;
+				pageStorage.data['savedCurrentPreSchedule'] = preScheduleData;
 				scheduleTable.setPreScheduleData(preScheduleData);
 				courseTable.setPreScheduleData(preScheduleData);
 				checkScheduleDataAndRender(false);
@@ -165,7 +179,7 @@ export default function (router, loginState) {
 					return;
 				}
 				const genCourseData = response.data;
-				pageStorage['savedCurrentGenCourseData'] = genCourseData;
+				pageStorage.data['savedCurrentGenCourseData'] = genCourseData;
 				courseTable.setGenCourseData(genCourseData);
 				courseTable.renderTable();
 				// checkCourseDataAndRender(false);
@@ -177,7 +191,7 @@ export default function (router, loginState) {
 					return;
 				}
 				const genEduCourseData = response.data;
-				pageStorage['savedCurrentGenEduCourseData'] = genEduCourseData;
+				pageStorage.data['savedCurrentGenEduCourseData'] = genEduCourseData;
 				courseTable.setGenEduCourseData(genEduCourseData);
 				courseTable.renderTable();
 				// checkCourseDataAndRender(false);
@@ -213,11 +227,11 @@ export default function (router, loginState) {
 			return;
 
 		scheduleTable.renderTable();
-		pageStorage.storageSave();
+		pageStorage.save();
 		downloadScheduleButton.classList.add('show');
 
 		// Try load course detail from page storage
-		const courseDetailRaw = pageStorage['savedCurrentCourseDetailRaw'];
+		const courseDetailRaw = pageStorage.data['savedCurrentCourseDetailRaw'];
 		if (firstRender && courseDetailRaw) {
 			const courseData = parseCourseDetail(courseDetailRaw);
 			scheduleTable.setCourseDetailData(courseData);
@@ -229,8 +243,8 @@ export default function (router, loginState) {
 			fetchApi('/search?serial=' + scheduleTable.getSearchQuery(), 'Get course info').then(response => {
 				// Update course data
 				if (response.success && response.data) {
-					pageStorage['savedCurrentCourseDetailRaw'] = response.data;
-					pageStorage.storageSave();
+					pageStorage.data['savedCurrentCourseDetailRaw'] = response.data;
+					pageStorage.save();
 					const courseData = parseCourseDetail(response.data);
 					scheduleTable.setCourseDetailData(courseData);
 					courseTable.setCourseDetailData(courseData);
@@ -261,8 +275,8 @@ export default function (router, loginState) {
 	}
 
 	function loadLastScheduleData() {
-		const scheduleData = pageStorage['savedCurrentSchedule'];
-		const preScheduleData = pageStorage['savedCurrentPreSchedule'];
+		const scheduleData = pageStorage.data['savedCurrentSchedule'];
+		const preScheduleData = pageStorage.data['savedCurrentPreSchedule'];
 		if (scheduleData && preScheduleData) {
 			scheduleLoading = true;
 			scheduleLoadingQueue = false;
@@ -274,8 +288,8 @@ export default function (router, loginState) {
 			checkScheduleDataAndRender(true);
 		}
 
-		const genCourseData = pageStorage['savedCurrentGenCourseData'];
-		const genEduCourseData = pageStorage['savedCurrentGenEduCourseData'];
+		const genCourseData = pageStorage.data['savedCurrentGenCourseData'];
+		const genEduCourseData = pageStorage.data['savedCurrentGenEduCourseData'];
 		if (genCourseData && genEduCourseData) {
 			courseTable.setGenCourseData(genCourseData);
 			courseTable.setGenEduCourseData(genEduCourseData);
