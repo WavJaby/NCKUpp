@@ -22,7 +22,7 @@ import static com.wavjaby.lib.Lib.*;
 public class ProxyManager implements Module {
     private static final String TAG = "[ProxyManager]";
     private static final Logger logger = new Logger(TAG);
-    private static final int TEST_TIMEOUT = 4000;
+    private static final int TEST_TIMEOUT = 1000;
     private final PropertiesReader properties;
     private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory("ProxyChecker"));
     private final List<ProxyData> proxies = new ArrayList<>();
@@ -136,9 +136,10 @@ public class ProxyManager implements Module {
     private final Runnable proxyCheckFunc = () -> {
         final String testUrl = "https://course.ncku.edu.tw/index.php";
 
+        ProxyData testingProxy = proxies.get(proxyIndex);
         for (int i = 0; i < proxies.size(); i++) {
             try {
-                HttpURLConnection conn = (HttpURLConnection) new URL(testUrl).openConnection(proxy.toProxy());
+                HttpURLConnection conn = (HttpURLConnection) new URL(testUrl).openConnection(testingProxy.toProxy());
                 conn.setConnectTimeout(TEST_TIMEOUT);
                 conn.setReadTimeout(TEST_TIMEOUT);
                 conn.setUseCaches(false);
@@ -146,16 +147,24 @@ public class ProxyManager implements Module {
 
                 if (conn.getResponseCode() == 200) {
                     readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
+                    conn.disconnect();
                     // Success
+                    proxy = proxies.get(proxyIndex);
                     return;
                 }
                 conn.disconnect();
             } catch (IOException ignore) {
-                // Next proxy
-                if (++proxyIndex >= proxies.size())
-                    proxyIndex = 0;
-                proxy = proxies.get(proxyIndex + i);
-                logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
+                if (i == 0) {
+                    updateProxy();
+                    getUsingProxy();
+                    testingProxy = proxy;
+                } else {
+                    // Next proxy
+                    if (++proxyIndex >= proxies.size())
+                        proxyIndex = 0;
+                    testingProxy = proxies.get(proxyIndex);
+                    logger.log("Using proxy: " + proxies.size() + '/' + proxyIndex + ' ' + testingProxy.toUrl());
+                }
             }
         }
     };
@@ -167,6 +176,7 @@ public class ProxyManager implements Module {
 
         if (useProxy) {
             updateProxy();
+            getUsingProxy();
             service.scheduleWithFixedDelay(proxyCheckFunc, 1000, 5000, TimeUnit.MILLISECONDS);
         }
     }
@@ -190,7 +200,6 @@ public class ProxyManager implements Module {
         if (proxyFileLastModified == lastModified) {
             proxyIndex = 0;
             proxy = proxies.get(proxyIndex);
-            logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
             return;
         }
         proxyFileLastModified = lastModified;
@@ -213,7 +222,7 @@ public class ProxyManager implements Module {
             }
             // Proxy file empty
             if (oldProxy.isEmpty() && newProxy.isEmpty()) {
-                logger.log("Proxy file empty, Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
+                logger.warn("Proxy file empty");
                 return;
             }
 
@@ -227,7 +236,6 @@ public class ProxyManager implements Module {
         if (!proxies.isEmpty()) {
             proxyIndex = 0;
             proxy = proxies.get(proxyIndex);
-            logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
         }
     }
 
@@ -239,7 +247,7 @@ public class ProxyManager implements Module {
             proxyIndex = 0;
 
         proxy = proxies.get(proxyIndex);
-        logger.log("Using proxy: " + proxyIndex + ' ' + proxy.toUrl());
+        getUsingProxy();
     }
 
     public void getUsingProxy() {
@@ -248,8 +256,7 @@ public class ProxyManager implements Module {
         else if (proxy == null)
             logger.log("No proxy");
         else
-            logger.log("Using proxy: " + proxy.toUrl());
-
+            logger.log("Using proxy: " + proxies.size() + '/' + proxyIndex + ' ' + proxy.toUrl());
     }
 
     public Proxy getProxy() {

@@ -122,6 +122,7 @@ public class Main {
                     break;
                 case "up":
                     proxyManager.updateProxy();
+                    proxyManager.getUsingProxy();
                     break;
                 case "p":
                     proxyManager.getUsingProxy();
