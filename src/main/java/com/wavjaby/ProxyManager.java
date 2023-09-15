@@ -22,7 +22,7 @@ import static com.wavjaby.lib.Lib.*;
 public class ProxyManager implements Module {
     private static final String TAG = "[ProxyManager]";
     private static final Logger logger = new Logger(TAG);
-    private static final int TEST_TIMEOUT = 1000;
+    private static final int TEST_TIMEOUT = 1500;
     private final PropertiesReader properties;
     private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory("ProxyChecker"));
     private final List<ProxyData> proxies = new ArrayList<>();
@@ -134,7 +134,7 @@ public class ProxyManager implements Module {
     }
 
     private final Runnable proxyCheckFunc = () -> {
-        final String testUrl = "https://course.ncku.edu.tw/index.php";
+        final String testUrl = "https://api.simon.chummydns.com/api/ip";
 
         ProxyData testingProxy = proxies.get(proxyIndex);
         for (int i = 0; i < proxies.size(); i++) {

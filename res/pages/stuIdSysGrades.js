@@ -192,7 +192,14 @@ export default function (router, loginState) {
 	}
 
 	function gradeToText(grade) {
-		return grade === -1 ? '無' : grade === -2 ? '成績未到' : grade === -3 ? '通過' : grade;
+		return grade === -1 ? '無'
+			: grade === -2 ? '成績未到'
+				: grade === -3 ? '通過'
+					: grade === -4 ? '抵免'
+						: grade === -5 ? "退選"
+							: grade === -6 ? "優良"
+								: grade === -7 ? "不通"
+									: grade;
 	}
 
 	return div('stuIdSysGrades',
