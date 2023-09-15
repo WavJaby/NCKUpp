@@ -245,6 +245,14 @@ export function createSyllabusUrl(yearSem, sysNumClassCode) {
 		'&class_code=' + classCode;
 }
 
+export function nckuHubScoreToSpan(score) {
+	const color = score > 7 ? textColor.green : score > 3 ? textColor.orange : textColor.red;
+	score = score.toFixed(1);
+	if (score === '10.0')
+		score = '10';
+	return span(score, null, {style: 'color:' + color});
+}
+
 /**
  * @param {QueryRouter} router
  * @param {Signal} loginState
@@ -1090,7 +1098,7 @@ export default function (router, loginState, userGuideTool) {
 			registerCountLabel,
 			th('已選', 'selected', {key: 'selected', onclick: sortIntKey}),
 			th('餘額', 'available', {key: 'available', onclick: sortIntKey}),
-			// NckuHub
+			// NCKU HUB
 			th('收穫', 'nckuHub', {key: 'got', onclick: sortNckuHubKey, noHide: true}, nckuHubLoadingOverlay[0]),
 			th('甜度', 'nckuHub', {key: 'sweet', onclick: sortNckuHubKey, noHide: true}, nckuHubLoadingOverlay[1]),
 			th('涼度', 'nckuHub', {key: 'cold', onclick: sortNckuHubKey, noHide: true}, nckuHubLoadingOverlay[2]),
@@ -1284,14 +1292,6 @@ function NckuHubDetailWindow(courseSearch, userGuideTrigger) {
 		));
 		popupWindow.windowOpen();
 	};
-}
-
-function nckuHubScoreToSpan(score) {
-	const color = score > 7 ? textColor.green : score > 3 ? textColor.orange : textColor.red;
-	score = score.toFixed(1);
-	if (score === '10.0')
-		score = '10';
-	return span(score, null, {style: 'color:' + color});
 }
 
 function FlexTimeWindow(courseSearch) {

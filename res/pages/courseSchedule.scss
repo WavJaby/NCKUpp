@@ -243,10 +243,24 @@ $schedule-row-bg-color: #1C1E1FB0;
         //width: 100%;
         border-collapse: collapse;
         text-align: center;
+        margin: 5px;
 
         > thead {
             > tr > th {
-                border: 1px solid;
+                padding: 2px;
+                background-color: $pure-gray-900;
+
+                &:not(&:last-child) {
+                    border-right: white 1px solid;
+                }
+
+                &:first-child {
+                    border-radius: 10px 0 0 10px;
+                }
+
+                &:last-child {
+                    border-radius: 0 10px 10px 0;
+                }
             }
         }
 
@@ -254,7 +268,7 @@ $schedule-row-bg-color: #1C1E1FB0;
             > tr {
                 > td {
                     min-width: 2em;
-                    border: 1px solid;
+                    padding: 2px 5px;
                 }
 
                 > .serialNumber, > .courseName {
@@ -263,6 +277,7 @@ $schedule-row-bg-color: #1C1E1FB0;
 
                 > .courseTime {
                     > button {
+                        background: $button-dark-bg-color;
                         border-radius: 10px;
                         display: inline-block;
 
@@ -276,8 +291,17 @@ $schedule-row-bg-color: #1C1E1FB0;
                     white-space: nowrap;
 
                     > button {
+                        background: $button-dark-bg-color;
                         border-radius: 10px;
                         display: inline-block;
+
+                        &.functionBtn:hover {
+                            background: $button-dark-green-bg-color;
+                        }
+
+                        &.removeBtn:hover {
+                            background: $button-dark-red-bg-color;
+                        }
 
                         &:not(&:first-child) {
                             margin-left: 10px;
