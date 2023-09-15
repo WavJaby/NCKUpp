@@ -60,7 +60,9 @@ export default function (router, loginState) {
 			return;
 
 		preferenceAdjustLoading = true;
+		window.pageLoading.set(true);
 		fetchApi('/preferenceAdjust', 'Get preference').then(i => {
+			window.pageLoading.set(false);
 			if (i.success)
 				renderAdjustList(i.data);
 			else
@@ -122,8 +124,8 @@ export default function (router, loginState) {
 			const currentTab = adjustListTabs.appendChild(div('tab', {adjustList: adjustList},
 				h1(tab.name, 'title noSelect'),
 				expectA9Reg,
+				button('showInSearch', '在課程搜尋中顯示', showInSearch, {serialIds: tab.items.map(i => i.sn)}),
 				adjustList.element,
-				button('showInSearch', '在課程搜尋中顯示', showInSearch, {serialIds: tab.items.map(i => i.sn)})
 			));
 			adjustListTabButtons.appendChild(button(null, tab.name, onTabSelect, {tab: currentTab}));
 
@@ -137,7 +139,7 @@ export default function (router, loginState) {
 
 	function showInSearch() {
 		const rawQuery = [['serial', this.serialIds.join(',')], ['dept', 'A9']];
-		router.openPage('CourseSearch', false, () => courseSearch(rawQuery));
+		courseSearch(router, rawQuery);
 	}
 
 	function saveExpectA9RegVal() {
@@ -275,6 +277,7 @@ function AdjustList() {
 			adjustListBody.appendChild(
 				div('itemHolder', div('item noSelect', {
 					onmousedown: onGrabItem,
+					onpointerdown: onGrabItem,
 					ontouchstart: onGrabItem
 				}, item), {index: i++})
 			);

@@ -24,7 +24,7 @@
 
         > .expectA9Reg {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-size: 18px;
 
             > .description, > .value {
@@ -124,7 +124,9 @@
         }
 
         > .showInSearch {
-            margin: auto;
+            background-color: $button-dark-bg-color;
+            border-radius: 20px;
+            margin: 5px auto;
         }
     }
 

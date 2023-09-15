@@ -237,7 +237,7 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 		addCourse: rawCourseData.ac,
 		preRegister: rawCourseData.pr,
 		addRequest: rawCourseData.ar,
-		nckuhub: null
+		nckuHub: null
 	};
 
 	// Parse time

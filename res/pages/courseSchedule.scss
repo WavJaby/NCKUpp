@@ -1,4 +1,5 @@
 @import '../variables';
+@import './courseSearch';
 
 $course-block-bg-color: #5985EF;
 $course-pre-block-bg-color: #464646;
@@ -244,11 +245,13 @@ $schedule-row-bg-color: #1C1E1FB0;
         border-collapse: collapse;
         text-align: center;
         margin: 5px;
+        font-size: 18px;
 
         > thead {
             > tr > th {
-                padding: 2px;
+                padding: 5px;
                 background-color: $pure-gray-900;
+                @include box-sizing-border;
 
                 &:not(&:last-child) {
                     border-right: white 1px solid;
@@ -265,6 +268,38 @@ $schedule-row-bg-color: #1C1E1FB0;
         }
 
         > tbody {
+            > tr.margin {
+                height: 5px;
+
+                &.pre {
+                    display: none;
+                }
+            }
+
+            > tr.courseBlock {
+                &.pre {
+                    display: none;
+                }
+
+                > td {
+                    background-color: $pure-gray-900;
+
+                    &:first-child {
+                        border-radius: 10px 0 0 10px;
+                    }
+
+                    &:last-child {
+                        border-radius: 0 10px 10px 0;
+                    }
+                }
+            }
+
+            &.showPre {
+                > tr.pre.courseBlock, > tr.pre.margin {
+                    display: table-row;
+                }
+            }
+
             > tr {
                 > td {
                     min-width: 2em;
@@ -308,7 +343,24 @@ $schedule-row-bg-color: #1C1E1FB0;
                         }
                     }
                 }
+
+                > .nckuHub {
+                    padding: 0;
+                    white-space: nowrap;
+                    cursor: pointer;
+
+                    > div {
+                        width: 2.5em;
+                        display: inline-block;
+
+                        > .label {
+                            display: none;
+                        }
+                    }
+                }
             }
         }
     }
+
+    @extend %nckuHubDetailWindow;
 }

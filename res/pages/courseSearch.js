@@ -55,7 +55,7 @@
  * @property {string} addCourse
  * @property {string} preRegister
  * @property {string} addRequest
- * @property {NckuHub|null} nckuhub
+ * @property {NckuHub|null} nckuHub
  */
 /**
  * @typedef {Object} CourseDataTag
@@ -121,16 +121,8 @@
  * @property {string} sweet
  * @property {string} cold
  * @property {NckuHubCommentObject[]} comments
- * @property {Object.<int, NckuHubRateObject>} parsedRates
- */
-/**
- * @typedef {Object} NckuHubRaw
- * @property {string} got
- * @property {string} sweet
- * @property {string} cold
- * @property {int} rate_count
- * @property {NckuHubCommentObject[]} comment
  * @property {NckuHubRateObject[]} rates
+ * @property {Object.<int, NckuHubRateObject>} parsedRates
  */
 /**
  * @typedef {Object} NckuHubRateObject
@@ -205,7 +197,14 @@ const textColor = {
 };
 const totalColSpan = 18;
 
-export let courseSearch;
+// Search from other page
+let externalSearch = false;
+let courseSearchFunc;
+
+export function courseSearch(router, rawQuery, saveQuery) {
+	externalSearch = true;
+	router.openPage('CourseSearch', false, () => courseSearchFunc(rawQuery, saveQuery));
+}
 
 export function createSelectAvailableStr(courseData) {
 	if (courseData.selected === null && courseData.available === null)
@@ -268,7 +267,7 @@ export default function (router, loginState, userGuideTool) {
 	const searchResultSignal = new Signal({loading: false, courseResult: null, nckuHubResult: null});
 	const instructorInfoBubble = InstructorInfoBubble();
 	const userGuideTrigger = userGuideTool.pageTrigger.CourseSearch;
-	courseSearch = search;
+	courseSearchFunc = search;
 
 	// Element
 	const courseSearchResultInfo = span();
@@ -287,9 +286,12 @@ export default function (router, loginState, userGuideTool) {
 			if (response == null || !response.success || !response.data)
 				return;
 			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.name, i.dept]));
-			loadLastSearch(false);
+			if (!externalSearch)
+				loadLastSearch(false);
 		});
-		loadLastSearch(true);
+		// Search from other page
+		if (!externalSearch)
+			loadLastSearch(true);
 	}
 
 	function onPageOpen(isHistory) {
@@ -485,15 +487,14 @@ export default function (router, loginState, userGuideTool) {
 				// If success
 				if (response.success && response.data) for (let data of Object.entries(response.data)) {
 					const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubResult[data[0]];
-					/**@type NckuHubRaw*/
-					const nckuHub = data[1];
-					courseData.nckuhub = /**@type NckuHub*/ {
-						noData: nckuHub.rate_count === 0 && nckuHub.comment.length === 0,
-						got: parseFloat(nckuHub.got),
-						sweet: parseFloat(nckuHub.sweet),
-						cold: parseFloat(nckuHub.cold),
+					const /**@type{NckuHub}*/ nckuHub = data[1];
+					courseData.nckuHub = /**@type NckuHub*/ {
+						noData: nckuHub.rate_count === 0 && nckuHub.comments.length === 0,
+						got: nckuHub.got,
+						sweet: nckuHub.sweet,
+						cold: nckuHub.cold,
 						rate_count: nckuHub.rate_count,
-						comments: nckuHub.comment,
+						comments: nckuHub.comments,
 						parsedRates: nckuHub.rates.reduce((a, v) => {
 							a[v.post_id] = v;
 							return a;
@@ -658,8 +659,12 @@ export default function (router, loginState, userGuideTool) {
 	function addPreScheduleButtonClick() {
 		const title = this.courseData.courseName + ' 加入預排';
 		addPreSchedule(this.courseData, this.key,
-			function (msg) {window.messageAlert.addSuccess(title + '成功', msg, 5000);},
-			function (msg) {window.messageAlert.addError(title + '失敗', msg, 20000);}
+			function (msg) {
+				window.messageAlert.addSuccess(title + '成功', msg, 5000);
+			},
+			function (msg) {
+				window.messageAlert.addError(title + '失敗', msg, 20000);
+			}
 		);
 	}
 
@@ -748,7 +753,7 @@ export default function (router, loginState, userGuideTool) {
 			keys.unshift(key);
 
 			sortResultItem(key, this, ([a], [b]) => {
-				return sortNumberKeyOrder(a.nckuhub, b.nckuhub, keys);
+				return sortNumberKeyOrder(a.nckuHub, b.nckuHub, keys);
 			});
 
 			userGuideTrigger.nckuHubSort();
@@ -930,19 +935,19 @@ export default function (router, loginState, userGuideTool) {
 				// NCKU Hub info
 				const nckuHubInfo = nckuHubResultData && nckuHubResultData.signal
 					? State(nckuHubResultData.signal, () => {
-						if (data.nckuhub) {
-							if (data.nckuhub.noData)
+						if (data.nckuHub) {
+							if (data.nckuHub.noData)
 								return td('沒有資料', 'nckuHub', {colSpan: 3, onclick: userGuideTrigger.nckuHubCommentEmpty});
 							const options = {colSpan: 3, onclick: openNckuHubDetailWindow};
-							if (data.nckuhub.rate_count === 0)
+							if (data.nckuHub.rate_count === 0)
 								return td(null, 'nckuHub', options,
 									div(null, span('收穫', 'label'), span('--', null, {style: 'color:' + textColor.orange})),
 									div(null, span('甜度', 'label'), span('--', null, {style: 'color:' + textColor.orange})),
 									div(null, span('涼度', 'label'), span('--', null, {style: 'color:' + textColor.orange})));
 							return td(null, 'nckuHub', options,
-								div(null, span('收穫', 'label'), nckuHubScoreToSpan(data.nckuhub.got)),
-								div(null, span('甜度', 'label'), nckuHubScoreToSpan(data.nckuhub.sweet)),
-								div(null, span('涼度', 'label'), nckuHubScoreToSpan(data.nckuhub.cold)),
+								div(null, span('收穫', 'label'), nckuHubScoreToSpan(data.nckuHub.got)),
+								div(null, span('甜度', 'label'), nckuHubScoreToSpan(data.nckuHub.sweet)),
+								div(null, span('涼度', 'label'), nckuHubScoreToSpan(data.nckuHub.cold)),
 							);
 						}
 						return td('載入中...', 'nckuHub', {colSpan: 3});
@@ -1252,11 +1257,11 @@ function getColor(number) {
 	return number < 2 ? 'red' : number < 4 ? 'yellow' : 'blue';
 }
 
-function NckuHubDetailWindow(courseSearch, userGuideTrigger) {
-	const popupWindow = new PopupWindow({root: courseSearch, onclose: userGuideTrigger.nckuHubCommentClose});
+export function NckuHubDetailWindow(courseSearch, userGuideTrigger) {
+	const popupWindow = new PopupWindow({root: courseSearch, onclose: userGuideTrigger && userGuideTrigger.nckuHubCommentClose});
 
 	this.set = function (/**@param{CourseData}courseData*/courseData) {
-		const nckuHub = courseData.nckuhub;
+		const nckuHub = courseData.nckuHub;
 		popupWindow.setWindowContent(div('nckuHubDetailWindow',
 			div('courseInfoPanel',
 				span(courseData.serialNumber),

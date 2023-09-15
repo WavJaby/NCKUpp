@@ -20,7 +20,7 @@ import {
 } from '../lib/domHelper_v003.min.js';
 import {addPreSchedule, checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
-import {createSelectAvailableStr, createSyllabusUrl, nckuHubScoreToSpan} from './courseSearch.js';
+import {createSelectAvailableStr, createSyllabusUrl, NckuHubDetailWindow, nckuHubScoreToSpan} from './courseSearch.js';
 
 // static
 const weekTable = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -66,9 +66,13 @@ export default function (router, loginState) {
 	let scheduleLoading = false, scheduleLoadingQueue = false, scheduleLoadingTaskCount = 0;
 
 	showClassroomCheckbox.input.onchange = () => scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
-	showPreScheduleCheckbox.input.onchange = () => scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
+	showPreScheduleCheckbox.input.onchange = () => {
+		scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
+		courseTable.setTableShow(showPreScheduleCheckbox.input.checked);
+	};
 	scheduleTable.showRoomName(showClassroomCheckbox.input.checked);
 	scheduleTable.setTableShow(showPreScheduleCheckbox.input.checked);
+	courseTable.setTableShow(showPreScheduleCheckbox.input.checked);
 
 	downloadScheduleButton.onclick = function () {
 		let table;
@@ -156,6 +160,7 @@ export default function (router, loginState) {
 				const scheduleData = response.data;
 				pageStorage.data['savedCurrentSchedule'] = scheduleData;
 				scheduleTable.setScheduleData(scheduleData);
+				courseTable.setScheduleData(scheduleData);
 				updateScheduleInfo(scheduleData);
 				checkScheduleDataAndRender(false);
 			});
@@ -222,6 +227,7 @@ export default function (router, loginState) {
 			return;
 
 		scheduleTable.renderTable();
+		courseTable.renderTable();
 		pageStorage.save();
 		downloadScheduleButton.classList.add('show');
 
@@ -294,6 +300,7 @@ export default function (router, loginState) {
 			updateScheduleInfo(scheduleData);
 			scheduleTable.setScheduleData(scheduleData);
 			scheduleTable.setPreScheduleData(preScheduleData);
+			courseTable.setScheduleData(scheduleData);
 			courseTable.setPreScheduleData(preScheduleData);
 			checkScheduleDataAndRender(true);
 		}
@@ -338,15 +345,16 @@ export default function (router, loginState) {
  * @constructor
  */
 function CourseTable(windowRoot, updatePreScheduleData) {
+	const nckuHubDetailWindow = new NckuHubDetailWindow(windowRoot);
 	const courseListBody = tbody();
 	this.element = table('courseTable',
 		thead(null, tr(null,
-			th('系所', 'departmentName'),
+			// th('系所', 'departmentName'),
 			th('系-序號', 'serialNumber'),
-			th('類別', 'category'),
-			th('年級', 'grade'),
-			th('班別', 'classInfo'),
-			th('組別', 'classGroup'),
+			// th('類別', 'category'),
+			// th('年級', 'grade'),
+			// th('班別', 'classInfo'),
+			// th('組別', 'classGroup'),
 			th('時間', 'courseTime'),
 			th('課程名稱', 'courseName'),
 			th('選必修', 'required'),
@@ -365,6 +373,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 	);
 	let genCourseData = null;
 	let genEduCourseData = null;
+	let /**@type ?ScheduleData*/ scheduleData = null;
 	let /**@type ?ScheduleData*/ preScheduleData = null;
 	let a9Registered = null;
 	let /**@type{Object.<string, CourseData>}*/ courseDetail = {};
@@ -390,7 +399,10 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 
 	this.setPreScheduleData = function (data) {
 		preScheduleData = data;
-		updateTable();
+	};
+
+	this.setScheduleData = function (data) {
+		scheduleData = data;
 	};
 
 	this.setNckuHubData = function (data) {
@@ -398,17 +410,19 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 
 		for (const i in nckuHubElements) {
 			const nckuHubEle = nckuHubElements[i];
-			const nckuhub = nckuHubData[i] || {};
+			const nckuHub = nckuHubData[i];
+			if (!nckuHub || nckuHub.rate_count === 0)
+				continue;
 
 			if (nckuHubEle[0].firstChild)
 				nckuHubEle[0].firstChild.parentElement.removeChild(nckuHubEle[0].firstChild);
-			nckuhub.got && nckuHubEle[0].appendChild(nckuHubScoreToSpan(nckuhub.got));
+			nckuHubEle[0].appendChild(nckuHubScoreToSpan(nckuHub.got));
 			if (nckuHubEle[1].firstChild)
-				nckuHubEle[1].firstChild.parentElement.removeChild(nckuHubEle[0].firstChild);
-			nckuhub.sweet && nckuHubEle[1].appendChild(nckuHubScoreToSpan(nckuhub.sweet));
+				nckuHubEle[1].firstChild.parentElement.removeChild(nckuHubEle[1].firstChild);
+			nckuHubEle[1].appendChild(nckuHubScoreToSpan(nckuHub.sweet));
 			if (nckuHubEle[2].firstChild)
-				nckuHubEle[2].firstChild.parentElement.removeChild(nckuHubEle[0].firstChild);
-			nckuhub.cold && nckuHubEle[2].appendChild(nckuHubScoreToSpan(nckuhub.cold));
+				nckuHubEle[2].firstChild.parentElement.removeChild(nckuHubEle[2].firstChild);
+			nckuHubEle[2].appendChild(nckuHubScoreToSpan(nckuHub.cold));
 		}
 	};
 
@@ -426,6 +440,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 	this.clearCourseData = function () {
 		genCourseData = null;
 		genEduCourseData = null;
+		scheduleData = null;
 		preScheduleData = null;
 		a9Registered = null;
 		nckuHubElements = {};
@@ -433,7 +448,15 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 	};
 
 	this.dataReady = function () {
-		return genCourseData != null && genEduCourseData != null && a9Registered != null;
+		return scheduleData != null && preScheduleData != null &&
+			genCourseData != null && genEduCourseData != null && a9Registered != null;
+	};
+
+	this.setTableShow = function (state) {
+		if (state)
+			courseListBody.classList.add('showPre');
+		else
+			courseListBody.classList.remove('showPre');
 	};
 
 	function updateTable() {
@@ -442,34 +465,49 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 		// console.log(genCourseData, genEduCourseData);
 		console.log('Course table update');
 
-		if (preScheduleData) for (const preSchedule of preScheduleData.schedule)
+		if (preScheduleData) for (const preSchedule of preScheduleData.schedule) {
+			courseListBody.appendChild(tr('pre margin'));
 			courseListBody.appendChild(
 				renderCourseBlock(preSchedule,
 					genCourseData && genCourseData[preSchedule.serialNumber] || genEduCourseData && genEduCourseData[preSchedule.serialNumber] || {},
 					courseDetail[preSchedule.serialNumber] || {},
 					a9Registered && a9Registered[preSchedule.serialNumber],
-					preSchedule.delete)
+					preSchedule.delete,
+					true)
 			);
+		}
+
+		if (scheduleData) for (const preSchedule of scheduleData.schedule) {
+			courseListBody.appendChild(tr('margin'));
+			courseListBody.appendChild(
+				renderCourseBlock(preSchedule,
+					genCourseData && genCourseData[preSchedule.serialNumber] || genEduCourseData && genEduCourseData[preSchedule.serialNumber] || {},
+					courseDetail[preSchedule.serialNumber] || {},
+					a9Registered && a9Registered[preSchedule.serialNumber],
+					preSchedule.delete,
+					false)
+			);
+		}
 	}
 
-	function renderCourseBlock(preSchedule, regCourseData, detail, a9Registered, removeKey) {
+	function renderCourseBlock(preSchedule, regCourseData, detail, a9Registered, removeKey, pre) {
 		const courseName = detail.courseName || preSchedule.courseName;
 		const serialNumber = detail.serialNumber || preSchedule.serialNumber;
 		const credits = detail.credits || preSchedule.credits;
-		const nckuhub = nckuHubData[serialNumber] || {};
+		const nckuHub = nckuHubData[serialNumber] || {};
 		const nckuHubEle = [
-			td(null, 'nckuHub', nckuhub.rate_count > 0 && nckuhub.got && nckuHubScoreToSpan(nckuhub.got)),
-			td(null, 'nckuHub', nckuhub.rate_count > 0 && nckuhub.sweet && nckuHubScoreToSpan(nckuhub.sweet)),
-			td(null, 'nckuHub', nckuhub.rate_count > 0 && nckuhub.cold && nckuHubScoreToSpan(nckuhub.cold)),
+			div(null, nckuHub.rate_count > 0 && nckuHub.got && nckuHubScoreToSpan(nckuHub.got)),
+			div(null, nckuHub.rate_count > 0 && nckuHub.sweet && nckuHubScoreToSpan(nckuHub.sweet)),
+			div(null, nckuHub.rate_count > 0 && nckuHub.cold && nckuHubScoreToSpan(nckuHub.cold)),
 		];
 		nckuHubElements[serialNumber] = nckuHubEle;
-		return tr(null,
-			td(detail.departmentName, 'departmentName'),
+		return tr(pre ? 'pre courseBlock' : 'courseBlock',
+			// td(detail.departmentName, 'departmentName'),
 			td(serialNumber, 'serialNumber'),
-			td(null, 'category', detail.category && text(detail.category)),
-			td(null, 'grade', detail.courseGrade && text(detail.courseGrade.toString())),
-			td(null, 'classInfo', detail.classInfo && text(detail.classInfo)),
-			td(null, 'classGroup', detail.classGroup && text(detail.classGroup)),
+			// td(null, 'category', detail.category && text(detail.category)),
+			// td(null, 'grade', detail.courseGrade && text(detail.courseGrade.toString())),
+			// td(null, 'classInfo', detail.classInfo && text(detail.classInfo)),
+			// td(null, 'classGroup', detail.classGroup && text(detail.classGroup)),
 			td(null, 'courseTime',
 				detail.time && detail.time.map(i =>
 					i.flexTimeDataKey
@@ -485,7 +523,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 			td(null, 'registerCount', a9Registered == null ? null : text(a9Registered.count.toString())),
 			td(null, 'selected', detail.selected == null ? null : span(detail.selected)),
 			td(null, 'available', detail.available == null ? null : createSelectAvailableStr(detail)),
-			nckuHubEle,
+			td(null, 'nckuHub', nckuHubEle, {colSpan: 3, onclick: openNckuHubWindow, serialNumber, courseData: preSchedule}),
 			td(null, 'functionBtn', regCourseData.cosdata && (regCourseData.prechk == null
 				? button('functionBtn', '單科加選', addCourse, {courseData: preSchedule, key: regCourseData.cosdata, preKey: detail.preRegister})
 				: button('functionBtn', '加入志願', addPreferenceEnter, {
@@ -497,6 +535,14 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 				removeKey && button('removeBtn', '刪除', removePreScheduleButtonClick, {courseData: preSchedule, key: removeKey})
 			)
 		);
+	}
+
+	function openNckuHubWindow() {
+		const nckuHub = nckuHubData[this.serialNumber];
+		if (!nckuHub)
+			return;
+		this.courseData.nckuHub = nckuHub;
+		nckuHubDetailWindow.set(this.courseData);
 	}
 
 	function addPreferenceEnter() {

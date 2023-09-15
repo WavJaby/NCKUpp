@@ -133,18 +133,18 @@ public class NCKUHub implements EndpointModule {
         JsonObjectStringBuilder courses = new JsonObjectStringBuilder();
         long now = System.currentTimeMillis();
         for (String serialId : serialIds) {
-            // Convert serial id to nckuhub id
+            // Convert serial id to NCKU HUB id
             int split = serialId.indexOf('-');
             Map<String, Integer> a = nckuHubCourseIdMap.get(serialId.substring(0, split));
-            final Integer nckuhubId = a == null ? null : a.get(serialId.substring(split + 1));
-            if (nckuhubId == null) {
+            final Integer nckuHubId = a == null ? null : a.get(serialId.substring(split + 1));
+            if (nckuHubId == null) {
                 courses.appendRaw(serialId, null);
                 taskLeft.countDown();
                 continue;
             }
 
             // Try get cached data
-            final NckuHubCourseData cached = courseInfoCache.get(nckuhubId);
+            final NckuHubCourseData cached = courseInfoCache.get(nckuHubId);
             if (cached != null && now - cached.lastUpdate < maxCacheTime) {
                 courses.appendRaw(serialId, cached.data);
                 taskLeft.countDown();
@@ -159,10 +159,10 @@ public class NCKUHub implements EndpointModule {
             }
             courseInfoGetter.execute(() -> {
                 // No cache, fetch data
-                Connection.Response nckuhubCourse;
+                Connection.Response nckuHubCourse;
                 try {
                     // Fetch data
-                    nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/" + nckuhubId)
+                    nckuHubCourse = HttpConnection.connect("https://nckuhub.com/course/" + nckuHubId)
                             .header("Connection", "keep-alive")
                             .ignoreContentType(true)
                             .execute();
@@ -174,7 +174,7 @@ public class NCKUHub implements EndpointModule {
                     return;
                 }
                 // Parse data
-                JsonObject json = new JsonObject(nckuhubCourse.body());
+                JsonObject json = new JsonObject(nckuHubCourse.body());
                 for (Object i : json.getArray("rates")) {
                     JsonObject o = (JsonObject) i;
                     // NckuHub typo
@@ -182,6 +182,21 @@ public class NCKUHub implements EndpointModule {
                     o.remove("recommand");
                 }
                 json.remove("courseInfo");
+                Object got = json.getObject("got");
+                Object sweet = json.getObject("sweet");
+                Object cold = json.getObject("cold");
+                if (got instanceof String)
+                    json.put("got", Float.parseFloat((String) got));
+                if (sweet instanceof String)
+                    json.put("sweet", Float.parseFloat((String) sweet));
+                if (cold instanceof String)
+                    json.put("cold", Float.parseFloat((String) cold));
+                Object comments = json.getObject("comment");
+                if (comments != null) {
+                    json.remove("comment");
+                    json.put("comments", comments);
+                }
+
                 String resultData = json.toString();
                 synchronized (courses) {
                     courses.appendRaw(serialId, resultData);
@@ -195,9 +210,9 @@ public class NCKUHub implements EndpointModule {
                         cached.updateData(resultData);
                         cacheSize += cached.size;
                     } else {
-                        NckuHubCourseData newCache = new NckuHubCourseData(resultData, nckuhubId);
+                        NckuHubCourseData newCache = new NckuHubCourseData(resultData, nckuHubId);
                         cacheSize += newCache.size;
-                        courseInfoCache.put(nckuhubId, newCache);
+                        courseInfoCache.put(nckuHubId, newCache);
                     }
                 }
                 courseInfoGetterLock.release();
@@ -214,17 +229,17 @@ public class NCKUHub implements EndpointModule {
 
     private boolean updateNckuHubCourseID() {
         logger.log("Updating course id");
-        Connection.Response nckuhubCourse;
+        Connection.Response nckuHubCourse;
         try {
-            nckuhubCourse = HttpConnection.connect("https://nckuhub.com/course/")
+            nckuHubCourse = HttpConnection.connect("https://nckuhub.com/course/")
                     .ignoreContentType(true)
                     .execute();
         } catch (IOException e) {
             logger.errTrace(e);
             return false;
         }
-        JsonObject nckuhubResponse = new JsonObject(nckuhubCourse.body());
-        JsonArray courseData = nckuhubResponse.getArray("courses");
+        JsonObject nckuHubResponse = new JsonObject(nckuHubCourse.body());
+        JsonArray courseData = nckuHubResponse.getArray("courses");
         nckuHubCourseIdMap.clear();
         HashSet<String> available = new HashSet<>();
         for (Object i : courseData) {
