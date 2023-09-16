@@ -358,13 +358,13 @@ export default function (router, loginState, userGuideTool) {
 		multiple: true
 	})
 	const courseSearchForm = div('form',
-		input(null, '序號查詢 A0-000,B0-001', 'serial', {onkeyup: onSearchFormInput, type: 'search'}),
 		input(null, '課程名稱', 'courseName', {onkeyup: onSearchFormInput, type: 'search'}),
 		deptNameSelectMenu.element,
 		input(null, '教師姓名', 'instructor', {onkeyup: onSearchFormInput, type: 'search'}),
 		new SelectMenu('年級', 'grade', 'grade', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']], {searchBar: false}).element,
 		dayOfWeekSelectMenu.element,
 		sectionSelectMenu.element,
+		input(null, '序號查詢 A0-000,B0-001', 'serial', {onkeyup: onSearchFormInput, type: 'search'}),
 		button(null, '搜尋', search),
 		button(null, '關注列表', getWatchCourse),
 	);
@@ -787,17 +787,19 @@ export default function (router, loginState, userGuideTool) {
 	const hideEmptyColumnTool = hideEmptyColumn(courseRenderResult, () => searchTableHead);
 	const classFilterOption = classFilter(updateFilter, courseRenderResult);
 	const categoryFilterOption = categoryFilter(updateFilter, courseRenderResult);
+	const tagFilterOption = tagFilter(updateFilter, courseRenderResult);
 	const requireFilterOption = requireFilter(updateFilter);
 	const filter = new Filter();
 	/**@type {FilterOption[]}*/
 	const filterOptions = [
 		textSearchFilter(updateFilter),
 		hideConflictCourseFilter(updateFilter, loginState),
-		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
-		hidePracticeFilter(updateFilter),
 		classFilterOption,
 		categoryFilterOption,
+		tagFilterOption,
 		requireFilterOption,
+		insureSectionRangeFilter(updateFilter, dayOfWeekSelectMenu, sectionSelectMenu),
+		hidePracticeFilter(updateFilter),
 		hideEmptyColumnTool,
 	];
 	filter.setOptions(filterOptions);
@@ -1660,11 +1662,7 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 
 		// Class info empty
 		isEmpty = classCategory.length === 0;
-		if (isEmpty) {
-			selectMenu.element.style.display = 'none';
-		} else
-			selectMenu.element.style.display = '';
-
+		selectMenu.element.style.display = isEmpty ? 'none' : '';
 		selectMenu.setItems(classCategory, true);
 		selectValue = selectMenu.getSelectedValue();
 	}
@@ -1727,11 +1725,7 @@ function categoryFilter(onFilterUpdate, courseRenderResult) {
 
 		// Category info empty
 		isEmpty = classCategory.length === 0;
-		if (isEmpty) {
-			selectMenu.element.style.display = 'none';
-		} else
-			selectMenu.element.style.display = '';
-
+		selectMenu.element.style.display = isEmpty ? 'none' : '';
 		selectMenu.setItems(classCategory, true);
 		selectValue = selectMenu.getSelectedValue();
 	}
@@ -1744,8 +1738,75 @@ function categoryFilter(onFilterUpdate, courseRenderResult) {
 			return false;
 		if (!courseData.category)
 			return selectValue.indexOf('') !== -1;
-
 		return selectValue.indexOf(courseData.category) !== -1;
+	}
+
+	return {
+		clear: clearItems,
+		onFilterStart: onFilterStart,
+		condition: condition,
+		element: selectMenu.element,
+	}
+}
+
+/**
+ * @param {function()} onFilterUpdate
+ * @param {any[]} courseRenderResult
+ * @return {FilterOption & {clear: function()}}
+ */
+function tagFilter(onFilterUpdate, courseRenderResult) {
+	const selectMenu = new SelectMenu('標籤過濾', 'tagFilter', 'tagFilter', null, {multiple: true});
+	let selectValue = null;
+	let isEmpty = false;
+	selectMenu.onSelectItemChange = updateSelectValue;
+
+	function clearItems() {
+		selectMenu.clearItems();
+	}
+
+	function updateSelectValue() {
+		selectValue = selectMenu.getSelectedValue();
+		onFilterUpdate();
+	}
+
+	function onFilterStart(firstRenderAfterSearch) {
+		if (!firstRenderAfterSearch)
+			return;
+
+		let courseTags = [];
+		let courseNoTag = false;
+		for (const [i] of courseRenderResult) {
+			if (!i.tags)
+				courseNoTag = true;
+			else {
+				for (const tag of i.tags)
+					if (courseTags.indexOf(tag.name) === -1)
+						courseTags.push(tag.name);
+			}
+		}
+		courseTags = courseTags.map(i => [i, i]);
+		if (courseTags.length > 0 && courseNoTag)
+			courseTags.push(['', '無標籤']);
+
+		// Category info empty
+		isEmpty = courseTags.length === 0;
+		selectMenu.element.style.display = isEmpty ? 'none' : '';
+		selectMenu.setItems(courseTags, true);
+		selectValue = selectMenu.getSelectedValue();
+	}
+
+	/**@param{CourseData}courseData*/
+	function condition([courseData]) {
+		if (!selectValue || isEmpty)
+			return true;
+		if (selectValue.length === 0)
+			return false;
+		if (!courseData.tags)
+			return selectValue.indexOf('') !== -1;
+		for (const tag of courseData.tags)
+			if (selectValue.indexOf(tag.name) !== -1)
+				return true;
+		return false;
 	}
 
 	return {
