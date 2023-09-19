@@ -184,7 +184,7 @@ import {
 	th,
 	thead,
 	tr
-} from '../lib/domHelper_v003.min.js';
+} from '../minjs_v000/domHelper.min.js';
 
 import SelectMenu from '../selectMenu.js';
 import {addPreSchedule, courseDataTimeToString, fetchApi, getPreSchedule, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
@@ -282,6 +282,7 @@ export default function (router, loginState, userGuideTool) {
 	function onRender() {
 		console.log('Course search Render');
 		styles.mount();
+
 		fetchApi('/alldept').then(response => {
 			if (response == null || !response.success || !response.data)
 				return;
@@ -972,7 +973,7 @@ export default function (router, loginState, userGuideTool) {
 							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'},
 								span((data.serialNumber ? data.serialNumber + ' ' : '') + data.courseName))
 						),
-						td(data.departmentName, 'departmentName'),
+						td(data.departmentName, 'departmentName', {title: data.departmentName}),
 						td(data.serialNumber, 'serialNumber'),
 						td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
 						td(null, 'grade', span('年級:', 'label'), data.courseGrade && text(data.courseGrade.toString())),
@@ -1223,7 +1224,7 @@ function InstructorDetailWindow(courseSearch, userGuideTrigger) {
 	const popupWindow = new PopupWindow({root: courseSearch, onclose: userGuideTrigger.urSchoolCommentClose});
 	this.set = function (/**@param{UrSchoolInstructor}instructor*/instructor) {
 		const instructorInfo = instructorInfoElement(instructor.info);
-		popupWindow.setWindowContent(div('instructorDetailWindow',
+		popupWindow.windowSet(div('instructorDetailWindow',
 			div('title',
 				span(instructor.info.department),
 				span(instructor.info.name),
@@ -1264,7 +1265,7 @@ export function NckuHubDetailWindow(courseSearch, userGuideTrigger) {
 
 	this.set = function (/**@param{CourseData}courseData*/courseData) {
 		const nckuHub = courseData.nckuHub;
-		popupWindow.setWindowContent(div('nckuHubDetailWindow',
+		popupWindow.windowSet(div('nckuHubDetailWindow',
 			div('courseInfoPanel',
 				span(courseData.serialNumber),
 				span(courseData.courseName),
@@ -1309,7 +1310,7 @@ function FlexTimeWindow(courseSearch) {
 	 * @param {FlexTimeData[]} timeData
 	 */
 	this.set = function ([courseData, timeData]) {
-		popupWindow.setWindowContent(div('flexTimeWindow',
+		popupWindow.windowSet(div('flexTimeWindow',
 			div('courseInfoPanel',
 				span(courseData.serialNumber),
 				span(courseData.courseName),

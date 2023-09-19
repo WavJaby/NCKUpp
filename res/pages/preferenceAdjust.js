@@ -1,6 +1,6 @@
 'use strict';
 
-import {button, div, h1, input, mountableStylesheet, span} from '../lib/domHelper_v003.min.js';
+import {button, div, h1, input, mountableStylesheet, span} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 import {courseSearch} from './courseSearch.js';
 

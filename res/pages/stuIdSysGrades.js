@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../lib/domHelper_v003.min.js';
+import {div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
@@ -148,7 +148,7 @@ export default function (router, loginState) {
 			return;
 		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(response => {
 			if (response.success) {
-				normalDestImgWindow.setWindowContent(
+				normalDestImgWindow.windowSet(
 					div('normalDestImg',
 						h1(courseInfo.courseName),
 						img('data:image/svg+xml;base64,' + btoa(response.data[0]), '', '', {onload: i => URL.revokeObjectURL(i.target.src)})

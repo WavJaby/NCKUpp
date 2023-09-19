@@ -14,7 +14,7 @@
         bottom: 0;
         right: 0.5em;
         margin: auto;
-        cursor: pointer;
+        pointer-events: none;
     }
 
     > input {

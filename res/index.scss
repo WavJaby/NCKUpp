@@ -159,7 +159,10 @@
 
     // Login button
     > .loginBtn {
+        width: 80px;
+        font-size: 18px;
         float: right;
+        text-align: center;
     }
 
     // Mobile css
@@ -226,19 +229,35 @@
     position: absolute;
     top: $navbar-height;
     right: 0;
+    border-radius: 10px 0 10px 10px;
+    z-index: 100;
 
     > .description {
-        margin: 5px;
+        color: $font-color2;
+        margin: 0 5px;
         display: block;
-        font-size: 18px;
+        font-size: 16px;
+        float: left;
+    }
+
+    > .loginFunctionDeclaration {
+        color: #ff6f6a;
+        background: none;
+        text-decoration: underline;
+        margin: 0 5px;
+        padding: 0;
+        box-shadow: none;
+        cursor: pointer;
     }
 
     > .loginField {
         display: block;
-        margin: 5px;
+        margin: 5px 5px 0 5px;
     }
 
     > button.loginField {
+        margin-bottom: 5px;
+        border-radius: 10px;
         float: right;
     }
 
@@ -345,6 +364,20 @@ footer {
     -ms-transition: height 0.2s;
     -o-transition: height 0.2s;
     overflow: hidden;
+}
+
+.loginFunctionDeclarationWindow {
+    > h1 {
+        margin: 5px 0;
+    }
+
+    > .declaration {
+        > .red {
+            color: #f94c3b;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+    }
 }
 
 // Checkbox with name

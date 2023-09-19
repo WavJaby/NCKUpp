@@ -17,7 +17,7 @@ import {
 	th,
 	thead,
 	tr
-} from '../lib/domHelper_v003.min.js';
+} from '../minjs_v000/domHelper.min.js';
 import {addPreSchedule, checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 import {createSelectAvailableStr, createSyllabusUrl, NckuHubDetailWindow, nckuHubScoreToSpan} from './courseSearch.js';
@@ -106,14 +106,7 @@ export default function (router, loginState) {
 			return;
 		}
 
-		pageStorage = router.getPageStorage(this);
-		// Check save version
-		const pageVersion = 0;
-		if (pageStorage.data['saveVersion'] !== pageVersion) {
-			pageStorage.data = {saveVersion: pageVersion};
-			pageStorage.save();
-		}
-
+		pageStorage = router.getPageStorage(this, 0);
 		loadLastScheduleData();
 	}
 
@@ -726,7 +719,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 				let timeStr = courseDataTimeToString(time);
 				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
 			}
-		courseInfoWindow.setWindowContent(div('courseInfo',
+		courseInfoWindow.windowSet(div('courseInfo',
 			preCourseRemoveKey[this.serialNumber] && button('delete', '刪除', removePreScheduleButtonClick, {serialNumber: this.serialNumber}),
 			h2(data.serialNumber + ' ' + data.courseName),
 			data.instructors.map(i => span(i + ' ')),

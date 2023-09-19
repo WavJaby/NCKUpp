@@ -1,4 +1,4 @@
-import {button, div, img, p, span} from './lib/domHelper_v003.min.js';
+import {button, div, img, p, span} from './minjs_v000/domHelper.min.js';
 
 /**
  * @constructor

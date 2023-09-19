@@ -303,16 +303,25 @@ function QueryRouter(titlePrefix, pageSuffix, defaultPageId,
 
 	/**
 	 * @param {PageElement} page
+	 * @param {int} saveVersion
 	 * @return {PageStorage}
 	 */
-	this.getPageStorage = function (page) {
+	this.getPageStorage = function (page, saveVersion) {
 		const pageStorage = {
-			save: function () {localStorage.setItem(page.pageId, JSON.stringify(this.data));},
+			save: function () {
+				localStorage.setItem(page.pageId, JSON.stringify(this.data));
+			},
 			data: null,
 		};
 		try {
 			const data = localStorage.getItem(page.pageId);
-			pageStorage.data = data ? JSON.parse(data) : {};
+			if (data)
+				pageStorage.data = JSON.parse(data);
+			// Version change
+			if (!pageStorage.data || pageStorage.data['saveVersion'] !== saveVersion) {
+				pageStorage.data = {saveVersion: saveVersion};
+				pageStorage.save();
+			}
 		} catch (e) {
 			pageStorage.data = {};
 		}
@@ -922,10 +931,18 @@ function mountableStylesheet(url) {
 	const element = document.createElement('link');
 	element.rel = 'stylesheet';
 	element.href = url;
-	element.mount = function () {document.head.appendChild(element);};
-	element.unmount = function () {document.head.removeChild(element);};
-	element.enable = function () {element.disabled = false;};
-	element.disable = function () {element.disabled = true;};
+	element.mount = function () {
+		document.head.appendChild(element);
+	};
+	element.unmount = function () {
+		document.head.removeChild(element);
+	};
+	element.enable = function () {
+		element.disabled = false;
+	};
+	element.disable = function () {
+		element.disabled = true;
+	};
 	return element;
 }
 

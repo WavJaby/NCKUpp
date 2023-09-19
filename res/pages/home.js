@@ -1,6 +1,6 @@
 'use strict';
 
-import {a, br, div, h1, h2, img, mountableStylesheet, p, span, text} from '../lib/domHelper_v003.min.js';
+import {a, br, div, h1, h2, img, mountableStylesheet, p, span, text} from '../minjs_v000/domHelper.min.js';
 import {fetchApi, isMobile} from '../lib/lib.js';
 
 /**
@@ -9,8 +9,10 @@ import {fetchApi, isMobile} from '../lib/lib.js';
  */
 export default function (router) {
 	console.log('Home Init');
-	const titleAnimation = span(null, 'slideOut', span('++'));
 	const styles = mountableStylesheet('./res/pages/home.css');
+	let /**@type{PageStorage}*/pageStorage;
+
+	const titleAnimation = span(null, 'slideOut', span('++'));
 	const introduction = div('introduction',
 		div('block',
 			img('./res/assets/page_home/sort_function.png'),
@@ -44,20 +46,31 @@ export default function (router) {
 			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
 		)
 	);
-	// 腸太郎萬歲 \o/ \o/ \o/
-	const owo = img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', '');
+	const iconImages = [
+		img('res/assets/icon/icon_64.svg', ''),
+		// 腸太郎萬歲 \o/ \o/ \o/
+		img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', ''),
+		img('https://sticker-assets.dcard.tw/images/b5c7eddc-8dd9-40e9-ba4b-358323a45713/full.png', ''),
+		img('https://sticker-assets.dcard.tw/images/84eddd38-497c-41d6-8845-ec8b57498c6a/full.png', ''),
+		img('https://sticker-assets.dcard.tw/images/102eb5ae-3f1e-4b28-8866-905a64f87c9b/full.png', ''),
+	];
+	let iconImageStyle = 0;
 	let clickCount = 0;
-	const siteIcon = img('res/assets/icon/icon_64.svg', '');
 	const iconImageParent = div('rippleable', {
 		onclick: e => {
-			if (++clickCount === 10) iconImageParent.replaceChild(owo, siteIcon);
 			createRipple(e);
-		}
-	}, siteIcon);
+			if (++clickCount === 5) {
+				clickCount = 0;
+				if (++iconImageStyle === iconImages.length)
+					iconImageStyle = 0;
+				pageStorage.data['iconImageStyle'] = iconImageStyle;
+				pageStorage.save();
+				iconImageParent.replaceChild(iconImages[iconImageStyle], iconImageParent.firstChild);
+			}
+		},
+	});
 	const siteInfo = div('siteInfo',
-		h1(null, 'title',
-			iconImageParent, span('NCKU'), titleAnimation
-		),
+		h1(null, 'title', iconImageParent, span('NCKU'), titleAnimation),
 		p(null, 'description',
 			text('集合'),
 			img('res/assets/NCKU_course_system_logo.png', '國立成功大學課程資訊及選課系統'),
@@ -110,6 +123,11 @@ export default function (router) {
 	function onRender() {
 		console.log('Home Render');
 		styles.mount();
+		pageStorage = router.getPageStorage(this, 0);
+
+		// Load iconImage style
+		iconImageStyle = pageStorage.data['iconImageStyle'] || 0;
+		iconImageParent.appendChild(iconImages[iconImageStyle]);
 
 		// Get home info
 		fetchApi('/homeInfo').then(response => {

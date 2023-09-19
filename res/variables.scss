@@ -15,6 +15,7 @@ $pure-gray-900: #212121;
 $pure-gray-1000: #080808;
 
 $small-screen: 'max-width: 700px';
+$big-screen: 'min-width: 700px';
 $background-color: $pure-gray-1000;
 $object-layer1-dark: $pure-gray-900;
 $object-layer2-dark: $pure-gray-800;
@@ -37,7 +38,7 @@ $button-dark-red-bg-color: #703a47;
 
 $scrollbar-bg-color: #00000019;
 
-$overlay-transparent-bg-color: #000000A0;
+$overlay-transparent-bg-color: #000000B0;
 
 $source-root: '/NCKUpp/res/assets/';
 $icon-info: url($source-root + 'info_icon.svg');

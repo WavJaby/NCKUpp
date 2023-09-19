@@ -1,4 +1,4 @@
-import {a, div, h1, h3, img, mountableStylesheet, p, Signal, State} from '../lib/domHelper_v003.min.js';
+import {a, div, h1, h3, img, mountableStylesheet, p, Signal, State} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 
 /**

@@ -1,45 +1,97 @@
-import {button, div} from './lib/domHelper_v003.min.js';
+import {button, div} from './minjs_v000/domHelper.min.js';
 
 /**
  * @typedef PopupWindowOption
  * @property {HTMLElement} [root] Root element for window. Default document.body
- * @property {function()} [onclose]
+ * @property {int} [windowType] 0: Default, 1: Dialog
+ * @property {string} [conformButton]
+ * @property {string} [cancelButton]
+ * @property {function(conform:boolean)} [onclose]
  */
+
+/**
+ * @typedef PopupWindow
+ * @property {function(HTMLElement):void} windowSet
+ * @property {function():void} windowClear
+ * @property {function():void} windowOpen
+ * @property {function():void} windowClose
+ * @property {function():boolean} isEmpty
+ */
+
+PopupWindow.WIN_TYPE_DEFAULT = 0;
+PopupWindow.WIN_TYPE_DIALOG = 1;
 
 /**
  * @param {PopupWindowOption} [options]
  * @constructor
+ * @return {PopupWindow}
  */
 export default function PopupWindow(options) {
-	const closeButton = button('closeButton', null, windowClose, div('icon'));
-	const popupWindowBody = div('popupWindowBody', closeButton, div());
-	const popupWindow = div('popupWindow', popupWindowBody, {onclick: e => e.target === popupWindow && windowClose()});
-
 	if (!options)
 		options = {root: document.body};
+	if (!options.root)
+		options.root = document.body
 
-	/**
-	 * @param {HTMLElement} content
-	 */
-	this.setWindowContent = function (content) {
-		popupWindowBody.replaceChild(content, popupWindowBody.lastChild);
+	const closeButton = button('closeButton', null, windowClose, div('icon'));
+	const functionButtons = div('buttons');
+	const popupWindowBody = div('popupWindowBody', closeButton, functionButtons);
+	const popupWindow = div('popupWindow', popupWindowBody, {onclick: e => e.target === popupWindow && windowClose(false)});
+	let lastContentElement = null;
+
+	if (options.windowType == null || options.windowType === PopupWindow.WIN_TYPE_DEFAULT) {
+		popupWindow.classList.add('default');
+	} else if (options.windowType === PopupWindow.WIN_TYPE_DIALOG) {
+		popupWindow.classList.add('dialog');
+		functionButtons.classList.add('show');
+
+		if (options.conformButton != null) {
+			functionButtons.appendChild(button('conform', options.conformButton, () => windowClose(true)));
+		}
+
+		if (options.cancelButton != null) {
+			functionButtons.appendChild(button('cancel', options.cancelButton, () => windowClose(false)));
+		}
 	}
 
-	this.windowClose = windowClose;
+	this.windowSet = windowSet;
+
+	this.windowClear = function () {
+		windowSet(null);
+	};
+
 	this.windowOpen = function () {
 		options.root.appendChild(popupWindow);
 		window.addEventListener('keyup', onkeyup);
 	};
 
-	function windowClose() {
-		options.root.removeChild(popupWindow);
+	this.windowClose = windowClose;
+
+	this.isEmpty = function () {
+		return lastContentElement === null;
+	}
+
+	function windowSet(content) {
+		if (content == null || !(content instanceof HTMLElement)) {
+			popupWindowBody.removeChild(lastContentElement);
+			lastContentElement = null;
+		} else if (lastContentElement === null) {
+			popupWindowBody.insertBefore(content, functionButtons);
+			lastContentElement = content;
+		} else {
+			popupWindowBody.replaceChild(content, lastContentElement);
+			lastContentElement = content;
+		}
+	}
+
+	function windowClose(conform) {
 		if (options.onclose)
-			options.onclose();
+			options.onclose(conform);
 		window.removeEventListener('keyup', onkeyup);
+		popupWindow.parentElement.removeChild(popupWindow);
 	}
 
 	function onkeyup(e) {
 		if (e.key === 'Escape')
-			windowClose();
+			windowClose(false);
 	}
 }

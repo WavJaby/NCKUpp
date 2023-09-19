@@ -14,6 +14,7 @@ import {
 	li,
 	mountableStylesheet,
 	nav,
+	p,
 	QueryRouter,
 	RouterLazyLoad,
 	ShowIf,
@@ -23,11 +24,12 @@ import {
 	text,
 	TextState,
 	ul
-} from './res/lib/domHelper_v003.min.js';
+} from './res/minjs_v000/domHelper.min.js';
 
 import {metaSet, metaType} from './res/lib/metaTag.js';
 import {fetchApi, isLocalNetwork} from './res/lib/lib.js';
 import {UserGuideTool} from './res/userGuide.js';
+import PopupWindow from './res/popupWindow.js';
 
 window.askForLoginAlert = () => window.messageAlert.addInfo('需要登入來使用此頁面', '右上角登入按鈕登入', 3000);
 window.loadingElement = svg('<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="square"/>', '0 0 50 50', 'loaderCircle');
@@ -60,6 +62,17 @@ window.pageLoading = new Signal(false);
 		console.log('Debug enabled');
 		doomHelperDebug();
 
+		function pad(i) {
+			return i.toString().padStart(2, '0');
+		}
+
+		function offset(i) {
+			return i > 0 ? '-' + pad(i / 60 | 0) + ':' + pad(i % 60) : '+' + pad(-i / 60 | 0) + ':' + pad(-i % 60);
+		}
+
+		const date = new Date();
+		console.log(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${offset(date.getTimezoneOffset())}`);
+
 		// Memory usage (for chrome)
 		if (window.performance && window.performance.memory) {
 			const memoryUpdate = new Signal(window.performance.memory);
@@ -73,6 +86,7 @@ window.pageLoading = new Signal(false);
 		console.log('Debug disable');
 
 	// main code
+	const loginFunctionDeclarationWindow = new PopupWindow();
 	const userGuideTool = new UserGuideTool();
 	const pageIdName = {
 		// search: 'Search',
@@ -92,7 +106,7 @@ window.pageLoading = new Signal(false);
 	const showLoginWindow = new Signal(false);
 	const queryRouter = new QueryRouter('NCKU++', pageIdName, defaultPage,
 		{
-			Home: new RouterLazyLoad('./res/pages/home_v003.min.js'),
+			Home: new RouterLazyLoad('./res/minjs_v000/home.min.js'),
 			CourseSearch: new RouterLazyLoad('./res/pages/courseSearch.js', userLoginData, userGuideTool),
 			Schedule: new RouterLazyLoad('./res/pages/courseSchedule.js', userLoginData),
 			GradeInquiry: new RouterLazyLoad('./res/pages/stuIdSysGrades.js', userLoginData),
@@ -167,7 +181,7 @@ window.pageLoading = new Signal(false);
 		nav('navbar noSelect',
 			NavSelectList('loginBtn',
 				span(TextState(userLoginData, /**@param{LoginData}state*/state =>
-					state && state.login ? state.studentID : 'Login'
+					state && state.login ? state.studentID : '登入'
 				)),
 				[
 					['Profile', () => queryRouter.openPage('Profile')],
@@ -381,8 +395,8 @@ window.pageLoading = new Signal(false);
 	}
 
 	function LoginWindow(onLoginStateChange) {
-		const username = input('loginField', 'Account', null, {onkeyup, type: 'email', autocomplete: 'username'});
-		const password = input('loginField', 'Password', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
+		const username = input('loginField', '學號', null, {onkeyup, type: 'email', autocomplete: 'username'});
+		const password = input('loginField', '密碼', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
 		let loading = false;
 
 		function onkeyup(e) {
@@ -406,12 +420,29 @@ window.pageLoading = new Signal(false);
 			}
 		}
 
+		function loginDetail() {
+			if (loginFunctionDeclarationWindow.isEmpty()) {
+				loginFunctionDeclarationWindow.windowSet(div('loginFunctionDeclarationWindow',
+					h1('聲明: '),
+					p(null, 'declaration',
+						span('本網站不會將密碼以任何形式暫存或儲存', 'red'), text('，登入功能僅代替使用者將資料轉至成功入口，並回傳登入狀態(Session Cookie)\n'),
+						span('本網站僅儲存學號以及登入狀態(Session Cookie)，提供附加功能之登入驗證使用\n', 'red'),
+						text('這是不得已的，成大不像其他學校，成大並未公開auth驗證系統的api，如果會擔心的使用者可在使用完畢後登出，且不登入也可以使用查詢功能\n' +
+							'將來會嘗試爭取成功入口驗證系統之api，作為本網站之登入方式\n' +
+							'本網站開源，如對以上聲明還是有疑慮，請自行將專案下載後執行')
+					),
+				));
+			}
+			loginFunctionDeclarationWindow.windowOpen();
+		}
+
 		// element
 		return div('loginWindow', {onRender: () => username.focus()},
-			span('帳密與成功入口相同', 'description'),
+			button('loginFunctionDeclaration', '登入功能聲明', loginDetail),
 			username,
 			password,
-			button('loginField', 'Login', login, {type: 'submit'}),
+			span('帳密與成功入口相同', 'description'),
+			button('loginField', '登入', login, {type: 'submit'}),
 		);
 	}
 })();
