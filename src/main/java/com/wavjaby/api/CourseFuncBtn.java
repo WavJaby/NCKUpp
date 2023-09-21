@@ -29,13 +29,13 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
-public class CourseFunctionButton implements EndpointModule {
-    private static final String TAG = "[CourseFunctionButton]";
+public class CourseFuncBtn implements EndpointModule {
+    private static final String TAG = "[CourseFuncBtn]";
     private static final Logger logger = new Logger(TAG);
     private final RobotCode robotCode;
     private final ProxyManager proxyManager;
 
-    public CourseFunctionButton(ProxyManager proxyManager, RobotCode robotCode) {
+    public CourseFuncBtn(ProxyManager proxyManager, RobotCode robotCode) {
         this.robotCode = robotCode;
         this.proxyManager = proxyManager;
     }

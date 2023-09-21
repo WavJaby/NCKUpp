@@ -80,7 +80,7 @@ public class Main {
         registerModule(robotCode, "/api/robotCode");
         Search search = new Search(urSchool, robotCode, proxyManager);
         registerModule(search, "/api/search");
-        CourseFunctionButton courseFunctionButton = new CourseFunctionButton(proxyManager, robotCode);
+        CourseFuncBtn courseFunctionButton = new CourseFuncBtn(proxyManager, robotCode);
         registerModule(courseFunctionButton, "/api/courseFuncBtn");
         CourseSchedule courseSchedule = new CourseSchedule(proxyManager);
         registerModule(courseSchedule, "/api/courseSchedule");
@@ -101,7 +101,7 @@ public class Main {
         registerModule(new NCKUHub(), "/api/nckuhub");
         registerModule(new UsefulWebsite(), "/api/usefulWebsite");
         registerModule(new ClientDebugLog(), "/api/clientDebugLog");
-        registerModule(new StudentIdentificationSystem(), "/api/stuIdSys");
+        registerModule(new StudentIdSys(), "/api/stuIdSys");
 
         server.start();
         logger.log("Server started, " + server.hostname + ':' + server.port);

@@ -27,12 +27,16 @@
 // Navbar
 .navbar {
     background: $navbar-bg-color;
-    box-shadow: 0px -4px 15px 5px $pure-gray-1000;
     width: 100%;
     height: $navbar-height;
     position: absolute;
     z-index: 100;
     white-space: nowrap;
+    @include transition(box-shadow 200ms);
+
+    &.scroll {
+        box-shadow: 0px -4px 15px 5px $pure-gray-1000;
+    }
 
     > .hamburgerMenu {
         height: $navbar-height;
@@ -80,7 +84,7 @@
         overflow: hidden;
         position: relative;
         float: left;
-        @include transition(height 0.15s ease-in);
+        @include transition(height 0.1s ease-in);
 
         // List title
         > li.title {
@@ -159,7 +163,7 @@
 
     // Login button
     > .loginBtn {
-        width: 80px;
+        min-width: 80px;
         font-size: 18px;
         float: right;
         text-align: center;

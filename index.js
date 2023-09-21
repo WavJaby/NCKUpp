@@ -89,9 +89,6 @@ window.pageLoading = new Signal(false);
 	const loginFunctionDeclarationWindow = new PopupWindow();
 	const userGuideTool = new UserGuideTool();
 	const pageIdName = {
-		// search: 'Search',
-		// schedule: 'Schedule',
-		// grades: 'Grades',
 		Home: '成功大學課程資訊及選課系統',
 		CourseSearch: '課程查詢',
 		Schedule: '課表',
@@ -153,62 +150,71 @@ window.pageLoading = new Signal(false);
 			nextPageButton.classList.add('opened');
 		metaSet(metaType.TITLE, document.title);
 	}
-	const navbarLinks = ul('links',
-		Object.values(pageButtons),
-		li(null, NavSelectList('arrow', text('0w0'), [
-			['嗨嗨', null],
-			['🥰', null],
-		])),
-	);
+
 	const navBarMobileBackground = ul('navBarMobileBG', {onclick: navMenuClose});
+	const navbar = nav('navbar noSelect',
+		NavSelectList('loginBtn',
+			span(TextState(userLoginData, /**@param{LoginData}state*/state =>
+				state && state.login ? state.studentID : '登入'
+			)),
+			[
+				['Profile', () => queryRouter.openPage('Profile')],
+				['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
+			],
+			false,
+			() => {
+				navMenuClose();
+				// Is login
+				if (userLoginData.state && userLoginData.state.login)
+					return true; // Open select list
+				// Not login, open login window
+				showLoginWindow.set(!showLoginWindow.state);
+				return false; // Not open select list
+			}
+		),
+		ul('hamburgerMenu', li(null,
+			img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
+		)),
+		ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
+		navBarMobileBackground,
+		ul('links',
+			Object.values(pageButtons),
+			li(null, NavSelectList('arrow', text('0w0'), [
+				['嗨嗨', null],
+				['🥰', null],
+			])),
+		),
+	);
 	window.navMenuClose = navMenuClose;
 
 	function navMenuClose() {
-		navbarLinks.classList.remove('open');
 		navBarMobileBackground.classList.remove('open');
 	}
 
 	function navMenuToggle() {
-		navbarLinks.classList.toggle('open');
 		navBarMobileBackground.classList.toggle('open');
 	}
+
+	queryRouter.element.addEventListener('scroll', () => {
+		if (queryRouter.element.scrollTop === 0)
+			navbar.classList.remove('scroll');
+		else
+			navbar.classList.add('scroll');
+	});
 
 	// check login
 	fetchApi('/login?mode=course', 'Check login').then(onLoginStateChange);
 
 	const root = div('root',
-		// Navbar
-		nav('navbar noSelect',
-			NavSelectList('loginBtn',
-				span(TextState(userLoginData, /**@param{LoginData}state*/state =>
-					state && state.login ? state.studentID : '登入'
-				)),
-				[
-					['Profile', () => queryRouter.openPage('Profile')],
-					['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
-				],
-				false,
-				() => {
-					navMenuClose();
-					// Is login
-					if (userLoginData.state && userLoginData.state.login)
-						return true; // Open select list
-					// Not login, open login window
-					showLoginWindow.set(!showLoginWindow.state);
-					return false; // Not open select list
-				}
-			),
-			ul('hamburgerMenu', li(null,
-				img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
-			)),
-			ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
-			navBarMobileBackground,
-			navbarLinks,
-		),
-		// Pages
+		// Navbar menu
+		navbar,
+		// Page router
 		queryRouter.element,
+		// Guide tutorial tool
 		userGuideTool.element,
+		// Login window
 		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
+		// Page loading circle
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert.element,
 		window.requestState.element,

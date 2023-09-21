@@ -36,7 +36,7 @@ public class Login implements EndpointModule {
     private final SQLite sqLite;
     private final Search search;
     private final ProxyManager proxyManager;
-    private final CourseFunctionButton courseFunctionButton;
+    private final CourseFuncBtn courseFunctionButton;
     private final CourseSchedule courseSchedule;
     private PreparedStatement addUserLoginData, updateUserLoginData, getUserLoginState;
 
@@ -82,7 +82,7 @@ public class Login implements EndpointModule {
         }
     }
 
-    public Login(Search search, CourseFunctionButton courseFunctionButton, CourseSchedule courseSchedule, SQLite sqLite, ProxyManager proxyManager) {
+    public Login(Search search, CourseFuncBtn courseFunctionButton, CourseSchedule courseSchedule, SQLite sqLite, ProxyManager proxyManager) {
         this.search = search;
         this.courseFunctionButton = courseFunctionButton;
         this.courseSchedule = courseSchedule;

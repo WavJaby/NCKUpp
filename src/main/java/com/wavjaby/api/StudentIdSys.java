@@ -20,19 +20,18 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.wavjaby.Main.stuIdSysNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.leftPad;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
-public class StudentIdentificationSystem implements EndpointModule {
+public class StudentIdSys implements EndpointModule {
     private static final String TAG = "[StuIdSys]";
     private static final Logger logger = new Logger(TAG);
     private static final String loginCheckString = ".asp?oauth=";
+    private static final String NORMAL_DEST_FOLDER = "./api_file/CourseScoreDistribution";
 
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
@@ -40,11 +39,11 @@ public class StudentIdentificationSystem implements EndpointModule {
             {0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111},
             {0b01110, 0b10001, 0b00001, 0b00110, 0b00001, 0b00001, 0b10001, 0b01110},
             {0b00010, 0b00110, 0b01010, 0b10010, 0b10010, 0b11111, 0b00010, 0b00010},
-            {0b11110, 0b10000, 0b11110, 0b10001, 0b00001, 0b00001, 0b10001, 0b01110},
+            {0b11111, 0b10000, 0b11110, 0b10001, 0b00001, 0b00001, 0b10001, 0b01110},
             {0b00111, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b10001, 0b01110},
             {0b11111, 0b00001, 0b00010, 0b00010, 0b00100, 0b00100, 0b01000, 0b01000},
             {0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110},
-            {0b01110, 0b10001, 0b10001, 0b10001, 0b01110, 0b00001, 0b00010, 0b11100},
+            {0b01110, 0b10001, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b11100},
     };
 
     public static class SemesterOverview {
@@ -324,6 +323,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 response.errorBadQuery("Query \"courseNormalDist\" mode require \"imgQuery\"");
                 return;
             }
+            logger.log(imageQueryRaw);
 
             String[] cache = imageQueryRaw.split(",", 4);
             if (cache.length != 4) {
@@ -538,7 +538,6 @@ public class StudentIdentificationSystem implements EndpointModule {
                     .cookieStore(cookieStore).execute().bodyStream();
             image = ImageIO.read(in);
 
-
         } catch (IOException e) {
             logger.errTrace(e);
             return new HttpResponseData(HttpResponseData.ResponseState.NETWORK_ERROR);
@@ -546,10 +545,14 @@ public class StudentIdentificationSystem implements EndpointModule {
         int imageWidth = image.getWidth();
         int imageHeight = image.getHeight();
         int[] imageRGB = image.getRGB(0, 0, imageWidth, imageHeight, null, 0, imageWidth);
-
         int[] studentCount = parseImage(imageRGB, imageWidth, imageHeight, false);
+
 //        image.setRGB(0, 0, imageWidth, imageHeight, imageRGB, 0, imageWidth);
-//        ImageIO.write(image, "png", new File("image1.png"));
+//        try {
+//            ImageIO.write(image, "png", new File(NORMAL_DEST_FOLDER + '/' + query + ".png"));
+//        } catch (IOException e) {
+//            logger.errTrace(e);
+//        }
 
         if (studentCount == null)
             return new HttpResponseData(HttpResponseData.ResponseState.DATA_PARSE_ERROR);
@@ -708,138 +711,295 @@ public class StudentIdentificationSystem implements EndpointModule {
     }
 
     private int[] parseImage(int[] imageRGB, int imageWidth, int imageHeight, boolean debug) {
-        int count = 0;
-        int[] studentCount = new int[11];
-        int lastX = -1;
-        for (int y = imageHeight - 1; y > -1; y--) {
-            boolean finedData = false;
+        // Get x axis base posY
+        int xAxisLineY = -1;
+        for (int y = imageHeight - 25; y > -1; y--) {
             for (int x = 0; x < imageWidth; x++) {
-                int offset = y * imageWidth + x;
-                int pixel = imageRGB[offset] & 0xFFFFFF;
-
-                if (count == studentCount.length)
-                    break;
-
-                // Find x split
-                boolean last = false;
-                if (pixel == 0 || (last = finedData && x == imageWidth - 1)) {
-                    finedData = true;
-                    if (last)
-                        x = lastX + 40;
-
-                    // Find number
-                    if (lastX != -1) {
-                        int rangeStartY = 0;
-                        int rangeEndY = y;
-                        // Find axis base
-                        for (; rangeEndY > -1; rangeEndY--)
-                            if ((imageRGB[rangeEndY * imageWidth + lastX + 1] & 0xFFFF00) != 0xFFFF00)
-                                break;
-                        rangeEndY--;
-                        // Find text base
-                        for (; rangeEndY > -1; rangeEndY--) {
-                            boolean findStart = false;
-                            for (int i = lastX + 1; i < x; i++) {
-                                int p = imageRGB[rangeEndY * imageWidth + i] & 0xFFFF00;
-                                if (p == 0) break;
-                                // Is white
-                                if (p == 0xFFFF00) {
-                                    findStart = true;
-                                    break;
-                                }
-                            }
-                            if (findStart) break;
-                        }
-                        rangeEndY++;
-                        // Find text start
-                        int startX = x, startY = rangeEndY, endX = lastX, endY = rangeStartY;
-                        boolean findNum = false;
-                        boolean findStart = false;
-                        for (int i = rangeEndY; i > -1 + 3; i--) {
-                            if (findNum)
-                                findStart = true;
-                            for (int j = lastX + 1; j < x; j++) {
-                                int p = imageRGB[i * imageWidth + j] & 0xFF00FF;
-                                if (p == 0) break;
-                                // Is blue text
-                                if (p <= 0x0000FF) {
-                                    findNum = true;
-                                    findStart = false;
-                                    break;
-                                }
-                                // Check no blue text after
-                                int p1 = imageRGB[(i - 1) * imageWidth + j] & 0xFF00FF;
-                                int p2 = imageRGB[(i - 2) * imageWidth + j] & 0xFF00FF;
-                                int p3 = imageRGB[(i - 3) * imageWidth + j] & 0xFF00FF;
-                                if (p1 > 0 && p1 <= 0x0000FF ||
-                                        p2 > 0 && p2 <= 0x0000FF ||
-                                        p3 > 0 && p3 <= 0x0000FF) {
-                                    findStart = false;
-                                    break;
-                                }
-                            }
-                            if (findStart) {
-                                rangeStartY = i;
-                                break;
-                            }
-                        }
-                        // Have zero people
-                        if (!findStart) {
-                            studentCount[count++] = 0;
-                        } else {
-                            rangeStartY++;
-                            // Find text bound
-                            for (int i = lastX + 1; i < x; i++) {
-                                for (int j = rangeStartY; j < rangeEndY; j++) {
-                                    int p = imageRGB[j * imageWidth + i] & 0xFF00FF;
-                                    if (p > 0 && p <= 0x0000FF) {
-                                        if (i < startX)
-                                            startX = i;
-                                        else if (i > endX)
-                                            endX = i;
-                                        if (j < startY)
-                                            startY = j;
-                                        else if (j > endY)
-                                            endY = j;
-                                    }
-                                }
-                            }
-                            endX++;
-                            endY++;
-
-                            // Parse number
-                            int num = getNumber(imageRGB, imageWidth, startX, startY, endX, endY);
-                            if (num != -1)
-                                studentCount[count++] = num;
-
-                            // Debug mark
-                            if (debug) {
-                                for (int i = lastX + 1; i < x; i++) {
-//                                    imageRGB[(rangeStartY - 1) * imageWidth + i] = 0xFF00FF;
-                                    imageRGB[rangeEndY * imageWidth + i] = 0xFF00FF;
-                                }
-                                for (int i = startX; i < endX; i++) {
-                                    imageRGB[(startY - 1) * imageWidth + i] = 0;
-                                }
-                                for (int i = startY; i < endY; i++)
-                                    imageRGB[i * imageWidth + startX - 1] = 0xFF0000;
-                            }
-                        }
-                    }
-
-                    if (last)
+                // Find black grid line
+                if ((imageRGB[y * imageWidth + x] & 0xFFFFFF) != 0)
+                    continue;
+                ++x;
+                // Find base posY
+                for (; y > -1; y--) {
+                    if ((imageRGB[y * imageWidth + x] & 0xFFFF00) != 0xFFFF00) {
+                        xAxisLineY = y;
                         break;
-                    lastX = x;
+                    }
+                }
+                break;
+            }
+            if (xAxisLineY != -1)
+                break;
+        }
+        if (xAxisLineY == -1) {
+            return null;
+        }
+
+        // Get xAxisGrid
+        int[] xAxisGridPosX = new int[11];
+        for (int x = 0, i = 0; x < imageWidth; x++) {
+            if ((imageRGB[(xAxisLineY + 1) * imageWidth + x] & 0xFFFFFF) == 0) {
+                if (i == xAxisGridPosX.length)
+                    break;
+                xAxisGridPosX[i++] = x;
+            }
+        }
+
+        // Get bar height
+        int[] barTopPosY = new int[xAxisGridPosX.length];
+        for (int i = 0; i < xAxisGridPosX.length; i++) {
+            int baseX = xAxisGridPosX[i] + 1;
+            int nextX = (i + 1 == xAxisGridPosX.length) ? imageWidth : xAxisGridPosX[i + 1];
+            for (int y = xAxisLineY - 1; y > -1; y--) {
+                if ((imageRGB[y * imageWidth + baseX] & 0xFFFFFF) <= 0x00FFFF)
+                    continue;
+                // Find if any pixel in the section of row is white
+                boolean find = false;
+                for (int x = baseX; x < nextX; x++) {
+                    int color = imageRGB[y * imageWidth + x] & 0xFFFF00;
+                    // Skip if touch wall
+                    if (color == 0)
+                        break;
+                    if (color == 0xFFFF00) {
+                        barTopPosY[i] = y;
+                        find = true;
+                        break;
+                    }
+                }
+                if (find)
+                    break;
+            }
+        }
+
+        // Get number
+        Digits[] barNumbers = new Digits[barTopPosY.length];
+        for (int i = 0; i < xAxisGridPosX.length; i++) {
+            int baseX = xAxisGridPosX[i] + 1;
+            int baseY = barTopPosY[i];
+            Digits barNum = barNumbers[i] = new Digits(xAxisLineY - baseY - 1);
+            int nextX = (i + 1 == xAxisGridPosX.length) ? imageWidth : xAxisGridPosX[i + 1];
+            // Find text location
+            int minY = Math.max(-1, baseY - 20);
+            int textBaseX = -1, textBaseY = -1;
+            for (int y = baseY; y > minY; y--) {
+                boolean emptyLine = true;
+                for (int x = baseX; x < nextX; x++) {
+                    int color = imageRGB[y * imageWidth + x] & 0x00FFFF;
+                    // Find blue text
+                    if (color != 0 && (color & 0x00FF00) != 0x00FF00) {
+                        if (textBaseX == -1 || textBaseX > x)
+                            textBaseX = x;
+                        emptyLine = false;
+                        break;
+                    }
+                }
+                if (!emptyLine) {
+                    textBaseY = y;
+                } else if (textBaseY != -1) {
+                    // Found text top
+                    break;
                 }
             }
 
-            if (finedData)
-                if (count < studentCount.length)
-                    return null;
-                else
-                    return studentCount;
+            // Empty
+            if (textBaseX == -1) {
+                barNum.addSureDigit(0);
+                continue;
+            }
+
+            // Parse digit
+            int nextTextBaseX = textBaseX;
+            while (nextTextBaseX < imageWidth - 5) {
+                int[] score = getDigit(imageRGB, imageWidth, nextTextBaseX, textBaseY);
+                nextTextBaseX += 6;
+
+                int maxScoreIndex = maxArr(score);
+                // 100%
+                if (score[maxScoreIndex] == 40) {
+                    barNum.addSureDigit(maxScoreIndex);
+                } else {
+                    barNum.addUncertainDigit(score);
+                }
+
+                // Find next digit
+                if (nextTextBaseX >= imageWidth - 5)
+                    break;
+                boolean fineNextDigit = false;
+                for (int offY = 0; offY < 8; offY++) {
+                    if ((imageRGB[(textBaseY + offY) * imageWidth + nextTextBaseX] & 0xFFFFFF) <= 0x00FFFF) {
+                        fineNextDigit = true;
+                        break;
+                    }
+                }
+                if (!fineNextDigit)
+                    break;
+            }
         }
-        return null;
+
+        // Parse uncertain digits
+        int[] studentCount = new int[barNumbers.length];
+        int sureNumberCount = 0;
+        float heightPerStudent = 0;
+        // Get sure digits
+        for (int i = 0; i < barNumbers.length; i++) {
+            Digits barNum = barNumbers[i];
+            if (barNum.isSure()) {
+                int num = studentCount[i] = barNum.getParsedNumber();
+                if (num > 2) {
+                    ++sureNumberCount;
+                    heightPerStudent += (float) barNum.getBarHeight() / num;
+                }
+            }
+        }
+        if (sureNumberCount == 0)
+            return null;
+        // Calibrate uncertain digits
+        heightPerStudent /= sureNumberCount;
+        for (int i = 0; i < barNumbers.length; i++) {
+            Digits barNum = barNumbers[i];
+            if (barNum.isSure())
+                continue;
+            studentCount[i] = barNum.calibrateDigit(heightPerStudent);
+        }
+
+        // Debug
+        if (debug) {
+            logger.log(Arrays.toString(studentCount));
+            for (int i = 0; i < xAxisGridPosX.length; i++) {
+                imageRGB[(xAxisLineY + 1) * imageWidth + xAxisGridPosX[i]] = 0xFF0000;
+
+                int baseX = xAxisGridPosX[i] + 1;
+                int nextX = (i + 1 == xAxisGridPosX.length) ? imageWidth : xAxisGridPosX[i + 1];
+                for (int x = baseX; x < nextX; x++) {
+                    imageRGB[barTopPosY[i] * imageWidth + x] = 0xFF0000;
+                }
+            }
+        }
+
+        return studentCount;
+    }
+
+    private static class Digits {
+        private final List<int[]> digits = new ArrayList<>();
+        private final int barHeight;
+        private boolean sure = true;
+
+        public Digits(int barHeight) {
+            this.barHeight = barHeight;
+        }
+
+        public void addSureDigit(int digit) {
+            this.digits.add(new int[]{digit});
+        }
+
+        public void addUncertainDigit(int[] digitScore) {
+            this.digits.add(digitScore);
+            sure = false;
+        }
+
+        public boolean isSure() {
+            return sure;
+        }
+
+        public int getBarHeight() {
+            return barHeight;
+        }
+
+        public int getParsedNumber() {
+            int number = 0;
+            for (int[] digit : digits)
+                number = number * 10 + digit[0];
+            return number;
+        }
+
+        private void flattenPossibilities(int prevNumber, int index, List<Integer[]> sortedDigits, List<Integer> numbers) {
+            if (index + 1 == sortedDigits.size()) {
+                for (Integer digit : sortedDigits.get(index)) {
+                    numbers.add(prevNumber * 10 + digit);
+                }
+            } else {
+                for (Integer digit : sortedDigits.get(index)) {
+                    if (numbers.size() > 1000)
+                        break;
+                    if (digit != 0)
+                        flattenPossibilities(prevNumber * 10 + digit, index + 1, sortedDigits, numbers);
+                }
+            }
+        }
+
+        public int calibrateDigit(float heightPerStudent) {
+            float approximateCount = barHeight / heightPerStudent;
+//            logger.log(approximateCount);
+            if (digits.isEmpty()) {
+                logger.warn("Digits not found");
+                return (int) approximateCount;
+            }
+
+            // Sort digits
+            List<Integer[]> sortedDigits = new ArrayList<>();
+            for (int i = 0; i < digits.size(); i++) {
+                int[] digitsScore = digits.get(i);
+                Integer[] index = new Integer[digitsScore.length];
+                // Sure digit
+                if (digitsScore.length == 1) {
+                    index[0] = digitsScore[0];
+                }
+                // Possible digits
+                else {
+                    for (int j = 0; j < index.length; j++)
+                        index[j] = j;
+                    Arrays.sort(index, (a, b) -> digitsScore[b] - digitsScore[a]);
+                }
+                sortedDigits.add(index);
+            }
+
+            // List all possible number
+            List<Integer> numbers = new ArrayList<>();
+            flattenPossibilities(0, 0, sortedDigits, numbers);
+            // Find min diff
+            int numberOut = numbers.get(0);
+            float minDiff = Math.abs(numberOut - approximateCount);
+            for (Integer number : numbers) {
+                float diff = Math.abs(number - approximateCount);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    numberOut = number;
+                    if (minDiff < 1e-8)
+                        break;
+                }
+            }
+
+            if(minDiff < 1e-8)
+                return numberOut;
+
+            // Use approximate count
+            logger.warn("Use approximate count");
+            return (int) approximateCount;
+        }
+    }
+
+    private int maxArr(int[] arr) {
+        int maxIndex = 0;
+        for (int j = 0; j < arr.length; j++) {
+            if (arr[j] > arr[maxIndex])
+                maxIndex = j;
+        }
+        return maxIndex;
+    }
+
+    private int[] getDigit(int[] imageRGB, int imageWidth, int startX, int startY) {
+        int[] score = new int[numbers.length];
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 5; x++) {
+                // Blue
+                boolean isNum = (imageRGB[(startY + y) * imageWidth + startX + x] & 0xFFFFFF) <= 0x00FFFF;
+                for (int k = 0; k < numbers.length; k++) {
+                    if (isNum == (((numbers[k][y] >> (4 - x)) & 0x1) == 0x1))
+                        score[k]++;
+                }
+            }
+        }
+        return score;
     }
 
     private int getNumber(int[] imageRGB, int imageWidth, int startX, int startY, int endX, int endY) {
@@ -865,6 +1025,7 @@ public class StudentIdentificationSystem implements EndpointModule {
                 if (score[i] > score[num])
                     num = i;
             }
+//            logger.log(score[num] + " " + Arrays.toString(score));
             out = out * 10 + num;
             startX += 6;
         }
