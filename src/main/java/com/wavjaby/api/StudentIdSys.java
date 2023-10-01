@@ -30,7 +30,7 @@ import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 public class StudentIdSys implements EndpointModule {
     private static final String TAG = "[StuIdSys]";
     private static final Logger logger = new Logger(TAG);
-    private static final String loginCheckString = ".asp?oauth=";
+    private static final String loginCheckString = "/ncku/qrys02.asp";
     private static final String NORMAL_DEST_FOLDER = "./api_file/CourseScoreDistribution";
 
     private static final byte[][] numbers = {
@@ -334,14 +334,7 @@ public class StudentIdSys implements EndpointModule {
             String imageQuery = "syear=" + cache[0] + "&sem=" + cache[1] + "&co_no=" + cache[2] + "&class_code=" + cache[3];
 
             // Get image
-            HttpResponseData responseData = getDistributionGraph(imageQuery, cookieStore);
-            if (responseData.state == HttpResponseData.ResponseState.SUCCESS)
-                response.setData(new JsonArray().add(responseData.data).toString());
-            else {
-                if (responseData.state == HttpResponseData.ResponseState.DATA_PARSE_ERROR)
-                    response.setMessageDisplay("Normal distribution graph not exist");
-                response.errorParse(TAG + "Cant get semester course grade normal distribution");
-            }
+            getDistributionGraph(imageQuery, cookieStore, response);
         }
         // Unknown mode
         else
@@ -396,6 +389,7 @@ public class StudentIdSys implements EndpointModule {
         try {
             Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys02.asp")
                     .header("Connection", "keep-alive")
+                    .followRedirects(false)
                     .cookieStore(cookieStore).execute();
             String body = res.body();
             if (body.contains(loginCheckString)) {
@@ -492,6 +486,7 @@ public class StudentIdSys implements EndpointModule {
             Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
+                    .followRedirects(false)
                     .method(Connection.Method.POST)
                     .requestBody("submit1=" + semesterID)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8").execute();
@@ -529,7 +524,7 @@ public class StudentIdSys implements EndpointModule {
         response.setData(courseGradeList.toString());
     }
 
-    private HttpResponseData getDistributionGraph(String query, CookieStore cookieStore) {
+    private void getDistributionGraph(String query, CookieStore cookieStore, ApiResponse response) {
         BufferedImage image;
         try {
             BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + query)
@@ -539,8 +534,9 @@ public class StudentIdSys implements EndpointModule {
             image = ImageIO.read(in);
 
         } catch (IOException e) {
+            response.errorNetwork(e);
             logger.errTrace(e);
-            return new HttpResponseData(HttpResponseData.ResponseState.NETWORK_ERROR);
+            return;
         }
         int imageWidth = image.getWidth();
         int imageHeight = image.getHeight();
@@ -554,8 +550,18 @@ public class StudentIdSys implements EndpointModule {
 //            logger.errTrace(e);
 //        }
 
-        if (studentCount == null)
-            return new HttpResponseData(HttpResponseData.ResponseState.DATA_PARSE_ERROR);
+        if (studentCount == null) {
+            response.errorParse("Normal distribution graph not found");
+            response.setMessageDisplay("Normal distribution graph not found");
+            return;
+        }
+
+        response.setData(new JsonObjectStringBuilder()
+                .appendRaw("studentCount", Arrays.toString(studentCount))
+                .toString());
+    }
+
+    private String buildNormalDestSvg(int[] studentCount) {
         int totalStudentCount = 0;
         float highestPercent = 0;
         for (int i = 0; i < 11; i++)
@@ -566,6 +572,7 @@ public class StudentIdSys implements EndpointModule {
                 highestPercent = percent;
         }
         highestPercent = 1 / highestPercent;
+
 
         int svgWidth = 600, svgHeight = 450;
         Svg svg = new Svg(svgWidth, svgHeight);
@@ -664,7 +671,7 @@ public class StudentIdSys implements EndpointModule {
             if (i == 0)
                 builder.append("M ").append(points[i][0]).append(',').append(points[i][1]);
             else
-            // Create the bezier curve command
+            // Create the Bézier curve command
             {
                 // start control point
                 float[] cps = controlPoint(points[i - 1], i < 2 ? null : points[i - 2], points[i], false);
@@ -681,8 +688,7 @@ public class StudentIdSys implements EndpointModule {
                 .setStrokeColor("#85A894");
         stdDevLine.addPoint(builder.toString());
         svg.appendChild(stdDevLine);
-
-        return new HttpResponseData(HttpResponseData.ResponseState.SUCCESS, svg.toString());
+        return svg.toString();
     }
 
     private float[] controlPoint(float[] current, float[] previous, float[] next, boolean reverse) {
@@ -937,8 +943,7 @@ public class StudentIdSys implements EndpointModule {
 
             // Sort digits
             List<Integer[]> sortedDigits = new ArrayList<>();
-            for (int i = 0; i < digits.size(); i++) {
-                int[] digitsScore = digits.get(i);
+            for (int[] digitsScore : digits) {
                 Integer[] index = new Integer[digitsScore.length];
                 // Sure digit
                 if (digitsScore.length == 1) {
@@ -969,7 +974,7 @@ public class StudentIdSys implements EndpointModule {
                 }
             }
 
-            if(minDiff < 1e-8)
+            if (minDiff < 1e-8)
                 return numberOut;
 
             // Use approximate count

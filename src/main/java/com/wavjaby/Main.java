@@ -70,7 +70,7 @@ public class Main {
         registerModule(sqLite);
         registerModule(new FileHost(serverSettings), "/NCKUpp/");
         registerModule(new IP(), "/api/ip");
-        registerModule(new Route(), "/api/route");
+        registerModule(new Route(), "/api/quizlet");
         registerModule(new WebSocket(), "/api/v0/socket");
 
         // API
