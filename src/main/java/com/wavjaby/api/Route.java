@@ -23,7 +23,7 @@ import static com.wavjaby.lib.Lib.readInputStreamToString;
 
 @SuppressWarnings("ALL")
 public class Route implements EndpointModule {
-    private static final String TAG = "[Route]";
+    private static final String TAG = "Route";
     private static final Logger logger = new Logger(TAG);
 
 
@@ -152,7 +152,9 @@ public class Route implements EndpointModule {
 
                         fileWriter.write(Base64.getDecoder().decode(body.getString("data")));
                         fileWriter.close();
-                        headerFileWriter.write(body.getArray("headers").toString().getBytes(StandardCharsets.UTF_8));
+
+                        JsonArray headers = body.getArray("headers");
+                        headerFileWriter.write(headers.toString().getBytes(StandardCharsets.UTF_8));
                         headerFileWriter.close();
                     } else {
                         File filePath = new File("./quizlet" + body.getString("filePath"));
