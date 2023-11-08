@@ -3,7 +3,7 @@ export const isLocalNetwork = window.location.hostname === 'localhost' || window
 const customServer = localStorage.getItem('customServer');
 const apiEndPoint = isLocalNetwork
 	? customServer || window.location.origin + '/api'
-	: 'https://api.simon.chummydns.com/api';
+	: 'https://api.wavjaby.nckuctf.org/api';
 
 // const isSafari = navigator.userAgent &&
 // 	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1 &&
