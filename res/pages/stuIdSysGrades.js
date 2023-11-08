@@ -149,9 +149,9 @@ export default function (router, loginState) {
 		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(response => {
 			if (response.success) {
 				normalDestImgWindow.windowSet(
-					div('normalDestImg',
+					div('normalDest',
 						h1(courseInfo.courseName),
-						img('data:image/svg+xml;base64,' + btoa(response.data[0]), '', '', {onload: i => URL.revokeObjectURL(i.target.src)})
+						createDestImage(response.data.studentCount),
 					)
 				);
 				normalDestImgWindow.windowOpen();
@@ -172,6 +172,27 @@ export default function (router, loginState) {
 				// }
 			}
 		});
+	}
+
+	/**
+	 * @param {int[]} counts
+	 */
+	function createDestImage(counts) {
+		const bars = [];
+		const sum = counts.reduce((i, j) => i + j, 0);
+		const barWidth = 100 / counts.length;
+		for (let i = 0; i < counts.length; i++) {
+			const count = counts[i];
+			const bar = div('bar',
+				span(count, 'count')
+			);
+			bar.style.width = barWidth + '%';
+			bar.style.height = 100 * count / sum + '%';
+			bar.style.left = barWidth * i + '%';
+			bars.push(bar);
+		}
+
+		return div('destImage', bars);
 	}
 
 	const gpaPoint = {A: 4, B: 4, C: 3, D: 2, E: 1, F: 0, X: 0};

@@ -14,6 +14,7 @@ let fileContent = await script.text();
 // Edit import
 fileContent = fileContent.replaceAll('from \'' + outputFileParentPath, 'from \'./');
 fileContent = fileContent.replaceAll('from \'./res/', 'from \'./../');
+console.log('File read');
 // Minify
 const result = UglifyJS.minify(fileContent, {
 	compress: {
@@ -27,8 +28,9 @@ const result = UglifyJS.minify(fileContent, {
 	mangle: true,
 	toplevel: true,
 });
-
+console.log('File minify');
 const outputFile = Bun.file(outputFilePath);
 await Bun.write(outputFile, result.code);
 const outputJsMapFile = Bun.file(outputJsMapFilePath);
 await Bun.write(outputJsMapFile, result.map);
+console.log('File write');

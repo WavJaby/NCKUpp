@@ -548,7 +548,7 @@ function input(classN, placeholder, id, ...options) {
 function labelFor(classN, text, inputElement, ...options) {
 	const element = document.createElement('label');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (inputElement) {
 		if (!inputElement.id)
 			inputElement.id = Math.random().toString(16).substring(2);
@@ -567,7 +567,7 @@ function labelFor(classN, text, inputElement, ...options) {
 function label(classN, text, ...options) {
 	const element = document.createElement('label');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -626,7 +626,7 @@ function checkboxWithName(classN, title, defaultState, onchange, ...options) {
 function button(classN, text, onClick, ...options) {
 	const element = document.createElement('button');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (onClick) element.onclick = onClick;
 	if (options.length) addOption(element, options);
 	return element;
@@ -713,7 +713,7 @@ function tr(classN, ...options) {
 function th(text, classN, ...options) {
 	const element = document.createElement('th');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -727,7 +727,7 @@ function th(text, classN, ...options) {
 function td(text, classN, ...options) {
 	const element = document.createElement('td');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -741,7 +741,7 @@ function td(text, classN, ...options) {
 function h1(text, classN, ...options) {
 	const element = document.createElement('h1');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -755,7 +755,7 @@ function h1(text, classN, ...options) {
 function h2(text, classN, ...options) {
 	const element = document.createElement('h2');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -769,7 +769,7 @@ function h2(text, classN, ...options) {
 function h3(text, classN, ...options) {
 	const element = document.createElement('h3');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -783,7 +783,7 @@ function h3(text, classN, ...options) {
 function h4(text, classN, ...options) {
 	const element = document.createElement('h4');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -797,7 +797,7 @@ function h4(text, classN, ...options) {
 function h5(text, classN, ...options) {
 	const element = document.createElement('h5');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -811,7 +811,7 @@ function h5(text, classN, ...options) {
 function h6(text, classN, ...options) {
 	const element = document.createElement('h6');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -828,7 +828,7 @@ function a(text, href, classN, onClick, ...options) {
 	const element = document.createElement('a');
 	if (classN) parseClassInput(classN, element);
 	if (href) element.href = href;
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (onClick) element.onclick = onClick;
 	if (options.length) addOption(element, options);
 	return element;
@@ -843,7 +843,7 @@ function a(text, href, classN, onClick, ...options) {
 function p(text, classN, ...options) {
 	const element = document.createElement('p');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -857,7 +857,7 @@ function p(text, classN, ...options) {
 function span(text, classN, ...options) {
 	const element = document.createElement('span');
 	if (classN) parseClassInput(classN, element);
-	if (text) parseTextInput(text, element);
+	if (notEmpty(text)) parseTextInput(text, element);
 	if (options.length) addOption(element, options);
 	return element;
 }
@@ -985,6 +985,10 @@ function dom(tagN, classN, ...options) {
 
 function doomHelperDebug() {
 	debug = console;
+}
+
+function notEmpty(obj) {
+	return obj != null;
 }
 
 export {
