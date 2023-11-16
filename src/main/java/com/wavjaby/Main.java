@@ -84,14 +84,15 @@ public class Main {
 
         // API
         addModule(new NCKUHub());
-        addModule(new UrSchool());
+        UrSchool urSchool = new UrSchool();
+        addModule(urSchool);
         RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
         addModule(robotCode);
         CourseFuncBtn courseFunctionButton = new CourseFuncBtn(proxyManager, robotCode);
         addModule(courseFunctionButton);
         CourseSchedule courseSchedule = new CourseSchedule(proxyManager);
         addModule(courseSchedule);
-        Search search = new Search(null, null, proxyManager);
+        Search search = new Search(urSchool, robotCode, proxyManager);
         addModule(search);
         Login login = new Login(search, courseFunctionButton, courseSchedule, sqLite, proxyManager);
         addModule(login);

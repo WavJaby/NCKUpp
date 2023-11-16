@@ -5,27 +5,28 @@ $object-layer2-dark: #828282;
 
 .home {
     > .siteInfo {
-        height: 100vh;
-        position: sticky;
-        top: 0;
-        overflow: auto;
-        padding-bottom: 200px;
+        //height: 100vh;
+        //position: sticky;
+        //top: 0;
+        //overflow: auto;
+        //padding-bottom: 200px;
         @include box-sizing-border;
 
         > .main {
-            padding: 10% 0 0 10%;
+            min-height: 100vh;
+            margin-top: -$navbar-height;
+            padding: 250px 0 0 10%;
+            box-sizing: border-box;
 
             > .title {
-                display: inline-block;
                 margin: 0;
 
-                > div.rippleable {
+                > .rippleable {
                     display: inline-block;
-                    margin-right: 10px;
+                    margin-right: 40px;
 
                     > img {
                         height: 90px;
-                        margin-right: 40px;
                         vertical-align: bottom;
                     }
                 }
@@ -38,17 +39,28 @@ $object-layer2-dark: #828282;
                 > .slideOut {
                     width: 0;
                     display: inline-block;
-                    vertical-align: top;
                     overflow: hidden;
+                    position: relative;
                     @include transition(width 400ms ease-out);
 
                     &.open {
                         width: 4em;
                     }
 
+                    &::before{
+                        content: '';
+                        height: 100%;
+                        width: 0.1em;
+                        background: linear-gradient(to right, $background-color, #{$background-color}00);
+                        display: block;
+                        position: absolute;
+                        left: 0;
+                    }
+
                     > img {
+                        height: 100%;
                         float: right;
-                        padding-left: 0.2em;
+                        padding-left: 0.4em;
                     }
                 }
             }
@@ -68,34 +80,41 @@ $object-layer2-dark: #828282;
                 display: inline-block;
                 height: 100px;
                 border-radius: 5px;
+                position: relative;
+                padding-right: 230px;
 
                 > .searchInput {
                     background: none;
-                    width: 500px;
+                    width: 100%;
                     height: 100%;
-                    font-size: 30px;
-                    display: inline-block;
-                    vertical-align: top;
+                    font-size: 32px;
                     padding: 25px 0 25px 50px;
                     border-radius: 0;
                     box-shadow: none;
+                    letter-spacing: 3.2px;
                 }
 
                 // Search button
                 > button {
                     background: $primary;
-                    width: 200px;
-                    height: 100px;
-                    font-size: 30px;
+                    height: 100%;
+                    width: 230px;
+                    font-size: 32px;
                     border-radius: 5px;
-                    padding: 30px 0;
-                    display: inline-block;
-                    vertical-align: top;
+                    display: block;
+                    cursor: pointer;
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    font-weight: 700;
 
                     > img {
                         display: inline-block;
-                        margin-right: 10px;
-                        vertical-align: text-bottom;
+                        vertical-align: middle;
+                    }
+
+                    > span {
+                        margin-left: 10px;
                     }
                 }
             }
@@ -182,6 +201,34 @@ $object-layer2-dark: #828282;
                 }
             }
         }
+
+        @media only screen and ($small-screen) {
+            > .main {
+                padding: 10vh 0 0 15px;
+
+                > .title > .rippleable {
+                    display: block;
+                    margin-bottom: 10px;
+                }
+
+                > .title > img, > .title > .slideOut {
+                    height: 40px;
+                }
+
+                > .quickSearch {
+                    height: 80px;
+                    padding-right: 80px;
+                    margin-right: 15px;
+
+                    > button {
+                        width: 80px;
+                        > span {
+                            display: none;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     > .scrollDownIndicator {
@@ -193,6 +240,7 @@ $object-layer2-dark: #828282;
         bottom: 0;
         cursor: pointer;
         @include box-sizing-border;
+        display: none;
 
         > .scrollDownArrow {
             width: 20px;
@@ -247,7 +295,7 @@ $object-layer2-dark: #828282;
 
     > .panels {
         background: $background-color;
-        margin-top: -$navbar-height;
+        //margin-top: -$navbar-height;
         padding: 0 15% 15%;
         position: relative;
 

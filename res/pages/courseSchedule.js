@@ -3,7 +3,7 @@
 import {
 	a,
 	button,
-	checkboxWithName,
+	checkbox,
 	div,
 	h1,
 	h2,
@@ -55,8 +55,8 @@ export default function (router, loginState) {
 	// static element
 	const styles = mountableStylesheet('./res/pages/courseSchedule.css');
 	let /**@type{PageStorage}*/pageStorage;
-	const showClassroomCheckbox = checkboxWithName(null, '顯示教室', false);
-	const showPreScheduleCheckbox = checkboxWithName(null, '顯示預排', false);
+	const showClassroomCheckbox = checkbox(null, false, null, text('顯示教室'));
+	const showPreScheduleCheckbox = checkbox(null, false,null, text('顯示預排'));
 	const scheduleTableInfo = span(null, 'scheduleTableInfo');
 	const windowRoot = div();
 	const scheduleTable = new ScheduleTable(windowRoot, updatePreScheduleData);

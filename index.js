@@ -3,6 +3,7 @@
 import {
 	a,
 	button,
+	checkbox,
 	div,
 	doomHelperDebug,
 	footer,
@@ -48,7 +49,7 @@ window.pageLoading = new Signal(false);
 	console.log('index.js Init');
 	window.messageAlert = new MessageAlert();
 	window.requestState = new RequestStateObject();
-	const font = mountableStylesheet('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
+	const font = mountableStylesheet('https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap');
 	if (document.requestStorageAccess)
 		document.requestStorageAccess().then(
 			() => console.log("StorageAccess granted"),
@@ -180,16 +181,20 @@ window.pageLoading = new Signal(false);
 		// 	}
 		// ),
 		li('loginBtn',
-			button(null, TextState(userLoginData, /**@param{LoginData}state*/state =>
-				state && state.login ? state.studentID : '登入'), () => {
-				navMenuClose();
-				// Is login
-				if (userLoginData.state && userLoginData.state.login)
-					return true; // Open select list
-				// Not login, open login window
-				showLoginWindow.set(!showLoginWindow.state);
-				return false; // Not open select list
-			})
+			button(null, null, () => {
+					navMenuClose();
+					// Is login
+					if (userLoginData.state && userLoginData.state.login) {
+						fetchApi('/logout').then(onLoginStateChange);
+						return true; // Open select list
+					}
+					// Not login, open login window
+					showLoginWindow.set(!showLoginWindow.state);
+					return false; // Not open select list
+				},
+				img('./res/assets/login_icon.svg'),
+				span(TextState(userLoginData, /**@param{LoginData}state*/state => state && state.login ? state.studentID : '登入')),
+			)
 		),
 		ul('hamburgerMenu', li(null,
 			img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
@@ -443,7 +448,7 @@ window.pageLoading = new Signal(false);
 			}
 		}
 
-		function loginDetail() {
+		function loginFunctionDeclaration() {
 			if (loginFunctionDeclarationWindow.isEmpty()) {
 				loginFunctionDeclarationWindow.windowSet(div('loginFunctionDeclarationWindow',
 					h1('聲明: '),
@@ -461,11 +466,16 @@ window.pageLoading = new Signal(false);
 
 		// element
 		return div('loginWindow', {onRender: () => username.focus()},
-			button('loginFunctionDeclaration', '登入功能聲明', loginDetail),
+			h2('登入'),
 			username,
 			password,
 			span('帳密與成功入口相同', 'description'),
-			button('loginField', '登入', login, {type: 'submit'}),
+			div('bottomRow',
+				checkbox('loginFunctionDeclaration', false, null,
+					span('我已閱讀'), button(null, '登入聲明', loginFunctionDeclaration),
+				),
+				button('loginField', '登入', login, {type: 'submit'}),
+			),
 		);
 	}
 })();

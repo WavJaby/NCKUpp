@@ -130,13 +130,12 @@
             }
 
             .item.multi {
-                padding: 0;
+                padding: 0 10px;
                 // Multi selection
-                > .checkboxWithName {
+                > .checkbox {
                     @include box-sizing-border;
                     width: 100%;
                     line-height: 2em;
-                    padding: 0 10px;
                     display: inline-block;
                     cursor: pointer;
                 }

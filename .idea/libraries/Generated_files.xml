@@ -2,15 +2,25 @@
   <library name="Generated files" type="javaScript">
     <properties>
       <sourceFilesUrls>
+        <item url="file://$PROJECT_DIR$/res/minjs_v000/courseSchedule.min.js" />
         <item url="file://$PROJECT_DIR$/res/minjs_v000/domHelper.min.js" />
         <item url="file://$PROJECT_DIR$/res/minjs_v000/home.min.js" />
         <item url="file://$PROJECT_DIR$/res/minjs_v000/index.min.js" />
+        <item url="file://$PROJECT_DIR$/res/minjs_v000/preferenceAdjust.min.js" />
+        <item url="file://$PROJECT_DIR$/res/minjs_v000/profile.min.js" />
+        <item url="file://$PROJECT_DIR$/res/minjs_v000/stuIdSysGrades.min.js" />
+        <item url="file://$PROJECT_DIR$/res/minjs_v000/usefulWebsite.min.js" />
       </sourceFilesUrls>
     </properties>
     <CLASSES>
+      <root url="file://$PROJECT_DIR$/res/minjs_v000/courseSchedule.min.js" />
       <root url="file://$PROJECT_DIR$/res/minjs_v000/domHelper.min.js" />
       <root url="file://$PROJECT_DIR$/res/minjs_v000/home.min.js" />
       <root url="file://$PROJECT_DIR$/res/minjs_v000/index.min.js" />
+      <root url="file://$PROJECT_DIR$/res/minjs_v000/preferenceAdjust.min.js" />
+      <root url="file://$PROJECT_DIR$/res/minjs_v000/profile.min.js" />
+      <root url="file://$PROJECT_DIR$/res/minjs_v000/stuIdSysGrades.min.js" />
+      <root url="file://$PROJECT_DIR$/res/minjs_v000/usefulWebsite.min.js" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

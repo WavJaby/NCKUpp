@@ -1,7 +1,8 @@
 @import '../variables';
+@import '../nckuHubWindow';
 
-$search-result-header-bg-color: #484848;
-$search-result-course-block-bg-color: #484848;
+$search-result-header-bg-color: #242b32;
+$search-result-course-block-bg-color: #242b32;
 $search-result-item-spacing: 10px;
 $instructor-info-fade-time: 200ms;
 
@@ -183,7 +184,7 @@ $instructor-info-fade-time: 200ms;
                     }
 
                     > .selectMenu,
-                    > .checkboxWithName {
+                    > .checkbox {
                         margin: 2px 10px 2px 0;
                         display: inline-block;
                         vertical-align: middle;
@@ -800,70 +801,6 @@ $instructor-info-fade-time: 200ms;
                 > td {
                     padding: 10px;
                     border: 1px solid #ddd;
-                }
-            }
-        }
-    }
-}
-
-%nckuHubDetailWindow {
-    .nckuHubDetailWindow {
-        > .courseInfoPanel {
-            text-align: center;
-
-            > span {
-                font-size: 25px;
-                margin-right: 10px;
-            }
-        }
-
-        > .nckuHubPanel {
-            font-size: 18px;
-
-            > .title {
-                margin-top: 10px;
-                display: block;
-            }
-
-            > .rates {
-                width: 100%;
-                padding: 10px 0;
-                display: table;
-                table-layout: fixed;
-                text-align: center;
-
-                > div {
-                    display: table-cell;
-                }
-
-                > div > .rateBox {
-                    background: $pure-gray-800;
-                    max-width: 7em;
-                    margin: auto;
-                    border-radius: 10px;
-
-                    > span {
-                        display: block;
-                    }
-                }
-            }
-
-            > .comments {
-                > .commentBlock {
-                    background: $pure-gray-800;
-                    margin: 10px 5px;
-                    border-radius: 10px;
-                    padding: 10px;
-
-                    > span {
-                        background: $pure-gray-700;
-                        color: #ff4d4d;
-                        font-size: 18px;
-                        padding: 2px 10px;
-                        border-radius: 2em;
-                        margin-bottom: 10px;
-                        display: inline-block;
-                    }
                 }
             }
         }

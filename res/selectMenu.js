@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkboxWithName, div, img, input, label, li, span, text, ul} from './minjs_v000/domHelper.min.js';
+import {checkbox, div, img, input, label, li, span, text, ul} from './minjs_v000/domHelper.min.js';
 
 /**
  * [itemValue, displayName] or [groupName, ItemData[]]
@@ -295,8 +295,8 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			} else {
 				// Create item
 				if (options.multiple) {
-					const checkbox = checkboxWithName(null, item[1], defaultSelected, onCheckBoxClick);
-					parent.appendChild(li('item multi', checkbox, {itemValue: item[0], itemName: item[1]}));
+					const checkbox_ = checkbox(null, defaultSelected, onCheckBoxClick, text(item[1]));
+					parent.appendChild(li('item multi', checkbox_, {itemValue: item[0], itemName: item[1]}));
 					if (defaultSelected)
 						selectedItems.push([item[0], item[1]]);
 				} else

@@ -3,7 +3,6 @@
 /key/
 /out/
 /lib/
-/res/quizlet/
 /node_modules/*
 package*
 Test.java

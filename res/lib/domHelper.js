@@ -75,9 +75,12 @@ function parseTextInput(text, element) {
 function parseClassInput(className, element) {
 	if (className instanceof ClassList)
 		className.init(element);
-	else if (typeof className === 'string')
-		element.className += className;
-	else if (debug)
+	else if (typeof className === 'string') {
+		if (element.className.length === 0)
+			element.className = className;
+		else
+			element.className += ' ' + className;
+	} else if (debug)
 		debug.warn(element, 'classname type error: ', className);
 }
 
@@ -579,7 +582,7 @@ function label(classN, text, ...options) {
  * @param [options] Options for element
  * @return {HTMLInputElement}
  */
-function checkbox(classN, onchange, id, ...options) {
+function checkboxDefault(classN, onchange, id, ...options) {
 	const element = document.createElement('input');
 	element.type = 'checkbox';
 	if (classN) parseClassInput(classN, element);
@@ -591,13 +594,12 @@ function checkbox(classN, onchange, id, ...options) {
 
 /**
  * @param {string | ClassList} [classN] Class Name
- * @param {string} title
  * @param {boolean} [defaultState]
  * @param {function(ev: Event): any} [onchange]
  * @param [options] Options for element
  * @return {HTMLLabelElement & {input: HTMLInputElement}}
  */
-function checkboxWithName(classN, title, defaultState, onchange, ...options) {
+function checkbox(classN, defaultState, onchange, ...options) {
 	const input = document.createElement('input');
 	input.type = 'checkbox';
 	input.onchange = onchange;
@@ -606,11 +608,10 @@ function checkboxWithName(classN, title, defaultState, onchange, ...options) {
 	checkmark.className = 'checkmark';
 
 	const element = document.createElement('label');
-	element.className = 'checkboxWithName noSelect';
+	element.className = 'checkbox noSelect';
 	if (classN) parseClassInput(classN, element);
 	element.appendChild(input);
 	element.appendChild(checkmark);
-	element.appendChild(document.createTextNode(title));
 	element.input = input;
 	if (options.length) addOption(element, options);
 	return element;
@@ -1005,7 +1006,7 @@ export {
 	// Nav, list
 	nav, ul, li,
 	// Input
-	labelFor, label, input, checkbox, checkboxWithName, button,
+	labelFor, label, input, checkboxDefault, checkbox, button,
 	// Table
 	table, thead, tbody, colgroup, col, th, tr, td,
 	// Text

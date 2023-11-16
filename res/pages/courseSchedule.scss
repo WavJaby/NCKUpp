@@ -1,10 +1,11 @@
 @import '../variables';
-@import './courseSearch';
+@import '../nckuHubWindow';
 
 $course-block-bg-color: #5985EF;
 $course-pre-block-bg-color: #464646;
 $schedule-head-bg-color: #282B2CB0;
 $schedule-row-bg-color: #1C1E1FB0;
+$detail-row-bg-color: #242b32;
 
 .courseSchedule {
     > .title {
@@ -14,7 +15,7 @@ $schedule-row-bg-color: #1C1E1FB0;
     > .options {
         margin: 10px 10px 0 10px;
 
-        > .checkboxWithName {
+        > .checkbox {
             margin-right: 5px;
             display: inline-block;
         }
@@ -250,7 +251,7 @@ $schedule-row-bg-color: #1C1E1FB0;
         > thead {
             > tr > th {
                 padding: 5px;
-                background-color: $pure-gray-900;
+                background-color: $detail-row-bg-color;
                 @include box-sizing-border;
 
                 &:not(&:last-child) {
@@ -282,7 +283,7 @@ $schedule-row-bg-color: #1C1E1FB0;
                 }
 
                 > td {
-                    background-color: $pure-gray-900;
+                    background-color: $detail-row-bg-color;
 
                     &:first-child {
                         border-radius: 10px 0 0 10px;

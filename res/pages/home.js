@@ -1,6 +1,6 @@
 'use strict';
 
-import {a, br, div, h1, h2, img, mountableStylesheet, p, span, button, text, input} from '../minjs_v000/domHelper.min.js';
+import {a, button, div, h1, h2, img, input, mountableStylesheet, p, span, text} from '../minjs_v000/domHelper.min.js';
 import {fetchApi, isMobile} from '../lib/lib.js';
 
 /**
@@ -73,13 +73,13 @@ export default function (router) {
 		div('main',
 			h1(null, 'title', iconImageParent, img('./res/assets/page_home/logo_text.svg', 'NCKU'), titleAnimation),
 			p(null, 'description',
-				span('結合 NCKU HUB ・UrSchool・成大選課系統'),
-				span('眾多功能，提供更好的選課環境。', null, {style: 'font-size:48px'})
+				span('結合 NCKU HUB・UrSchool・成大選課系統', null, {style: 'letter-spacing: 3.2px'}),
+				span('眾多功能，提供更好的選課環境。', null, {style: 'font-size:48px;font-weight:700;letter-spacing:4.8px'})
 			),
 			div('quickSearch',
-				input('searchInput','Search...',null,null,null),
+				input('searchInput', 'Search...', null, null),
 				button(null, null, null,
-					img('./res/assets/search_icon.svg', ''), text('課程查詢')
+					img('./res/assets/search_icon.svg', ''), span('課程查詢')
 				),
 			),
 		),

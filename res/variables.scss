@@ -5,7 +5,7 @@ $big-screen: 'min-width: 700px';
 $primary-bg: #1B1F24;
 $primary: #155cff;
 $white-color-2: #F5F5F5;
-$shadow-color: #0000003F;
+$shadow-color: #00000050;
 
 $pure-gray-50: #FAFAFA;
 $pure-gray-100: #F5F5F5;
@@ -54,7 +54,7 @@ $icon-search: url($source-root + 'search_icon.svg');
 $icon-login: url($source-root + 'login_icon.svg');
 
 @mixin default-shadow {
-    box-shadow: 0 0 5px 0 $shadow-color;
+    box-shadow: 1px 1px 5px 1px $shadow-color;
 }
 
 @mixin transform($transform) {
@@ -95,11 +95,11 @@ $icon-login: url($source-root + 'login_icon.svg');
 }
 
 @mixin cursor-grabbing {
-    cursor: url('https://www.google.com/intl/en_ALL/mapfiles/closedhand.cur'), all-scroll;
+    //cursor: url('https://www.google.com/intl/en_ALL/mapfiles/closedhand.cur'), all-scroll;
     cursor: grabbing;
 }
 
 @mixin cursor-grab {
-    cursor: url('https://www.google.com/intl/en_ALL/mapfiles/openhand.cur'), all-scroll;
+    //cursor: url('https://www.google.com/intl/en_ALL/mapfiles/openhand.cur'), all-scroll;
     cursor: grab;
 }
