@@ -151,7 +151,14 @@ window.pageLoading = new Signal(false);
 		metaSet(metaType.TITLE, document.title);
 	}
 
-	const navBarMobileBackground = ul('navBarMobileBG', {onclick: navMenuClose});
+	const navbarMobileBackground = ul('navBarMobileBG', {onclick: navMenuClose});
+	const navbarLinks = ul('links',
+		Object.values(pageButtons),
+		li(null, NavSelectList('arrow', text('0w0'), [
+			['嗨嗨', null],
+			['🥰', null],
+		])),
+	);
 	const navbar = nav('navbar noSelect',
 		NavSelectList('loginBtn',
 			span(TextState(userLoginData, /**@param{LoginData}state*/state =>
@@ -176,23 +183,19 @@ window.pageLoading = new Signal(false);
 			img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
 		)),
 		ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
-		navBarMobileBackground,
-		ul('links',
-			Object.values(pageButtons),
-			li(null, NavSelectList('arrow', text('0w0'), [
-				['嗨嗨', null],
-				['🥰', null],
-			])),
-		),
+		navbarMobileBackground,
+		navbarLinks,
 	);
 	window.navMenuClose = navMenuClose;
 
 	function navMenuClose() {
-		navBarMobileBackground.classList.remove('open');
+		navbarMobileBackground.classList.remove('open');
+		navbarLinks.classList.remove('open');
 	}
 
 	function navMenuToggle() {
-		navBarMobileBackground.classList.toggle('open');
+		navbarMobileBackground.classList.toggle('open');
+		navbarLinks.classList.toggle('open');
 	}
 
 	queryRouter.element.addEventListener('scroll', () => {
@@ -416,7 +419,7 @@ window.pageLoading = new Signal(false);
 				const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
 				fetchApi('/login?mode=course', 'login', {
 					method: 'POST',
-					body: `username=${encodeURIComponent(usr)}&password=${encodeURIComponent(password.value)}`,
+					body: JSON.stringify({username: usr, password: password.value}),
 					timeout: 10000,
 				}).then(i => {
 					loading = false;

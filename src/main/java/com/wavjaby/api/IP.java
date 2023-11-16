@@ -2,19 +2,27 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
+import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-@SuppressWarnings("ALL")
-public class IP implements EndpointModule {
-    private static final String TAG = "[IP]";
+@RequestMapping("/api/v0")
+public class IP implements Module {
+    private static final String TAG = "IP";
     private static final Logger logger = new Logger(TAG);
+
+    public static class IpInfo{
+        public final String ip;
+
+        private IpInfo(String ip) {
+            this.ip = ip;
+        }
+    }
 
     @Override
     public void start() {
@@ -29,24 +37,11 @@ public class IP implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
-        try {
-            byte[] dataByte = getClientIP(req).getBytes();
-
-            req.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
-
-            // send response
-            req.sendResponseHeaders(200, dataByte.length);
-            OutputStream response = req.getResponseBody();
-            response.write(dataByte);
-            response.flush();
-            req.close();
-        } catch (IOException e) {
-            logger.errTrace(e);
-            req.close();
-        }
-//        logger.log(remoteIp);
-    };
+    @RequestMapping("/ip")
+    public IpInfo ip(HttpExchange req) {
+        String ip = getClientIP(req);
+        return new IpInfo(ip);
+    }
 
     public static String getClientIP(HttpExchange req) {
         Headers headers = req.getRequestHeaders();
@@ -58,10 +53,5 @@ public class IP implements EndpointModule {
         } else {
             return remoteIps.substring(remoteIps.lastIndexOf(',') + 1);
         }
-    }
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
     }
 }

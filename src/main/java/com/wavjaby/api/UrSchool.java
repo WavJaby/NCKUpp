@@ -1,16 +1,18 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.ThreadFactory;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.logger.ProgressBar;
+import com.wavjaby.logger.Progressbar;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Element;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +35,9 @@ import java.util.concurrent.*;
 
 import static com.wavjaby.lib.Lib.*;
 
-public class UrSchool implements EndpointModule {
-    private static final String TAG = "[UrSchool]";
+@RequestMapping("/api/v0")
+public class UrSchool implements Module {
+    private static final String TAG = "UrSchool";
     private static final Logger logger = new Logger(TAG);
     private static final long UPDATE_INTERVAL = 2 * 60 * 60 * 1000;
     private static final long CACHE_UPDATE_INTERVAL = 10 * 60 * 1000;
@@ -136,7 +140,9 @@ public class UrSchool implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+
+    @RequestMapping("/urschool")
+    public RestApiResponse urschool(HttpExchange req) {
         long startTime = System.currentTimeMillis();
 
         ApiResponse apiResponse = new ApiResponse();
@@ -155,14 +161,8 @@ public class UrSchool implements EndpointModule {
         } else
             getInstructorInfo(instructorID, getMode, apiResponse);
 
-        apiResponse.sendResponse(req);
-
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return apiResponse;
     }
 
     private void getInstructorInfo(String id, String mode, ApiResponse response) {
@@ -381,12 +381,10 @@ public class UrSchool implements EndpointModule {
         lastFileUpdateTime = start;
         pool.submit(() -> {
             // Get first page
-            ProgressBar progressBar = new ProgressBar(TAG + "Update data ");
-            Logger.addProgressBar(progressBar);
-            progressBar.setProgress(0f);
+            Progressbar progressbar = Logger.addProgressbar(TAG + " update");
             int[] maxPage = new int[1];
             List<ProfessorSummary> firstPage = fetchUrSchoolData(1, maxPage);
-            progressBar.setProgress((float) 1 / maxPage[0] * 100);
+            progressbar.setProgress((float) 1 / maxPage[0] * 100);
             if (firstPage == null)
                 return;
             List<ProfessorSummary> result = new ArrayList<>(firstPage);
@@ -419,7 +417,7 @@ public class UrSchool implements EndpointModule {
                     if (page != null)
                         result.addAll(page);
                     fetchLeft.countDown();
-                    progressBar.setProgress(((float) (maxPage[0] - fetchLeft.getCount() + 1) / maxPage[0]) * 100);
+                    progressbar.setProgress(((float) (maxPage[0] - fetchLeft.getCount() + 1) / maxPage[0]) * 100);
                 });
             }
             // Wait result
@@ -431,8 +429,7 @@ public class UrSchool implements EndpointModule {
             }
             executorShutdown(fetchPool, 1000, "UrSchoolFetch");
 
-            progressBar.setProgress(100f);
-            Logger.removeProgressBar(progressBar);
+            progressbar.setProgress(100f);
 
             String resultString = result.toString();
             urSchoolDataJson = resultString;
@@ -465,6 +462,8 @@ public class UrSchool implements EndpointModule {
                     break;
                 } catch (IOException | UncheckedIOException ignore) {
                 }
+                if (pool.isShutdown())
+                    return null;
             }
 
             if (maxPage != null) {

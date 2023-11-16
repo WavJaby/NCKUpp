@@ -1,13 +1,18 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RequestMethod;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -16,6 +21,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -30,8 +36,9 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
-public class CourseSchedule implements EndpointModule {
-    private static final String TAG = "[Schedule]";
+@RequestMapping("/api/v0")
+public class CourseSchedule implements Module {
+    private static final String TAG = "Schedule";
     private static final Logger logger = new Logger(TAG);
     public static final HashMap<String, Integer> dayOfWeekTextToInt = new HashMap<String, Integer>() {{
         put("未定", -1);
@@ -105,40 +112,48 @@ public class CourseSchedule implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping(value = "/courseSchedule", method = RequestMethod.GET)
+    public RestApiResponse getCourseSchedule(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
+        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
 
         ApiResponse apiResponse = new ApiResponse();
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-        String method = req.getRequestMethod();
         // Get pre schedule
-        if ("true".equals(query.get("pre"))) {
-            if (method.equalsIgnoreCase("GET"))
-                getPreCourseSchedule(cookieStore, apiResponse);
-            else if (method.equalsIgnoreCase("POST"))
-                postPreCourseSchedule(readRequestBody(req, StandardCharsets.UTF_8), cookieStore, apiResponse);
-            else
-                apiResponse.errorUnsupportedHttpMethod(method);
-        }
-        // Get schedule
-        else {
-            if (method.equalsIgnoreCase("GET"))
-                getCourseSchedule(cookieStore, apiResponse);
-            else
-                apiResponse.errorUnsupportedHttpMethod(method);
-        }
-
+        if ("true".equals(query.get("pre")))
+            getPreCourseSchedule(cookieStore, apiResponse);
+        else
+            getCourseSchedule(cookieStore, apiResponse);
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return apiResponse;
+    }
 
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+    @RequestMapping(value = "/courseSchedule", method = RequestMethod.POST)
+    public RestApiResponse postCourseSchedule(HttpExchange req) {
+        long startTime = System.currentTimeMillis();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req, cookieStore);
+        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
+
+        ApiResponse response = new ApiResponse();
+        // Post pre schedule
+        if ("true".equals(query.get("pre"))) {
+            try {
+                postPreCourseSchedule(readRequestBody(req, StandardCharsets.UTF_8), cookieStore, response);
+            } catch (IOException e) {
+                response.errorBadPayload("Read payload failed");
+                logger.err(e);
+            }
+        }
+        else
+            response.errorUnsupportedHttpMethod(req.getRequestMethod());
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
+        return response;
     }
 
     public void getPreCourseSchedule(CookieStore cookieStore, ApiResponse response) {

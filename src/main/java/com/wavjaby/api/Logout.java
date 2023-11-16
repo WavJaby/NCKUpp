@@ -1,11 +1,12 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -15,18 +16,19 @@ import java.net.CookieManager;
 import java.net.CookieStore;
 
 import static com.wavjaby.Main.courseNckuOrg;
-import static com.wavjaby.api.Login.loginCheckString;
+import static com.wavjaby.api.login.Login.loginCheckString;
 import static com.wavjaby.lib.Cookie.*;
 
-public class Logout implements EndpointModule {
-    private static final String TAG = "[Logout]";
+
+@RequestMapping("/api/v0")
+public class Logout implements Module {
+    private static final String TAG = "Logout";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
     public Logout(ProxyManager proxyManager) {
         this.proxyManager = proxyManager;
     }
-
 
     @Override
     public void start() {
@@ -41,27 +43,22 @@ public class Logout implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/logout")
+    public RestApiResponse logout(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
         // Logout
-        ApiResponse apiResponse = new ApiResponse();
-        logout(cookieStore, apiResponse);
+        ApiResponse response = new ApiResponse();
+        logout(cookieStore, response);
 
-        Headers responseHeaders = req.getResponseHeaders();
         packCourseLoginStateCookie(req, loginState, cookieStore);
         addRemoveCookieToHeader("authData", "/api/login", req);
         addRemoveCookieToHeader("stuSysLoginData", "/", req);
 
-        apiResponse.sendResponse(req);
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return response;
     }
 
     private void logout(CookieStore cookieStore, ApiResponse response) {

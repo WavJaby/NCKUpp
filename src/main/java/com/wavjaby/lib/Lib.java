@@ -11,6 +11,7 @@ import org.jsoup.nodes.Element;
 
 import java.io.*;
 import java.net.CookieStore;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import static com.wavjaby.Main.accessControlAllowOrigin;
 
 public class Lib {
-    private static final String TAG = "[CosPreCheck]";
+    private static final String TAG = "Lib";
     private static final Logger logger = new Logger(TAG);
 
     public static void cosPreCheck(String urlOrigin, String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
@@ -54,7 +55,6 @@ public class Lib {
             }
         }
 
-        // 3 try
         for (int i = 0; i < 2; i++) {
             try {
                 Connection.Response res = HttpConnection.connect(urlOrigin + "/index.php?c=portal&m=cosprecheck&time=" + now)
@@ -73,12 +73,13 @@ public class Lib {
                 return;
             } catch (IOException e) {
 //                logger.errTrace(e);
-                logger.warn("CosPreCheck timeout");
             }
         }
         // Failed
-        if (response != null)
-            response.addWarn(TAG + "Network error");
+        if (response != null) {
+            response.addWarn(TAG + "CosPreCheck Network error");
+            logger.warn("CosPreCheck Network error");
+        }
     }
 
     public static Element checkCourseNckuLoginRequiredPage(Connection connection, ApiResponse response, boolean useWarn) {

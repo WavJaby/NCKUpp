@@ -1,13 +1,16 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RequestMethod;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -27,8 +30,9 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
-public class PreferenceAdjust implements EndpointModule {
-    private static final String TAG = "[PreferenceAdjust]";
+@RequestMapping("/api/v0")
+public class PreferenceAdjust implements Module {
+    private static final String TAG = "PreferenceAdjust";
     private static final Logger logger = new Logger(TAG);
     public static final HashMap<String, Integer> dayOfWeekTextToInt = new HashMap<String, Integer>() {{
         put("MON", 0);
@@ -45,7 +49,6 @@ public class PreferenceAdjust implements EndpointModule {
         this.proxyManager = proxyManager;
     }
 
-
     @Override
     public void start() {
     }
@@ -59,26 +62,40 @@ public class PreferenceAdjust implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping(value = "/preferenceAdjust", method = RequestMethod.GET)
+    public RestApiResponse getPreferenceAdjust(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
-        ApiResponse apiResponse = new ApiResponse();
-
-        String method = req.getRequestMethod();
-        if (method.equalsIgnoreCase("GET"))
-            getPreferenceAdjustList(apiResponse, cookieStore);
-        else if (method.equalsIgnoreCase("POST"))
-            updatePreferenceAdjustList(readRequestBody(req, StandardCharsets.UTF_8), apiResponse, cookieStore);
-        else
-            apiResponse.errorUnsupportedHttpMethod(method);
+        ApiResponse response = new ApiResponse();
+        getPreferenceAdjustList(response, cookieStore);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return response;
+    }
+
+    @RequestMapping(value = "/preferenceAdjust", method = RequestMethod.POST)
+    public RestApiResponse postPreferenceAdjust(HttpExchange req) {
+        long startTime = System.currentTimeMillis();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req, cookieStore);
+
+        ApiResponse response = new ApiResponse();
+        try {
+            updatePreferenceAdjustList(readRequestBody(req, StandardCharsets.UTF_8), response, cookieStore);
+        } catch (IOException e) {
+            response.errorBadPayload("Read payload failed");
+            logger.err(e);
+        }
+
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
+        return response;
+    }
 
     private void updatePreferenceAdjustList(String postData, ApiResponse response, CookieStore cookieStore) {
         Map<String, String> form = parseUrlEncodedForm(postData);
@@ -299,8 +316,5 @@ public class PreferenceAdjust implements EndpointModule {
         response.setData(result.toString());
     }
 
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
-    }
+
 }

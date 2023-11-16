@@ -1,11 +1,16 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.sun.org.apache.bcel.internal.generic.PUSH;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -28,8 +33,9 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
-public class A9Registered implements EndpointModule {
-    private static final String TAG = "[A9Registered]";
+@RequestMapping("/api/v0")
+public class A9Registered implements Module {
+    private static final String TAG = "A9Registered";
     private static final Logger logger = new Logger(TAG);
     private static final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
     private static final ZoneOffset timeZoneOffset = ZoneOffset.ofHours(8);
@@ -88,7 +94,10 @@ public class A9Registered implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+
+
+    @RequestMapping("/A9Registered")
+    public RestApiResponse getA9Registered(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
@@ -97,10 +106,10 @@ public class A9Registered implements EndpointModule {
         getA9Registered(cookieStore, apiResponse);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return apiResponse;
+    }
 
     private void getA9Registered(CookieStore cookieStore, ApiResponse response) {
         Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry13225")
@@ -175,10 +184,5 @@ public class A9Registered implements EndpointModule {
                 logger.errTrace(e);
             }
         }
-    }
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
     }
 }

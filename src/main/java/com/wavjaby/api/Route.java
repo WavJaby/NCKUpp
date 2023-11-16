@@ -1,11 +1,16 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
 import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
@@ -21,8 +26,8 @@ import java.util.Map;
 
 import static com.wavjaby.lib.Lib.readInputStreamToString;
 
-@SuppressWarnings("ALL")
-public class Route implements EndpointModule {
+@RequestMapping("/api/v0")
+public class Route implements Module {
     private static final String TAG = "Route";
     private static final Logger logger = new Logger(TAG);
 
@@ -40,7 +45,9 @@ public class Route implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/quizlet")
+    @CustomResponse
+    public void quizlet(HttpExchange req) {
         String method = req.getRequestMethod();
 
         String path = req.getRequestURI().getRawPath().substring(13);
@@ -173,14 +180,10 @@ public class Route implements EndpointModule {
             req.sendResponseHeaders(404, 0);
             req.close();
         } catch (Exception e) {
-            req.sendResponseHeaders(500, 0);
             req.close();
             logger.errTrace(e);
         }
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
     }
+
+
 }

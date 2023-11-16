@@ -1,14 +1,18 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiCode;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -29,8 +33,9 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
-public class CourseFuncBtn implements EndpointModule {
-    private static final String TAG = "[CourseFuncBtn]";
+@RequestMapping("/api/v0")
+public class CourseFuncBtn implements Module {
+    private static final String TAG = "CourseFuncBtn";
     private static final Logger logger = new Logger(TAG);
     private final RobotCode robotCode;
     private final ProxyManager proxyManager;
@@ -53,7 +58,9 @@ public class CourseFuncBtn implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+
+    @RequestMapping("/courseFuncBtn")
+    public RestApiResponse courseFuncBtn(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
@@ -71,10 +78,10 @@ public class CourseFuncBtn implements EndpointModule {
             apiResponse.errorBadQuery("Query require one of \"cosdata\" or \"prekey\"");
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return apiResponse;
+    }
 
     public void getFlexTime(String key, CookieStore cookieStore, ApiResponse response) {
         try {
@@ -134,11 +141,6 @@ public class CourseFuncBtn implements EndpointModule {
         } catch (IOException e) {
             logger.errTrace(e);
         }
-    }
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
     }
 
     public void postPreKey(String key, CookieStore cookieStore, ApiResponse response) {

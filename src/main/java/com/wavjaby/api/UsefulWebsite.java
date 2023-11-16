@@ -1,12 +1,14 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
@@ -15,8 +17,9 @@ import java.nio.charset.StandardCharsets;
 import static com.wavjaby.lib.Lib.getFileFromPath;
 import static com.wavjaby.lib.Lib.readFileToString;
 
-public class UsefulWebsite implements EndpointModule {
-    private static final String TAG = "[UsefulWebsite]";
+@RequestMapping("/api/v0")
+public class UsefulWebsite implements Module {
+    private static final String TAG = "UsefulWebsite";
     private static final Logger logger = new Logger(TAG);
     private static final String WEBSITE_FILE_PATH = "./api_file/usefulWebsite.json";
     private long lastFileModify = -1;
@@ -69,25 +72,17 @@ public class UsefulWebsite implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/usefulWebsite")
+    public RestApiResponse usefulWebsite() {
         long startTime = System.currentTimeMillis();
 
-        ApiResponse apiResponse = new ApiResponse();
-        String method = req.getRequestMethod();
-        if (method.equalsIgnoreCase("GET"))
-            getLinks(apiResponse);
-        else
-            apiResponse.errorUnsupportedHttpMethod(method);
-
-        apiResponse.sendResponse(req);
+        ApiResponse response = new ApiResponse();
+        getLinks(response);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return response;
     }
+
 
     private void getLinks(ApiResponse response) {
         updateData();

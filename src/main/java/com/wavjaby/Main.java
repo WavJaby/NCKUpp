@@ -1,21 +1,29 @@
 package com.wavjaby;
 
 import com.wavjaby.api.*;
-import com.wavjaby.lib.HttpServer;
+import com.wavjaby.api.login.Login;
+import com.wavjaby.api.search.Search;
 import com.wavjaby.lib.PropertiesReader;
+import com.wavjaby.lib.restapi.RestApiServer;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
 import java.net.URI;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static com.wavjaby.lib.Lib.executorShutdown;
 
 
 public class Main {
     public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36";
-    private static final String TAG = "[Main]";
+    private static final String TAG = "Main";
     private static final Logger logger = new Logger(TAG);
     public static final String courseNcku = "course.ncku.edu.tw";
 
@@ -44,73 +52,71 @@ public class Main {
             "https://wavjaby.github.io"
     };
     public static String cookieDomain;
-    private final HttpServer server;
-    private final Map<String, Module> modules = new LinkedHashMap<>();
+    private final RestApiServer server;
+    private final List<Module> modules = new ArrayList<>();
     private boolean running = false;
     public static final File cacheFolder = new File("cache");
 
 
     Main() {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
-
         PropertiesReader serverSettings = new PropertiesReader("./server.properties");
+        Logger.setLogFile(serverSettings.getProperty("logFilePath", "./server.log"));
+        Logger.setTraceClassFilter(serverSettings.getProperty("traceFilter", "com.wavjaby"));
         cookieDomain = serverSettings.getProperty("domain", "localhost");
 
-        server = new HttpServer(serverSettings);
-        if (!server.opened) return;
+        server = new RestApiServer(serverSettings);
+        if (!server.ready || !server.start()) return;
+
         if (!cacheFolder.exists())
             if (!cacheFolder.mkdir())
                 logger.err("Cache folder can not create");
         Runtime.getRuntime().addShutdownHook(new Thread(this::stopModules));
 
         ProxyManager proxyManager = new ProxyManager(serverSettings);
-        registerModule(proxyManager);
-
+        addModule(proxyManager);
         SQLite sqLite = new SQLite();
-        registerModule(sqLite);
-        registerModule(new FileHost(serverSettings), "/NCKUpp/");
-        registerModule(new IP(), "/api/ip");
-        registerModule(new Route(), "/api/quizlet");
-        registerModule(new WebSocket(), "/api/v0/socket");
+        addModule(sqLite);
+        addModule(new WebSocket());
+        addModule(new IP());
+        addModule(new Route());
+        addModule(new FileHost(serverSettings));
 
         // API
-        UrSchool urSchool = new UrSchool();
-        registerModule(urSchool, "/api/urschool");
+        addModule(new NCKUHub());
+        addModule(new UrSchool());
         RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
-        registerModule(robotCode, "/api/robotCode");
-        Search search = new Search(urSchool, robotCode, proxyManager);
-        registerModule(search, "/api/search");
+        addModule(robotCode);
         CourseFuncBtn courseFunctionButton = new CourseFuncBtn(proxyManager, robotCode);
-        registerModule(courseFunctionButton, "/api/courseFuncBtn");
+        addModule(courseFunctionButton);
         CourseSchedule courseSchedule = new CourseSchedule(proxyManager);
-        registerModule(courseSchedule, "/api/courseSchedule");
+        addModule(courseSchedule);
+        Search search = new Search(null, null, proxyManager);
+        addModule(search);
         Login login = new Login(search, courseFunctionButton, courseSchedule, sqLite, proxyManager);
-        registerModule(login, "/api/login");
-        DeptWatchDog watchDog = new DeptWatchDog(login, sqLite);
-        registerModule(watchDog, "/api/watchdog");
+        addModule(login);
+        addModule(new AllDept(search));
+        addModule(new Logout(proxyManager));
+        addModule(new A9Registered(proxyManager));
+        addModule(new DeptWatchdog(login, sqLite));
+        addModule(new Profile(login, sqLite));
+        addModule(new CourseRegister(proxyManager, robotCode));
+        addModule(new ExtractUrl(proxyManager));
+        addModule(new PreferenceAdjust(proxyManager));
+        addModule(new HomeInfo(proxyManager));
+        addModule(new UsefulWebsite());
+        addModule(new ClientDebugLog());
+        addModule(new StudentIdSys());
 
-        registerModule(new Profile(login, sqLite), "/api/profile");
-        registerModule(new AllDept(search), "/api/alldept");
-        registerModule(new HomeInfo(proxyManager), "/api/homeInfo");
-        registerModule(new Logout(proxyManager), "/api/logout");
-        registerModule(new ExtractUrl(proxyManager), "/api/extract");
-        registerModule(new PreferenceAdjust(proxyManager), "/api/preferenceAdjust");
-        registerModule(new A9Registered(proxyManager), "/api/A9Registered");
-        registerModule(new CourseRegister(proxyManager, robotCode), "/api/courseRegister");
+//        logger.log("Server started, " + server.hostname + ':' + server.port);
 
-        registerModule(new NCKUHub(), "/api/nckuhub");
-        registerModule(new UsefulWebsite(), "/api/usefulWebsite");
-        registerModule(new ClientDebugLog(), "/api/clientDebugLog");
-        registerModule(new StudentIdSys(), "/api/stuIdSys");
-
-        server.start();
-        logger.log("Server started, " + server.hostname + ':' + server.port);
-
+        long start = System.currentTimeMillis();
         startModules();
-        logger.log("Ready");
+        logger.log("Ready in " + (System.currentTimeMillis() - start) + "ms");
+        server.printStructure();
 
-        if (serverSettings.getPropertyBoolean("getCourseUpdate", false))
-            new GetCourseDataUpdate(search, watchDog, serverSettings);
+//        if (serverSettings.getPropertyBoolean("getCourseUpdate", false))
+//            new GetCourseDataUpdate(search, watchDog, serverSettings);
 
         // Stop
         Scanner scanner = new Scanner(System.in);
@@ -134,43 +140,120 @@ public class Main {
         logger.log("Server stopped");
     }
 
+
+    final Map<Module, List<Class<?>>> moduleDependencies = new HashMap<>();
+    final List<Class<?>> loadedModule = new ArrayList<>();
+
     private void startModules() {
         if (running) return;
         running = true;
-        for (Module module : modules.values()) {
-            long start = System.currentTimeMillis();
-            try {
-                module.start();
-                logger.log("##### " + module.getTag() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
-            } catch (Exception e) {
-                logger.errTrace(e);
-                logger.err("##### " + module.getTag() + " ERROR " + (System.currentTimeMillis() - start) + "ms #####");
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        Semaphore lock = new Semaphore(executor.getMaximumPoolSize());
+        CountDownLatch taskCount = new CountDownLatch(modules.size());
+        for (Module module : modules) {
+            // Get dependencies in constructor
+            List<Class<?>> dependencies = new ArrayList<>();
+            for (Constructor<?> constructor : module.getClass().getDeclaredConstructors()) {
+                // Get parameters
+                for (Parameter parameter : constructor.getParameters()) {
+                    if (parameter.getType() == module.getClass())
+                        continue;
+                    // Check if parameter is module
+                    Class<?> dependencyModule = null;
+                    for (Class<?> anInterface : parameter.getType().getInterfaces()) {
+                        if (anInterface == Module.class) {
+                            dependencyModule = anInterface;
+                            break;
+                        }
+                    }
+                    if (dependencyModule == null || loadedModule.contains(parameter.getType()))
+                        continue;
+
+                    dependencies.add(parameter.getType());
+                }
             }
+            if (!dependencies.isEmpty()) {
+                moduleDependencies.put(module, dependencies);
+//                logger.log(dependencies);
+                continue;
+            }
+
+            // Start load module
+            try {
+                lock.acquire();
+            } catch (InterruptedException e) {
+                logger.errTrace(e);
+                return;
+            }
+            executor.execute(() -> addStartModuleTask(module, lock, taskCount, executor));
+        }
+        try {
+            taskCount.await();
+        } catch (InterruptedException e) {
+            logger.errTrace(e);
+        }
+        executorShutdown(executor, 1000, "Start executor");
+        moduleDependencies.clear();
+        loadedModule.clear();
+    }
+
+    private void addStartModuleTask(Module module, Semaphore lock, CountDownLatch taskCount, ThreadPoolExecutor executor) {
+        startModule(module);
+        // Add to loaded module
+        synchronized (loadedModule) {
+            loadedModule.add(module.getClass());
+        }
+        // Check module have dependencies
+        synchronized (moduleDependencies) {
+            List<Module> removeList = new ArrayList<>();
+            for (Map.Entry<Module, List<Class<?>>> i : moduleDependencies.entrySet()) {
+                List<Class<?>> value = i.getValue();
+                synchronized (value) {
+                    value.remove(module.getClass());
+                    // Load module
+                    if (value.isEmpty()) {
+                        executor.execute(() -> addStartModuleTask(i.getKey(), lock, taskCount, executor));
+                        removeList.add(i.getKey());
+                    }
+                }
+            }
+            for (Module i : removeList) {
+                moduleDependencies.remove(i);
+            }
+        }
+        lock.release();
+        taskCount.countDown();
+    }
+
+    private void startModule(Module module) {
+        long start = System.currentTimeMillis();
+        try {
+            module.start();
+            if (module.api())
+                server.addEndpoint(module);
+            logger.log("##### " + module.getTag() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
+        } catch (Exception e) {
+            logger.errTrace(e);
+            logger.err("##### " + module.getTag() + " ERROR " + (System.currentTimeMillis() - start) + "ms #####");
         }
     }
 
     private void stopModules() {
         if (!running) return;
         running = false;
-        for (Module module : modules.values()) {
+        for (Module module : modules) {
             logger.log("##### Stopping" + module.getTag() + " #####");
             module.stop();
 //            Logger.log("##### ", module.getTag() + "Stopped #####");
         }
         server.stop();
+        Logger.stopAndFlushLog();
     }
 
-    private void registerModule(EndpointModule module, String contextPath) {
-        if (contextPath != null)
-            server.createContext(contextPath, module.getHttpHandler());
-        modules.put(module.getTag(), module);
+    private void addModule(Module module) {
+        modules.add(module);
     }
 
-    private void registerModule(Module module) {
-        modules.put(module.getTag(), module);
-    }
-
-    @SuppressWarnings("ALL")
     public static void main(String[] args) {
         new Main();
     }

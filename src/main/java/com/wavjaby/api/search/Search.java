@@ -1,10 +1,11 @@
-package com.wavjaby.api;
+package com.wavjaby.api.search;
 
-import com.sun.istack.internal.Nullable;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.api.RobotCode;
+import com.wavjaby.api.UrSchool;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
@@ -13,8 +14,10 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.lib.ThreadFactory;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.logger.ProgressBar;
+import com.wavjaby.logger.Progressbar;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.HttpConnection;
@@ -27,7 +30,10 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
-import java.net.*;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -38,25 +44,21 @@ import java.util.regex.Pattern;
 
 import static com.wavjaby.Main.*;
 import static com.wavjaby.api.IP.getClientIP;
-import static com.wavjaby.lib.ApiThrottle.checkIpThrottle;
-import static com.wavjaby.lib.ApiThrottle.doneIpThrottle;
+import static com.wavjaby.lib.ApiThrottle.*;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Lib.*;
 
-public class Search implements EndpointModule {
-    private static final String TAG = "[Search]";
+@RequestMapping("/api/v0")
+public class Search implements Module {
+    private static final String TAG = "Search";
     private static final Logger logger = new Logger(TAG);
-
     private static final int MAX_ROBOT_CHECK_REQUEST_TRY = 3;
     private static final int MAX_ROBOT_CHECK_TRY = 2;
     private static final int COS_PRE_CHECK_COOKIE_LOCK = 2;
     private static final int MULTITHREADING_SEARCH_THREAD_COUNT = 4;
-    private final ThreadPoolExecutor cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("CosPreT-"));
-    private final Semaphore cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize(), true);
-    private final Map<String, CookieLock> cosPreCheckCookieLock = new ConcurrentHashMap<>();
+    private static final int MULTI_QUERY_SEARCH_THREAD_COUNT = 4;
     private static final Pattern displayRegex = Pattern.compile("[\\r\\n]+\\.(\\w+) *\\{[\\r\\n]* *(?:/\\* *\\w+ *: *\\w+ *;? *\\*/ *)?display *: *(\\w+) *;? *");
-
     private static final Map<String, Character> tagColormap = new HashMap<String, Character>() {{
         put("default", '0');
         put("success", '1');
@@ -65,6 +67,10 @@ public class Search implements EndpointModule {
         put("warning", '4');
         put("danger", '5');
     }};
+
+    private final ThreadPoolExecutor cosPreCheckPool;
+    private final Semaphore cosPreCheckPoolLock;
+    private final Map<String, CookieLock> cosPreCheckCookieLock = new ConcurrentHashMap<>();
 
     private final UrSchool urSchool;
     private final RobotCode robotCode;
@@ -84,6 +90,8 @@ public class Search implements EndpointModule {
         this.urSchool = urSchool;
         this.robotCode = robotCode;
         this.proxyManager = proxyManager;
+        this.cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("CosPreT-"));
+        this.cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize(), true);
     }
 
     @Override
@@ -100,7 +108,8 @@ public class Search implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/search")
+    public RestApiResponse search(HttpExchange req) {
         String ip = getClientIP(req);
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
@@ -111,569 +120,370 @@ public class Search implements EndpointModule {
 
         // search
         String rawQuery = req.getRequestURI().getRawQuery();
-        SearchQuery searchQuery = new SearchQuery(rawQuery, cookieIn);
-        ApiResponse apiResponse = new ApiResponse();
-        if (searchQuery.serialNumberInvalid()) {
-            apiResponse.errorBadQuery("Query \"serial\" is invalid: " + searchQuery.getSerialError);
-        } else if (searchQuery.serialNumberEmpty()) {
-            apiResponse.errorBadQuery("Query \"serial\" is empty");
-        } else if (searchQuery.historySearchInvalid()) {
-            apiResponse.errorBadQuery("History search query invalid: " + searchQuery.historySearchError);
-        } else if (searchQuery.dayOfWeekError()) {
-            apiResponse.errorBadQuery("Query \"dayOfWeek\" is invalid: " + searchQuery.dayOfWeekError);
-        } else if (searchQuery.sectionOfDayError()) {
-            apiResponse.errorBadQuery("Query \"section\" is invalid: " + searchQuery.sectionOfDayError);
-        } else if (searchQuery.noQuery()) {
-            apiResponse.errorBadQuery("Query \"" + rawQuery + "\" Require least 1 of \"dept\", \"serial\", \"courseName\", \"instructor\", \"grade\", \"dayOfWeek\", \"section\"");
-        } else {
+        // Parse query
+        Map<String, String> query = parseUrlEncodedForm(rawQuery);
+        ApiResponse response = new ApiResponse();
+        SearchQuery searchQuery = getSearchQueryFromRequest(query, cookieIn, response);
+        String errorMessage = searchQuery.getError();
+        if (errorMessage != null)
+            response.errorBadQuery(errorMessage);
+        else if (searchQuery.noQuery())
+            response.errorBadQuery("Empty query");
+        else {
             // Check throttle
             if (!checkIpThrottle(ip)) {
 //                logger.log(getClientIP(req) + " Throttle");
-                apiResponse.errorTooManyRequests();
-                apiResponse.sendResponse(req);
-                return;
+                response.errorTooManyRequests();
+                return response;
             }
-            logger.log(ip);
-            // Search
-            search(searchQuery, apiResponse, cookieStore);
+
+            SearchResult searchResult = querySearch(searchQuery, cookieStore);
+            searchResult.passDataTo(response);
+
+            // set cookie
+            packCourseLoginStateCookie(req, loginState, cookieStore);
+            if (response.isSuccess()) {
+                if (searchResult.getSearchID() != null)
+                    addCookieToHeader("searchID", searchResult.getSearchID().getAsCookieValue(), "/", req);
+            } else
+                addRemoveCookieToHeader("searchID", "/", req);
         }
 
-        // set cookie
-        packCourseLoginStateCookie(req, loginState, cookieStore);
-        if (apiResponse.isSuccess())
-            addCookieToHeader("searchID", getSearchIdCookieValue(searchQuery), "/", req);
-        else
-            addRemoveCookieToHeader("searchID", "/", req);
+        int used = doneIpThrottle(ip);
+        if (used < FETCH_PER_MIN) {
+            logger.log(ip + ' ' + used + ' ' + response.isSuccess() + ' ' + (System.currentTimeMillis() - startTime) + "ms");
+        }
 
-        apiResponse.sendResponse(req);
-        logger.log(ip + ' ' + doneIpThrottle(ip) + ' ' + apiResponse.isSuccess() + ' ' + (System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return response;
     }
 
-    public static class SearchQuery {
-        String searchID, historySearchID;
-
-        String deptNo;                  // 系所 A...
-        final String courseName;        // 課程名稱
-        final String instructor;        // 教師姓名
-        final String grade;             // 年級 1 ~ 4
-        final byte[] dayOfWeek;         // 星期 [0 ~ 6]
-        final String dayOfWeekError;
-        final byte[] sectionOfDay;      // 節次 [0 ~ 15]
-        final String sectionOfDayError;
-
-        final boolean getAll;
-
-        final boolean getSerial;
-        final String getSerialError;
-        final Map<String, Set<String>> serialIdNumber;     // 系號=序號&系號2=序號,序號
-
-        final boolean historySearch;
-        final String historySearchError;
-        final int yearBegin, semBegin, yearEnd, semEnd;
-
-        public SearchQuery(CourseData courseData) {
-            this.deptNo = courseData.serialNumber == null
-                    ? null
-                    : courseData.serialNumber.substring(0, courseData.serialNumber.indexOf('-'));
-            this.courseName = courseData.courseName;
-            this.instructor = courseData.instructors == null ? null : courseData.instructors[0];
-            this.grade = courseData.forGrade == null ? null : String.valueOf(courseData.forGrade);
-            Byte dayOfWeek = null, sectionOfDay = null;
-            if (courseData.timeList != null) {
-                for (CourseData.TimeData time : courseData.timeList) {
-                    if (time.sectionStart == null) continue;
-                    dayOfWeek = time.dayOfWeek;
-                    sectionOfDay = time.sectionStart;
-                    break;
-                }
-                // if no section
-                if (dayOfWeek == null)
-                    dayOfWeek = courseData.timeList[0].dayOfWeek;
-            }
-            this.dayOfWeek = dayOfWeek == null ? null : new byte[]{dayOfWeek};
-            this.dayOfWeekError = null;
-            this.sectionOfDay = sectionOfDay == null ? null : new byte[]{sectionOfDay};
-            this.sectionOfDayError = null;
-
-            this.getAll = false;
-            this.getSerial = false;
-            this.getSerialError = null;
-
-            this.serialIdNumber = null;
-
-            this.historySearch = false;
-            this.historySearchError = null;
-            this.yearBegin = this.semBegin = this.yearEnd = this.semEnd = -1;
-        }
-
-        public SearchQuery(SearchQuery searchQuery) {
-            this.searchID = searchQuery.searchID;
-            this.historySearchID = searchQuery.historySearchID;
-            this.deptNo = searchQuery.deptNo;
-            this.courseName = searchQuery.courseName;
-            this.instructor = searchQuery.instructor;
-            this.grade = searchQuery.grade;
-            this.dayOfWeek = searchQuery.dayOfWeek == null ? null : searchQuery.dayOfWeek.clone();
-            this.dayOfWeekError = searchQuery.dayOfWeekError;
-            this.sectionOfDay = searchQuery.sectionOfDay == null ? null : searchQuery.sectionOfDay.clone();
-            this.sectionOfDayError = searchQuery.sectionOfDayError;
-
-            this.getAll = searchQuery.getAll;
-            this.getSerial = searchQuery.getSerial;
-            this.getSerialError = searchQuery.getSerialError;
-
-            this.serialIdNumber = searchQuery.serialIdNumber == null ? null : new HashMap<>(searchQuery.serialIdNumber);
-
-            this.historySearch = searchQuery.historySearch;
-            this.historySearchError = searchQuery.historySearchError;
-
-            this.yearBegin = searchQuery.yearBegin;
-            this.semBegin = searchQuery.semBegin;
-            this.yearEnd = searchQuery.yearEnd;
-            this.semEnd = searchQuery.semEnd;
-        }
-
-        public SearchQuery(String queryString, String[] cookieIn) {
-            // Get search ID
-            String searchIDs = Cookie.getCookie("searchID", cookieIn);
-            if (searchIDs != null) {
-                int split = searchIDs.indexOf('|');
-                if (split == -1) {
-                    this.searchID = searchIDs.isEmpty() ? null : searchIDs;
-                    this.historySearchID = null;
+    private SearchQuery getSearchQueryFromRequest(Map<String, String> query, String[] cookieIn, ApiResponse response) {
+        // Get search ID
+        String searchIDs = Cookie.getCookie("searchID", cookieIn);
+        CourseSearchID courseSearchID = null;
+        if (searchIDs != null) {
+            int split = searchIDs.indexOf('|');
+            String searchID = searchIDs.isEmpty() || split == 0 ? null
+                    : searchIDs.substring(0, split);
+            // "searchID,PHPSESSID"
+            String historySearchIDAndCookie = split == -1 || split + 1 == searchIDs.length() ? null
+                    : searchIDs.substring(split + 1);
+            String historySearchID = null, historySearchPHPSESSID = null;
+            if (historySearchIDAndCookie != null) {
+                int idSplit = historySearchIDAndCookie.indexOf(',');
+                if (idSplit == -1 || idSplit == 0 || idSplit + 1 == historySearchIDAndCookie.length()) {
+                    response.addWarn("'searchID' Format error, Not provide correct 'searchID' will impact response time, please use correct searchID from response cookie.");
                 } else {
-                    this.searchID = split == 0 ? null : searchIDs.substring(0, split);
-                    this.historySearchID = split == searchIDs.length() - 1 ? null : searchIDs.substring(split + 1);
+                    historySearchID = historySearchIDAndCookie.substring(0, idSplit);
+                    historySearchPHPSESSID = historySearchIDAndCookie.substring(idSplit + 1);
                 }
             }
+            courseSearchID = new CourseSearchID(searchID, historySearchID, historySearchPHPSESSID);
+        }
 
-            // Parse query
-            Map<String, String> query = parseUrlEncodedForm(queryString);
+        // Get with serial
+        String rawSerial = query.get("serial");
+        Map<String, Set<String>> serialIdNumber = null;
+        if (rawSerial != null) {
+            serialIdNumber = new HashMap<>();
+            // Text type
+            String[] deptSerialArr = simpleSplit(rawSerial, ',');
+            for (String i : deptSerialArr) {
+                int index = i.indexOf('-');
+                if (index == -1) {
+                    return SearchQuery.newError("'serial' Format error: '" + i + "', use '-' to separate dept id and serial number, EX: F7-001.");
+                }
+                Set<String> serial = serialIdNumber.computeIfAbsent(i.substring(0, index), k -> new HashSet<>());
+                String serialId = i.substring(index + 1);
+                // TODO: Check dept id and serial number
+                serial.add(serialId);
+            }
+        }
 
-            // Get all dept
-            String deptNo = query.get("dept");
-            this.getAll = "ALL".equals(deptNo);
-
-            // Get with time
-            String queryTimeBegin = query.get("timeBegin"), queryTimeEnd = query.get("timeEnd"), historySearchError = null;
-            this.historySearch = queryTimeBegin != null || queryTimeEnd != null;
+        // History search
+        String queryTimeBegin = query.get("semBegin"), queryTimeEnd = query.get("semEnd");
+        CourseHistorySearch historySearch = null;
+        if (queryTimeBegin != null || queryTimeEnd != null) {
             int yearBegin = -1, semBegin = -1, yearEnd = -1, semEnd = -1;
-            if (this.historySearch) {
-                if (queryTimeBegin == null || queryTimeEnd == null) {
-                    historySearchError = "History search should include \"timeBegin\" and \"timeEnd\"";
+            if (queryTimeBegin == null) {
+                return SearchQuery.newError("History search missing 'timeBegin' key in query.");
+            } else if (queryTimeEnd == null) {
+                return SearchQuery.newError("History search missing 'timeEnd' key in query.");
+            } else {
+                int startSplit = queryTimeBegin.indexOf('-');
+                if (startSplit == -1) {
+                    return SearchQuery.newError("'semBegin' Format error: use '-' to separate year and semester, EX: 111-1.");
                 } else {
-                    int startSplit = queryTimeBegin.indexOf('-');
-                    if (startSplit == -1) {
-                        historySearchError = "\"timeBegin\" formatError";
-                    } else {
-                        try {
-                            yearBegin = Integer.parseInt(queryTimeBegin.substring(0, startSplit));
-                            semBegin = Integer.parseInt(queryTimeBegin.substring(startSplit + 1));
-                        } catch (NumberFormatException e) {
-                            yearBegin = -1;
-                            historySearchError = "\"timeBegin\" formatError";
-                        }
+                    try {
+                        yearBegin = Integer.parseInt(queryTimeBegin.substring(0, startSplit));
+                        semBegin = Integer.parseInt(queryTimeBegin.substring(startSplit + 1));
+                    } catch (NumberFormatException e) {
+                        return SearchQuery.newError("'semBegin' Format error: " + e.getMessage() + '.');
                     }
+                }
 
-                    int endSplit = queryTimeEnd.indexOf('-');
-                    if (endSplit == -1) {
-                        historySearchError = "\"timeEnd\" formatError";
-                    } else {
-                        try {
-                            yearEnd = Integer.parseInt(queryTimeEnd.substring(0, endSplit));
-                            semEnd = Integer.parseInt(queryTimeEnd.substring(endSplit + 1));
-                        } catch (NumberFormatException e) {
-                            yearBegin = -1;
-                            historySearchError = "\"timeEnd\" formatError";
-                        }
+                int endSplit = queryTimeEnd.indexOf('-');
+                if (endSplit == -1) {
+                    return SearchQuery.newError("'semEnd' Format error: use '-' to separate year and semester, EX: 111-1.");
+                } else {
+                    try {
+                        yearEnd = Integer.parseInt(queryTimeEnd.substring(0, endSplit));
+                        semEnd = Integer.parseInt(queryTimeEnd.substring(endSplit + 1));
+                    } catch (NumberFormatException e) {
+                        return SearchQuery.newError("'semEnd' Format error: " + e.getMessage() + '.');
                     }
                 }
             }
-            this.yearBegin = yearBegin;
-            this.semBegin = semBegin;
-            this.yearEnd = yearEnd;
-            this.semEnd = semEnd;
-            this.historySearchError = historySearchError;
+            historySearch = new CourseHistorySearch(yearBegin, semBegin, yearEnd, semEnd);
+        }
 
-            // Get with serial
-            String rawSerial = query.get("serial"), getSerialError = null;
-            this.getSerial = rawSerial != null;
-            Map<String, Set<String>> serialIdNumber = null;
-            if (this.getSerial) {
-                String deptSerial = null;
-                try {
-                    deptSerial = URLDecoder.decode(rawSerial, "UTF-8");
-                } catch (IllegalArgumentException | UnsupportedEncodingException e) {
-                    logger.errTrace(e);
-                    getSerialError = rawSerial;
+        // Parse time query
+        String timeRaw = query.get("time");                   // 時間 [星期)節次~節次_節次_節次...] (星期: 0~6, 節次: 0~15)
+        CourseSearchQuery.TimeQuery[] timeQueries = null;
+        if (timeRaw != null) {
+            List<CourseSearchQuery.TimeQuery> timeQuerieList = new ArrayList<>();
+            boolean[][] timeTable = new boolean[7][];
+            String[] timeArr = simpleSplit(timeRaw, ',');
+            for (String time : timeArr) {
+                int dayOfWeekIndex = time.indexOf(')');
+
+                byte dayOfWeek;
+                boolean allDay = false;
+                boolean noSection = false;
+                if (dayOfWeekIndex != -1 || (noSection = time.indexOf('~') == -1 && time.indexOf('_') == -1)) {
+                    if (noSection)
+                        dayOfWeekIndex = time.length();
+                    try {
+                        int d = Integer.parseInt(time.substring(0, dayOfWeekIndex));
+                        if (d < 0 || d > 6) {
+                            return SearchQuery.newError("'time' Format error: day of week should >= 0 and <= 6.");
+                        }
+                        dayOfWeek = (byte) d;
+                    } catch (NumberFormatException e) {
+                        return SearchQuery.newError("'time' Format error: day of week '" + time.substring(0, dayOfWeekIndex) + "' is not a number.");
+                    }
+                    if (noSection)
+                        Arrays.fill(timeTable[dayOfWeek] = new boolean[16], true);
+                } else {
+                    dayOfWeek = 6;
+                    allDay = true;
                 }
-                if (deptSerial != null) {
-                    serialIdNumber = new HashMap<>();
-                    // Text type
-                    if (deptSerial.indexOf('=') == -1 && deptSerial.indexOf('-') != -1) {
-                        String[] deptSerialArr = simpleSplit(deptSerial, ',');
-                        for (String i : deptSerialArr) {
-                            int index = i.indexOf('-');
+                if (!noSection) {
+                    // Parse section
+                    String sectionOfDayRaw = time.substring(dayOfWeekIndex + 1);
+                    for (int i = allDay ? 0 : dayOfWeek; i <= dayOfWeek; i++) {
+                        boolean[] sections = timeTable[i];
+                        if (sections == null)
+                            sections = timeTable[i] = new boolean[16];
+                        String[] sectionOfDays = simpleSplit(sectionOfDayRaw, '_');
+                        // [section~section, section, section]
+                        for (String section : sectionOfDays) {
+                            int index = section.indexOf('~');
+                            byte sectionStart, sectionEnd;
+                            // Parse section end
+                            try {
+                                int s = Integer.parseInt(section.substring(index + 1));
+                                if (s < 0 || s > 15) {
+                                    return SearchQuery.newError("'time' Format error: section start should >= 0 and <= 15.");
+                                }
+                                sectionEnd = (byte) s;
+                            } catch (NumberFormatException e) {
+                                return SearchQuery.newError("'time' Format error: section start '" + section + "' is not a number.");
+                            }
+                            // Parse section start
                             if (index == -1) {
-                                getSerialError = i;
-                                break;
+                                sectionStart = sectionEnd;
+                            } else {
+                                try {
+                                    int s = Integer.parseInt(section.substring(0, index));
+                                    if (s < 0 || s > 15) {
+                                        return SearchQuery.newError("'time' Format error: section end should >= 0 and <= 15.");
+                                    }
+                                    sectionStart = (byte) s;
+                                } catch (NumberFormatException e) {
+                                    return SearchQuery.newError("'time' Format error: section end '" + section + "' is not a number.");
+                                }
                             }
-                            Set<String> serial = serialIdNumber.computeIfAbsent(i.substring(0, index), k -> new HashSet<>());
-                            serial.add(i.substring(index + 1));
+                            for (int j = sectionStart; j <= sectionEnd; j++)
+                                sections[j] = true;
                         }
                     }
-                    // Form type
-                    else {
-                        for (Map.Entry<String, String> i : parseUrlEncodedForm(deptSerial).entrySet()) {
-                            String serialNumsStr = i.getValue();
-                            if (serialNumsStr == null) {
-                                getSerialError = rawSerial;
-                                break;
-                            }
-                            serialIdNumber.put(i.getKey(), new HashSet<>(simpleSplitToArray(serialNumsStr, ',')));
-                        }
+                }
+            }
+            List<Byte> selectedSections = new ArrayList<>();
+            for (byte i = 0; i < timeTable.length; i++) {
+                boolean[] sections = timeTable[i];
+                if (sections == null)
+                    continue;
+                selectedSections.clear();
+                for (byte j = 0; j < sections.length; j++) {
+                    if (!sections[j])
+                        continue;
+                    selectedSections.add(j);
+                }
+                byte[] b = new byte[selectedSections.size()];
+                for (int j = 0; j < selectedSections.size(); j++)
+                    b[j] = selectedSections.get(j);
+                timeQuerieList.add(new CourseSearchQuery.TimeQuery(i, b));
+            }
+            if (!timeQuerieList.isEmpty())
+                timeQueries = timeQuerieList.toArray(new CourseSearchQuery.TimeQuery[0]);
+        }
+
+        // Normal parameters
+        String courseName = query.get("courseName");          // 課程名稱
+        String instructor = query.get("instructor");          // 教師姓名
+        String grade = query.get("grade");                    // 年級 1 ~ 4
+        // TODO: Check grade valid
+        String dept = query.get("dept");
+
+        return new SearchQuery(courseSearchID,
+                serialIdNumber,
+                historySearch,
+                dept, timeQueries,
+                courseName,
+                instructor,
+                grade
+        );
+    }
+
+    private SearchResult querySearch(SearchQuery searchQuery, CookieStore cookieStore) {
+        // TODO: Support history when get all and serial
+        boolean success;
+        // get all course
+        if (searchQuery.getAll()) {
+            SearchResult result = new SearchResult();
+            AllDeptData allDeptData = getAllDeptData(cookieStore, result);
+            if (allDeptData == null)
+                return result;
+            // start getting dept
+            Progressbar progressbar = Logger.addProgressbar(TAG + " get all");
+            CountDownLatch taskLeft = new CountDownLatch(allDeptData.deptCount);
+            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
+                    Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+            Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
+            // Get cookie fragments
+            AllDeptData[] fragments = new AllDeptData[MULTITHREADING_SEARCH_THREAD_COUNT];
+            CountDownLatch fragmentsLeft = new CountDownLatch(MULTITHREADING_SEARCH_THREAD_COUNT);
+            AtomicBoolean allSuccess = new AtomicBoolean(true);
+            List<CourseData> courseDataList = new ArrayList<>();
+            try {
+                for (int i = 0; i < MULTITHREADING_SEARCH_THREAD_COUNT; i++) {
+                    int finalI = i;
+                    fetchPool.submit(() -> {
+                        fragments[finalI] = getAllDeptData(createCookieStore(), null);
+                        fragmentsLeft.countDown();
+                    });
+                }
+                fragmentsLeft.await();
+
+                // Fetch data
+                int i = 0;
+                for (String dept : allDeptData.allDept) {
+                    fetchPoolLock.acquire();
+                    // If one failed, stop all
+                    if (!allSuccess.get()) {
+                        while (taskLeft.getCount() > 0)
+                            taskLeft.countDown();
+                        break;
                     }
+                    // Switch fragment
+                    AllDeptData fragment = fragments[i++];
+                    if (i == fragments.length)
+                        i = 0;
+                    fetchPool.submit(() -> {
+                        try {
+                            long start = System.currentTimeMillis();
+                            SearchResult deptCourseData = getDeptCourseData(dept, fragment, false);
+                            if (allSuccess.get() && deptCourseData.isSuccess()) {
+                                synchronized (courseDataList) {
+                                    courseDataList.addAll(deptCourseData.courseDataList);
+                                }
+                                progressbar.setProgress(
+                                        Thread.currentThread().getName() + " " + dept + " " + (System.currentTimeMillis() - start) + "ms",
+                                        (float) (allDeptData.deptCount - taskLeft.getCount()) / allDeptData.deptCount * 100f);
+                            } else {
+                                allSuccess.set(false);
+                                // Pass error data
+                                result.passDataTo(deptCourseData);
+                                logger.err(Thread.currentThread().getName() + " " + dept + " failed");
+                            }
+                        } catch (Exception e) {
+                            logger.errTrace(e);
+                            allSuccess.set(false);
+                        }
+                        fetchPoolLock.release();
+                        taskLeft.countDown();
+                    });
                 }
+                taskLeft.await();
+                executorShutdown(fetchPool, 5000, "SearchFetchPool");
+            } catch (InterruptedException e) {
+                logger.errTrace(e);
+                allSuccess.set(false);
             }
-            this.getSerialError = getSerialError;
-            this.serialIdNumber = serialIdNumber;
-
-            // Normal parameters
-            this.deptNo = this.getAll ? null : deptNo;          // 系所 XX
-            this.courseName = query.get("courseName");          // 課程名稱
-            this.instructor = query.get("instructor");          // 教師姓名
-            this.grade = query.get("grade");                    // 年級 1 ~ 4
-            String dayOfWeekQuery = query.get("dayOfWeek");     // 星期 [0 ~ 6]
-            String sectionOfDayQuery = query.get("section");    // 節次 [0 ~ 15]
-
-            byte[] dayOfWeek = null;
-            String dayOfWeekError = null;
-            if (dayOfWeekQuery == null && sectionOfDayQuery != null)
-                dayOfWeek = new byte[]{0, 1, 2, 3, 4, 5, 6};
-            else if (dayOfWeekQuery != null) {
-                String[] dayOfWeekArr = simpleSplit(dayOfWeekQuery, ',');
-                dayOfWeek = new byte[dayOfWeekArr.length];
-                try {
-                    for (int i = 0; i < dayOfWeekArr.length; i++)
-                        dayOfWeek[i] = Byte.parseByte(dayOfWeekArr[i]);
-                } catch (NumberFormatException e) {
-                    dayOfWeekError = "\"dayOfWeek\" formatError";
+            progressbar.setProgress(100f);
+            success = allSuccess.get();
+            result.setSuccess(success);
+            if (success)
+                result.setCourseData(courseDataList);
+            return result;
+        }
+        // Get listed serial or multiple time
+        else if (searchQuery.getSerial() || searchQuery.multipleTime()) {
+            SearchResult result = new SearchResult();
+            List<CourseData> courseDataList = new ArrayList<>();
+            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MULTI_QUERY_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+            Semaphore fetchPoolLock = new Semaphore(MULTI_QUERY_SEARCH_THREAD_COUNT, true);
+            AtomicBoolean allSuccess = new AtomicBoolean(true);
+            CourseSearchQuery[] courseSearchQuery = searchQuery.getSerial()
+                    ? searchQuery.toCourseQueriesSerial()
+                    : searchQuery.toCourseQueriesMultiTime();
+            CountDownLatch taskLeft = new CountDownLatch(courseSearchQuery.length);
+            try {
+                for (CourseSearchQuery query : courseSearchQuery) {
+                    fetchPoolLock.acquire();
+                    // If one failed, stop all
+                    if (!allSuccess.get()) {
+                        while (taskLeft.getCount() > 0)
+                            taskLeft.countDown();
+                        break;
+                    }
+                    fetchPool.submit(() -> {
+                        try {
+                            SearchResult deptCourseData = getQueryCourseData(query, cookieStore);
+                            if (allSuccess.get() && deptCourseData.isSuccess())
+                                synchronized (courseDataList) {
+                                    courseDataList.addAll(deptCourseData.courseDataList);
+                                }
+                            else {
+                                allSuccess.set(false);
+                                // Pass error data
+                                result.passDataTo(deptCourseData);
+                            }
+                        } catch (Exception e) {
+                            logger.errTrace(e);
+                            allSuccess.set(false);
+                        }
+                        fetchPoolLock.release();
+                        taskLeft.countDown();
+                    });
                 }
+                taskLeft.await();
+                executorShutdown(fetchPool, 5000, "SearchFetchPool");
+            } catch (InterruptedException e) {
+                logger.errTrace(e);
+                allSuccess.set(false);
             }
-            this.dayOfWeek = dayOfWeek;
-            this.dayOfWeekError = dayOfWeekError;
-
-            String sectionOfDayError = null;
-            byte[] sectionOfDay = null;
-            if (sectionOfDayQuery != null) {
-                String[] sectionOfDayArr = simpleSplit(sectionOfDayQuery, ',');
-                sectionOfDay = new byte[sectionOfDayArr.length];
-                try {
-                    for (int i = 0; i < sectionOfDay.length; i++)
-                        sectionOfDay[i] = Byte.parseByte(sectionOfDayArr[i]);
-                } catch (NumberFormatException e) {
-                    sectionOfDayError = "\"sectionOfDay\" formatError";
-                }
-            }
-            this.sectionOfDay = sectionOfDay;
-            this.sectionOfDayError = sectionOfDayError;
+            success = allSuccess.get();
+            result.setSuccess(success);
+            if (success)
+                result.setCourseData(courseDataList);
+            return result;
         }
-
-        boolean noQuery() {
-            return !getAll &&
-                    !getSerial &&
-                    deptNo == null &&
-                    courseName == null &&
-                    instructor == null &&
-                    grade == null &&
-                    dayOfWeek == null &&
-                    sectionOfDay == null;
-        }
-
-        public boolean serialNumberEmpty() {
-            return getSerial && serialIdNumber != null && serialIdNumber.isEmpty();
-        }
-
-        public boolean serialNumberInvalid() {
-            return getSerial && getSerialError != null;
-        }
-
-        public boolean dayOfWeekError() {
-            return dayOfWeekError != null;
-        }
-
-        public boolean sectionOfDayError() {
-            return sectionOfDayError != null;
-        }
-
-        public boolean historySearchInvalid() {
-            return historySearch && yearBegin == -1;
-        }
-    }
-
-    public static class CourseData {
-        private final String semester;
-        private final String departmentName; // Can be null
-        private final String serialNumber; // Can be null
-        private final String courseAttributeCode;
-        private final String courseSystemNumber;
-        private final Integer forGrade;  // Can be null
-        private final String forClass; // Can be null
-        private final String group;  // Can be null
-        private final String category;
-        private final String courseName;
-        private final String courseNote; // Can be null
-        private final String courseLimit; // Can be null
-        private final TagData[] tags; // Can be null
-        private final Float credits; // Can be null
-        private final Boolean required; // Can be null
-        private final String[] instructors; // Can be null
-        private final Integer selected; // Can be null
-        private final Integer available; // Can be null
-        private final TimeData[] timeList; // Can be null
-        private final String moodle; // Can be null
-        private final String btnPreferenceEnter; // Can be null
-        private final String btnAddCourse; // Can be null
-        private final String btnPreRegister; // Can be null
-        private final String btnAddRequest; // Can be null
-
-        public CourseData(String semester,
-                          String departmentName,
-                          String serialNumber, String courseAttributeCode, String courseSystemNumber,
-                          Integer forGrade, String forClass, String group,
-                          String category,
-                          String courseName, String courseNote, String courseLimit, TagData[] tags,
-                          Float credits, Boolean required,
-                          String[] instructors,
-                          Integer selected, Integer available,
-                          TimeData[] timeList,
-                          String moodle,
-                          String btnPreferenceEnter, String btnAddCourse, String btnPreRegister, String btnAddRequest) {
-            this.semester = semester;
-            this.departmentName = departmentName;
-            this.serialNumber = serialNumber;
-            this.courseAttributeCode = courseAttributeCode;
-            this.courseSystemNumber = courseSystemNumber;
-            this.forGrade = forGrade;
-            this.forClass = forClass;
-            this.group = group;
-            this.category = category;
-            this.courseName = courseName;
-            this.courseNote = courseNote;
-            this.courseLimit = courseLimit;
-            this.tags = tags;
-            this.credits = credits;
-            this.required = required;
-            this.instructors = instructors;
-            this.selected = selected;
-            this.available = available;
-            this.timeList = timeList;
-            this.moodle = moodle;
-            this.btnPreferenceEnter = btnPreferenceEnter;
-            this.btnAddCourse = btnAddCourse;
-            this.btnPreRegister = btnPreRegister;
-            this.btnAddRequest = btnAddRequest;
-        }
-
-        private static class TagData {
-            final String tag;
-            final String url; // Can be null
-            final String colorID;
-
-            public TagData(String tag, String colorID, String url) {
-                this.tag = tag;
-                this.url = url;
-                this.colorID = colorID;
-            }
-
-            @Override
-            public String toString() {
-                if (url == null)
-                    return tag + ',' + colorID + ',';
-                return tag + ',' + colorID + ',' + url;
-            }
-        }
-
-        private static class TimeData {
-            final Byte dayOfWeek; // Can be null, [0 ~ 6]
-            final Byte sectionStart; // Can be null, [0 ~ 15]
-            final Byte sectionEnd; // Can be null, [0 ~ 15]
-            final String mapLocation; // Can be null
-            final String mapRoomNo; // Can be null
-            final String mapRoomName; // Can be null
-            // Detailed time data
-            final String detailedTimeData; // Can be null
-
-            public TimeData(Byte dayOfWeek, Byte sectionStart, Byte sectionEnd,
-                            String mapLocation, String mapRoomNo, String mapRoomName) {
-                this.dayOfWeek = dayOfWeek;
-                this.sectionStart = sectionStart;
-                this.sectionEnd = sectionEnd;
-                this.mapLocation = mapLocation;
-                this.mapRoomNo = mapRoomNo;
-                this.mapRoomName = mapRoomName;
-                this.detailedTimeData = null;
-            }
-
-            public TimeData(String detailedTimeData) {
-                this.dayOfWeek = null;
-                this.sectionStart = null;
-                this.sectionEnd = null;
-                this.mapLocation = null;
-                this.mapRoomNo = null;
-                this.mapRoomName = null;
-                this.detailedTimeData = detailedTimeData;
-            }
-
-            @Override
-            public String toString() {
-                if (detailedTimeData != null)
-                    return detailedTimeData;
-
-                StringBuilder builder = new StringBuilder();
-                if (dayOfWeek != null) builder.append(dayOfWeek);
-                builder.append(',');
-                if (sectionStart != null) builder.append(sectionStart);
-                builder.append(',');
-                if (sectionEnd != null) builder.append(sectionEnd);
-                builder.append(',');
-                if (mapLocation != null) builder.append(mapLocation);
-                builder.append(',');
-                if (mapRoomNo != null) builder.append(mapRoomNo);
-                builder.append(',');
-                if (mapRoomName != null) builder.append(mapRoomName);
-                return builder.toString();
-            }
-        }
-
-        private JsonArrayStringBuilder toJsonArray(Object[] array) {
-            if (array == null) return null;
-            JsonArrayStringBuilder builder = new JsonArrayStringBuilder();
-            for (Object i : array)
-                builder.append(i.toString());
-            return builder;
-        }
-
-        @Override
-        public String toString() {
-            // output
-            JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
-            jsonBuilder.append("y", semester);
-            jsonBuilder.append("dn", departmentName);
-
-            jsonBuilder.append("sn", serialNumber);
-            jsonBuilder.append("ca", courseAttributeCode);
-            jsonBuilder.append("cs", courseSystemNumber);
-
-            if (forGrade == null) jsonBuilder.append("g");
-            else jsonBuilder.append("g", forGrade);
-            jsonBuilder.append("co", forClass);
-            jsonBuilder.append("cg", group);
-
-            jsonBuilder.append("ct", category);
-
-            jsonBuilder.append("cn", courseName);
-            jsonBuilder.append("ci", courseNote);
-            jsonBuilder.append("cl", courseLimit);
-            jsonBuilder.append("tg", toJsonArray(tags));
-
-            if (credits == null) jsonBuilder.append("c");
-            else jsonBuilder.append("c", credits);
-            if (required == null) jsonBuilder.append("r");
-            else jsonBuilder.append("r", required);
-
-            jsonBuilder.append("i", toJsonArray(instructors));
-
-            if (selected == null) jsonBuilder.append("s");
-            else jsonBuilder.append("s", selected);
-            if (available == null) jsonBuilder.append("a");
-            else jsonBuilder.append("a", available);
-
-            jsonBuilder.append("t", toJsonArray(timeList));
-            jsonBuilder.append("m", moodle);
-            jsonBuilder.append("pe", btnPreferenceEnter);
-            jsonBuilder.append("ac", btnAddCourse);
-            jsonBuilder.append("pr", btnPreRegister);
-            jsonBuilder.append("ar", btnAddRequest);
-            return jsonBuilder.toString();
-        }
-
-        public String getSerialNumber() {
-            return serialNumber;
-        }
-
-        public String getGroup() {
-            return group;
-        }
-
-        public String getForClass() {
-            return forClass;
-        }
-
-        public String getBtnAddCourse() {
-            return btnAddCourse;
-        }
-
-        public String getBtnPreRegister() {
-            return btnPreRegister;
-        }
-
-        public String getBtnAddRequest() {
-            return btnAddRequest;
-        }
-
-        public String getTimeString() {
-            if (timeList == null)
-                return null;
-
-            StringBuilder builder = new StringBuilder();
-            for (TimeData i : timeList) {
-                if (i.detailedTimeData != null || i.dayOfWeek == null) continue;
-                if (builder.length() > 0)
-                    builder.append(',');
-
-                builder.append('[').append(i.dayOfWeek + 1).append(']');
-                if (i.sectionStart != null) {
-                    if (i.sectionEnd != null)
-                        builder.append(i.sectionStart).append('~').append(i.sectionEnd);
-                    else
-                        builder.append(i.sectionStart);
-                }
-            }
-            return builder.toString();
-        }
-
-        public String getCourseName() {
-            return courseName;
-        }
-
-        public Integer getSelected() {
-            return selected;
-        }
-
-        public Integer getAvailable() {
-            return available;
-        }
-    }
-
-    public static class SaveQueryToken {
-        private final URI urlOrigin;
-        private final String search;
-        private final CookieStore cookieStore;
-
-        public SaveQueryToken(URI urlOrigin, String search, CookieStore cookieStore) {
-            this.urlOrigin = urlOrigin;
-            this.search = search;
-            this.cookieStore = cookieStore;
-        }
-
-        public String getUrl() {
-            return urlOrigin + "/index.php?c=qry11215" + search;
+        // Normal Search
+        else {
+            return getQueryCourseData(searchQuery.toCourseQuery(), cookieStore);
         }
     }
 
@@ -745,6 +555,22 @@ public class Search implements EndpointModule {
         }
     }
 
+    public static class SaveQueryToken {
+        private final URI urlOrigin;
+        private final String search;
+        private final CookieStore cookieStore;
+
+        public SaveQueryToken(URI urlOrigin, String search, CookieStore cookieStore) {
+            this.urlOrigin = urlOrigin;
+            this.search = search;
+            this.cookieStore = cookieStore;
+        }
+
+        public String getUrl() {
+            return urlOrigin + "/index.php?c=qry11215" + search;
+        }
+    }
+
     public static class DeptToken {
         private final String urlEncodedId;
         private final CookieStore cookieStore;
@@ -769,139 +595,62 @@ public class Search implements EndpointModule {
         }
     }
 
-    private void search(SearchQuery searchQuery, ApiResponse response, CookieStore cookieStore) {
-        try {
-            boolean success;
-            // get all course
-            if (searchQuery.getAll) {
-                ProgressBar progressBar = new ProgressBar(TAG + "Get All ");
-                Logger.addProgressBar(progressBar);
-                progressBar.setProgress(0f);
-                AllDeptData allDeptData = getAllDeptData(cookieStore, response);
-                if (allDeptData == null) {
-                    success = false;
-                }
-                // start getting dept
-                else {
-                    CountDownLatch taskLeft = new CountDownLatch(allDeptData.deptCount);
-                    ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
-                            Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
-                    Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
-                    // Get cookie fragments
-                    AllDeptData[] fragments = new AllDeptData[MULTITHREADING_SEARCH_THREAD_COUNT];
-                    CountDownLatch fragmentsLeft = new CountDownLatch(MULTITHREADING_SEARCH_THREAD_COUNT);
-                    for (int i = 0; i < MULTITHREADING_SEARCH_THREAD_COUNT; i++) {
-                        int finalI = i;
-                        fetchPool.submit(() -> {
-                            fragments[finalI] = getAllDeptData(createCookieStore(), null);
-                            fragmentsLeft.countDown();
-                        });
-                    }
-                    fragmentsLeft.await();
+    public static class SearchResult {
+        private List<CourseData> courseDataList = new ArrayList<>();
+        private boolean success = true;
+        private CourseSearchID searchID;
+        private String parseError, fetchError;
 
-                    // Fetch data
-                    int i = 0;
-                    List<CourseData> courseDataList = new ArrayList<>();
-                    AtomicBoolean allSuccess = new AtomicBoolean(true);
-                    for (String dept : allDeptData.allDept) {
-                        fetchPoolLock.acquire();
-                        // If one failed, stop all
-                        if (!allSuccess.get()) {
-                            while (taskLeft.getCount() > 0)
-                                taskLeft.countDown();
-                            break;
-                        }
-                        // Switch fragment
-                        AllDeptData fragment = fragments[i++];
-                        if (i == fragments.length)
-                            i = 0;
-                        fetchPool.submit(() -> {
-                            try {
-                                long start = System.currentTimeMillis();
-                                if (allSuccess.get() && !getDeptCourseData(dept, fragment, false, response, courseDataList))
-                                    allSuccess.set(false);
-                                logger.log(Thread.currentThread().getName() + " " + dept + " done, " + (System.currentTimeMillis() - start) + "ms");
-                            } catch (Exception e) {
-                                logger.errTrace(e);
-                            }
-                            fetchPoolLock.release();
-                            taskLeft.countDown();
-                            progressBar.setProgress((float) (allDeptData.deptCount - taskLeft.getCount()) / allDeptData.deptCount * 100f);
-                        });
-                    }
-                    taskLeft.await();
-                    executorShutdown(fetchPool, 5000, "SearchFetchPool");
-                    success = allSuccess.get();
-                    if (success)
-                        response.setData(courseDataList.toString());
-                }
-                progressBar.setProgress(100f);
-                Logger.removeProgressBar(progressBar);
-            }
-            // get listed serial
-            else if (searchQuery.getSerial) {
-                assert searchQuery.serialIdNumber != null;
-                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
-                CountDownLatch taskLeft = new CountDownLatch(searchQuery.serialIdNumber.size());
-                Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
+        public void setCourseData(List<CourseData> courseDataList) {
+            this.courseDataList = courseDataList;
+        }
 
-                List<CourseData> courseDataList = new ArrayList<>();
-                AtomicBoolean allSuccess = new AtomicBoolean(true);
-                for (Map.Entry<String, Set<String>> i : searchQuery.serialIdNumber.entrySet()) {
-                    fetchPoolLock.acquire();
-                    fetchPool.submit(() -> {
-                        SearchQuery finalSearchQuery = new SearchQuery(searchQuery);
-                        List<CourseData> eachCourseDataList = new ArrayList<>();
-                        finalSearchQuery.deptNo = i.getKey();
-                        if (allSuccess.get() && !getQueryCourseData(finalSearchQuery, i.getValue(), cookieStore, response, eachCourseDataList)) {
-                            allSuccess.set(false);
-                        }
-                        courseDataList.addAll(eachCourseDataList);
-                        fetchPoolLock.release();
-                        taskLeft.countDown();
-                    });
-                }
-                taskLeft.await();
-                executorShutdown(fetchPool, 5000, "SearchFetchPool");
-                success = allSuccess.get();
-                if (success)
-                    response.setData(courseDataList.toString());
-            } else if (searchQuery.dayOfWeek != null && searchQuery.dayOfWeek.length > 1) {
-                final int threadCount = 2;
-                ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount, new ThreadFactory("SearchT-"));
-                CountDownLatch taskLeft = new CountDownLatch(searchQuery.dayOfWeek.length);
-                Semaphore fetchPoolLock = new Semaphore(threadCount, true);
-                AtomicBoolean allSuccess = new AtomicBoolean(true);
+        public void setSuccess(boolean success) {
+            this.success = success;
+        }
 
-                List<CourseData> courseDataList = new CopyOnWriteArrayList<>();
-                for (int i = 0; i < searchQuery.dayOfWeek.length; i++) {
-                    fetchPoolLock.acquire();
-                    final int finalI = i;
-                    fetchPool.submit(() -> {
-                        List<CourseData> eachCourseDataList = new ArrayList<>();
-                        if (allSuccess.get() && !getQueryCourseData(searchQuery, null, finalI, cookieStore, response, eachCourseDataList)) {
-                            allSuccess.set(false);
-                        }
-                        courseDataList.addAll(eachCourseDataList);
-                        fetchPoolLock.release();
-                        taskLeft.countDown();
-                    });
-                }
-                taskLeft.await();
-                executorShutdown(fetchPool, 5000, "SearchFetchPool");
-                success = allSuccess.get();
-                if (success)
-                    response.setData(courseDataList.toString());
-            } else {
-                List<CourseData> courseDataList = new ArrayList<>();
-                success = getQueryCourseData(searchQuery, null, cookieStore, response, courseDataList);
-                response.setData(courseDataList.toString());
-            }
+        public boolean isSuccess() {
+            return success;
+        }
 
-            response.setSuccess(success);
-        } catch (Exception e) {
-            logger.errTrace(e);
-            response.errorParse(e.getMessage());
+        public void setSearchID(CourseSearchID searchID) {
+            this.searchID = searchID;
+        }
+
+        public CourseSearchID getSearchID() {
+            return searchID;
+        }
+
+        public void errorParse(String message) {
+            if (this.parseError == null)
+                this.parseError = message;
+        }
+
+        public void errorFetch(String message) {
+            if (this.fetchError == null)
+                this.fetchError = message;
+        }
+
+        public void passDataTo(ApiResponse apiResponse) {
+            if (this.parseError != null)
+                apiResponse.errorParse(this.parseError);
+            if (this.fetchError != null)
+                apiResponse.errorFetch(this.fetchError);
+            if (success)
+                apiResponse.setData(courseDataList.toString());
+        }
+
+        public void passDataTo(SearchResult result) {
+            if (this.parseError == null)
+                this.parseError = result.parseError;
+            if (this.fetchError == null)
+                this.fetchError = result.fetchError;
+            if (!result.success)
+                success = false;
+        }
+
+        public List<CourseData> getCourseDataList() {
+            return courseDataList;
         }
     }
 
@@ -928,17 +677,7 @@ public class Search implements EndpointModule {
         return cookieStore;
     }
 
-    public static String getSearchIdCookieValue(SearchQuery searchQuery) {
-        if (searchQuery.searchID == null && searchQuery.historySearchID == null)
-            return "|";
-        if (searchQuery.searchID == null)
-            return '|' + searchQuery.historySearchID;
-        if (searchQuery.historySearchID == null)
-            return searchQuery.searchID + '|';
-        return searchQuery.searchID + '|' + searchQuery.historySearchID;
-    }
-
-    public AllDeptData getAllDeptData(CookieStore cookieStore, ApiResponse response) {
+    public AllDeptData getAllDeptData(CookieStore cookieStore, SearchResult result) {
         Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
@@ -948,13 +687,12 @@ public class Search implements EndpointModule {
                 .timeout(5000);
         HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
         if (!httpResponseData.isSuccess()) {
-            if (response != null)
-                response.errorFetch("Failed to fetch all dept data");
+            result.errorFetch("Failed to fetch all dept data");
             return null;
         }
         String body = httpResponseData.data;
 
-        cosPreCheck(courseNckuOrg, body, cookieStore, response, proxyManager);
+        cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
 
         Set<String> allDept = new HashSet<>();
         for (Element element : Jsoup.parse(body).getElementsByClass("pnl_dept"))
@@ -965,8 +703,7 @@ public class Search implements EndpointModule {
                 (cryptStart = body.indexOf('\'', cryptStart + 7)) == -1 ||
                 (cryptEnd = body.indexOf('\'', ++cryptStart)) == -1
         ) {
-            if (response != null)
-                response.errorParse("Get all dept \"crypt\" data not found");
+            result.errorParse("Get all dept 'crypt' data not found");
             return null;
         }
         return new AllDeptData(body.substring(cryptStart, cryptEnd), allDept, cookieStore);
@@ -1011,27 +748,26 @@ public class Search implements EndpointModule {
         return new AllDeptGroupData(groups, total);
     }
 
-    public boolean getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache,
-                                     ApiResponse response, List<CourseData> courseDataList) {
-        DeptToken deptToken = createDeptToken(deptNo, allDeptData, response);
-        if (deptToken == null)
-            return false;
-
-        return getDeptCourseData(deptToken, addUrSchoolCache,
-                response, courseDataList);
+    public SearchResult getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache) {
+        SearchResult result = new SearchResult();
+        DeptToken deptToken = createDeptToken(deptNo, allDeptData, result);
+        if (deptToken == null) {
+            result.setSuccess(false);
+            return result;
+        }
+        result.setSuccess(getDeptCourseData(deptToken, addUrSchoolCache, result));
+        return result;
     }
 
-    public boolean getDeptCourseData(DeptToken deptToken, boolean addUrSchoolCache,
-                                     @Nullable ApiResponse response, List<CourseData> courseDataList) {
+    public boolean getDeptCourseData(DeptToken deptToken, boolean addUrSchoolCache, SearchResult result) {
         HttpResponseData searchResult = getDeptNCKU(deptToken);
         if (!searchResult.isSuccess()) {
-            if (response != null)
-                response.errorFetch("Failed to fetch dept search result: " + deptToken.deptNo);
+            result.errorFetch("Failed to fetch dept search result: " + deptToken.deptNo);
             return false;
         }
         String searchResultBody = searchResult.data;
 
-        Element table = findCourseTable(searchResultBody, "Dept.No " + deptToken.deptNo, response);
+        Element table = findCourseTable(searchResultBody, "Dept " + deptToken.deptNo, result);
         if (table == null) {
             return false;
         }
@@ -1042,12 +778,12 @@ public class Search implements EndpointModule {
                 null,
                 addUrSchoolCache,
                 false,
-                courseDataList
+                result
         );
         return true;
     }
 
-    public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData, ApiResponse response) {
+    public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData, SearchResult result) {
         try {
             Connection.Response res = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all&m=result_init")
                     .header("Connection", "keep-alive")
@@ -1064,14 +800,12 @@ public class Search implements EndpointModule {
             String error = idData.getString("err");
 
             if (!error.isEmpty()) {
-                if (response != null)
-                    response.errorFetch("Create dept token failed: " + error);
+                result.errorFetch("Create dept token failed: " + error);
                 return null;
             }
             String id = idData.getString("id");
             if (id == null || id.isEmpty()) {
-                if (response != null)
-                    response.errorFetch("Create dept token failed: id not found");
+                result.errorFetch("Create dept token failed: id not found");
                 return null;
             }
 
@@ -1082,17 +816,14 @@ public class Search implements EndpointModule {
             );
         } catch (JsonException e) {
             logger.errTrace(e);
-            if (response != null)
-                response.errorParse("Response Json parse error: " + e.getMessage());
+            result.errorParse("Response Json parse error: " + e.getMessage());
             return null;
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);
-            if (response != null)
-                response.errorParse("Unsupported encoding");
             return null;
         } catch (IOException e) {
-            if (response != null)
-                response.errorNetwork(e);
+            logger.errTrace(e);
+            result.errorFetch("Network error when creating dept token");
             return null;
         }
     }
@@ -1115,51 +846,46 @@ public class Search implements EndpointModule {
         return httpResponseData;
     }
 
-    public boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum,
-                                      CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
-        return getQueryCourseData(searchQuery, getSerialNum, 0, cookieStore, response, courseDataList);
-    }
-
-    private boolean getQueryCourseData(SearchQuery searchQuery, Set<String> getSerialNum, int dayOfWeekIndex,
-                                       CookieStore cookieStore, ApiResponse response, List<CourseData> courseDataList) {
+    private SearchResult getQueryCourseData(CourseSearchQuery searchQuery, CookieStore cookieStore) {
+        SearchResult result = new SearchResult();
         // Create save query token
-        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, dayOfWeekIndex, cookieStore, response);
-        if (saveQueryToken == null)
-            return false;
-
-        return getQueryCourseData(searchQuery, saveQueryToken, getSerialNum, response, courseDataList);
+        SaveQueryToken saveQueryToken = createSaveQueryToken(searchQuery, cookieStore, result);
+        if (saveQueryToken == null) {
+            result.setSuccess(false);
+            return result;
+        }
+        result.setSuccess(getQueryCourseData(searchQuery, saveQueryToken, result));
+        return result;
     }
 
-    public boolean getQueryCourseData(SearchQuery searchQuery, SaveQueryToken saveQueryToken, Set<String> getSerialNum,
-                                      @Nullable ApiResponse response, List<CourseData> courseDataList) {
+    public boolean getQueryCourseData(CourseSearchQuery searchQuery, SaveQueryToken saveQueryToken,
+                                      SearchResult result) {
         // Get search result
         HttpResponseData searchResult = getCourseNCKU(saveQueryToken);
         if (!searchResult.isSuccess()) {
-            if (response != null)
-                response.errorFetch("Failed to fetch course search result");
+            result.errorFetch("Failed to fetch course search result");
             return false;
         }
         String searchResultBody = searchResult.data;
 
         // Get searchID
-        String searchID = getSearchID(searchResultBody, response);
+        String searchID = getSearchID(searchResultBody, result);
         if (searchID == null) {
             return false;
         }
 
         // Renew searchID
-        if (searchQuery.historySearch) {
+        if (searchQuery.historySearch()) {
             String PHPSESSID = Cookie.getCookie("PHPSESSID", saveQueryToken.urlOrigin, saveQueryToken.cookieStore);
             if (PHPSESSID == null) {
-                if (response != null)
-                    response.errorParse("Cookie historySearch \"PHPSESSID\" not found");
+                result.errorParse("Cookie historySearch 'PHPSESSID' not found");
                 return false;
             }
-            searchQuery.historySearchID = searchID + ',' + PHPSESSID;
+            result.setSearchID(new CourseSearchID(searchID, PHPSESSID));
         } else
-            searchQuery.searchID = searchID;
+            result.setSearchID(new CourseSearchID(searchID));
 
-        Element table = findCourseTable(searchResultBody, "Query", response);
+        Element table = findCourseTable(searchResultBody, "Query", result);
         if (table == null) {
             return false;
         }
@@ -1167,26 +893,26 @@ public class Search implements EndpointModule {
         parseCourseTable(
                 table,
                 searchResultBody,
-                getSerialNum,
+                searchQuery.serialFilter,
                 true,
-                searchQuery.historySearch,
-                courseDataList
+                searchQuery.historySearch(),
+                result
         );
 
         return true;
     }
 
-    public SaveQueryToken createSaveQueryToken(SearchQuery searchQuery, int dayOfWeekIndex, CookieStore cookieStore, ApiResponse response) {
+    public SaveQueryToken createSaveQueryToken(CourseSearchQuery searchQuery, CookieStore cookieStore, SearchResult result) {
         StringBuilder postData = new StringBuilder();
         URI urlOrigin;
         CookieStore postCookieStore;
         // Build query
         try {
-            if (searchQuery.historySearch) {
+            if (searchQuery.historySearch()) {
                 urlOrigin = courseQueryNckuOrgUri;
                 postCookieStore = new CookieManager().getCookieStore();
 
-                if (searchQuery.historySearchID == null) {
+                if (searchQuery.searchID.historySearchID == null) {
 //                    logger.log("Renew search id");
 //                    Connection request = HttpConnection.connect(courseQueryNckuOrg + "/index.php?c=qry11215&m=en_query")
 //                            .header("Connection", "keep-alive")
@@ -1213,22 +939,16 @@ public class Search implements EndpointModule {
 //                    searchQuery.histroySearchID = searchID + ',' + PHPSESSID;
                     postData.append("id=");
                 } else {
-                    // searchID: "searchID,PHPSESSID"
-                    int split = searchQuery.historySearchID.indexOf(',');
-                    if (split == -1) {
-                        if (response != null)
-                            response.errorCookie("Cookie \"searchID\" format error");
-                        return null;
-                    }
-                    postData.append("id=").append(searchQuery.historySearchID, 0, split);
-                    postCookieStore.add(courseQueryNckuOrgUri, createHttpCookie("PHPSESSID", searchQuery.historySearchID.substring(split + 1), courseQueryNcku));
+                    postData.append("id=").append(searchQuery.searchID.historySearchID);
+                    postCookieStore.add(courseQueryNckuOrgUri, createHttpCookie("PHPSESSID", searchQuery.searchID.historySearchPHPSESSID, courseQueryNcku));
                 }
 
                 // Write post data
-                postData.append("&syear_b=").append(searchQuery.yearBegin);
-                postData.append("&syear_e=").append(searchQuery.yearEnd);
-                postData.append("&sem_b=").append(searchQuery.semBegin);
-                postData.append("&sem_e=").append(searchQuery.semEnd);
+                postData.append("&syear_b=").append(searchQuery.historySearch.yearBegin);
+                postData.append("&syear_e=").append(searchQuery.historySearch.yearEnd);
+                postData.append("&sem_b=").append(searchQuery.historySearch.semBegin);
+                postData.append("&sem_e=").append(searchQuery.historySearch.semEnd);
+
                 if (searchQuery.courseName != null)
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
                 if (searchQuery.instructor != null)
@@ -1285,7 +1005,7 @@ public class Search implements EndpointModule {
                 urlOrigin = courseNckuOrgUri;
                 postCookieStore = cookieStore;
 //                // Get searchID if it's null
-//                if (searchQuery.searchID == null) {
+//                if (searchQuery.searchID.searchID == null) {
 //                    logger.log("Renew search id");
 //
 //                    Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
@@ -1306,29 +1026,27 @@ public class Search implements EndpointModule {
 
                 // Write post data
                 postData.append("id=");
-                if (searchQuery.searchID != null) postData.append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+                if (searchQuery.searchID != null) postData.append(URLEncoder.encode(searchQuery.searchID.searchID, "UTF-8"));
                 if (searchQuery.courseName != null)
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
                 if (searchQuery.instructor != null)
                     postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
-                if (searchQuery.dayOfWeek != null)
-                    postData.append("&wk=").append(searchQuery.dayOfWeek[dayOfWeekIndex] + 1);
+                if (searchQuery.time != null) {
+                    postData.append("&wk=").append(searchQuery.time.dayOfWeek + 1);
+                    if (searchQuery.time.sectionOfDay != null) {
+                        StringBuilder b = new StringBuilder();
+                        for (byte i : searchQuery.time.sectionOfDay) {
+                            if (b.length() > 0) b.append("%2C");
+                            b.append(i + 1);
+                        }
+                        postData.append("&cl=").append(b);
+                    }
+                }
                 if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
                 if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
-                if (searchQuery.sectionOfDay != null) {
-                    StringBuilder b = new StringBuilder();
-                    for (byte i : searchQuery.sectionOfDay) {
-                        if (b.length() > 0)
-                            b.append("%2C");
-                        b.append(i + 1);
-                    }
-                    postData.append("&cl=").append(b);
-                }
             }
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);
-            if (response != null)
-                response.errorParse("Unsupported encoding");
             return null;
         }
 
@@ -1350,8 +1068,7 @@ public class Search implements EndpointModule {
             body = request.execute().body();
         } catch (IOException e) {
             logger.errTrace(e);
-            if (response != null)
-                response.errorNetwork(e);
+            result.errorFetch("Network error when creating query token");
             return null;
         }
 
@@ -1360,23 +1077,19 @@ public class Search implements EndpointModule {
 //            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
 
         if (body.equals("0")) {
-            if (response != null)
-                response.errorParse("Condition not set");
+            result.errorParse("Condition not set");
             return null;
         }
         if (body.equals("1")) {
-            if (response != null)
-                response.errorParse("Wrong condition format");
+            result.errorParse("Wrong condition format");
             return null;
         }
         if (body.equals("&m=en_query")) {
-            if (response != null)
-                response.errorParse("Can not create save query");
+            result.errorParse("Can not create save query");
             return null;
         }
         if (!enQuery) {
-            if (response != null)
-                response.errorNetwork("Course NCKU Error");
+            result.errorFetch("Unknown error");
             return null;
         }
         return new SaveQueryToken(urlOrigin, body, postCookieStore);
@@ -1440,11 +1153,10 @@ public class Search implements EndpointModule {
         });
     }
 
-    private Element findCourseTable(String html, String errorPrefix, @Nullable ApiResponse response) {
+    private Element findCourseTable(String html, String errorPrefix, SearchResult result) {
         int resultTableStart;
         if ((resultTableStart = html.indexOf("<table")) == -1) {
-            if (response != null)
-                response.errorParse(errorPrefix + " result table not found");
+            result.errorParse(errorPrefix + " result table not found");
             return null;
         }
         // get table body
@@ -1452,8 +1164,7 @@ public class Search implements EndpointModule {
         if ((resultTableBodyStart = html.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
                 (resultTableBodyEnd = html.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
         ) {
-            if (response != null)
-                response.errorParse(errorPrefix + " result table body not found");
+            result.errorParse(errorPrefix + " result table body not found");
             return null;
         }
 
@@ -1464,14 +1175,15 @@ public class Search implements EndpointModule {
     }
 
     /**
-     * @param tbody            Input: Course data table
-     * @param searchResultBody Input: Full document for finding style
-     * @param getSerialNumber  Serial number filter
-     * @param addUrSchoolCache True for adding UrSchool cache
-     * @param historySearch    Have to add offset if search course history
-     * @param courseDataList   Output: To course data list
+     * @param tbody              Input: Course data table
+     * @param searchResultBody   Input: Full document for finding style
+     * @param serialNumberFilter Serial number filter
+     * @param addUrSchoolCache   True for adding UrSchool cache
+     * @param historySearch      Add col offset if search course history
+     * @param result             Output: Search result
      */
-    private void parseCourseTable(Element tbody, String searchResultBody, Set<String> getSerialNumber, boolean addUrSchoolCache, boolean historySearch, List<CourseData> courseDataList) {
+    private void parseCourseTable(Element tbody, String searchResultBody,
+                                  Set<String> serialNumberFilter, boolean addUrSchoolCache, boolean historySearch, SearchResult result) {
         List<Map.Entry<String, Boolean>> styles = new ArrayList<>();
         // Find style section
         int styleStart, styleEnd = 0;
@@ -1535,10 +1247,10 @@ public class Search implements EndpointModule {
             // get serial number
             List<Node> section1 = section.get(sectionOffset + 1).childNodes();
             String serialNumber = ((Element) section1.get(0)).ownText().trim();
-            if (getSerialNumber != null) {
+            if (serialNumberFilter != null) {
                 String serialNumberStr = serialNumber.substring(serialNumber.indexOf('-') + 1);
                 // Skip if we don't want
-                if (!getSerialNumber.contains(serialNumberStr))
+                if (!serialNumberFilter.contains(serialNumberStr))
                     continue;
             }
             // Get serial number
@@ -1817,7 +1529,7 @@ public class Search implements EndpointModule {
                     courseData_timeList,
                     courseData_moodle,
                     courseData_btnPreferenceEnter, courseData_btnAddCourse, courseData_btnPreRegister, courseData_btnAddRequest);
-            courseDataList.add(courseData);
+            result.courseDataList.add(courseData);
         }
 
         // Add urSchool cache
@@ -1828,12 +1540,11 @@ public class Search implements EndpointModule {
         }
     }
 
-    private String getSearchID(String body, ApiResponse response) {
+    private String getSearchID(String body, SearchResult result) {
         // get entry function
         int searchFunctionStart = body.indexOf("function setdata()");
         if (searchFunctionStart == -1) {
-            if (response != null)
-                response.errorParse("Search function not found");
+            result.errorParse("Search id function not found");
             return null;
         } else searchFunctionStart += 18;
 
@@ -1842,8 +1553,7 @@ public class Search implements EndpointModule {
                 (idStart = body.indexOf('\'', idStart + 4)) == -1 ||
                 (idEnd = body.indexOf('\'', idStart + 1)) == -1
         ) {
-            if (response != null)
-                response.errorParse("Search id not found");
+            result.errorParse("Search id not found");
             return null;
         }
         return body.substring(idStart + 1, idEnd);
@@ -1856,13 +1566,10 @@ public class Search implements EndpointModule {
             try {
                 response = request.execute().body();
                 networkError = false;
-            } catch (SocketTimeoutException e) {
+            } catch (UncheckedIOException | IOException e) {
                 networkError = true;
-                logger.warn("CheckRobot timeout retry");
+                logger.warn("Fetch page failed retry: " + e.getClass().getName() + ": " + e.getMessage());
                 continue;
-            } catch (IOException | UncheckedIOException e) {
-                logger.errTrace(e);
-                return new HttpResponseData(ResponseState.NETWORK_ERROR);
             }
 
             // Check if no robot

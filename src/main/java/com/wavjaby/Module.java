@@ -1,9 +1,15 @@
 package com.wavjaby;
 
 public interface Module {
-    void start();
+    default void start() {
+    }
 
-    void stop();
+    default void stop() {
+    }
+
+    default boolean api() {
+        return true;
+    }
 
     String getTag();
 }

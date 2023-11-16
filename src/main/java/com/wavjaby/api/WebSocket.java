@@ -1,14 +1,21 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.websocket.httpServer.HttpSocketServer;
 import com.wavjaby.websocket.httpServer.SocketServerClient;
 import com.wavjaby.websocket.httpServer.SocketServerEvent;
 
-public class WebSocket implements EndpointModule, SocketServerEvent {
-    private static final String TAG = "[WebSocket]";
+
+@RequestMapping("/api/v0")
+public class WebSocket implements Module, SocketServerEvent {
+    private static final String TAG = "WebSocket";
     private static final Logger logger = new Logger(TAG);
     private HttpSocketServer server;
 
@@ -27,16 +34,14 @@ public class WebSocket implements EndpointModule, SocketServerEvent {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/socket")
+    @CustomResponse
+    public void socket(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         server.addClient(req);
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
     }
+
 
     @Override
     public void ReceiveData(SocketServerClient client, String message) {

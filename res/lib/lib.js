@@ -2,8 +2,8 @@ export const mobileWidth = 700;
 export const isLocalNetwork = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
 const customServer = localStorage.getItem('customServer');
 const apiEndPoint = isLocalNetwork
-	? customServer || window.location.origin + '/api'
-	: 'https://api.wavjaby.nckuctf.org/api';
+	? customServer || window.location.origin + '/api/v0'
+	: 'https://api.wavjaby.nckuctf.org/api/v0';
 
 // const isSafari = navigator.userAgent &&
 // 	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1 &&

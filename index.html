@@ -50,17 +50,17 @@
 		tempConsole.style.whiteSpace = 'pre-wrap';
 		tempConsole.style.display = 'none';
 		document.head.appendChild(tempConsole);
-		var consoleLog = console.log;
-		console.log = function () {
-			consoleLog.apply(console, arguments);
-			var params = new Array(arguments.length);
-			for (var i = 0; i < arguments.length; i++)
-				params[i] = arguments[i];
-
-			var logText = '\n[Log] ' + params.join(' ');
-			tempConsole.textContent += logText;
-			// remoteLog(logText);
-		}
+		// var consoleLog = console.log;
+		// console.log = function () {
+		// 	consoleLog.apply(console, arguments);
+		// 	var params = new Array(arguments.length);
+		// 	for (var i = 0; i < arguments.length; i++)
+		// 		params[i] = arguments[i];
+		//
+		// 	var logText = '\n[Log] ' + params.join(' ');
+		// 	tempConsole.textContent += logText;
+		// 	// remoteLog(logText);
+		// }
 
 		window.addEventListener('error', function (e) {
 			var errorText = [

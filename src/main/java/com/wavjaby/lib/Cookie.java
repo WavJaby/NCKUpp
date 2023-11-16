@@ -63,7 +63,7 @@ public class Cookie {
         return originalCookie;
     }
 
-    public static void packAuthCookie(HttpExchange req, String orgCookie, CookieStore cookieStore) {
+    public static void packAuthCookie(HttpExchange req, String orgCookie, String path, CookieStore cookieStore) {
         StringBuilder cookieValueBuilder = new StringBuilder();
         Map<String, String> portalNckuCookies = new HashMap<>();
         for (HttpCookie i : cookieStore.get(portalNckuOrgUri))
@@ -80,7 +80,7 @@ public class Cookie {
 
         String cookieValue = cookieValueBuilder.toString();
         if (!cookieValue.equals(orgCookie))
-            addCookieToHeader("authData", cookieValue, "/api/login", req);
+            addCookieToHeader("authData", cookieValue, path, req);
     }
 
     public static String unpackCourseLoginStateCookie(String[] cookieIn, CookieStore cookieStore) {

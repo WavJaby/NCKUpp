@@ -1,8 +1,10 @@
 package com.wavjaby;
 
 import com.sun.istack.internal.NotNull;
-import com.wavjaby.api.DeptWatchDog;
-import com.wavjaby.api.Search;
+import com.wavjaby.api.DeptWatchdog;
+import com.wavjaby.api.search.CourseData;
+import com.wavjaby.api.search.Search;
+import com.wavjaby.api.search.SearchQuery;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.lib.Cookie;
@@ -20,14 +22,14 @@ import static com.wavjaby.Main.courseNcku;
 import static com.wavjaby.Main.courseNckuOrgUri;
 
 public class GetCourseDataUpdate implements Runnable {
-    private static final String TAG = "[CourseListener]";
+    private static final String TAG = "CourseListener";
     private static final Logger logger = new Logger(TAG);
     private static final String apiUrl = "https://discord.com/api/v10";
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final ExecutorService fetchCoursePool = Executors.newFixedThreadPool(8);
     private final ExecutorService messageSendPool = Executors.newFixedThreadPool(4);
     private final Search search;
-    private final DeptWatchDog watchDog;
+    private final DeptWatchdog watchDog;
     private final CookieStore baseCookieStore;
 
     private final long updateInterval = 1600;
@@ -39,7 +41,7 @@ public class GetCourseDataUpdate implements Runnable {
 
     private final Map<String, CookieStore> listenDept = new HashMap<>();
     private final Map<String, Search.DeptToken> deptTokenMap = new HashMap<>();
-    private final Map<String, List<Search.CourseData>> deptCourseDataList = new HashMap<>();
+    private final Map<String, List<CourseData>> deptCourseDataList = new HashMap<>();
     private final String botToken;
     private final HashMap<String, String> userDmChannelCache = new HashMap<>();
 
@@ -51,18 +53,18 @@ public class GetCourseDataUpdate implements Runnable {
         }
 
         private final Type type;
-        private final Search.CourseData courseData;
+        private final CourseData courseData;
         private final int availableDiff;
         private final int selectDiff;
 
-        public CourseDataDifference(Search.CourseData courseData, int availableDiff, int selectDiff) {
+        public CourseDataDifference(CourseData courseData, int availableDiff, int selectDiff) {
             this.type = Type.UPDATE;
             this.courseData = courseData;
             this.availableDiff = availableDiff;
             this.selectDiff = selectDiff;
         }
 
-        public CourseDataDifference(Search.CourseData courseData) {
+        public CourseDataDifference(CourseData courseData) {
             this.type = Type.CREATE;
             this.courseData = courseData;
             this.availableDiff = courseData.getAvailable();
@@ -70,7 +72,7 @@ public class GetCourseDataUpdate implements Runnable {
         }
     }
 
-    public GetCourseDataUpdate(Search search, DeptWatchDog watchDog, Properties serverSettings) {
+    public GetCourseDataUpdate(Search search, DeptWatchdog watchDog, Properties serverSettings) {
         this.search = search;
         this.watchDog = watchDog;
         botToken = serverSettings.getProperty("botToken");
@@ -192,14 +194,14 @@ public class GetCourseDataUpdate implements Runnable {
                 // Have dept token
                 if (deptToken != null) {
                     // Get dept course data
-                    List<Search.CourseData> newCourseDataList = new ArrayList<>();
-                    if (!search.getDeptCourseData(deptToken, false, null, newCourseDataList) ||
-                            newCourseDataList.isEmpty()) {
+                    Search.SearchResult searchResult = new Search.SearchResult();
+                    if (!search.getDeptCourseData(deptToken, false, searchResult)) {
                         logger.log("Dept " + dept + " failed");
                         if (!done.get())
                             deptTokenMap.put(dept, null);
                     } else if (!done.get()) {
-                        List<Search.CourseData> lastCourseDataList = deptCourseDataList.get(dept);
+                        List<CourseData> lastCourseDataList = deptCourseDataList.get(dept);
+                        List<CourseData> newCourseDataList = searchResult.getCourseDataList();
                         total[0] += newCourseDataList.size();
                         if (lastCourseDataList != null)
                             diff.addAll(getDifferent(lastCourseDataList, newCourseDataList));
@@ -245,14 +247,14 @@ public class GetCourseDataUpdate implements Runnable {
                     logger.log("CREATE: " + i.courseData.getCourseName());
                     break;
                 case UPDATE:
-                    Search.CourseData cosData = i.courseData;
+                    CourseData cosData = i.courseData;
                     logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName());
 //                            "available: " + i.availableDiff + ", select: " + i.selectDiff);
 
                     String url = null;
                     try {
-                        Search.SearchQuery searchQuery = new Search.SearchQuery(cosData);
-                        Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery, 0, baseCookieStore, null);
+                        SearchQuery searchQuery = new SearchQuery(cosData);
+                        Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery.toCourseQuery(), baseCookieStore, null);
                         if (token != null)
                             url = token.getUrl();
                     } catch (Exception e) {
@@ -325,17 +327,17 @@ public class GetCourseDataUpdate implements Runnable {
         return integer > 0 ? "+" + integer : String.valueOf(integer);
     }
 
-    private List<CourseDataDifference> getDifferent(@NotNull List<Search.CourseData> last, @NotNull List<Search.CourseData> now) {
-        HashMap<String, Search.CourseData> lastCourseDataMap = new HashMap<>();
-        for (Search.CourseData i : last)
+    private List<CourseDataDifference> getDifferent(@NotNull List<CourseData> last, @NotNull List<CourseData> now) {
+        HashMap<String, CourseData> lastCourseDataMap = new HashMap<>();
+        for (CourseData i : last)
             if (i.getSerialNumber() != null)
                 lastCourseDataMap.put(i.getSerialNumber(), i);
 
         List<CourseDataDifference> diff = new ArrayList<>();
 
-        for (Search.CourseData nowData : now) {
+        for (CourseData nowData : now) {
             if (nowData.getSerialNumber() == null) continue;
-            Search.CourseData lastData = lastCourseDataMap.get(nowData.getSerialNumber());
+            CourseData lastData = lastCourseDataMap.get(nowData.getSerialNumber());
 
             if (lastData == null) {
                 diff.add(new CourseDataDifference(nowData));

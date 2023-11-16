@@ -1,11 +1,15 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -25,8 +29,9 @@ import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 
-public class HomeInfo implements EndpointModule {
-    private static final String TAG = "[HomeInfo]";
+@RequestMapping("/api/v0")
+public class HomeInfo implements Module {
+    private static final String TAG = "HomeInfo";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
@@ -47,18 +52,19 @@ public class HomeInfo implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/homeInfo")
+    public RestApiResponse homeInfo(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
-        ApiResponse apiResponse = new ApiResponse();
-        getHomepageInfo(cookieStore, apiResponse);
+        ApiResponse response = new ApiResponse();
+        getHomepageInfo(cookieStore, response);
         packCourseLoginStateCookie(req, loginState, cookieStore);
 
-        apiResponse.sendResponse(req);
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return response;
+    }
 
     private void getHomepageInfo(CookieStore cookieStore, ApiResponse response) {
         Connection request = HttpConnection.connect(courseNckuOrg + "/index.php")
@@ -191,9 +197,6 @@ public class HomeInfo implements EndpointModule {
         response.setData(data.toString());
     }
 
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
-    }
+
 }
 

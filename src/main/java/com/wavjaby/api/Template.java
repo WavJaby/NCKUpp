@@ -1,8 +1,10 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Module;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 
 import java.net.CookieManager;
@@ -12,8 +14,9 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 
 @SuppressWarnings("ALL")
-public class Template implements EndpointModule {
-    private static final String TAG = "[Template]";
+@RequestMapping("/api/v0")
+public class Template implements Module {
+    private static final String TAG = "Template";
     private static final Logger logger = new Logger(TAG);
 
 
@@ -30,7 +33,8 @@ public class Template implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/template")
+    public RestApiResponse template(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
@@ -38,13 +42,8 @@ public class Template implements EndpointModule {
         ApiResponse apiResponse = new ApiResponse();
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return apiResponse;
     }
 }

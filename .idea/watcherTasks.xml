@@ -14,31 +14,11 @@
         <array />
       </option>
       <option name="outputFromStdout" value="false" />
-      <option name="program" value="$USER_HOME$/.bun/bin/sass" />
+      <option name="program" value="sass" />
       <option name="runOnExternalChanges" value="true" />
       <option name="scopeName" value="CssMinify" />
       <option name="trackOnlyRoot" value="true" />
       <option name="workingDir" value="$FileDir$" />
-      <envs />
-    </TaskOptions>
-    <TaskOptions isEnabled="false">
-      <option name="arguments" value="$FileDir$/$FileName$ -o $FileNameWithoutExtension$.min.js" />
-      <option name="checkSyntaxErrors" value="true" />
-      <option name="description" />
-      <option name="exitCodeBehavior" value="ERROR" />
-      <option name="fileExtension" value="js" />
-      <option name="immediateSync" value="true" />
-      <option name="name" value="UglifyJS" />
-      <option name="output" value="$FileNameWithoutExtension$.min.js" />
-      <option name="outputFilters">
-        <array />
-      </option>
-      <option name="outputFromStdout" value="false" />
-      <option name="program" value="$USER_HOME$/.bun/bin/uglifyjs" />
-      <option name="runOnExternalChanges" value="true" />
-      <option name="scopeName" value="UglifyJS" />
-      <option name="trackOnlyRoot" value="true" />
-      <option name="workingDir" value="$ProjectFileDir$/res/minjs_v000" />
       <envs />
     </TaskOptions>
     <TaskOptions isEnabled="true">
@@ -48,15 +28,15 @@
       <option name="exitCodeBehavior" value="ERROR" />
       <option name="fileExtension" value="js" />
       <option name="immediateSync" value="true" />
-      <option name="name" value="UglifyJS Copy" />
+      <option name="name" value="UglifyJS" />
       <option name="output" value="./res/minjs_v000/$FileNameWithoutExtension$.min.js" />
       <option name="outputFilters">
         <array />
       </option>
       <option name="outputFromStdout" value="false" />
-      <option name="program" value="$USER_HOME$/.bun/bin/bun" />
+      <option name="program" value="node" />
       <option name="runOnExternalChanges" value="true" />
-      <option name="scopeName" value="UglifyJS" />
+      <option name="scopeName" value="JsMinify" />
       <option name="trackOnlyRoot" value="true" />
       <option name="workingDir" value="$ProjectFileDir$" />
       <envs />

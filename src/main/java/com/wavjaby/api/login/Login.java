@@ -1,12 +1,18 @@
-package com.wavjaby.api;
+package com.wavjaby.api.login;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.api.CourseFuncBtn;
+import com.wavjaby.api.CourseSchedule;
+import com.wavjaby.api.search.Search;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RequestMethod;
+import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.RequestBody;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 import org.jsoup.Connection;
@@ -16,7 +22,6 @@ import org.jsoup.parser.Parser;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,8 +33,9 @@ import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
 
 
-public class Login implements EndpointModule {
-    private static final String TAG = "[Login]";
+@RequestMapping("/api/v0")
+public class Login implements Module {
+    private static final String TAG = "Login";
     private static final Logger logger = new Logger(TAG);
     public static final String loginCheckString = "/index.php?c=auth&m=logout";
 
@@ -232,70 +238,69 @@ public class Login implements EndpointModule {
         return false;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping(value = "/login", method = RequestMethod.GET)
+    public RestApiResponse getLogin(HttpExchange req) {
         long startTime = System.currentTimeMillis();
-
-        // Login
-        ApiResponse apiResponse = new ApiResponse();
-        login(req, apiResponse);
-        apiResponse.sendResponse(req);
+        ApiResponse response = new ApiResponse();
+        login(req, response, null);
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return response;
+    }
 
-    private void login(HttpExchange req, ApiResponse response) {
+    @RequestMapping(value = "/login", method = RequestMethod.POST)
+    public RestApiResponse postLogin(HttpExchange req, @RequestBody LoginData loginData) {
+        long startTime = System.currentTimeMillis();
+        ApiResponse response = new ApiResponse();
+        login(req, response, loginData);
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
+        return response;
+    }
+
+    private LoginMode getLoginMode(ApiResponse response, Map<String, String> query) {
+        String mode = query.get("mode");
+        if (mode == null || mode.isEmpty()) {
+            response.errorBadQuery("Login url query require 'mode', value should be one of 'course' or 'stuId'");
+            return LoginMode.UNKNOWN;
+        }
+        switch (mode) {
+            case "course":
+                return LoginMode.COURSE;
+            case "stuId":
+                return LoginMode.STUDENT_ID_SYSTEM;
+            default:
+                response.errorBadQuery("Unknown login mode: " + mode + ", 'mode' should be one of 'course' or 'stuId'");
+                return LoginMode.UNKNOWN;
+        }
+    }
+
+    private void login(HttpExchange req, ApiResponse response, LoginData postLoginData) {
         // Setup cookies
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String[] cookies = splitCookie(req);
         String authState = unpackAuthCookie(cookies, cookieStore);
 
         Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
-        String mode = query.get("mode");
-        String method = req.getRequestMethod();
-        boolean post = method.equalsIgnoreCase("POST");
-        boolean get = method.equalsIgnoreCase("GET");
-        // Unknown http method
-        if (!post && !get) {
-            response.errorUnsupportedHttpMethod(method);
-        } else if (mode == null) {
-            response.errorBadQuery("Query require \"mode\", value should be one of \"course\" or \"stuId\"");
-        }
+        LoginMode loginMode = getLoginMode(response, query);
+        if (loginMode == LoginMode.UNKNOWN)
+            return;
+
         // Login course ncku
-        else if (mode.equals("course")) {
+        if (loginMode == LoginMode.COURSE) {
             String loginState = unpackCourseLoginStateCookie(cookies, cookieStore);
-            try {
-                String postData = post ? readRequestBody(req, StandardCharsets.UTF_8) : null;
-                loginCourseNcku(get, postData, response, cookieStore);
-            } catch (IOException e) {
-                response.errorBadPayload("Read payload error");
-                logger.errTrace(e);
-            }
+            loginCourseNcku(postLoginData == null, postLoginData, response, cookieStore);
             packCourseLoginStateCookie(req, loginState, cookieStore);
         }
         // Login student identification system
-        else if (mode.equals("stuId")) {
+        else if (loginMode == LoginMode.STUDENT_ID_SYSTEM) {
             String loginState = unpackStudentIdSysLoginStateCookie(cookies, cookieStore);
-            try {
-                String postData = post ? readRequestBody(req, StandardCharsets.UTF_8) : null;
-                loginNckuStudentIdSystem(get, postData, response, cookieStore);
-            } catch (IOException e) {
-                response.errorBadPayload("Read payload error");
-                logger.errTrace(e);
-            }
+            loginNckuStudentIdSystem(postLoginData == null, postLoginData, response, cookieStore);
             packStudentIdSysLoginStateCookie(req, loginState, cookieStore);
         }
-        // Unknown mode
-        else
-            response.errorBadQuery("Unknown login mode: " + mode);
 
-        packAuthCookie(req, authState, cookieStore);
+        packAuthCookie(req, authState, "/api/v0/login", cookieStore);
     }
 
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
-    }
-
-    private void loginCourseNcku(boolean get, String postData, ApiResponse response, CookieStore cookieStore) {
+    private void loginCourseNcku(boolean get, LoginData loginData, ApiResponse response, CookieStore cookieStore) {
         try {
             logger.log("Check login state");
             Connection.Response checkLoginPage;
@@ -350,7 +355,7 @@ public class Login implements EndpointModule {
                     // POST
                     // Portal login
                     logger.log("POST portal login data");
-                    portalPage = portalLogin(postData, portalPage.body(), cookieStore, response);
+                    portalPage = portalLogin(loginData, portalPage.body(), cookieStore, response);
                     if (portalPage == null) {
                         response.setData("{\"login\":false}");
                         return;
@@ -399,7 +404,7 @@ public class Login implements EndpointModule {
         }
     }
 
-    public void loginNckuStudentIdSystem(boolean get, String postData, ApiResponse response, CookieStore cookieStore) {
+    public void loginNckuStudentIdSystem(boolean get, LoginData loginData, ApiResponse response, CookieStore cookieStore) {
         try {
             Connection.Response checkLoginPage;
             if (get) {
@@ -448,7 +453,7 @@ public class Login implements EndpointModule {
                 } else {
                     // POST
                     // Portal login
-                    portalPage = portalLogin(postData, portalPage.body(), cookieStore, response);
+                    portalPage = portalLogin(loginData, portalPage.body(), cookieStore, response);
                     if (portalPage == null) {
                         response.setData("{\"login\":false}");
                         return;
@@ -510,11 +515,10 @@ public class Login implements EndpointModule {
         return portalPage;
     }
 
-    private Connection.Response portalLogin(String postData, String portalBody, CookieStore cookieStore, ApiResponse response) {
+    private Connection.Response portalLogin(LoginData loginData, String portalBody, CookieStore cookieStore, ApiResponse response) {
         // In portal page
-        Map<String, String> loginForm = parseUrlEncodedForm(postData);
-        String username = loginForm.get("username");
-        String password = loginForm.get("password");
+        String username = loginData.username;
+        String password = loginData.password;
         if (username == null || password == null) {
             response.errorBadPayload("Login data not send");
             return null;

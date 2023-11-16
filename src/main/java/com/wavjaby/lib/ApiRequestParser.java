@@ -10,7 +10,7 @@ import java.util.Map;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
 public class ApiRequestParser {
-    private static final String TAG = "[ApiRequestParser]";
+    private static final String TAG = "ApiRequestParser";
     private static final Logger logger = new Logger(TAG);
 
     @Retention(RetentionPolicy.RUNTIME)

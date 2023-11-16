@@ -202,9 +202,9 @@ public class ProxyChecker {
         final boolean conforming = conformTry != -1;
 //        final String testUrl = conforming
 //                ? "https://course.ncku.edu.tw/index.php"
-//                : "https://api.simon.chummydns.com/api/ip";
-////                            : "https://ifconfig.me/ip";
-        final String testUrl = "https://api.simon.chummydns.com/api/ip";
+//                : "https://api.wavjaby.nckuctf.org/api/ip";
+//                            : "https://ifconfig.me/ip";
+        final String testUrl = "https://api.wavjaby.nckuctf.org/api/ip";
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(onProxyTestStart());
@@ -440,7 +440,7 @@ public class ProxyChecker {
     private void getSpysOneProxy(boolean allowHttp, Map<String, ProxyManager.ProxyData> proxyDataList) {
         // https://spys.one/asia-proxy/
         /*
-[['xf5',2],['xf1',1],['xpp',5,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
+[['xpp',5],['xf1',1],['xf2',0],['xf5',2,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
 
 [['xpp',5],['xf1',1],['xf2',1],['xf5',1,1]].forEach(i=>{const j=document.getElementById(i[0]);j.value=i[1];i[2]&&j.onchange();});
 

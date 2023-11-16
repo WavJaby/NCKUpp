@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * @typedef {Object} CourseDataRaw
+ * @typedef {Object} RawCourseData
  * @property {string} y - semester
  * @property {string} dn - departmentName
  * @property {string} sn - serialNumber

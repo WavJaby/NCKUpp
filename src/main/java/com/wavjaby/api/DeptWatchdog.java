@@ -1,12 +1,17 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Module;
+import com.wavjaby.api.login.Login;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RequestMethod;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
+import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
@@ -20,8 +25,9 @@ import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 import static com.wavjaby.lib.Lib.readRequestBody;
 
-public class DeptWatchDog implements EndpointModule {
-    private static final String TAG = "[WatchDog]";
+@RequestMapping("/api/v0")
+public class DeptWatchdog implements Module {
+    private static final String TAG = "Watchdog";
     private static final Logger logger = new Logger(TAG);
     private final SQLite sqLite;
     private final Login login;
@@ -29,7 +35,7 @@ public class DeptWatchDog implements EndpointModule {
 
     private final Set<String> newDeptData = new HashSet<>();
 
-    public DeptWatchDog(Login login, SQLite sqLite) {
+    public DeptWatchdog(Login login, SQLite sqLite) {
         this.login = login;
         this.sqLite = sqLite;
     }
@@ -145,40 +151,65 @@ public class DeptWatchDog implements EndpointModule {
         }
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping(value = "/watchdog", method = RequestMethod.GET)
+    public RestApiResponse getWatchdog(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
         ApiResponse apiResponse = new ApiResponse();
-        String method = req.getRequestMethod();
         String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
         if (PHPSESSID == null) {
             apiResponse.errorCookie("Cookie \"PHPSESSID\" not found");
-        } else {
-            if (method.equalsIgnoreCase("POST")) {
-                Map<String, String> query = parseUrlEncodedForm(readRequestBody(req, StandardCharsets.UTF_8));
-                String studentID = query.get("studentID");
-                String courseSerial;
-                if (studentID == null) {
-                    apiResponse.errorBadPayload("Form require \"studentID\"");
-                } else if ((courseSerial = query.get("courseSerial")) != null) {
-                    addWatchDog(courseSerial, studentID, PHPSESSID, apiResponse);
-                } else if ((courseSerial = query.get("removeCourseSerial")) != null) {
-                    removeWatchDog(courseSerial, studentID, PHPSESSID, apiResponse);
-                } else
-                    apiResponse.errorBadPayload("Form require one of \"courseSerial\" or \"removeCourseSerial\"");
-            } else if (method.equalsIgnoreCase("GET")) {
-                getWatchDog(req.getRequestURI().getRawQuery(), PHPSESSID, apiResponse);
+            logger.log((System.currentTimeMillis() - startTime) + "ms");
+            return apiResponse;
+        }
+
+        getUserWatchdog(req.getRequestURI().getRawQuery(), PHPSESSID, apiResponse);
+
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
+        return apiResponse;
+    }
+
+    @RequestMapping(value = "/watchdog", method = RequestMethod.POST)
+    public RestApiResponse postWatchdog(HttpExchange req) {
+        long startTime = System.currentTimeMillis();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req, cookieStore);
+
+        ApiResponse response = new ApiResponse();
+        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
+        if (PHPSESSID == null) {
+            response.errorCookie("Cookie \"PHPSESSID\" not found");
+            logger.log((System.currentTimeMillis() - startTime) + "ms");
+            return response;
+        }
+
+        Map<String, String> query = null;
+        try {
+            query = parseUrlEncodedForm(readRequestBody(req, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            response.errorBadPayload("Read payload failed");
+            logger.errTrace(e);
+        }
+        if (query != null) {
+            String studentID = query.get("studentID");
+            String courseSerial;
+            if (studentID == null) {
+                response.errorBadPayload("Form require \"studentID\"");
+            } else if ((courseSerial = query.get("courseSerial")) != null) {
+                addWatchDog(courseSerial, studentID, PHPSESSID, response);
+            } else if ((courseSerial = query.get("removeCourseSerial")) != null) {
+                removeWatchDog(courseSerial, studentID, PHPSESSID, response);
             } else
-                apiResponse.errorUnsupportedHttpMethod(method);
+                response.errorBadPayload("Form require one of \"courseSerial\" or \"removeCourseSerial\"");
         }
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
-
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return response;
+    }
 
     private void addWatchDog(String courseSerial, String studentID, String PHPSESSID, ApiResponse response) {
         if (!login.getUserLoginState(studentID, PHPSESSID)) {
@@ -205,7 +236,7 @@ public class DeptWatchDog implements EndpointModule {
     }
 
 
-    private void getWatchDog(String rawQuery, String PHPSESSID, ApiResponse response) {
+    private void getUserWatchdog(String rawQuery, String PHPSESSID, ApiResponse response) {
         Map<String, String> query = parseUrlEncodedForm(rawQuery);
         String studentID = query.get("studentID");
         if (studentID == null) {
@@ -230,10 +261,5 @@ public class DeptWatchDog implements EndpointModule {
         }
 
         response.setData(new JsonObject(data).toString());
-    }
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
     }
 }

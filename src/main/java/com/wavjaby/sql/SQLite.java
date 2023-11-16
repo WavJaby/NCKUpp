@@ -17,7 +17,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 public class SQLite implements Module {
-    private static final String TAG = "[SQLite]";
+    private static final String TAG = "SQLite";
     private static final Logger logger = new Logger(TAG);
     private java.sql.Connection sqlite;
 
@@ -84,5 +84,10 @@ public class SQLite implements Module {
 
     public Connection getDatabase() {
         return sqlite;
+    }
+
+    @Override
+    public boolean api() {
+        return false;
     }
 }

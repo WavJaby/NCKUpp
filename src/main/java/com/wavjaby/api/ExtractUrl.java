@@ -1,12 +1,16 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -20,8 +24,9 @@ import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
-public class ExtractUrl implements EndpointModule {
-    private static final String TAG = "[Extract]";
+@RequestMapping("/api/v0")
+public class ExtractUrl implements Module {
+    private static final String TAG = "Extract";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
 
@@ -42,28 +47,25 @@ public class ExtractUrl implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+
+    @RequestMapping("/extract")
+    public RestApiResponse extract(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         getDefaultCookie(req, cookieStore);
 
-        ApiResponse apiResponse = new ApiResponse();
+        ApiResponse response = new ApiResponse();
         String queryString = req.getRequestURI().getRawQuery();
         Map<String, String> query = parseUrlEncodedForm(queryString);
         if (query.containsKey("moodle"))
-            getMoodle(query.get("moodle"), cookieStore, apiResponse);
+            getMoodle(query.get("moodle"), cookieStore, response);
         else if (query.containsKey("location"))
-            getLocation(query.get("location"), cookieStore, apiResponse);
+            getLocation(query.get("location"), cookieStore, response);
         else
-            apiResponse.errorBadQuery("Query require one of \"moodle\" or \"location\"");
+            response.errorBadQuery("Query require one of \"moodle\" or \"location\"");
 
-        apiResponse.sendResponse(req);
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return response;
     }
 
     private void getMoodle(String requestData, CookieStore cookieStore, ApiResponse response) {

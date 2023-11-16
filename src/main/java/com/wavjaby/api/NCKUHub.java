@@ -1,12 +1,14 @@
 package com.wavjaby.api;
 
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.ThreadFactory;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -22,8 +24,9 @@ import java.util.concurrent.*;
 import static com.wavjaby.lib.Lib.executorShutdown;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 
-public class NCKUHub implements EndpointModule {
-    private static final String TAG = "[NCKU Hub]";
+@RequestMapping("/api/v0")
+public class NCKUHub implements Module {
+    private static final String TAG = "NCKU Hub";
     private static final Logger logger = new Logger(TAG);
 
     private final Map<String, Map<String, Integer>> nckuHubCourseIdMap = new HashMap<>();
@@ -97,21 +100,16 @@ public class NCKUHub implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping("/nckuhub")
+    public RestApiResponse nckuhub(HttpExchange req) {
         long startTime = System.currentTimeMillis();
 
-        ApiResponse apiResponse = new ApiResponse();
-
         String queryString = req.getRequestURI().getRawQuery();
-        getNckuHubCourseInfo(queryString, apiResponse);
+        ApiResponse response = new ApiResponse();
+        getNckuHubCourseInfo(queryString, response);
 
-        apiResponse.sendResponse(req);
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return response;
     }
 
     private void getNckuHubCourseInfo(String queryString, ApiResponse response) {

@@ -669,20 +669,21 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	};
 
 	this.getSearchQuery = function () {
-		// get course info
-		const courseDept = {};
-		for (const serialNumber in courseDetail) {
-			const dept = serialNumber.split('-');
-			let deptData = courseDept[dept[0]];
-			if (deptData)
-				deptData.push(dept[1]);
-			else
-				courseDept[dept[0]] = [dept[1]];
-		}
-		const courseFetchArr = [];
-		for (const serialNumber in courseDept)
-			courseFetchArr.push(serialNumber + '=' + courseDept[serialNumber].join(','));
-		return encodeURIComponent(courseFetchArr.join('&'));
+		// // get course info
+		// const courseDept = {};
+		// for (const serialNumber in courseDetail) {
+		// 	const dept = serialNumber.split('-');
+		// 	let deptData = courseDept[dept[0]];
+		// 	if (deptData)
+		// 		deptData.push(dept[1]);
+		// 	else
+		// 		courseDept[dept[0]] = [dept[1]];
+		// }
+		// const courseFetchArr = [];
+		// for (const serialNumber in courseDept)
+		// 	courseFetchArr.push(serialNumber + '=' + courseDept[serialNumber].join(','));
+		// return encodeURIComponent(courseFetchArr.join('&'));
+		return Object.keys(courseDetail).join(',');
 	};
 
 	this.getScheduleCourse = function () {

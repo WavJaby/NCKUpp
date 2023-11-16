@@ -15,65 +15,68 @@ import java.nio.file.Files;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public class HttpServer {
-    private static final String TAG = "[HttpServer]";
-    private static final Logger logger = new Logger(TAG);
+    private static final Logger logger = new Logger("HttpServer");
     private static final int defaultPort = 443;
     private com.sun.net.httpserver.HttpServer httpServer;
 
-    public boolean opened = false;
-    public boolean error = false;
-    public int port;
+    public final boolean ready;
+    public boolean running;
     public String hostname;
+    public final int port;
 
     public HttpServer(Properties serverSettings) {
-        try {
-            String portStr = serverSettings.getProperty("port");
-            if (portStr == null) {
-                port = 443;
-                logger.warn("Property \"port\" not found, using default: " + port);
-            } else
+        int port;
+        String portStr = serverSettings.getProperty("port");
+        if (portStr == null) {
+            port = 443;
+            logger.warn("Property \"port\" not found, use default: " + port);
+        } else {
+            try {
                 port = Integer.parseInt(portStr);
-        } catch (NumberFormatException e) {
-            port = defaultPort;
-            logger.warn("Property \"port\": \"" + serverSettings.get("port") + "\" have wrong format, using default: " + port);
+            } catch (NumberFormatException e) {
+                port = defaultPort;
+                logger.warn("Property \"port\": \"" + portStr + "\"is invalid, use default: " + port);
+            }
         }
+        this.port = port;
+
         String protocolName = serverSettings.getProperty("protocol");
         hostname = serverSettings.getProperty("hostname");
         if (protocolName == null) {
             protocolName = "https";
-            logger.warn("Property \"protocol\" not found, using default: " + protocolName);
+            logger.warn("Property \"protocol\" not found, use default: " + protocolName);
         }
         if (hostname == null) {
             hostname = "localhost";
-            logger.warn("Property \"hostname\" not found, using default: " + hostname);
+            logger.warn("Property \"hostname\" not found, use default: " + hostname);
         }
 
         if (protocolName.equals("https"))
-            error = createHttpsServer(hostname, port, serverSettings);
+            ready = createHttpsServer(hostname, port, serverSettings);
         else if (protocolName.equals("http"))
-            error = createHttpServer(hostname, port);
+            ready = createHttpServer(hostname, port);
+        else {
+            logger.err("Unknown protocol: " + protocolName);
+            ready = false;
+        }
     }
 
-    private synchronized boolean createHttpsServer(String hostname, int port, Properties serverSettings) {
+    private boolean createHttpsServer(String hostname, int port, Properties serverSettings) {
         String keystoreFilePath = serverSettings.getProperty("keystorePath");
         String keystorePropertyPath = serverSettings.getProperty("keystorePropertyPath");
         if (keystoreFilePath == null) {
             keystoreFilePath = "key/key.keystore";
-            logger.warn("Protocol name not found, using default: " + keystoreFilePath);
+            logger.warn("Protocol name not found, use default: " + keystoreFilePath);
         }
         if (keystorePropertyPath == null) {
             keystorePropertyPath = "key/key.properties";
-            logger.warn("Host name not found, using default: " + keystorePropertyPath);
+            logger.warn("Host name not found, use default: " + keystorePropertyPath);
         }
 
-        if (opened) {
-            logger.warn("Server already opened");
-            return false;
-        }
-        HttpsServer httpsServer;
         SSLContext sslContext;
         try {
             Properties prop = new Properties();
@@ -100,7 +103,6 @@ public class HttpServer {
             // load certificate
             char[] storepass = storePassword.toCharArray();
             char[] keypass = keyPassword.toCharArray();
-//        String alias = prop.getProperty("alias");
 
             // Initialise the keystore
             File keystoreFile = new File(keystoreFilePath);
@@ -114,29 +116,29 @@ public class HttpServer {
             keystoreIn.close();
 
             // display certificate
+//            String alias = prop.getProperty("alias");
 //            Certificate cert = keystore.getCertificate(alias);
 //            logger.log(cert);
 
             // Set up the key manager factory
             KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
             kmf.init(keystore, keypass);
-
             // Set up the trust manager factory
             TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
             tmf.init(keystore);
-
-            // create https server
-            httpsServer = HttpsServer.create(new InetSocketAddress(hostname, port), 0);
             // create ssl context
             sslContext = SSLContext.getInstance("TLSv1");
             // setup HTTPS context and parameters
             sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-        } catch (KeyManagementException | NoSuchAlgorithmException | IOException | KeyStoreException |
-                 UnrecoverableKeyException | CertificateException e) {
+
+            // create https server
+            httpServer = HttpsServer.create(new InetSocketAddress(hostname, port), 0);
+        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException |
+                 UnrecoverableKeyException | CertificateException | IOException e) {
             logger.errTrace(e);
             return false;
         }
-        httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+        ((HttpsServer) httpServer).setHttpsConfigurator(new HttpsConfigurator(sslContext) {
             public void configure(HttpsParameters params) {
                 try {
                     // Initialise the SSL context
@@ -155,37 +157,48 @@ public class HttpServer {
                 }
             }
         });
-        httpServer = httpsServer;
-        opened = true;
         return true;
     }
 
-    private synchronized boolean createHttpServer(String hostname, int port) {
-        if (opened) {
-            logger.warn("Server already opened");
-            return false;
-        }
+    private boolean createHttpServer(String hostname, int port) {
         try {
-            httpServer = com.sun.net.httpserver.HttpServer.create(
-                    new InetSocketAddress(hostname, port), 0
-            );
+            httpServer = com.sun.net.httpserver.HttpServer.create(new InetSocketAddress(hostname, port), 0);
         } catch (IOException e) {
             return false;
         }
-        opened = true;
         return true;
     }
 
-    public void start() {
-        httpServer.setExecutor(Executors.newCachedThreadPool());
+    public boolean start() {
+        return start(Executors.newCachedThreadPool());
+    }
+
+    public boolean start(Executor executor) {
+        if (!ready) {
+            logger.err("Server is not ready, failed to start.");
+            return false;
+        }
+        if (running) {
+            logger.err("Server already started");
+            return false;
+        }
+        httpServer.setExecutor(executor);
         httpServer.start();
+        return running = true;
     }
 
     public void createContext(String path, HttpHandler handler) {
+        if (httpServer == null)
+            return;
         httpServer.createContext(path, handler);
     }
 
     public void stop() {
+        if (!running) {
+            logger.err("Server is not running");
+            return;
+        }
         httpServer.stop(0);
+        running = false;
     }
 }

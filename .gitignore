@@ -4,6 +4,7 @@
 /out/
 /lib/
 /res/quizlet/
+/node_modules/*
+package*
 Test.java
-minify.bat
 *.min.js.map

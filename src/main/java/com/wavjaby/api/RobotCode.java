@@ -1,10 +1,14 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.EndpointModule;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.PropertiesReader;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 
 import java.io.*;
@@ -22,8 +26,9 @@ import java.util.concurrent.TimeoutException;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 
-public class RobotCode implements EndpointModule {
-    private static final String TAG = "[RobotCode]";
+@RequestMapping("/api/v0")
+public class RobotCode implements Module {
+    private static final String TAG = "RobotCode";
     private static final Logger logger = new Logger(TAG);
 
     private final ProxyManager proxyManager;
@@ -95,7 +100,9 @@ public class RobotCode implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+
+    @RequestMapping("/robotCode")
+    public RestApiResponse robotCode(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
@@ -103,14 +110,9 @@ public class RobotCode implements EndpointModule {
         ApiResponse apiResponse = new ApiResponse();
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
-
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
+        return apiResponse;
     }
 
     private synchronized void stopSubprocess() {

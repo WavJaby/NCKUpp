@@ -2,6 +2,7 @@ package com.wavjaby;
 
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.ThreadFactory;
+import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
@@ -19,8 +20,9 @@ import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.lib.Lib.*;
 
+@RequestMapping("/api/v0")
 public class ProxyManager implements Module {
-    private static final String TAG = "[ProxyManager]";
+    private static final String TAG = "ProxyManager";
     private static final Logger logger = new Logger(TAG);
     private static final int TEST_TIMEOUT = 1500;
     private final PropertiesReader properties;
@@ -134,7 +136,7 @@ public class ProxyManager implements Module {
     }
 
     private final Runnable proxyCheckFunc = () -> {
-        final String testUrl = "https://api.simon.chummydns.com/api/ip";
+        final String testUrl = "https://course.ncku.edu.tw/";
 
         ProxyData testingProxy = proxies.get(proxyIndex);
         for (int i = 0; i < proxies.size(); i++) {
@@ -189,6 +191,11 @@ public class ProxyManager implements Module {
     @Override
     public String getTag() {
         return TAG;
+    }
+
+    @Override
+    public boolean api() {
+        return false;
     }
 
     /**

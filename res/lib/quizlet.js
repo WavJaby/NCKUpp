@@ -3,13 +3,12 @@ const myRootUrl = '/api/quizlet';
 const loadedResources = window.loadedResources || (window.loadedResources = {});
 // const loadedResources = {};
 
-await getPage({_webUrl: window.location.href, page: 'home'});
+// await getPage({_webUrl: window.location.href, page: 'home'});
 
-let chapter = 2;
+let chapter = 3;
 const sections = pagesData[chapter].children;
-let sectionCount = 0;
+let sectionCount = 1;
 for (const section of sections) {
-	break;
 	const exercises = section.children
 		? section.children.reduce((i, page) => (i.push(...page.exercises), i), [])
 		: section.exercises;
@@ -17,7 +16,7 @@ for (const section of sections) {
 	for (const exercise of exercises) {
 		if (!exercise.hasSolution)
 			continue;
-		// await getPage(exercise);
+		await getPage(exercise);
 		console.log(`page:${exercise.page}, exercise:${exercise.exerciseName} ${exercise.mediaExerciseId} ${j}/${exercises.length} ${sectionCount}/${sections.length}`);
 		++j;
 	}
@@ -86,7 +85,10 @@ async function saveResources(urls) {
 
 		try {
 			const response = await fetch(url);
-			const headers = [...response.headers];
+			const headers = [];
+			for (const entry of response.headers.entries()) {
+				if (entry[0] !== 'content-encoding') headers.push(entry);
+			}
 			let data = await response.blob();
 
 			const contentType = response.headers.get("Content-type");
@@ -130,7 +132,7 @@ async function saveResources(urls) {
 async function extractWebPack(file) {
 	const fileFuncRegex = /\w+\.\w+=(function\(\w+\)\{return \d+===.+"\.js"})/g;
 	const [fileCreator, numbersRaw] = await parseFileCreator(file, fileFuncRegex);
-	const fileUrlsFilter = [];
+	let fileUrlsFilter = [];
 	let fileUrls = [];
 	for (const i of numbersRaw) {
 		if (fileUrlsFilter.indexOf(i[1]) === -1) {
@@ -142,6 +144,7 @@ async function extractWebPack(file) {
 
 	const cssFileFuncRegex = /\w+\.\w+=(function\(\w+\){return ?"[\w/]+"\+\{.+}\[\w+]\+"\.css"})/g;
 	const [cssFileCreator, cssNumbersRaw] = await parseFileCreator(file, cssFileFuncRegex);
+	fileUrlsFilter = [];
 	fileUrls = [];
 	for (const i of cssNumbersRaw) {
 		if (fileUrlsFilter.indexOf(i[1]) === -1) {
@@ -172,6 +175,7 @@ function parseFile(file) {
 	return file
 		.replace(/https?:\/\/quizlet.com\/explanations\/textbook-solutions/g, '/NCKUpp/quizlet')
 		.replace(/="\/_next/g, '="' + myRootUrl + '/base/_next')
+		.replace(/\/manifest.webmanifest/g, myRootUrl + '/base/manifest.webmanifest')
 		.replace(/https?:\/\/quizlet\.com/g, myRootUrl + '/base')
 		.replace(/https?:\/\/assets\.quizlet\.com/g, myRootUrl + '/assets')
 		.replace(/https?:\/\/www\.googletagmanager\.com\/gtm\.js\?id=[\w-]+/g, '')

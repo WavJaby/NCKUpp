@@ -1,14 +1,18 @@
 package com.wavjaby.api;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiRequestParser;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RequestMethod;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -26,8 +30,10 @@ import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
 import static com.wavjaby.lib.Lib.*;
 
-public class CourseRegister implements EndpointModule {
-    private static final String TAG = "[PreRegister]";
+
+@RequestMapping("/api/v0")
+public class CourseRegister implements Module {
+    private static final String TAG = "PreRegister";
     private static final Logger logger = new Logger(TAG);
     private final ProxyManager proxyManager;
     private final RobotCode robotCode;
@@ -50,26 +56,40 @@ public class CourseRegister implements EndpointModule {
         return TAG;
     }
 
-    private final HttpHandler httpHandler = req -> {
+    @RequestMapping(value = "/courseRegister", method = RequestMethod.GET)
+    public RestApiResponse getCourseRegister(HttpExchange req) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
         ApiResponse apiResponse = new ApiResponse();
-
-        String method = req.getRequestMethod();
-        if (method.equalsIgnoreCase("GET"))
-            getCoursePreRegisterList(req.getRequestURI().getRawQuery(), apiResponse, cookieStore);
-        else if (method.equalsIgnoreCase("POST"))
-            postCoursePreRegisterList(req.getRequestURI().getRawQuery(), readRequestBody(req, StandardCharsets.UTF_8), apiResponse, cookieStore);
-        else
-            apiResponse.errorUnsupportedHttpMethod(method);
+        getCoursePreRegisterList(req.getRequestURI().getRawQuery(), apiResponse, cookieStore);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        apiResponse.sendResponse(req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");
-    };
+        return apiResponse;
+    }
+
+    @RequestMapping(value = "/courseRegister", method = RequestMethod.POST)
+    public RestApiResponse postCourseRegister(HttpExchange req) {
+        long startTime = System.currentTimeMillis();
+        CookieStore cookieStore = new CookieManager().getCookieStore();
+        String loginState = getDefaultCookie(req, cookieStore);
+
+        ApiResponse response = new ApiResponse();
+        try {
+            postCoursePreRegisterList(req.getRequestURI().getRawQuery(), readRequestBody(req, StandardCharsets.UTF_8), response, cookieStore);
+        } catch (IOException e) {
+            response.errorBadPayload("Read payload failed");
+            logger.errTrace(e);
+        }
+
+        packCourseLoginStateCookie(req, loginState, cookieStore);
+
+        logger.log((System.currentTimeMillis() - startTime) + "ms");
+        return response;
+    }
 
     private static class CoursePreRegisterRequest extends ApiRequestParser.ApiRequestLib {
         @ApiRequestParser.Required
@@ -412,8 +432,5 @@ public class CourseRegister implements EndpointModule {
         courseData.append("category", cols.get(6).ownText().trim());
     }
 
-    @Override
-    public HttpHandler getHttpHandler() {
-        return httpHandler;
-    }
+
 }
