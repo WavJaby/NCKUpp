@@ -91,7 +91,7 @@ window.pageLoading = new Signal(false);
 	const pageIdName = {
 		Home: '成功大學課程資訊及選課系統',
 		CourseSearch: '課程查詢',
-		Schedule: '課表',
+		Schedule: '我的課表',
 		GradeInquiry: '成績查詢',
 		CourseSelectionPreference: '志願排序',
 		UsefulWebsite: '實用網站',
@@ -160,16 +160,28 @@ window.pageLoading = new Signal(false);
 		])),
 	);
 	const navbar = nav('navbar noSelect',
-		NavSelectList('loginBtn',
-			span(TextState(userLoginData, /**@param{LoginData}state*/state =>
-				state && state.login ? state.studentID : '登入'
-			)),
-			[
-				['Profile', () => queryRouter.openPage('Profile')],
-				['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
-			],
-			false,
-			() => {
+		// NavSelectList('loginBtn',
+		// 	span(TextState(userLoginData, /**@param{LoginData}state*/state =>
+		// 		state && state.login ? state.studentID : '登入'
+		// 	)),
+		// 	[
+		// 		['Profile', () => queryRouter.openPage('Profile')],
+		// 		['Logout', () => fetchApi('/logout').then(onLoginStateChange)],
+		// 	],
+		// 	false,
+		// 	() => {
+		// 		navMenuClose();
+		// 		// Is login
+		// 		if (userLoginData.state && userLoginData.state.login)
+		// 			return true; // Open select list
+		// 		// Not login, open login window
+		// 		showLoginWindow.set(!showLoginWindow.state);
+		// 		return false; // Not open select list
+		// 	}
+		// ),
+		li('loginBtn',
+			button(null, TextState(userLoginData, /**@param{LoginData}state*/state =>
+				state && state.login ? state.studentID : '登入'), () => {
 				navMenuClose();
 				// Is login
 				if (userLoginData.state && userLoginData.state.login)
@@ -177,12 +189,14 @@ window.pageLoading = new Signal(false);
 				// Not login, open login window
 				showLoginWindow.set(!showLoginWindow.state);
 				return false; // Not open select list
-			}
+			})
 		),
 		ul('hamburgerMenu', li(null,
 			img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
 		)),
-		ul('homePage', li(null, a('NCKU++', './?page=Home', null, pageButtonClick, {pageId: 'Home'}))),
+		ul('homePage', li(null, a(null, './?page=Home', null, pageButtonClick, {pageId: 'Home'},
+			img('./res/assets/page_home/logo_text.svg', 'NCKU'), img('./res/assets/page_home/logo_plusplus_text.svg', '++')
+		))),
 		navbarMobileBackground,
 		navbarLinks,
 	);

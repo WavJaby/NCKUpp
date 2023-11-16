@@ -1,6 +1,6 @@
 'use strict';
 
-import {a, br, div, h1, h2, img, mountableStylesheet, p, span, text} from '../minjs_v000/domHelper.min.js';
+import {a, br, div, h1, h2, img, mountableStylesheet, p, span, button, text, input} from '../minjs_v000/domHelper.min.js';
 import {fetchApi, isMobile} from '../lib/lib.js';
 
 /**
@@ -12,7 +12,7 @@ export default function (router) {
 	const styles = mountableStylesheet('./res/pages/home.css');
 	let /**@type{PageStorage}*/pageStorage;
 
-	const titleAnimation = span(null, 'slideOut', span('++'));
+	const titleAnimation = span(null, 'slideOut', img('./res/assets/page_home/logo_plusplus_text.svg', '++'));
 	const introduction = div('introduction',
 		div('block',
 			img('./res/assets/page_home/sort_function.png'),
@@ -70,21 +70,25 @@ export default function (router) {
 		},
 	});
 	const siteInfo = div('siteInfo',
-		h1(null, 'title', iconImageParent, span('NCKU'), titleAnimation),
-		p(null, 'description',
-			text('集合'),
-			img('res/assets/NCKU_course_system_logo.png', '國立成功大學課程資訊及選課系統'),
-			img('res/assets/nckuHub_logo.svg', 'NCKUHub'),
-			img('res/assets/UrSchool_logo.png', 'UrSchool'),
-			br(),
-			text('眾多功能，提供更好的選課環境')
+		div('main',
+			h1(null, 'title', iconImageParent, img('./res/assets/page_home/logo_text.svg', 'NCKU'), titleAnimation),
+			p(null, 'description',
+				span('結合 NCKU HUB ・UrSchool・成大選課系統'),
+				span('眾多功能，提供更好的選課環境。', null, {style: 'font-size:48px'})
+			),
+			div('quickSearch',
+				input('searchInput','Search...',null,null,null),
+				button(null, null, null,
+					img('./res/assets/search_icon.svg', ''), text('課程查詢')
+				),
+			),
 		),
-		introduction,
-		a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
+		// introduction,
+		// a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
 	);
 	const scrollDownIndicator = div('scrollDownIndicator', {onclick: scrollDown},
 		img('./res/assets/down_arrow_icon.svg', '', 'scrollDownArrow'),
-		h1('最新消息', 'title')
+		// h1('最新消息', 'title')
 	);
 	const newsPanel = div('newsPanel',
 		div('splitLine'),

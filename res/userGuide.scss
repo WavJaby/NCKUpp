@@ -1,7 +1,7 @@
 @import './variables';
 
-$guide-button-bg-color: #8461e5;
-$guide-button-hover-bg-color: #916ef6;
+$guide-button-bg-color: $primary;
+$guide-button-hover-bg-color: #2268f7;
 
 .userGuide {
     > .userGuideButton {
@@ -16,7 +16,7 @@ $guide-button-hover-bg-color: #916ef6;
         position: fixed;
         right: $height - $width;
         bottom: 30px;
-        box-shadow: 0 3px 5px 0 $pure-gray-1000;
+        @include default-shadow;
         cursor: pointer;
         @include transition(right 100ms);
 

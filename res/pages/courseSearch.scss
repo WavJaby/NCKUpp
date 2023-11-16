@@ -1,7 +1,7 @@
 @import '../variables';
 
-$search-result-header-bg-color: $pure-gray-900;
-$search-result-course-block-bg-color: $pure-gray-900;
+$search-result-header-bg-color: #484848;
+$search-result-course-block-bg-color: #484848;
 $search-result-item-spacing: 10px;
 $instructor-info-fade-time: 200ms;
 
@@ -126,7 +126,7 @@ $instructor-info-fade-time: 200ms;
         // Header
         > thead {
             background: $search-result-header-bg-color;
-            box-shadow: 0 0 10px 0 $pure-gray-1000;
+            @include default-shadow;
             border-radius: 0 0 10px 10px;
             position: sticky;
             top: 0;

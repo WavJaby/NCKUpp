@@ -1,6 +1,11 @@
-$font-size: 20px;
-$font-color: #e8e6e3;
-$font-color2: #c8c6c3;
+$small-screen: 'max-width: 700px';
+$big-screen: 'min-width: 700px';
+
+// Colors
+$primary-bg: #1B1F24;
+$primary: #155cff;
+$white-color-2: #F5F5F5;
+$shadow-color: #0000003F;
 
 $pure-gray-50: #FAFAFA;
 $pure-gray-100: #F5F5F5;
@@ -14,20 +19,20 @@ $pure-gray-800: #424242;
 $pure-gray-900: #212121;
 $pure-gray-1000: #080808;
 
-$small-screen: 'max-width: 700px';
-$big-screen: 'min-width: 700px';
-$background-color: $pure-gray-1000;
-$object-layer1-dark: $pure-gray-900;
-$object-layer2-dark: $pure-gray-800;
-
-$navbar-height: 40px;
+// Basic settings
+$font-size: 20px;
+$font-color: $white-color-2;
+$font-color2: #c8c6c3;
+$background-color: $primary-bg;
+$scrollbar-bg-color: #00000019;
+// Navbar setting
+$navbar-height: 50px;
 $navbar-margin-top: 5px;
 $navbar-font-color: 40px;
-$navbar-bg-color: $pure-gray-900;
+$navbar-bg-color: #151A1F;
 $navbar-hover-color: $pure-gray-800;
 $navbar-active-color: $background-color;
 $navbar-menu-bg-color: $pure-gray-800;
-
 
 $button-bg-color: #5B5B5B;
 $button-hover-color: #505050;
@@ -35,8 +40,6 @@ $button-active-color: #404040;
 $button-dark-bg-color: #303A47;
 $button-dark-green-bg-color: #304C47;
 $button-dark-red-bg-color: #703a47;
-
-$scrollbar-bg-color: #00000019;
 
 $overlay-transparent-bg-color: #000000B0;
 
@@ -48,6 +51,11 @@ $icon-new-tab: url($source-root + 'new_tab_icon.svg');
 $icon-down-arrow: url($source-root + 'down_arrow_icon.svg');
 $icon-close: url($source-root + 'close_icon.svg');
 $icon-search: url($source-root + 'search_icon.svg');
+$icon-login: url($source-root + 'login_icon.svg');
+
+@mixin default-shadow {
+    box-shadow: 0 0 5px 0 $shadow-color;
+}
 
 @mixin transform($transform) {
     transform: $transform;

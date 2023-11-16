@@ -14,7 +14,7 @@
         <array />
       </option>
       <option name="outputFromStdout" value="false" />
-      <option name="program" value="sass" />
+      <option name="program" value="$USER_HOME$/.bun/bin/sass" />
       <option name="runOnExternalChanges" value="true" />
       <option name="scopeName" value="CssMinify" />
       <option name="trackOnlyRoot" value="true" />
@@ -36,7 +36,7 @@
       <option name="outputFromStdout" value="false" />
       <option name="program" value="node" />
       <option name="runOnExternalChanges" value="true" />
-      <option name="scopeName" value="JsMinify" />
+      <option name="scopeName" value="Project Files" />
       <option name="trackOnlyRoot" value="true" />
       <option name="workingDir" value="$ProjectFileDir$" />
       <envs />

@@ -111,8 +111,8 @@
                 > .item {
                     z-index: 1;
                     @include cursor-grabbing;
+                    @include default-shadow;
                     position: absolute;
-                    box-shadow: 1px 1px 3px 1px $background-color;
                     border-radius: 10px;
 
 

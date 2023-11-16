@@ -35,7 +35,7 @@
     @include transition(box-shadow 200ms);
 
     &.scroll {
-        box-shadow: 0px -4px 15px 5px $pure-gray-1000;
+        @include default-shadow;
     }
 
     > .hamburgerMenu {
@@ -63,18 +63,25 @@
         display: none;
     }
 
-    > .homePage {
-        font-size: 1.5em;
-        vertical-align: top;
+    > .homePage > li > a > img {
+        height: 50%;
+        vertical-align: middle;
+
+        &:last-child {
+            margin-left: 1em;
+        }
     }
 
     ul {
-        padding-inline-start: 0;
-        padding: 0;
         margin: 0;
-        list-style-type: none;
+        padding: 0;
         overflow: hidden;
         display: inline-block;
+    }
+
+    li {
+        padding-inline-start: 0;
+        list-style-type: none;
     }
 
     // Select list
@@ -150,7 +157,12 @@
     }
 
     > .homePage > li {
+        height: $navbar-height;
         line-height: $navbar-height;
+
+        &:hover {
+            background: none;
+        }
     }
 
     li:hover {
@@ -163,10 +175,35 @@
 
     // Login button
     > .loginBtn {
-        min-width: 80px;
+        background: none;
+        width: 85px;
+        height: $navbar-height;
         font-size: 18px;
+        margin-right: 10px;
         float: right;
-        text-align: center;
+
+        &:hover {
+            background: none;
+        }
+
+        > button {
+            background: $primary;
+            width: 100%;
+            height: 35px;
+            margin-top: ($navbar-height - 35px)/2;
+            padding: 0;
+            border-radius: 10px;
+
+            &::before {
+                background: url('./assets/login_icon.svg') 0 0 / 1em;
+                width: 1em;
+                height: 1em;
+                display: inline-block;
+                vertical-align: text-top;
+                content: '';
+                margin-right: 10px;
+            }
+        }
     }
 
     // Mobile css
@@ -182,6 +219,7 @@
         > .homePage {
             display: inline-block;
             float: none;
+            vertical-align: top;
         }
 
         > .links {
