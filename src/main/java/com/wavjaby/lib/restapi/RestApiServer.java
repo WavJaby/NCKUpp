@@ -1,6 +1,5 @@
 package com.wavjaby.lib.restapi;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.lib.HttpServer;
 import com.wavjaby.lib.PropertiesReader;
@@ -8,7 +7,6 @@ import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -76,7 +74,7 @@ public class RestApiServer extends HttpServer {
         return true;
     }
 
-    public <T> void addEndpoint(T controller) {
+    synchronized public <T> void addEndpoint(T controller) {
         RequestMapping classMapping = controller.getClass().getDeclaredAnnotation(RequestMapping.class);
         if (classMapping == null) {
             logger.err("Failed to add endpoint: \"" + controller.getClass().getName() + "\"");

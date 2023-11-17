@@ -1,11 +1,8 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
 import com.wavjaby.Module;
 import com.wavjaby.lib.restapi.RequestMapping;
-import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.websocket.httpServer.HttpSocketServer;

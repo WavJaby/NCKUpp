@@ -1,8 +1,6 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
 import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;

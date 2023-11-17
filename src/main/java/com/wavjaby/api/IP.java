@@ -3,9 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Module;
-import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.restapi.RequestMapping;
-import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 
 import java.net.InetAddress;
@@ -16,7 +14,7 @@ public class IP implements Module {
     private static final String TAG = "IP";
     private static final Logger logger = new Logger(TAG);
 
-    public static class IpInfo{
+    public static class IpInfo {
         public final String ip;
 
         private IpInfo(String ip) {

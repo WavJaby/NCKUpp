@@ -1,8 +1,6 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
 import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArray;
@@ -147,8 +145,7 @@ public class CourseSchedule implements Module {
                 response.errorBadPayload("Read payload failed");
                 logger.err(e);
             }
-        }
-        else
+        } else
             response.errorUnsupportedHttpMethod(req.getRequestMethod());
         packCourseLoginStateCookie(req, loginState, cookieStore);
 

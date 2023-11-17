@@ -1,8 +1,7 @@
 package com.wavjaby.api;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
+import com.wavjaby.Main;
 import com.wavjaby.Module;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
@@ -19,15 +18,18 @@ import org.jsoup.select.Elements;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import static com.wavjaby.Main.stuIdSysNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
-import static com.wavjaby.lib.Lib.leftPad;
-import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
+import static com.wavjaby.lib.Lib.*;
 
 @RequestMapping("/api/v0")
 public class StudentIdSys implements Module {
@@ -35,6 +37,7 @@ public class StudentIdSys implements Module {
     private static final Logger logger = new Logger(TAG);
     private static final String loginCheckString = "/ncku/qrys02.asp";
     private static final String NORMAL_DEST_FOLDER = "./api_file/CourseScoreDistribution";
+    private final File normalDestFolder;
 
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
@@ -264,6 +267,37 @@ public class StudentIdSys implements Module {
         }
     }
 
+    public static class ImageQuery {
+        public final String year, semester, systemNumber, classCode;
+
+        public ImageQuery(String year, String semester, String systemNumber, String classCode) {
+            this.year = year;
+            this.semester = semester;
+            this.systemNumber = systemNumber;
+            this.classCode = classCode;
+        }
+
+        public String toQuery() {
+            return "syear=" + year + "&sem=" + semester + "&co_no=" + systemNumber + "&class_code=" + classCode;
+        }
+    }
+
+    public StudentIdSys() {
+        File normalDestFolder = new File(NORMAL_DEST_FOLDER);
+        setFilePermission(normalDestFolder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
+        if (!normalDestFolder.exists()) {
+            if (!normalDestFolder.mkdirs()) {
+                logger.err("Normal dest image folder failed to create");
+                normalDestFolder = null;
+            }
+        }
+        if (normalDestFolder != null && !normalDestFolder.isDirectory()) {
+            logger.err("Normal dest image folder is not directory");
+            normalDestFolder = null;
+        }
+        this.normalDestFolder = normalDestFolder;
+    }
+
     @Override
     public void start() {
     }
@@ -330,10 +364,9 @@ public class StudentIdSys implements Module {
                 response.errorBadQuery("\"" + imageQueryRaw + "\" (Only give " + len + " value instead of 4)");
                 return;
             }
-            String imageQuery = "syear=" + cache[0] + "&sem=" + cache[1] + "&co_no=" + cache[2] + "&class_code=" + cache[3];
 
             // Get image
-            getDistributionGraph(imageQuery, cookieStore, response);
+            getDistributionGraph(new ImageQuery(cache[0], cache[1], cache[2], cache[3]), cookieStore, response);
         }
         // Unknown mode
         else
@@ -523,10 +556,10 @@ public class StudentIdSys implements Module {
         response.setData(courseGradeList.toString());
     }
 
-    private void getDistributionGraph(String query, CookieStore cookieStore, ApiResponse response) {
+    private void getDistributionGraph(ImageQuery query, CookieStore cookieStore, ApiResponse response) {
         BufferedImage image;
         try {
-            BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + query)
+            BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + query.toQuery())
                     .header("Connection", "keep-alive")
                     .ignoreContentType(true)
                     .cookieStore(cookieStore).execute().bodyStream();
@@ -543,11 +576,6 @@ public class StudentIdSys implements Module {
         int[] studentCount = parseImage(imageRGB, imageWidth, imageHeight, false);
 
 //        image.setRGB(0, 0, imageWidth, imageHeight, imageRGB, 0, imageWidth);
-//        try {
-//            ImageIO.write(image, "png", new File(NORMAL_DEST_FOLDER + '/' + query + ".png"));
-//        } catch (IOException e) {
-//            logger.errTrace(e);
-//        }
 
         if (studentCount == null) {
             response.errorParse("Normal distribution graph not found");
@@ -1004,37 +1032,6 @@ public class StudentIdSys implements Module {
             }
         }
         return score;
-    }
-
-    private int getNumber(int[] imageRGB, int imageWidth, int startX, int startY, int endX, int endY) {
-//        if (endY - startY < 8)
-//            return -1;
-
-        int out = 0;
-        while (startX < endX) {
-            int[] score = new int[numbers.length];
-            for (int y = 0; y < 8; y++) {
-                for (int x = 0; x < 5; x++) {
-                    int p = imageRGB[(startY + y) * imageWidth + startX + x] & 0xFFFF00;
-                    boolean isNum = p != 0xFFFF00;
-                    for (int k = 0; k < numbers.length; k++) {
-                        boolean is1 = ((numbers[k][y] >> (4 - x)) & 0x1) > 0;
-                        if (isNum == is1)
-                            score[k]++;
-                    }
-                }
-            }
-            int num = 0;
-            for (int i = 0; i < score.length; i++) {
-                if (score[i] > score[num])
-                    num = i;
-            }
-//            logger.log(score[num] + " " + Arrays.toString(score));
-            out = out * 10 + num;
-            startX += 6;
-        }
-
-        return out;
     }
 
     private double stdDevFunction(double x, double stdDev, double avg) {

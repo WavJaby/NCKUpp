@@ -11,15 +11,16 @@ import org.jsoup.nodes.Element;
 
 import java.io.*;
 import java.net.CookieStore;
-import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.LinkOption;
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.UserPrincipal;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -338,5 +339,21 @@ public class Lib {
         for (int i = input.length(); i < length; i++)
             builder.append(chr);
         return builder + input;
+    }
+
+    public static void setFilePermission(File imageFile, UserPrincipal user, GroupPrincipal group, Set<PosixFilePermission> permission) {
+        PosixFileAttributeView attributeView = Files.getFileAttributeView(imageFile.toPath(), PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        if (attributeView != null) {
+            try {
+                if (user != null)
+                    attributeView.setOwner(user);
+                if (group != null)
+                    attributeView.setGroup(group);
+                if (permission != null)
+                    attributeView.setPermissions(permission);
+            } catch (IOException e) {
+                logger.errTrace(e);
+            }
+        }
     }
 }

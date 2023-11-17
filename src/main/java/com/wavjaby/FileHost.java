@@ -2,7 +2,6 @@ package com.wavjaby;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.request.CustomResponse;
@@ -50,7 +49,7 @@ public class FileHost implements Module {
 
     @RequestMapping("/**")
     @CustomResponse
-    public void fileHost(HttpExchange req){
+    public void fileHost(HttpExchange req) {
         String path = req.getRequestURI().getPath();
         Headers responseHeader = req.getResponseHeaders();
         try {
@@ -127,7 +126,7 @@ public class FileHost implements Module {
             else
                 mimeType = "application/octet-stream";
         }
-            responseHeader.set("Content-Type", mimeType);
+        responseHeader.set("Content-Type", mimeType);
     }
 
 

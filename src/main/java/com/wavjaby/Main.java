@@ -9,9 +9,13 @@ import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
+import java.net.InetAddress;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -19,6 +23,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static com.wavjaby.lib.Lib.executorShutdown;
+import static com.wavjaby.lib.Lib.setFilePermission;
 
 
 public class Main {
@@ -34,6 +39,10 @@ public class Main {
     public static final String stuIdSysNckuOrg = "https://" + stuIdSysNcku;
     public static final String courseQueryNcku = "course-query.acad.ncku.edu.tw";
     public static final String courseQueryNckuOrg = "https://" + courseQueryNcku;
+    public static UserPrincipal userPrincipal;
+    public static GroupPrincipal groupPrincipal;
+    public static Set<PosixFilePermission> filePermission;
+    public static Set<PosixFilePermission> folderPermission;
 
     public static final URI courseNckuOrgUri;
     public static final URI courseQueryNckuOrgUri;
@@ -60,18 +69,33 @@ public class Main {
 
     Main() {
 //        System.setProperty("javax.net.debug", "ssl,handshake");
+        // Read settings and logger
         PropertiesReader serverSettings = new PropertiesReader("./server.properties");
         Logger.setLogFile(serverSettings.getProperty("logFilePath", "./server.log"));
         Logger.setTraceClassFilter(serverSettings.getProperty("traceFilter", "com.wavjaby"));
         cookieDomain = serverSettings.getProperty("domain", "localhost");
 
-        server = new RestApiServer(serverSettings);
-        if (!server.ready || !server.start()) return;
+        // Get permission
+        Main.filePermission = PosixFilePermissions.fromString("rw-rw-r--");
+        Main.folderPermission = PosixFilePermissions.fromString("rwxrw-r--");
+        UserPrincipalLookupService lookupService = FileSystems.getDefault().getUserPrincipalLookupService();
+        try {
+            String userHostName = InetAddress.getLocalHost().getHostName();
+            Main.userPrincipal = lookupService.lookupPrincipalByName(userHostName);
+            Main.groupPrincipal = lookupService.lookupPrincipalByGroupName(userHostName);
+        } catch (IOException e) {
+            logger.warn(e);
+        }
+        // Set log permission
+        setFilePermission(Logger.getLogFile(), Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
 
         if (!cacheFolder.exists())
             if (!cacheFolder.mkdir())
                 logger.err("Cache folder can not create");
-        Runtime.getRuntime().addShutdownHook(new Thread(this::stopModules));
+
+        // Create RestAPI server
+        server = new RestApiServer(serverSettings);
+        if (!server.ready || !server.start()) return;
 
         ProxyManager proxyManager = new ProxyManager(serverSettings);
         addModule(proxyManager);
@@ -96,10 +120,11 @@ public class Main {
         addModule(search);
         Login login = new Login(search, courseFunctionButton, courseSchedule, sqLite, proxyManager);
         addModule(login);
+        DeptWatchdog watchDog = new DeptWatchdog(login, sqLite);
+        addModule(watchDog);
         addModule(new AllDept(search));
         addModule(new Logout(proxyManager));
         addModule(new A9Registered(proxyManager));
-        addModule(new DeptWatchdog(login, sqLite));
         addModule(new Profile(login, sqLite));
         addModule(new CourseRegister(proxyManager, robotCode));
         addModule(new ExtractUrl(proxyManager));
@@ -109,15 +134,19 @@ public class Main {
         addModule(new ClientDebugLog());
         addModule(new StudentIdSys());
 
+        if (serverSettings.getPropertyBoolean("getCourseUpdate", false))
+            addModule(new CourseWatcher(search, watchDog, serverSettings));
+
+        addModule(new CourseEnrollmentTracker(search, serverSettings));
+
 //        logger.log("Server started, " + server.hostname + ':' + server.port);
 
         long start = System.currentTimeMillis();
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stopModules));
         startModules();
         logger.log("Ready in " + (System.currentTimeMillis() - start) + "ms");
         server.printStructure();
 
-//        if (serverSettings.getPropertyBoolean("getCourseUpdate", false))
-//            new GetCourseDataUpdate(search, watchDog, serverSettings);
 
         // Stop
         Scanner scanner = new Scanner(System.in);
@@ -213,7 +242,7 @@ public class Main {
                     value.remove(module.getClass());
                     // Load module
                     if (value.isEmpty()) {
-                        executor.execute(() -> addStartModuleTask(i.getKey(), lock, taskCount, executor));
+                        executor.execute(() -> addStartModuleTask(i.getKey(), null, taskCount, executor));
                         removeList.add(i.getKey());
                     }
                 }
@@ -222,7 +251,8 @@ public class Main {
                 moduleDependencies.remove(i);
             }
         }
-        lock.release();
+        if (lock != null)
+            lock.release();
         taskCount.countDown();
     }
 

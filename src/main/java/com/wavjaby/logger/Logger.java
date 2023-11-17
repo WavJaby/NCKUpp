@@ -48,6 +48,7 @@ public class Logger {
     private static ByteArrayOutputStream logFileOutBuff;
     private static String[] traceClassFilter = null;
     private static ScheduledExecutorService scheduledExecutor;
+    private static File logFile;
 
     public Logger(String tag) {
         this.tag = '[' + tag + ']';
@@ -57,8 +58,11 @@ public class Logger {
         if (logFilePath == null) {
             return;
         }
-        File logFile = new File(logFilePath);
+        logFile = new File(logFilePath);
         try {
+            if (!logFile.exists())
+                if (!logFile.createNewFile())
+                    writeLog(ERROR, "Logger", "Failed to create log file", true);
             logFileOut = Files.newOutputStream(logFile.toPath(), CREATE, APPEND);
             logFileOutBuff = new ByteArrayOutputStream();
             if (scheduledExecutor == null) {
@@ -68,6 +72,10 @@ public class Logger {
         } catch (IOException e) {
             writeLog(ERROR, "Logger", "Failed to open log file", true);
         }
+    }
+
+    public static File getLogFile() {
+        return logFile;
     }
 
     public static void flushLog() {
@@ -182,7 +190,7 @@ public class Logger {
         StringBuilder builder = new StringBuilder();
         for (Progressbar progressbar : PROGRESSBARS) {
             builder.append('[').append(progressbar.tag).append("] ");
-            if(progressbar.message != null)
+            if (progressbar.message != null)
                 builder.append(progressbar.message).append(' ');
             builder.append(format.format(progressbar.progress)).append("% ");
         }

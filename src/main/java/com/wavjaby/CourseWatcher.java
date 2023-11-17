@@ -20,17 +20,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.wavjaby.Main.courseNcku;
 import static com.wavjaby.Main.courseNckuOrgUri;
+import static com.wavjaby.lib.Lib.executorShutdown;
 
-public class GetCourseDataUpdate implements Runnable {
-    private static final String TAG = "CourseListener";
+public class CourseWatcher implements Runnable, Module {
+    private static final String TAG = "CourseWatcher";
     private static final Logger logger = new Logger(TAG);
     private static final String apiUrl = "https://discord.com/api/v10";
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final ExecutorService fetchCoursePool = Executors.newFixedThreadPool(8);
-    private final ExecutorService messageSendPool = Executors.newFixedThreadPool(4);
     private final Search search;
     private final DeptWatchdog watchDog;
-    private final CookieStore baseCookieStore;
+    private CookieStore baseCookieStore;
+    private ScheduledExecutorService scheduler;
+    private ThreadPoolExecutor fetchCoursePool, messageSendPool;
 
     private final long updateInterval = 1600;
     private long lastScheduleStart = 0;
@@ -45,17 +45,16 @@ public class GetCourseDataUpdate implements Runnable {
     private final String botToken;
     private final HashMap<String, String> userDmChannelCache = new HashMap<>();
 
-
-    private static class CourseDataDifference {
-        private enum Type {
+    public static class CourseDataDifference {
+        public enum Type {
             CREATE,
             UPDATE,
         }
 
-        private final Type type;
-        private final CourseData courseData;
-        private final int availableDiff;
-        private final int selectDiff;
+        public final Type type;
+        public final CourseData courseData;
+        public final int availableDiff;
+        public final int selectDiff;
 
         public CourseDataDifference(CourseData courseData, int availableDiff, int selectDiff) {
             this.type = Type.UPDATE;
@@ -72,11 +71,14 @@ public class GetCourseDataUpdate implements Runnable {
         }
     }
 
-    public GetCourseDataUpdate(Search search, DeptWatchdog watchDog, Properties serverSettings) {
+    public CourseWatcher(Search search, DeptWatchdog watchDog, Properties serverSettings) {
         this.search = search;
         this.watchDog = watchDog;
         botToken = serverSettings.getProperty("botToken");
+    }
 
+    @Override
+    public void start() {
         baseCookieStore = search.createCookieStore();
 //        addListenDept("A1");
 //        addListenDept("A2");
@@ -90,8 +92,23 @@ public class GetCourseDataUpdate implements Runnable {
         addListenDept("F7");
         addListenDept("A9");
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
+
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        fetchCoursePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
+        messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
     }
 
+    @Override
+    public void stop() {
+        executorShutdown(scheduler, 5000, TAG);
+        executorShutdown(fetchCoursePool, 5000, TAG + "Fetch Pool");
+        executorShutdown(messageSendPool, 5000, TAG + "Message Pool");
+    }
+
+    @Override
+    public String getTag() {
+        return TAG;
+    }
 
     private void getWatchDogUpdate() {
         String[] newDept = watchDog.getNewDept();
@@ -175,6 +192,7 @@ public class GetCourseDataUpdate implements Runnable {
 
         // Force renew cookie
         if (count >= 1000) {
+            baseCookieStore = search.createCookieStore();
             for (String dept : listenDept.keySet())
                 deptTokenMap.put(dept, null);
             count = 0;
@@ -317,17 +335,17 @@ public class GetCourseDataUpdate implements Runnable {
         }
 //        for (Map.Entry<String, JsonObject> userNotificationData : userNotifications.entrySet())
 //            messageSendPool.submit(() -> postToChannel(getDmChannel(userNotificationData.getKey()), userNotificationData.getValue()));
-        if (mainChannelNotificationEmbeds.length > 0) {
-            logger.log("Post to channel");
-            messageSendPool.submit(() -> postToChannel("1018756061911601224", mainChannelNotification));
-        }
+//        if (mainChannelNotificationEmbeds.length > 0) {
+//            logger.log("Post to channel");
+//            messageSendPool.submit(() -> postToChannel("1018756061911601224", mainChannelNotification));
+//        }
     }
 
     private String intToString(int integer) {
         return integer > 0 ? "+" + integer : String.valueOf(integer);
     }
 
-    private List<CourseDataDifference> getDifferent(@NotNull List<CourseData> last, @NotNull List<CourseData> now) {
+    public static List<CourseDataDifference> getDifferent(@NotNull List<CourseData> last, @NotNull List<CourseData> now) {
         HashMap<String, CourseData> lastCourseDataMap = new HashMap<>();
         for (CourseData i : last)
             if (i.getSerialNumber() != null)
@@ -353,7 +371,7 @@ public class GetCourseDataUpdate implements Runnable {
         return diff;
     }
 
-    private int getIntegerDiff(Integer oldInt, Integer newInt) {
+    private static int getIntegerDiff(Integer oldInt, Integer newInt) {
         return newInt == null ? -oldInt
                 : oldInt == null ? newInt
                 : newInt - oldInt;

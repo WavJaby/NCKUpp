@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.wavjaby.lib.Cookie.isSafari;
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
 public class RestApiResponse {

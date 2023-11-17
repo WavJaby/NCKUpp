@@ -157,7 +157,7 @@ public class Search implements Module {
         return response;
     }
 
-    private SearchQuery getSearchQueryFromRequest(Map<String, String> query, String[] cookieIn, ApiResponse response) {
+    public SearchQuery getSearchQueryFromRequest(Map<String, String> query, String[] cookieIn, ApiResponse response) {
         // Get search ID
         String searchIDs = Cookie.getCookie("searchID", cookieIn);
         CourseSearchID courseSearchID = null;
@@ -172,7 +172,8 @@ public class Search implements Module {
             if (historySearchIDAndCookie != null) {
                 int idSplit = historySearchIDAndCookie.indexOf(',');
                 if (idSplit == -1 || idSplit == 0 || idSplit + 1 == historySearchIDAndCookie.length()) {
-                    response.addWarn("'searchID' Format error, Not provide correct 'searchID' will impact response time, please use correct searchID from response cookie.");
+                    if (response != null)
+                        response.addWarn("'searchID' Format error, Not provide correct 'searchID' will impact response time, please use correct searchID from response cookie.");
                 } else {
                     historySearchID = historySearchIDAndCookie.substring(0, idSplit);
                     historySearchPHPSESSID = historySearchIDAndCookie.substring(idSplit + 1);
@@ -347,7 +348,7 @@ public class Search implements Module {
         );
     }
 
-    private SearchResult querySearch(SearchQuery searchQuery, CookieStore cookieStore) {
+    public SearchResult querySearch(SearchQuery searchQuery, CookieStore cookieStore) {
         // TODO: Support history when get all and serial
         boolean success;
         // get all course

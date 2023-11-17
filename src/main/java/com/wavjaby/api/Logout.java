@@ -54,7 +54,7 @@ public class Logout implements Module {
         logout(cookieStore, response);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
-        addRemoveCookieToHeader("authData", "/api/login", req);
+        addRemoveCookieToHeader("authData", "/api/v0/login", req);
         addRemoveCookieToHeader("stuSysLoginData", "/", req);
 
         logger.log((System.currentTimeMillis() - startTime) + "ms");

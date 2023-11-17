@@ -2,29 +2,21 @@ package com.wavjaby.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.wavjaby.EndpointModule;
 import com.wavjaby.Main;
 import com.wavjaby.Module;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.lib.restapi.RequestMapping;
-import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.Base64;
-import java.util.Map;
-
-import static com.wavjaby.lib.Lib.readInputStreamToString;
 
 @RequestMapping("/api/v0")
 public class Route implements Module {

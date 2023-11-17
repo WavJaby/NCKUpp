@@ -101,7 +101,7 @@ public class Profile implements Module {
             response.errorBadPayload("Read payload failed");
             logger.errTrace(e);
         }
-        if(query!=null) {
+        if (query != null) {
             String studentID = query.get("studentID");
             String courseSerial;
             if (studentID == null) {
