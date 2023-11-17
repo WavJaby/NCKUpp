@@ -1,5 +1,7 @@
 @import 'variables';
 
+$login-bg-color: #0a0a0af2;
+
 .root {
     position: relative;
     width: 100%;
@@ -39,17 +41,17 @@
     }
 
     > .hamburgerMenu {
+        background: none;
         height: $navbar-height;
+        padding: 0;
         display: none;
+        box-shadow: none;
+        vertical-align: top;
 
-        > li {
+        > img {
             height: 100%;
-
-            > img {
-                height: 100%;
-                padding: 4px;
-                @include box-sizing-border;
-            }
+            padding: 4px;
+            @include box-sizing-border;
         }
     }
 
@@ -62,12 +64,19 @@
         display: none;
     }
 
-    > .homePage > li > a > img {
-        height: 50%;
-        vertical-align: middle;
+    > .homePage {
+        height: $navbar-height;
+        line-height: $navbar-height;
+        display: inline-block;
+        padding: 0 10px;
 
-        &:last-child {
-            margin-left: 5px;
+        > img {
+            height: 50%;
+            vertical-align: middle;
+
+            &:last-child {
+                margin-left: 5px;
+            }
         }
     }
 
@@ -132,7 +141,7 @@
     }
 
     // Links
-    > .links > li, > .homePage > li {
+    > .links > li {
         cursor: pointer;
         float: left;
         margin: 0;
@@ -156,15 +165,6 @@
         }
     }
 
-    > .homePage > li {
-        height: $navbar-height;
-        line-height: $navbar-height;
-
-        &:hover {
-            background: none;
-        }
-    }
-
     li:hover {
         background: $navbar-hover-color;
     }
@@ -175,31 +175,19 @@
 
     // Login button
     > .loginBtn {
-        background: none;
-        height: $navbar-height;
-        font-size: 18px;
-        margin-right: 10px;
+        background: $primary;
+        height: 35px;
+        margin: ($navbar-height - 35px) / 2 10px 0 0;
+        padding: 0 10px;
+        border-radius: 10px;
         float: right;
 
-        &:hover {
-            background: none;
-        }
-
-        > button {
-            background: $primary;
-            width: 100%;
-            height: 35px;
-            margin-top: ($navbar-height - 35px) / 2;
-            padding: 0 10px;
-            border-radius: 10px;
-
-            > img {
-                width: 1em;
-                height: 1em;
-                display: inline-block;
-                vertical-align: middle;
-                margin-right: 5px;
-            }
+        > img {
+            width: 1em;
+            height: 1em;
+            display: inline-block;
+            vertical-align: text-top;
+            margin-right: 5px;
         }
     }
 
@@ -212,16 +200,6 @@
         > .navBarMobileBG.open {
             display: block;
         }
-
-        > .homePage {
-            display: inline-block;
-            float: none;
-
-            > li > a > img {
-                height: 40%;
-            }
-        }
-
 
         > .links {
             background: $navbar-menu-bg-color;
@@ -268,7 +246,7 @@
 
 // Login Window
 .loginWindow {
-    background: $overlay-transparent-bg-color;
+    background: $login-bg-color;
     width: 400px;
     position: absolute;
     top: $navbar-height;
@@ -317,7 +295,7 @@
             display: inline-block;
         }
 
-        > .loginFunctionDeclaration {
+        > .loginDeclaration {
             position: absolute;
             bottom: 5px;
             text-align: left;
@@ -444,7 +422,7 @@ footer {
     overflow: hidden;
 }
 
-.loginFunctionDeclarationWindow {
+.loginDeclarationWindow {
     > h1 {
         margin: 5px 0;
     }

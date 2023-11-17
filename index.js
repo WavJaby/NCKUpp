@@ -87,7 +87,7 @@ window.pageLoading = new Signal(false);
 		console.log('Debug disable');
 
 	// main code
-	const loginFunctionDeclarationWindow = new PopupWindow();
+	const loginDeclarationWindow = new PopupWindow();
 	const userGuideTool = new UserGuideTool();
 	const pageIdName = {
 		Home: '成功大學課程資訊及選課系統',
@@ -152,7 +152,7 @@ window.pageLoading = new Signal(false);
 		metaSet(metaType.TITLE, document.title);
 	}
 
-	const navbarMobileBackground = ul('navBarMobileBG', {onclick: navMenuClose});
+	const navbarMobileBackground = div('navBarMobileBG', {onclick: navMenuClose});
 	const navbarLinks = ul('links',
 		Object.values(pageButtons),
 		li(null, NavSelectList('arrow', text('0w0'), [
@@ -180,30 +180,28 @@ window.pageLoading = new Signal(false);
 		// 		return false; // Not open select list
 		// 	}
 		// ),
-		li('loginBtn',
-			button(null, null, () => {
-					navMenuClose();
-					// Is login
-					if (userLoginData.state && userLoginData.state.login) {
-						fetchApi('/logout').then(onLoginStateChange);
-						return true; // Open select list
-					}
-					// Not login, open login window
-					showLoginWindow.set(!showLoginWindow.state);
-					return false; // Not open select list
-				},
-				img('./res/assets/login_icon.svg'),
-				span(TextState(userLoginData, /**@param{LoginData}state*/state => state && state.login ? state.studentID : '登入')),
-			)
+		button('hamburgerMenu', null, navMenuToggle,
+			img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect'),
 		),
-		ul('hamburgerMenu', li(null,
-			img('./res/assets/burger_menu_icon.svg', 'mobile menu button', 'noDrag noSelect', {onclick: navMenuToggle}),
-		)),
-		ul('homePage', li(null, a(null, './?page=Home', null, pageButtonClick, {pageId: 'Home'},
+		a(null, './?page=Home', 'homePage', pageButtonClick, {pageId: 'Home'},
 			img('./res/assets/page_home/logo_text.svg', 'NCKU'), img('./res/assets/page_home/logo_plusplus_text.svg', '++')
-		))),
+		),
 		navbarMobileBackground,
 		navbarLinks,
+		button('loginBtn', null, () => {
+				navMenuClose();
+				// Is login
+				if (userLoginData.state && userLoginData.state.login) {
+					fetchApi('/logout').then(onLoginStateChange);
+					return true; // Open select list
+				}
+				// Not login, open login window
+				showLoginWindow.set(!showLoginWindow.state);
+				return false; // Not open select list
+			},
+			img('./res/assets/login_icon.svg'),
+			span(TextState(userLoginData, /**@param{LoginData}state*/state => state && state.login ? state.studentID : '登入')),
+		),
 	);
 	window.navMenuClose = navMenuClose;
 
@@ -425,6 +423,9 @@ window.pageLoading = new Signal(false);
 	function LoginWindow(onLoginStateChange) {
 		const username = input('loginField', '學號', null, {onkeyup, type: 'email', autocomplete: 'username'});
 		const password = input('loginField', '密碼', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
+		const loginDeclarationCheck = checkbox('loginDeclaration', false, null,
+			span('我已閱讀'), button(null, '登入聲明', loginDeclaration),
+		);
 		let loading = false;
 
 		function onkeyup(e) {
@@ -433,6 +434,11 @@ window.pageLoading = new Signal(false);
 
 		function login() {
 			if (!loading) {
+				if (!loginDeclarationCheck.input.checked) {
+					messageAlert.addError('請先閱讀登入聲明', '', 2000);
+					return;
+				}
+
 				loading = true;
 				window.pageLoading.set(true);
 				const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
@@ -448,9 +454,9 @@ window.pageLoading = new Signal(false);
 			}
 		}
 
-		function loginFunctionDeclaration() {
-			if (loginFunctionDeclarationWindow.isEmpty()) {
-				loginFunctionDeclarationWindow.windowSet(div('loginFunctionDeclarationWindow',
+		function loginDeclaration() {
+			if (loginDeclarationWindow.isEmpty()) {
+				loginDeclarationWindow.windowSet(div('loginDeclarationWindow',
 					h1('聲明: '),
 					p(null, 'declaration',
 						span('本網站不會將密碼以任何形式暫存或儲存', 'red'), text('，登入功能僅代替使用者將資料轉至成功入口，並回傳登入狀態(Session Cookie)\n'),
@@ -461,7 +467,7 @@ window.pageLoading = new Signal(false);
 					),
 				));
 			}
-			loginFunctionDeclarationWindow.windowOpen();
+			loginDeclarationWindow.windowOpen();
 		}
 
 		// element
@@ -471,9 +477,7 @@ window.pageLoading = new Signal(false);
 			password,
 			span('帳密與成功入口相同', 'description'),
 			div('bottomRow',
-				checkbox('loginFunctionDeclaration', false, null,
-					span('我已閱讀'), button(null, '登入聲明', loginFunctionDeclaration),
-				),
+				loginDeclarationCheck,
 				button('loginField', '登入', login, {type: 'submit'}),
 			),
 		);
