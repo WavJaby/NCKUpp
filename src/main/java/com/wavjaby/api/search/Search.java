@@ -27,13 +27,11 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.URI;
-import java.net.URLEncoder;
+import java.net.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -355,7 +353,7 @@ public class Search implements Module {
         if (searchQuery.getAll()) {
             SearchResult result = new SearchResult();
             AllDeptData allDeptData = getAllDeptData(cookieStore, result);
-            if (allDeptData == null)
+            if (!result.success)
                 return result;
             // start getting dept
             Progressbar progressbar = Logger.addProgressbar(TAG + " get all");
@@ -369,14 +367,24 @@ public class Search implements Module {
             AtomicBoolean allSuccess = new AtomicBoolean(true);
             List<CourseData> courseDataList = new ArrayList<>();
             try {
+                // Get fragments
                 for (int i = 0; i < MULTITHREADING_SEARCH_THREAD_COUNT; i++) {
                     int finalI = i;
                     fetchPool.submit(() -> {
-                        fragments[finalI] = getAllDeptData(createCookieStore(), null);
+                        SearchResult allDeptResult = new SearchResult();
+                        fragments[finalI] = getAllDeptData(createCookieStore(), allDeptResult);
+                        if (!allDeptResult.success && result.success)
+                            synchronized (result) {
+                                allDeptResult.passDataTo(result);
+                            }
                         fragmentsLeft.countDown();
                     });
                 }
                 fragmentsLeft.await();
+                if (!result.success) {
+                    executorShutdown(fetchPool, 5000, "SearchFetchPool");
+                    return result;
+                }
 
                 // Fetch data
                 int i = 0;
@@ -406,7 +414,9 @@ public class Search implements Module {
                             } else {
                                 allSuccess.set(false);
                                 // Pass error data
-                                result.passDataTo(deptCourseData);
+                                synchronized (result) {
+                                    deptCourseData.passDataTo(result);
+                                }
                                 logger.err(Thread.currentThread().getName() + " " + dept + " failed");
                             }
                         } catch (Exception e) {
@@ -418,11 +428,11 @@ public class Search implements Module {
                     });
                 }
                 taskLeft.await();
-                executorShutdown(fetchPool, 5000, "SearchFetchPool");
             } catch (InterruptedException e) {
                 logger.errTrace(e);
                 allSuccess.set(false);
             }
+            executorShutdown(fetchPool, 5000, "SearchFetchPool");
             progressbar.setProgress(100f);
             success = allSuccess.get();
             result.setSuccess(success);
@@ -460,7 +470,9 @@ public class Search implements Module {
                             else {
                                 allSuccess.set(false);
                                 // Pass error data
-                                result.passDataTo(deptCourseData);
+                                synchronized (result) {
+                                    deptCourseData.passDataTo(result);
+                                }
                             }
                         } catch (Exception e) {
                             logger.errTrace(e);
@@ -637,17 +649,19 @@ public class Search implements Module {
                 apiResponse.errorParse(this.parseError);
             if (this.fetchError != null)
                 apiResponse.errorFetch(this.fetchError);
-            if (success)
+            if (this.success)
                 apiResponse.setData(courseDataList.toString());
         }
 
         public void passDataTo(SearchResult result) {
-            if (this.parseError == null)
-                this.parseError = result.parseError;
-            if (this.fetchError == null)
-                this.fetchError = result.fetchError;
-            if (!result.success)
-                success = false;
+            if (result.parseError == null)
+                result.parseError = this.parseError;
+            if (result.fetchError == null)
+                result.fetchError = this.fetchError;
+            if (result.success) {
+                result.success = this.success;
+                result.courseDataList = this.courseDataList;
+            }
         }
 
         public List<CourseData> getCourseDataList() {
@@ -658,20 +672,17 @@ public class Search implements Module {
     public CookieStore createCookieStore() {
         CookieStore cookieStore = new CookieManager().getCookieStore();
         cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
-        for (int i = 0; i < 3; i++) {
-            try {
-                HttpConnection.connect(courseNckuOrg + "/index.php")
-                        .header("Connection", "keep-alive")
+        try {
+            HttpConnection.connect(courseNckuOrg + "/index.php")
+                    .header("Connection", "keep-alive")
 //                    .header("Referer", "https://course.ncku.edu.tw/index.php")
-                        .cookieStore(cookieStore)
-                        .ignoreContentType(true)
-                        .proxy(proxyManager.getProxy())
-                        .userAgent(Main.USER_AGENT)
-                        .execute();
-                break;
-            } catch (IOException e) {
-                logger.errTrace(e);
-            }
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .proxy(proxyManager.getProxy())
+                    .userAgent(Main.USER_AGENT)
+                    .execute();
+        } catch (IOException e) {
+            logger.errTrace(e);
         }
 
 //        logger.log(cookieStore.getCookies().toString());
@@ -1569,7 +1580,8 @@ public class Search implements Module {
                 networkError = false;
             } catch (UncheckedIOException | IOException e) {
                 networkError = true;
-                logger.warn("Fetch page failed retry: " + e.getClass().getName() + ": " + e.getMessage());
+                logger.errTrace(e);
+                logger.warn("Fetch page failed retry: " + e.getMessage());
                 continue;
             }
 

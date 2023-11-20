@@ -3,29 +3,40 @@ package com.wavjaby;
 import com.wavjaby.api.search.CourseData;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.api.search.SearchQuery;
-import com.wavjaby.lib.Cookie;
+import com.wavjaby.json.JsonArray;
+import com.wavjaby.json.JsonArrayStringBuilder;
+import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.CookieStore;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static com.wavjaby.Main.courseNcku;
-import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.lib.Lib.executorShutdown;
+import static com.wavjaby.lib.Lib.setFilePermission;
 
 public class CourseEnrollmentTracker implements Runnable, Module {
     private static final String TAG = "EnrollmentTrack";
     private static final Logger logger = new Logger(TAG);
+    private static final String ENROLLMENT_TRACKER_FOLDER = "./api_file/CourseEnrollmentTracker";
+    private static final String CACHE_FILE_NAME = "cache.json";
     private final Search search;
     private CookieStore baseCookieStore;
     private ScheduledExecutorService scheduler;
     private ThreadPoolExecutor messageSendPool;
+    private File folder;
 
-    private final long updateInterval = 120000;
+    private final long updateInterval = 5 * 50 * 1000;
     private long lastScheduleStart = 0;
     private long lastUpdateStart = System.currentTimeMillis();
     private int count = 0;
@@ -40,8 +51,35 @@ public class CourseEnrollmentTracker implements Runnable, Module {
 
     @Override
     public void start() {
+        File folder = new File(ENROLLMENT_TRACKER_FOLDER);
+        if (!folder.exists()) {
+            if (!folder.mkdirs()) {
+                logger.err("EnrollmentTracker folder failed to create");
+                folder = null;
+            }
+        }
+        if (folder != null && !folder.isDirectory()) {
+            logger.err("EnrollmentTracker folder is not Directory");
+            folder = null;
+        }
+        if (folder != null)
+            setFilePermission(folder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
+        this.folder = folder;
+
         baseCookieStore = search.createCookieStore();
         lastCourseDataList = new ArrayList<>();
+        // Read cache
+        File cacheFile;
+        if (folder != null && (cacheFile = new File(folder, CACHE_FILE_NAME)).isFile()) {
+            try {
+                JsonArray jsonArray = new JsonArray(Files.newInputStream(cacheFile.toPath()));
+                for (Object o : jsonArray) {
+                    lastCourseDataList.add(new CourseData((JsonObject) o));
+                }
+            } catch (IOException e) {
+                logger.errTrace(e);
+            }
+        }
 
         messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -82,27 +120,52 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         lastUpdateStart = start;
 
         // Force renew cookie
-        if (count >= 1000) {
+        if (count % 2 == 0) {
             baseCookieStore = search.createCookieStore();
-            count = 0;
         }
 
         // Start fetch course update
-        List<CourseWatcher.CourseDataDifference> diff = new ArrayList<>();
         Map<String, String> map = new HashMap<>();
         map.put("dept", "ALL");
         SearchQuery searchQuery = search.getSearchQueryFromRequest(map, new String[0], null);
         Search.SearchResult searchResult = search.querySearch(searchQuery, baseCookieStore);
-
-        List<CourseData> newCourseDataList = searchResult.getCourseDataList();
-        if (!lastCourseDataList.isEmpty())
-            diff.addAll(CourseWatcher.getDifferent(lastCourseDataList, newCourseDataList));
-        lastCourseDataList = newCourseDataList;
-
-        // Build notification
-        if (!diff.isEmpty())
-            messageSendPool.submit(() -> buildAndSendNotification(diff));
-        logger.log(++count + ", " + newCourseDataList.size() + ", " + (System.currentTimeMillis() - start) + "ms");
+        // Check result
+        if (searchResult.isSuccess()) {
+            List<CourseData> newCourseDataList = searchResult.getCourseDataList();
+            // Get diff
+            List<CourseWatcher.CourseDataDifference> diff = new ArrayList<>();
+            if (!lastCourseDataList.isEmpty())
+                diff.addAll(CourseWatcher.getDifferent(lastCourseDataList, newCourseDataList));
+            lastCourseDataList = newCourseDataList;
+            if (!diff.isEmpty()) {
+                // Build notification
+                messageSendPool.submit(() -> buildAndSendNotification(diff));
+                // Create file
+                File cacheFile = new File(folder, CACHE_FILE_NAME);
+                JsonArrayStringBuilder builder = new JsonArrayStringBuilder();
+                for (CourseData courseData : newCourseDataList) {
+                    if (courseData.getSerialNumber() != null && courseData.getSelected() != null)
+                        builder.appendRaw(courseData.toStringShort());
+                }
+                try {
+                    // Store history Data
+                    if (folder != null && cacheFile.isFile()) {
+                        File historyFile = new File(folder, cacheFile.lastModified() + ".json");
+                        Files.copy(cacheFile.toPath(), historyFile.toPath(),
+                                StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    // Write bew data to cache
+                    FileWriter fileWriter = new FileWriter(cacheFile);
+                    fileWriter.write(builder.toString());
+                    fileWriter.close();
+                } catch (IOException e) {
+                    logger.errTrace(e);
+                }
+            }
+            logger.log(++count + ", " + newCourseDataList.size() + ", " + (System.currentTimeMillis() - start) + "ms");
+        } else {
+            logger.warn(count + " Failed " + (System.currentTimeMillis() - start) + "ms");
+        }
     }
 
     private void buildAndSendNotification(List<CourseWatcher.CourseDataDifference> diff) {
@@ -115,29 +178,10 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                 case UPDATE:
                     CourseData cosData = i.courseData;
                     logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() +
-                            "available: " + i.availableDiff + ", select: " + i.selectDiff);
-
+                            "available: " + CourseWatcher.intToString(i.availableDiff) +
+                            ", select: " + CourseWatcher.intToString(i.selectDiff));
                     break;
             }
         }
-    }
-
-    private String intToString(int integer) {
-        return integer > 0 ? "+" + integer : String.valueOf(integer);
-    }
-
-    private Search.DeptToken renewDeptToken(String deptNo, CookieStore cookieStore) {
-        logger.log("Renew dept token " + deptNo);
-        cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
-        Search.AllDeptData allDeptData = search.getAllDeptData(cookieStore, null);
-        if (allDeptData == null) {
-            logger.err("Can not get allDeptData");
-            return null;
-        }
-        Search.DeptToken deptToken = search.createDeptToken(deptNo, allDeptData, null);
-        if (deptToken == null)
-            return null;
-        logger.log(deptToken.getID());
-        return deptToken;
     }
 }

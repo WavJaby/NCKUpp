@@ -284,7 +284,6 @@ public class StudentIdSys implements Module {
 
     public StudentIdSys() {
         File normalDestFolder = new File(NORMAL_DEST_FOLDER);
-        setFilePermission(normalDestFolder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
         if (!normalDestFolder.exists()) {
             if (!normalDestFolder.mkdirs()) {
                 logger.err("Normal dest image folder failed to create");
@@ -295,6 +294,8 @@ public class StudentIdSys implements Module {
             logger.err("Normal dest image folder is not directory");
             normalDestFolder = null;
         }
+        if (normalDestFolder != null)
+            setFilePermission(normalDestFolder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
         this.normalDestFolder = normalDestFolder;
     }
 

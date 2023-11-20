@@ -1,6 +1,7 @@
 package com.wavjaby.api.search;
 
 import com.wavjaby.json.JsonArrayStringBuilder;
+import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 
 public class CourseData {
@@ -12,7 +13,7 @@ public class CourseData {
     final Integer forGrade;  // Can be null
     final String forClass; // Can be null
     final String group;  // Can be null
-    final String category;
+    final String category;  // Can be null
     final String courseName;
     final String courseNote; // Can be null
     final String courseLimit; // Can be null
@@ -28,6 +29,61 @@ public class CourseData {
     final String btnAddCourse; // Can be null
     final String btnPreRegister; // Can be null
     final String btnAddRequest; // Can be null
+
+
+    public CourseData(JsonObject jsonObject) {
+        // output
+        this.semester = jsonObject.getString("y");
+        this.departmentName = jsonObject.getString("dn");
+
+        this.serialNumber = jsonObject.getString("sn");
+        this.courseAttributeCode = jsonObject.getString("ca");
+        this.courseSystemNumber = jsonObject.getString("cs");
+
+        if (jsonObject.getObject("g") != null)
+            this.forGrade = jsonObject.getInt("g");
+        else
+            this.forGrade = null;
+        this.forClass = jsonObject.getString("co");
+        this.group = jsonObject.getString("cg");
+
+        this.category = jsonObject.getString("ct");
+
+        this.courseName = jsonObject.getString("cn");
+        this.courseNote = jsonObject.getString("ci");
+        this.courseLimit = jsonObject.getString("cl");
+        if (jsonObject.getObject("tg") != null)
+            this.tags = jsonObject.getArray("tg").stream().map(i -> TagData.fromString((String) i)).toArray(TagData[]::new);
+        else this.tags = null;
+
+        if (jsonObject.getObject("c") != null)
+            this.credits = jsonObject.getFloat("c");
+        else this.credits = null;
+        if (jsonObject.getObject("r") != null)
+            this.required = jsonObject.getBoolean("r");
+        else this.required = null;
+
+        if (jsonObject.getObject("i") != null)
+            this.instructors = jsonObject.getArray("i").stream().map(i -> (String) i).toArray(String[]::new);
+        else this.instructors = null;
+
+        if (jsonObject.getObject("s") != null)
+            this.selected = jsonObject.getInt("s");
+        else this.selected = null;
+        if (jsonObject.getObject("a") != null)
+            this.available = jsonObject.getInt("a");
+        else this.available = null;
+
+        if (jsonObject.getObject("t") != null)
+            this.timeList = jsonObject.getArray("t").stream().map(i -> TimeData.fromString((String) i)).toArray(TimeData[]::new);
+        else this.timeList = null;
+
+        this.moodle = jsonObject.getString("m");
+        this.btnPreferenceEnter = jsonObject.getString("pe");
+        this.btnAddCourse = jsonObject.getString("ac");
+        this.btnPreRegister = jsonObject.getString("pr");
+        this.btnAddRequest = jsonObject.getString("ar");
+    }
 
     public CourseData(String semester,
                       String departmentName,
@@ -67,7 +123,7 @@ public class CourseData {
         this.btnAddRequest = btnAddRequest;
     }
 
-    static class TagData {
+    public static class TagData {
         final String tag;
         final String url; // Can be null
         final String colorID;
@@ -78,6 +134,11 @@ public class CourseData {
             this.colorID = colorID;
         }
 
+        public static TagData fromString(String raw) {
+            String[] s = raw.split(",");
+            return new TagData(s[0], s[1], s[2]);
+        }
+
         @Override
         public String toString() {
             if (url == null)
@@ -86,7 +147,7 @@ public class CourseData {
         }
     }
 
-    static class TimeData {
+    public static class TimeData {
         /**
          * Can be null, 0 ~ 6
          */
@@ -124,6 +185,11 @@ public class CourseData {
             this.mapRoomNo = null;
             this.mapRoomName = null;
             this.detailedTimeData = detailedTimeData;
+        }
+
+        public static TimeData fromString(String raw) {
+            String[] s = raw.split(",");
+            return new TimeData(Byte.parseByte(s[0]), Byte.parseByte(s[1]), Byte.parseByte(s[2]), s[3], s[4], s[5]);
         }
 
         @Override
@@ -196,6 +262,32 @@ public class CourseData {
         jsonBuilder.append("ac", btnAddCourse);
         jsonBuilder.append("pr", btnPreRegister);
         jsonBuilder.append("ar", btnAddRequest);
+        return jsonBuilder.toString();
+    }
+
+    public String toStringShort() {
+        // output
+        JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
+        jsonBuilder.append("sn", serialNumber);
+        jsonBuilder.append("ca", courseAttributeCode);
+        jsonBuilder.append("cs", courseSystemNumber);
+
+        if (forGrade == null) jsonBuilder.append("g");
+        else jsonBuilder.append("g", forGrade);
+        jsonBuilder.append("co", forClass);
+        jsonBuilder.append("cg", group);
+
+        jsonBuilder.append("cn", courseName);
+        jsonBuilder.append("tg", toJsonArray(tags));
+
+        jsonBuilder.append("i", toJsonArray(instructors));
+
+        if (selected == null) jsonBuilder.append("s");
+        else jsonBuilder.append("s", selected);
+        if (available == null) jsonBuilder.append("a");
+        else jsonBuilder.append("a", available);
+
+        jsonBuilder.append("t", toJsonArray(timeList));
         return jsonBuilder.toString();
     }
 

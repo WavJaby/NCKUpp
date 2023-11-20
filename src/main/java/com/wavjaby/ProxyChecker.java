@@ -204,7 +204,7 @@ public class ProxyChecker {
 //                ? "https://course.ncku.edu.tw/index.php"
 //                : "https://api.wavjaby.nckuctf.org/api/ip";
 //                            : "https://ifconfig.me/ip";
-        final String testUrl = "https://api.wavjaby.nckuctf.org/api/ip";
+        final String testUrl = "https://ifconfig.me/ip";
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(onProxyTestStart());

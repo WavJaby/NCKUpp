@@ -341,7 +341,7 @@ public class CourseWatcher implements Runnable, Module {
 //        }
     }
 
-    private String intToString(int integer) {
+    public static String intToString(int integer) {
         return integer > 0 ? "+" + integer : String.valueOf(integer);
     }
 
