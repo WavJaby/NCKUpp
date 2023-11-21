@@ -26,14 +26,35 @@ $login-bg-color: #0a0a0af2;
     }
 }
 
+@keyframes NavbarSlideIn {
+    0% {
+        @include transform(translateY(-$navbar-height));
+    }
+    100% {
+        @include transform(translateY(0));
+    }
+}
+
+@-webkit-keyframes NavbarSlideIn {
+    0% {
+        @include transform(translateY(-$navbar-height));
+    }
+    100% {
+        @include transform(translateY(0));
+    }
+}
+
 // Navbar
 .navbar {
     background: $navbar-bg-color;
     width: 100%;
     height: $navbar-height;
     position: absolute;
+    top: 0;
     z-index: 100;
     white-space: nowrap;
+    animation: NavbarSlideIn ease-out 500ms forwards;
+    -webkit-animation: NavbarSlideIn ease-out 500ms forwards;
     @include transition(box-shadow 200ms);
 
     &.scroll {

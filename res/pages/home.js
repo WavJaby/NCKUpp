@@ -12,7 +12,7 @@ export default function (router) {
 	const styles = mountableStylesheet('./res/pages/home.css');
 	let /**@type{PageStorage}*/pageStorage;
 
-	const titleAnimation = span(null, 'slideOut', img('./res/assets/page_home/logo_plusplus_text.svg', '++'));
+	// Feature introduction
 	const introduction = div('introduction',
 		div('block',
 			img('./res/assets/page_home/sort_function.png'),
@@ -46,43 +46,11 @@ export default function (router) {
 			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
 		)
 	);
-	const iconImages = [
-		img('res/assets/icon/icon_64.svg', ''),
-		// 腸太郎萬歲 \o/ \o/ \o/
-		img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', ''),
-		img('https://sticker-assets.dcard.tw/images/b5c7eddc-8dd9-40e9-ba4b-358323a45713/full.png', ''),
-		img('https://sticker-assets.dcard.tw/images/84eddd38-497c-41d6-8845-ec8b57498c6a/full.png', ''),
-		img('https://sticker-assets.dcard.tw/images/102eb5ae-3f1e-4b28-8866-905a64f87c9b/full.png', ''),
-	];
-	let iconImageStyle = 0;
-	let clickCount = 0;
-	const iconImageParent = div('rippleable', {
-		onclick: e => {
-			createRipple(e);
-			if (++clickCount === 5) {
-				clickCount = 0;
-				if (++iconImageStyle === iconImages.length)
-					iconImageStyle = 0;
-				pageStorage.data['iconImageStyle'] = iconImageStyle;
-				pageStorage.save();
-				iconImageParent.replaceChild(iconImages[iconImageStyle], iconImageParent.firstChild);
-			}
-		},
-	});
+
+	const mainBoxElement = mainBox();
 	const siteInfo = div('siteInfo',
-		div('main',
-			h1(null, 'title', iconImageParent, img('./res/assets/page_home/logo_text.svg', 'NCKU'), titleAnimation),
-			p(null, 'description',
-				span('結合 NCKU HUB・UrSchool・成大選課系統', null, {style: 'letter-spacing: 3.2px'}),
-				span('眾多功能，提供更好的選課環境。', null, {style: 'font-size:48px;font-weight:700;letter-spacing:4.8px'})
-			),
-			div('quickSearch',
-				input('searchInput', 'Search...', null, null),
-				button(null, null, null,
-					img('./res/assets/search_icon.svg', ''), span('課程查詢')
-				),
-			),
-		),
+		mainBoxElement,
+		filterFeatureBox(),
 		// introduction,
 		// a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
 	);
@@ -129,9 +97,7 @@ export default function (router) {
 		styles.mount();
 		pageStorage = router.getPageStorage(this, 0);
 
-		// Load iconImage style
-		iconImageStyle = pageStorage.data['iconImageStyle'] || 0;
-		iconImageParent.appendChild(iconImages[iconImageStyle]);
+		mainBoxElement.init(pageStorage);
 
 		// Get home info
 		fetchApi('/homeInfo').then(response => {
@@ -144,9 +110,9 @@ export default function (router) {
 	function onPageOpen() {
 		console.log('Home Open');
 		styles.enable();
-		setTimeout(() => titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px', 700);
 		document.head.appendChild(linkCanonical);
 
+		mainBoxElement.onPageOpen();
 		router.element.addEventListener('scroll', onscroll);
 		router.element.addEventListener('wheel', onwheel);
 		pageOpened = true;
@@ -157,9 +123,9 @@ export default function (router) {
 	function onPageClose() {
 		console.log('Home Close');
 		styles.disable();
-		titleAnimation.style.width = null;
 		document.head.removeChild(linkCanonical);
 
+		mainBoxElement.onPageClose();
 		router.element.removeEventListener('scroll', onscroll);
 		router.element.removeEventListener('wheel', onwheel);
 		pageOpened = false;
@@ -295,6 +261,69 @@ export default function (router) {
 		}
 	}
 
+	return div('home',
+		{onRender, onPageClose, onPageOpen},
+		siteInfo,
+		scrollDownIndicator,
+		div('panels',
+			newsPanel,
+			bulletinPanel,
+		)
+	);
+};
+
+function mainBox() {
+	let pageStorage;
+	// Main title
+	const iconImages = [
+		img('res/assets/icon/icon_64.svg', ''),
+		// 腸太郎萬歲 \o/ \o/ \o/
+		img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', ''),
+		img('https://sticker-assets.dcard.tw/images/b5c7eddc-8dd9-40e9-ba4b-358323a45713/full.png', ''),
+		img('https://sticker-assets.dcard.tw/images/84eddd38-497c-41d6-8845-ec8b57498c6a/full.png', ''),
+		img('https://sticker-assets.dcard.tw/images/102eb5ae-3f1e-4b28-8866-905a64f87c9b/full.png', ''),
+	];
+	let iconImageStyle = 0;
+	let clickCount = 0;
+	const iconImageParent = div('rippleable', {
+		onclick: e => {
+			createRipple(e);
+			if (++clickCount === 5) {
+				clickCount = 0;
+				if (++iconImageStyle === iconImages.length)
+					iconImageStyle = 0;
+				pageStorage.data['iconImageStyle'] = iconImageStyle;
+				pageStorage.save();
+				iconImageParent.replaceChild(iconImages[iconImageStyle], iconImageParent.firstChild);
+			}
+		},
+	});
+	const titleAnimation = span(null, 'slideOut', img('./res/assets/page_home/logo_plusplus_text.svg', '++'));
+
+	return div('main', {
+			init: (pageStorage_) => {
+				pageStorage = pageStorage_;
+				// Load iconImage style
+				iconImageStyle = pageStorage.data['iconImageStyle'] || 0;
+				iconImageParent.appendChild(iconImages[iconImageStyle]);
+			},
+			onPageOpen: () =>
+				setTimeout(() => titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px', 700),
+			onPageClose: () => titleAnimation.style.width = null
+		},
+		h1(null, 'title', iconImageParent, img('./res/assets/page_home/logo_text.svg', 'NCKU'), titleAnimation),
+		p(null, 'description',
+			span('結合 NCKU HUB・UrSchool・成大選課系統', null, {style: 'letter-spacing: 3.2px'}),
+			span('眾多功能，提供更好的選課環境。', null, {style: 'font-size:48px;font-weight:700;letter-spacing:4.8px'})
+		),
+		div('quickSearch',
+			input('searchInput', 'Search...', null, null),
+			button(null, null, null,
+				img('./res/assets/search_icon.svg', ''), span('課程查詢')
+			),
+		),
+	);
+
 	function createRipple(event) {
 		const target = event.currentTarget;
 		const ripple = document.createElement('div');
@@ -323,14 +352,8 @@ export default function (router) {
 
 		target.appendChild(ripple);
 	}
+}
 
-	return div('home',
-		{onRender, onPageClose, onPageOpen},
-		siteInfo,
-		scrollDownIndicator,
-		div('panels',
-			newsPanel,
-			bulletinPanel,
-		)
-	);
-};
+function filterFeatureBox() {
+
+}

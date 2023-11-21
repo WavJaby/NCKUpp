@@ -134,10 +134,11 @@ public class Main {
         addModule(new ClientDebugLog());
         addModule(new StudentIdSys());
 
-        if (serverSettings.getPropertyBoolean("getCourseUpdate", false))
+        if (serverSettings.getPropertyBoolean("courseWatcher", false))
             addModule(new CourseWatcher(search, watchDog, serverSettings));
 
-        addModule(new CourseEnrollmentTracker(search, serverSettings));
+        if (serverSettings.getPropertyBoolean("courseEnrollmentTracker", false))
+            addModule(new CourseEnrollmentTracker(search, serverSettings));
 
 //        logger.log("Server started, " + server.hostname + ':' + server.port);
 
