@@ -6,11 +6,9 @@ import com.wavjaby.api.search.SearchQuery;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
-import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.CookieStore;
@@ -36,7 +34,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
     private ThreadPoolExecutor messageSendPool;
     private File folder;
 
-    private final long updateInterval = 5 * 50 * 1000;
+    private final long updateInterval = 6 * 50 * 1000;
     private long lastScheduleStart = 0;
     private long lastUpdateStart = System.currentTimeMillis();
     private int count = 0;
@@ -66,7 +64,6 @@ public class CourseEnrollmentTracker implements Runnable, Module {
             setFilePermission(folder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
         this.folder = folder;
 
-        baseCookieStore = search.createCookieStore();
         lastCourseDataList = new ArrayList<>();
         // Read cache
         File cacheFile;
@@ -74,7 +71,12 @@ public class CourseEnrollmentTracker implements Runnable, Module {
             try {
                 JsonArray jsonArray = new JsonArray(Files.newInputStream(cacheFile.toPath()));
                 for (Object o : jsonArray) {
-                    lastCourseDataList.add(new CourseData((JsonObject) o));
+                    try {
+                        lastCourseDataList.add(new CourseData((JsonObject) o));
+                    } catch (Exception e) {
+                        logger.log(o);
+                        throw e;
+                    }
                 }
             } catch (IOException e) {
                 logger.errTrace(e);
@@ -83,7 +85,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
 
         messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(this, 1000, updateInterval, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(this, 10000, updateInterval, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -128,7 +130,21 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         Map<String, String> map = new HashMap<>();
         map.put("dept", "ALL");
         SearchQuery searchQuery = search.getSearchQueryFromRequest(map, new String[0], null);
-        Search.SearchResult searchResult = search.querySearch(searchQuery, baseCookieStore);
+        Search.SearchResult searchResult = null;
+        for (int i = 0; i < 3; i++) {
+            start = System.currentTimeMillis();
+            searchResult = search.querySearch(searchQuery, baseCookieStore);
+            if (searchResult.isSuccess())
+                break;
+            else {
+                logger.warn(count + " Failed " + (System.currentTimeMillis() - start) + "ms, Retry");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    logger.errTrace(e);
+                }
+            }
+        }
         // Check result
         if (searchResult.isSuccess()) {
             List<CourseData> newCourseDataList = searchResult.getCourseDataList();
@@ -175,11 +191,14 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                 case CREATE:
                     logger.log("CREATE: " + i.courseData.getCourseName());
                     break;
+                case DELETE:
+                    logger.log("DELETE: " + i.courseData.getCourseName());
+                    break;
                 case UPDATE:
                     CourseData cosData = i.courseData;
                     logger.log("UPDATE " + cosData.getSerialNumber() + " " + cosData.getCourseName() +
-                            "available: " + CourseWatcher.intToString(i.availableDiff) +
-                            ", select: " + CourseWatcher.intToString(i.selectDiff));
+                            " available: " + CourseWatcher.intToString(i.availableDiff) +
+                            " select: " + CourseWatcher.intToString(i.selectDiff));
                     break;
             }
         }

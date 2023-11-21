@@ -27,11 +27,13 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
-import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
-import java.net.*;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -357,6 +359,7 @@ public class Search implements Module {
                 return result;
             // start getting dept
             Progressbar progressbar = Logger.addProgressbar(TAG + " get all");
+            progressbar.setProgress(0);
             CountDownLatch taskLeft = new CountDownLatch(allDeptData.deptCount);
             ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
                     Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
@@ -371,17 +374,24 @@ public class Search implements Module {
                 for (int i = 0; i < MULTITHREADING_SEARCH_THREAD_COUNT; i++) {
                     int finalI = i;
                     fetchPool.submit(() -> {
-                        SearchResult allDeptResult = new SearchResult();
-                        fragments[finalI] = getAllDeptData(createCookieStore(), allDeptResult);
-                        if (!allDeptResult.success && result.success)
-                            synchronized (result) {
-                                allDeptResult.passDataTo(result);
-                            }
+                        try {
+                            SearchResult allDeptResult = new SearchResult();
+                            fragments[finalI] = getAllDeptData(createCookieStore(), allDeptResult);
+                            if (!allDeptResult.success && result.success)
+                                synchronized (result) {
+                                    allDeptResult.passDataTo(result);
+                                }
+                        } catch (Exception e) {
+                            logger.errTrace(e);
+                            result.setSuccess(false);
+                        }
                         fragmentsLeft.countDown();
                     });
                 }
                 fragmentsLeft.await();
+                // Failed to create fragment
                 if (!result.success) {
+                    progressbar.setProgress(100f);
                     executorShutdown(fetchPool, 5000, "SearchFetchPool");
                     return result;
                 }
@@ -411,9 +421,10 @@ public class Search implements Module {
                                 progressbar.setProgress(
                                         Thread.currentThread().getName() + " " + dept + " " + (System.currentTimeMillis() - start) + "ms",
                                         (float) (allDeptData.deptCount - taskLeft.getCount()) / allDeptData.deptCount * 100f);
-                            } else {
+                            }
+                            // If search error
+                            else {
                                 allSuccess.set(false);
-                                // Pass error data
                                 synchronized (result) {
                                     deptCourseData.passDataTo(result);
                                 }
@@ -635,13 +646,17 @@ public class Search implements Module {
         }
 
         public void errorParse(String message) {
-            if (this.parseError == null)
-                this.parseError = message;
+            if (this.parseError != null)
+                return;
+            this.parseError = message;
+            this.success = false;
         }
 
         public void errorFetch(String message) {
-            if (this.fetchError == null)
-                this.fetchError = message;
+            if (this.fetchError != null)
+                return;
+            this.fetchError = message;
+            this.success = false;
         }
 
         public void passDataTo(ApiResponse apiResponse) {
@@ -658,14 +673,26 @@ public class Search implements Module {
                 result.parseError = this.parseError;
             if (result.fetchError == null)
                 result.fetchError = this.fetchError;
+            result.success = this.success;
             if (result.success) {
-                result.success = this.success;
                 result.courseDataList = this.courseDataList;
             }
         }
 
         public List<CourseData> getCourseDataList() {
             return courseDataList;
+        }
+
+        public String getErrorString() {
+            if (parseError != null || fetchError != null) {
+                if (parseError == null)
+                    return fetchError;
+                else if (fetchError == null)
+                    return parseError;
+                else
+                    return fetchError + ", " + parseError;
+            }
+            return null;
         }
     }
 
@@ -729,13 +756,8 @@ public class Search implements Module {
                 .proxy(proxyManager.getProxy())
                 .userAgent(USER_AGENT)
                 .timeout(5000);
-        HttpResponseData httpResponseData = null;
-        for (int i = 0; i < 5; i++) {
-            httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
-            if (httpResponseData.state == ResponseState.SUCCESS)
-                break;
-        }
-        if (httpResponseData.state != ResponseState.SUCCESS)
+        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
+        if (!httpResponseData.isSuccess())
             return null;
         String body = httpResponseData.data;
 
@@ -1146,9 +1168,11 @@ public class Search implements Module {
                 logger.log("CosPreCheck waiting");
             cosPreCheckPoolLock.acquire();
         } catch (InterruptedException e) {
-            logger.errTrace(e);
+            return;
         }
         // Submit cos pre checkPass
+        if (cosPreCheckPool.isShutdown())
+            return;
         cosPreCheckPool.submit(() -> {
             try {
                 cosPreCheck(originUrl.toString(), pageBody, cookieStore, null, proxyManager);
@@ -1580,8 +1604,8 @@ public class Search implements Module {
                 networkError = false;
             } catch (UncheckedIOException | IOException e) {
                 networkError = true;
+                logger.warn("Fetch page failed retry");
                 logger.errTrace(e);
-                logger.warn("Fetch page failed retry: " + e.getMessage());
                 continue;
             }
 

@@ -48,6 +48,7 @@ public class CourseWatcher implements Runnable, Module {
     public static class CourseDataDifference {
         public enum Type {
             CREATE,
+            DELETE,
             UPDATE,
         }
 

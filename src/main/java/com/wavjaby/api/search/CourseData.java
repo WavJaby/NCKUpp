@@ -125,18 +125,18 @@ public class CourseData {
 
     public static class TagData {
         final String tag;
-        final String url; // Can be null
         final String colorID;
+        final String url; // Can be null
 
         public TagData(String tag, String colorID, String url) {
             this.tag = tag;
-            this.url = url;
             this.colorID = colorID;
+            this.url = url;
         }
 
         public static TagData fromString(String raw) {
             String[] s = raw.split(",");
-            return new TagData(s[0], s[1], s[2]);
+            return new TagData(s[0], s[1], s.length == 3 ? s[2] : null);
         }
 
         @Override
@@ -188,8 +188,14 @@ public class CourseData {
         }
 
         public static TimeData fromString(String raw) {
-            String[] s = raw.split(",");
-            return new TimeData(Byte.parseByte(s[0]), Byte.parseByte(s[1]), Byte.parseByte(s[2]), s[3], s[4], s[5]);
+            String[] s = raw.split(",", 6);
+            if(s.length == 1)
+                return new TimeData(s[0]);
+            return new TimeData(
+                    s[0].isEmpty() ? null : Byte.parseByte(s[0]),
+                    s[1].isEmpty() ? null : Byte.parseByte(s[1]),
+                    s[2].isEmpty() ? null : Byte.parseByte(s[2]),
+                    s[3], s[4], s[5]);
         }
 
         @Override
@@ -278,7 +284,6 @@ public class CourseData {
         jsonBuilder.append("cg", group);
 
         jsonBuilder.append("cn", courseName);
-        jsonBuilder.append("tg", toJsonArray(tags));
 
         jsonBuilder.append("i", toJsonArray(instructors));
 

@@ -65,7 +65,7 @@ public class ProxyChecker {
         System.out.println("Filter2 start");
         System.out.println(proxyDataList.size());
         long filter2 = System.currentTimeMillis();
-        testProxy(proxyDataList, 250, 1500, false, 1, -1, true);
+        testProxy(proxyDataList, 200, 1500, false, 1, -1, true);
         proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("Filter2 use: " + ((System.currentTimeMillis() - filter2) / 1000) + "s");
         System.out.println("Done");
@@ -200,11 +200,12 @@ public class ProxyChecker {
         Semaphore checkConnectionLock = new Semaphore(threadCount * 2, true);
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
         final boolean conforming = conformTry != -1;
-//        final String testUrl = conforming
-//                ? "https://course.ncku.edu.tw/index.php"
-//                : "https://api.wavjaby.nckuctf.org/api/ip";
-//                            : "https://ifconfig.me/ip";
-        final String testUrl = "https://ifconfig.me/ip";
+        final String testUrl = conforming
+                ? "https://course.ncku.edu.tw/index.php"
+                : "https://api.wavjaby.nckuctf.org/api/v0/ip";
+//                : "https://ifconfig.me/ip";
+//        final String testUrl = "https://api.wavjaby.nckuctf.org/api/ip";
+//        final String testUrl = "https://ifconfig.me/ip";
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(onProxyTestStart());
@@ -425,7 +426,7 @@ public class ProxyChecker {
             System.err.println("Error\t" + proxyUrl);
         }
         proxyDataList.putAll(newData);
-        // System.out.println(newData.size() + "\t" + proxyUrl);
+        System.out.println(newData.size() + "\t" + proxyUrl);
     }
 
     private void getProxyScrapeProxy(String protocol, int timeout, Map<String, ProxyManager.ProxyData> proxyDataList) {
@@ -460,7 +461,7 @@ console.log([...list].slice(3, list.length - 1).map(i=>(i=i.children)&&(i[1].fir
                         continue;
                     proxyDataList.put(i.getKey(), i.getValue());
                 }
-                // System.out.println(newData.size() + "\t" + url);
+//                 System.out.println(newData.size() + "\t" + url);
             } else
                 System.out.println(spysOneProxyFile.getName() + " empty");
         } else

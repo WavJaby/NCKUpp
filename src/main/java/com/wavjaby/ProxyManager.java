@@ -138,8 +138,11 @@ public class ProxyManager implements Module {
     private final Runnable proxyCheckFunc = () -> {
         final String testUrl = "https://course.ncku.edu.tw/";
 
-        ProxyData testingProxy = proxies.get(proxyIndex);
+        updateProxy();
+        int newProxyIndex = 0;
+        ProxyData testingProxy;
         for (int i = 0; i < proxies.size(); i++) {
+            testingProxy = proxies.get(newProxyIndex);
             try {
                 HttpURLConnection conn = (HttpURLConnection) new URL(testUrl).openConnection(testingProxy.toProxy());
                 conn.setConnectTimeout(TEST_TIMEOUT);
@@ -151,22 +154,24 @@ public class ProxyManager implements Module {
                     readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
                     conn.disconnect();
                     // Success
-                    proxy = proxies.get(proxyIndex);
+                    if (proxyIndex != newProxyIndex) {
+                        proxyIndex = newProxyIndex;
+                        proxy = proxies.get(proxyIndex);
+                        getUsingProxy();
+                    }
                     return;
+                } else {
+                    logger.log("Test: " + newProxyIndex + '/' + proxies.size() + ' ' + testingProxy.toUrl() + ' ' + conn.getResponseCode() + conn.getResponseMessage());
                 }
                 conn.disconnect();
-            } catch (IOException ignore) {
-                if (i == 0) {
-                    updateProxy();
-                    getUsingProxy();
-                    testingProxy = proxy;
-                } else {
-                    // Next proxy
-                    if (++proxyIndex >= proxies.size())
-                        proxyIndex = 0;
-                    testingProxy = proxies.get(proxyIndex);
-                    logger.log("Using proxy: " + proxies.size() + '/' + proxyIndex + ' ' + testingProxy.toUrl());
-                }
+            } catch (IOException e) {
+                String m = e.getMessage();
+                if (m.length() > 20)
+                    m = m.substring(0, 20) + "...";
+                logger.log("Test: " + newProxyIndex + '/' + proxies.size() + ' ' + testingProxy.toUrl() + ' ' + m);
+                // Next proxy
+                if (++newProxyIndex >= proxies.size())
+                    newProxyIndex = 0;
             }
         }
     };
@@ -179,7 +184,7 @@ public class ProxyManager implements Module {
         if (useProxy) {
             updateProxy();
             getUsingProxy();
-            service.scheduleWithFixedDelay(proxyCheckFunc, 1000, 5000, TimeUnit.MILLISECONDS);
+            service.scheduleWithFixedDelay(proxyCheckFunc, 0, 5000, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -198,15 +203,10 @@ public class ProxyManager implements Module {
         return false;
     }
 
-    /**
-     *
-     */
     public void updateProxy() {
         // Check last modify
         long lastModified = proxyFile.lastModified();
         if (proxyFileLastModified == lastModified) {
-            proxyIndex = 0;
-            proxy = proxies.get(proxyIndex);
             return;
         }
         proxyFileLastModified = lastModified;
@@ -263,7 +263,7 @@ public class ProxyManager implements Module {
         else if (proxy == null)
             logger.log("No proxy");
         else
-            logger.log("Using proxy: " + proxies.size() + '/' + proxyIndex + ' ' + proxy.toUrl());
+            logger.log("Using proxy: " + proxyIndex + '/' + proxies.size() + ' ' + proxy.toUrl());
     }
 
     public Proxy getProxy() {
