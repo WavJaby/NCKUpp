@@ -3,9 +3,9 @@ package com.wavjaby;
 import com.wavjaby.api.search.CourseData;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.api.search.SearchQuery;
-import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
@@ -13,7 +13,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.CookieStore;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,6 +45,8 @@ public class CourseEnrollmentTracker implements Runnable, Module {
     private long taskSkippedStartTime = 0;
 
     private List<CourseData> lastCourseDataList;
+    // Serial, index
+    private Map<String, Integer> tableIndex;
 
     public CourseEnrollmentTracker(Search search, Properties serverSettings) {
         this.search = search;
@@ -66,17 +71,18 @@ public class CourseEnrollmentTracker implements Runnable, Module {
 
         lastCourseDataList = new ArrayList<>();
         // Read cache
-        File cacheFile;
-        if (folder != null && (cacheFile = new File(folder, CACHE_FILE_NAME)).isFile()) {
+        if (folder != null) {
+            File cacheFile = new File(folder, CACHE_FILE_NAME);
             try {
-                JsonArray jsonArray = new JsonArray(Files.newInputStream(cacheFile.toPath()));
-                for (Object o : jsonArray) {
-                    try {
+                if (!cacheFile.exists()) {
+                    if (cacheFile.createNewFile())
+                        setFilePermission(cacheFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
+                    else
+                        logger.err("EnrollmentTracker cache file failed to create");
+                } else {
+                    JsonObject cache = new JsonObject(Files.newInputStream(cacheFile.toPath()));
+                    for (Object o : cache.getArray("data"))
                         lastCourseDataList.add(new CourseData((JsonObject) o));
-                    } catch (Exception e) {
-                        logger.log(o);
-                        throw e;
-                    }
                 }
             } catch (IOException e) {
                 logger.errTrace(e);
@@ -131,7 +137,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         map.put("dept", "ALL");
         SearchQuery searchQuery = search.getSearchQueryFromRequest(map, new String[0], null);
         Search.SearchResult searchResult = null;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             start = System.currentTimeMillis();
             searchResult = search.querySearch(searchQuery, baseCookieStore);
             if (searchResult.isSuccess())
@@ -145,6 +151,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                 }
             }
         }
+        long now = System.currentTimeMillis();
         // Check result
         if (searchResult.isSuccess()) {
             List<CourseData> newCourseDataList = searchResult.getCourseDataList();
@@ -156,23 +163,68 @@ public class CourseEnrollmentTracker implements Runnable, Module {
             if (!diff.isEmpty()) {
                 // Build notification
                 messageSendPool.submit(() -> buildAndSendNotification(diff));
+                // Create table index
+                if (tableIndex == null) {
+                    tableIndex = new HashMap<>();
+                    for (CourseData courseData : newCourseDataList) {
+                        if (courseData.getSerialNumber() == null)
+                            continue;
+                        tableIndex.put(courseData.getSerialNumber(), 0);
+                    }
+                    int i = 0;
+                    for (Map.Entry<String, Integer> entry : tableIndex.entrySet())
+                        entry.setValue(i++);
+                }
                 // Create file
                 File cacheFile = new File(folder, CACHE_FILE_NAME);
-                JsonArrayStringBuilder builder = new JsonArrayStringBuilder();
+                JsonObjectStringBuilder out = new JsonObjectStringBuilder();
+                out.append("time", now);
+                JsonArrayStringBuilder courseJsonArray = new JsonArrayStringBuilder();
+                int[] selected = new int[tableIndex.size()];
                 for (CourseData courseData : newCourseDataList) {
-                    if (courseData.getSerialNumber() != null && courseData.getSelected() != null)
-                        builder.appendRaw(courseData.toStringShort());
+                    if (courseData.getSerialNumber() == null || courseData.getSelected() == null)
+                        continue;
+                    courseJsonArray.appendRaw(courseData.toStringShort());
+
+                    Integer index = tableIndex.get(courseData.getSerialNumber());
+                    if (index == null) {
+                        logger.err("Unknown SerialNumber: " + courseData.getSerialNumber());
+                        return;
+                    }
+                    selected[index] = courseData.getSelected();
                 }
+                out.append("data", courseJsonArray);
+
                 try {
                     // Store history Data
                     if (folder != null && cacheFile.isFile()) {
-                        File historyFile = new File(folder, cacheFile.lastModified() + ".json");
-                        Files.copy(cacheFile.toPath(), historyFile.toPath(),
-                                StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+                        String date = OffsetDateTime.ofInstant(Instant.ofEpochMilli(now), ZoneId.systemDefault())
+                                .format(DateTimeFormatter.ISO_LOCAL_DATE);
+                        File historyFile = new File(folder, date + ".csv");
+                        StringBuilder csvOut = new StringBuilder();
+                        if (!historyFile.exists()) {
+                            if (!historyFile.createNewFile()) {
+                                logger.err("Failed to create file: " + historyFile.getAbsolutePath());
+                                return;
+                            }
+                            for (Map.Entry<String, Integer> entry : tableIndex.entrySet())
+                                csvOut.append(',').append(entry.getKey());
+                        }
+                        // Build row
+                        StringBuilder builder = new StringBuilder();
+                        for (int j = 0; j < selected.length; j++) {
+                            if (j > 0) builder.append(',');
+                            builder.append(selected[j]);
+                        }
+                        csvOut.append('\n').append(now).append(',').append(builder);
+                        // Write history
+                        FileWriter writer = new FileWriter(historyFile, true);
+                        writer.write(csvOut.toString());
+                        writer.close();
                     }
-                    // Write bew data to cache
+                    // Write new data to cache
                     FileWriter fileWriter = new FileWriter(cacheFile);
-                    fileWriter.write(builder.toString());
+                    fileWriter.write(out.toString());
                     fileWriter.close();
                 } catch (IOException e) {
                     logger.errTrace(e);
@@ -180,7 +232,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
             }
             logger.log(++count + ", " + newCourseDataList.size() + ", " + (System.currentTimeMillis() - start) + "ms");
         } else {
-            logger.warn(count + " Failed " + (System.currentTimeMillis() - start) + "ms");
+            logger.err(count + " Failed " + (System.currentTimeMillis() - start) + "ms");
         }
     }
 

@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, h1, img, mountableStylesheet, ShowIf, Signal, span, State, text} from '../minjs_v000/domHelper.min.js';
+import {div, h1, mountableStylesheet, ShowIf, Signal, span, State, text} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
@@ -54,7 +54,7 @@ export default function (router, loginState) {
 	const currentSemestersInfo = new Signal();
 	const semestersInfo = new Signal();
 	const semesterGrades = new Signal();
-	const normalDestImgWindow = new PopupWindow({root: router.element});
+	const normalDistImgWindow = new PopupWindow({root: router.element});
 	let stuIdLoadingCount = 0;
 	let stuIdLoading = false;
 
@@ -142,19 +142,19 @@ export default function (router, loginState) {
 	/**
 	 * @this {{courseInfo: CourseGrade}}
 	 */
-	function getNormalDestImg(inCourseInfo) {
+	function getNormalDistImg(inCourseInfo) {
 		const courseInfo = this && this.courseInfo || inCourseInfo;
 		if (!courseInfo.imgQuery)
 			return;
 		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(response => {
 			if (response.success) {
-				normalDestImgWindow.windowSet(
-					div('normalDest',
+				normalDistImgWindow.windowSet(
+					div('normalDist',
 						h1(courseInfo.courseName),
-						createDestImage(response.data.studentCount),
+						createDistImage(response.data.studentCount),
 					)
 				);
-				normalDestImgWindow.windowOpen();
+				normalDistImgWindow.windowOpen();
 			} else {
 				// // Normal distribution graph not exist
 				// if (i.msg) {
@@ -168,7 +168,7 @@ export default function (router, loginState) {
 				//             return;
 				//         courseInfo.imgQuery = courseInfo.imgQuery.substring(0, index + 1) + classCodeTry;
 				//     }
-				//     getNormalDestImg(courseInfo);
+				//     getNormalDistImg(courseInfo);
 				// }
 			}
 		});
@@ -177,22 +177,34 @@ export default function (router, loginState) {
 	/**
 	 * @param {int[]} counts
 	 */
-	function createDestImage(counts) {
+	function createDistImage(counts) {
 		const bars = [];
+		const labels = [];
 		const sum = counts.reduce((i, j) => i + j, 0);
 		const barWidth = 100 / counts.length;
 		for (let i = 0; i < counts.length; i++) {
 			const count = counts[i];
-			const bar = div('bar',
+			const bar = div(null,
 				span(count, 'count')
 			);
 			bar.style.width = barWidth + '%';
-			bar.style.height = 100 * count / sum + '%';
+			bar.style.height = 90 * count / sum + '%';
 			bar.style.left = barWidth * i + '%';
 			bars.push(bar);
+
+			const line = div(i * 10);
+			line.style.left = barWidth * i + '%';
+			labels.push(line);
+
+			const label = span(i * 10, i === 0 ? null : 'center');
+			label.style.left = barWidth * i + '%';
+			labels.push(label);
 		}
 
-		return div('destImage', bars);
+		return div('distImage',
+			div('bars', bars),
+			div('labels', labels)
+		);
 	}
 
 	const gpaPoint = {A: 4, B: 4, C: 3, D: 2, E: 1, F: 0, X: 0};
@@ -213,14 +225,24 @@ export default function (router, loginState) {
 	}
 
 	function gradeToText(grade) {
-		return grade === -1 ? '無'
-			: grade === -2 ? '成績未到'
-				: grade === -3 ? '通過'
-					: grade === -4 ? '抵免'
-						: grade === -5 ? "退選"
-							: grade === -6 ? "優良"
-								: grade === -7 ? "不通"
-									: grade;
+		switch (grade) {
+			case -1:
+				return '無'
+			case -2:
+				return '成績未到'
+			case -3:
+				return '通過'
+			case -4:
+				return '抵免'
+			case -5:
+				return "退選"
+			case -6:
+				return "優良"
+			case -7:
+				return "不通"
+			default:
+				return grade.toString();
+		}
 	}
 
 	return div('stuIdSysGrades',
@@ -267,7 +289,7 @@ export default function (router, loginState) {
 		State(semesterGrades, /**@param{CourseGrade[]}i*/i => !i ? div()
 			// If CourseGrade data, render
 			: div('semesterGrades', i.map(course =>
-				div(null, {onclick: getNormalDestImg, courseInfo: course},
+				div(null, {onclick: getNormalDistImg, courseInfo: course},
 					h1(course.courseName),
 					// span(null, 'info', span('Serial Number'), text(': ' + course.serialNumber)),
 					// span(null, 'info', span('System Number'), text(': ' + course.systemNumber)),

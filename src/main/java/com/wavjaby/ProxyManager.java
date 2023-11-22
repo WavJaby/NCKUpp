@@ -139,7 +139,7 @@ public class ProxyManager implements Module {
         final String testUrl = "https://course.ncku.edu.tw/";
 
         updateProxy();
-        int newProxyIndex = 0;
+        int newProxyIndex = proxyIndex;
         ProxyData testingProxy;
         for (int i = 0; i < proxies.size(); i++) {
             testingProxy = proxies.get(newProxyIndex);

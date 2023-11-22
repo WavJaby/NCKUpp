@@ -36,8 +36,8 @@ public class StudentIdSys implements Module {
     private static final String TAG = "StuIdSys";
     private static final Logger logger = new Logger(TAG);
     private static final String loginCheckString = "/ncku/qrys02.asp";
-    private static final String NORMAL_DEST_FOLDER = "./api_file/CourseScoreDistribution";
-    private final File normalDestFolder;
+    private static final String NORMAL_DIST_FOLDER = "./api_file/CourseScoreDistribution";
+    private final File normalDistFolder;
 
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
@@ -283,20 +283,20 @@ public class StudentIdSys implements Module {
     }
 
     public StudentIdSys() {
-        File normalDestFolder = new File(NORMAL_DEST_FOLDER);
-        if (!normalDestFolder.exists()) {
-            if (!normalDestFolder.mkdirs()) {
-                logger.err("Normal dest image folder failed to create");
-                normalDestFolder = null;
+        File normalDistFolder = new File(NORMAL_DIST_FOLDER);
+        if (!normalDistFolder.exists()) {
+            if (!normalDistFolder.mkdirs()) {
+                logger.err("Normal dist image folder failed to create");
+                normalDistFolder = null;
             }
         }
-        if (normalDestFolder != null && !normalDestFolder.isDirectory()) {
-            logger.err("Normal dest image folder is not directory");
-            normalDestFolder = null;
+        if (normalDistFolder != null && !normalDistFolder.isDirectory()) {
+            logger.err("Normal dist image folder is not directory");
+            normalDistFolder = null;
         }
-        if (normalDestFolder != null)
-            setFilePermission(normalDestFolder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
-        this.normalDestFolder = normalDestFolder;
+        if (normalDistFolder != null)
+            setFilePermission(normalDistFolder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
+        this.normalDistFolder = normalDistFolder;
     }
 
     @Override
@@ -584,12 +584,20 @@ public class StudentIdSys implements Module {
             return;
         }
 
+        try {
+            File imageFile = new File(normalDistFolder, query.year + '_' + query.semester + '_' + query.systemNumber + '_' + query.classCode + ".png");
+            ImageIO.write(image, "png", imageFile);
+            setFilePermission(imageFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
+        } catch (IOException e) {
+            logger.errTrace(e);
+        }
+
         response.setData(new JsonObjectStringBuilder()
                 .appendRaw("studentCount", Arrays.toString(studentCount))
                 .toString());
     }
 
-    private String buildNormalDestSvg(int[] studentCount) {
+    private String buildNormalDistSvg(int[] studentCount) {
         int totalStudentCount = 0;
         float highestPercent = 0;
         for (int i = 0; i < 11; i++)

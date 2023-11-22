@@ -8,7 +8,7 @@ public class CourseData {
     final String semester;
     final String departmentName; // Can be null
     final String serialNumber; // Can be null
-    final String courseAttributeCode;
+    final String courseAttribute;
     final String courseSystemNumber;
     final Integer forGrade;  // Can be null
     final String forClass; // Can be null
@@ -37,7 +37,7 @@ public class CourseData {
         this.departmentName = jsonObject.getString("dn");
 
         this.serialNumber = jsonObject.getString("sn");
-        this.courseAttributeCode = jsonObject.getString("ca");
+        this.courseAttribute = jsonObject.getString("ca");
         this.courseSystemNumber = jsonObject.getString("cs");
 
         if (jsonObject.getObject("g") != null)
@@ -87,7 +87,7 @@ public class CourseData {
 
     public CourseData(String semester,
                       String departmentName,
-                      String serialNumber, String courseAttributeCode, String courseSystemNumber,
+                      String serialNumber, String courseAttribute, String courseSystemNumber,
                       Integer forGrade, String forClass, String group,
                       String category,
                       String courseName, String courseNote, String courseLimit, TagData[] tags,
@@ -100,7 +100,7 @@ public class CourseData {
         this.semester = semester;
         this.departmentName = departmentName;
         this.serialNumber = serialNumber;
-        this.courseAttributeCode = courseAttributeCode;
+        this.courseAttribute = courseAttribute;
         this.courseSystemNumber = courseSystemNumber;
         this.forGrade = forGrade;
         this.forClass = forClass;
@@ -235,7 +235,7 @@ public class CourseData {
         jsonBuilder.append("dn", departmentName);
 
         jsonBuilder.append("sn", serialNumber);
-        jsonBuilder.append("ca", courseAttributeCode);
+        jsonBuilder.append("ca", courseAttribute);
         jsonBuilder.append("cs", courseSystemNumber);
 
         if (forGrade == null) jsonBuilder.append("g");
@@ -275,7 +275,7 @@ public class CourseData {
         // output
         JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
         jsonBuilder.append("sn", serialNumber);
-        jsonBuilder.append("ca", courseAttributeCode);
+        jsonBuilder.append("ca", courseAttribute);
         jsonBuilder.append("cs", courseSystemNumber);
 
         if (forGrade == null) jsonBuilder.append("g");
@@ -298,6 +298,14 @@ public class CourseData {
 
     public String getSerialNumber() {
         return serialNumber;
+    }
+
+    public String getCourseSystemNumber() {
+        return courseSystemNumber;
+    }
+
+    public String[] getInstructors() {
+        return instructors;
     }
 
     public String getGroup() {

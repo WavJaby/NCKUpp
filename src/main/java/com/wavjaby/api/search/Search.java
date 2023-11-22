@@ -423,12 +423,12 @@ public class Search implements Module {
                                         (float) (allDeptData.deptCount - taskLeft.getCount()) / allDeptData.deptCount * 100f);
                             }
                             // If search error
-                            else {
+                            else if (!deptCourseData.isSuccess()) {
                                 allSuccess.set(false);
+                                logger.err(Thread.currentThread().getName() + " " + dept + " failed");
                                 synchronized (result) {
                                     deptCourseData.passDataTo(result);
                                 }
-                                logger.err(Thread.currentThread().getName() + " " + dept + " failed");
                             }
                         } catch (Exception e) {
                             logger.errTrace(e);
@@ -440,7 +440,6 @@ public class Search implements Module {
                 }
                 taskLeft.await();
             } catch (InterruptedException e) {
-                logger.errTrace(e);
                 allSuccess.set(false);
             }
             executorShutdown(fetchPool, 5000, "SearchFetchPool");
@@ -1604,8 +1603,11 @@ public class Search implements Module {
                 networkError = false;
             } catch (UncheckedIOException | IOException e) {
                 networkError = true;
-                logger.warn("Fetch page failed retry");
-                logger.errTrace(e);
+                // Last try failed
+                if (i + 1 == MAX_ROBOT_CHECK_REQUEST_TRY)
+                    logger.errTrace(e);
+                else
+                    logger.warn("Fetch page failed: " + e.getMessage() + ", Retry...");
                 continue;
             }
 

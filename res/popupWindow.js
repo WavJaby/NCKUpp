@@ -33,24 +33,21 @@ export default function PopupWindow(options) {
 		options.root = document.body
 
 	const closeButton = button('closeButton', null, windowClose, div('icon'));
-	const functionButtons = div('buttons');
-	const popupWindowBody = div('popupWindowBody', closeButton, functionButtons);
-	const popupWindow = div('popupWindow', popupWindowBody, {onclick: e => e.target === popupWindow && windowClose(false)});
+	const functionButtons = options.windowType === PopupWindow.WIN_TYPE_DIALOG ? div('buttons') : null;
+	const popupWindowBody = div('popupWindowBody');
+	const popupWindow = div('popupWindowOverlay', {onclick: e => e.target === popupWindow && windowClose(false)},
+		div('popupWindow', closeButton, popupWindowBody, functionButtons),
+	);
 	let lastContentElement = null;
 
 	if (options.windowType == null || options.windowType === PopupWindow.WIN_TYPE_DEFAULT) {
 		popupWindow.classList.add('default');
 	} else if (options.windowType === PopupWindow.WIN_TYPE_DIALOG) {
 		popupWindow.classList.add('dialog');
-		functionButtons.classList.add('show');
-
-		if (options.conformButton != null) {
+		if (options.conformButton != null)
 			functionButtons.appendChild(button('conform', options.conformButton, () => windowClose(true)));
-		}
-
-		if (options.cancelButton != null) {
+		if (options.cancelButton != null)
 			functionButtons.appendChild(button('cancel', options.cancelButton, () => windowClose(false)));
-		}
 	}
 
 	this.windowSet = windowSet;
