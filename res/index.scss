@@ -460,9 +460,8 @@ footer {
 
 // Checkbox with name
 .checkbox {
-    display: block;
+    display: inline-block;
     position: relative;
-    padding-left: 1.8em;
     cursor: pointer;
 
     > input {
@@ -492,12 +491,14 @@ footer {
         height: 1.5em;
         width: 1.5em;
         border-radius: 5px;
-        pointer-events: none;
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        margin: auto 0;
+        position: relative;
+        margin-right: 5px;
+        vertical-align: top;
+        display: inline-block;
+    }
+
+    > span {
+        vertical-align: top;
     }
 
     &:hover > .checkmark {

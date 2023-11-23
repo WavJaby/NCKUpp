@@ -65,7 +65,7 @@ public class ProxyChecker {
         System.out.println("Filter2 start");
         System.out.println(proxyDataList.size());
         long filter2 = System.currentTimeMillis();
-        testProxy(proxyDataList, 200, 1200, false, 1, -1, true);
+        testProxy(proxyDataList, 200, 1300, false, 1, -1, true);
         proxyDataList.values().removeIf(ProxyManager.ProxyInfo::isUnavailable);
         System.out.println("Filter2 use: " + ((System.currentTimeMillis() - filter2) / 1000) + "s");
         System.out.println("Done");

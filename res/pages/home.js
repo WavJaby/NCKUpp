@@ -1,6 +1,6 @@
 'use strict';
 
-import {a, button, div, h1, h2, img, input, mountableStylesheet, p, span, text} from '../minjs_v000/domHelper.min.js';
+import {a, button, div, h1, h2, img, input, mountableStylesheet, p, span, text, checkbox} from '../minjs_v000/domHelper.min.js';
 import {fetchApi, isMobile} from '../lib/lib.js';
 
 /**
@@ -216,9 +216,9 @@ export default function (router) {
 
 	function onscroll() {
 		const percent = router.element.scrollTop / siteInfo.offsetHeight;
-		if (percent <= 1) {
-			siteInfo.style.opacity = (1 - percent * 1.2).toString();
-		}
+		// if (percent <= 1) {
+		// 	siteInfo.style.opacity = (1 - percent * 1.2).toString();
+		// }
 
 		if (percent > 0.5) {
 			if (!scrollDownIndicatorState)
@@ -355,5 +355,64 @@ function mainBox() {
 }
 
 function filterFeatureBox() {
+	const checkboxes = [
+		checkbox(null, true, null, span('英語授課')),
+		checkbox('gray', true, null, span('大學國文')),
+		checkbox(null, true, null, span('新聞傳播學程')),
+		checkbox('gray', true, null, span('社會資料科學學分學程')),
+		checkbox('gray', true, null, span('外國語言')),
+		checkbox(null, true, null, span('Coursera')),
+	];
+	const mouseRadius = 10;
+	let mouseX = -mouseRadius, mouseY = -mouseRadius;
 
+	for (const checkbox of checkboxes) {
+		checkbox.direction = Math.random() * 2 * Math.PI;
+		// checkbox.direction = 180 / 180 * Math.PI;
+		checkbox.speed = Math.random() * 1.5 + 0.5;
+		// checkbox.speed = 0;
+		checkbox.x = 0;
+		checkbox.y = 0;
+		checkbox.style.transform = 'translate(' +
+			checkbox.x + 'px,' +
+			checkbox.y + 'px)';
+	}
+
+	setInterval(animation, 200);
+
+	function animation() {
+		// let i = 0;
+		for (const checkbox of checkboxes) {
+			// if (i++ === 0) {
+			// 	const x = mouseX - checkbox.offsetLeft;
+			// 	const y = mouseY - checkbox.offsetTop;
+			// 	const distance = Math.sqrt(x * x + y * y);
+			// 	console.log(distance);
+			// 	if (distance < mouseRadius) {
+			// 	}
+			// }
+
+			checkbox.direction += (5) / 180 * Math.PI
+			const x = Math.cos(checkbox.direction) * checkbox.speed;
+			const y = Math.sin(checkbox.direction) * checkbox.speed;
+			checkbox.x += x;
+			checkbox.y += y;
+			checkbox.style.transform = 'translate(' +
+				checkbox.x + 'px,' +
+				checkbox.y + 'px)';
+		}
+	}
+
+	function onmousemove(e) {
+		mouseX = e.offsetX;
+		mouseY = e.offsetY;
+		// console.log(e);
+	}
+
+	return div('filterFeature',
+		div('animationBox', checkboxes, {onmousemove: onmousemove}),
+		img('./res/assets/filter_menu_icon.svg', ''),
+		h2('搜尋結果篩選'),
+		p('可以自由選擇篩選條件，提供衝堂、精選節次、班別等篩選器，讓你選課不卡卡！'),
+	);
 }

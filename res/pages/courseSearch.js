@@ -1451,7 +1451,7 @@ function textSearchFilter(onFilterUpdate) {
  * @return {FilterOption}
  */
 function hideConflictCourseFilter(onFilterUpdate, loginState) {
-	const checkBoxOuter = checkbox(null, false, hideConflictFilterChange, text('隱藏衝堂'));
+	const checkBoxOuter = checkbox(null, false, hideConflictFilterChange, span('隱藏衝堂'));
 	const checkBox = checkBoxOuter.input;
 	let fetchingData = false;
 	let /**@type{CourseDataTime[]}*/timeData = null;
@@ -1535,7 +1535,7 @@ function hideConflictCourseFilter(onFilterUpdate, loginState) {
  * @return {FilterOption}
  */
 function insureSectionRangeFilter(onFilterUpdate, dayOfWeekSelectMenu, sectionSelectMenu) {
-	const checkBoxOuter = checkbox(null, true, onchange, text('確保節次範圍'));
+	const checkBoxOuter = checkbox(null, true, onchange, span('確保節次範圍'));
 	const checkBox = checkBoxOuter.input;
 
 	let searchDayOfWeek = -1;
@@ -1607,7 +1607,7 @@ function insureSectionRangeFilter(onFilterUpdate, dayOfWeekSelectMenu, sectionSe
  * @return {FilterOption}
  */
 function hidePracticeFilter(onFilterUpdate) {
-	const checkBoxOuter = checkbox(null, true, () => onFilterUpdate(), text('隱藏實習'));
+	const checkBoxOuter = checkbox(null, true, () => onFilterUpdate(), span('隱藏實習'));
 	const checkBox = checkBoxOuter.input;
 
 	/**@param{CourseData}courseData*/
@@ -1860,7 +1860,7 @@ function requireFilter(onFilterUpdate) {
  * @return {FilterOption & {resetHeaderHide: function()}}
  */
 function hideEmptyColumn(courseRenderResult, getHeader) {
-	const checkBoxOuter = checkbox(null, true, updateHideElement, text('隱藏空欄位'));
+	const checkBoxOuter = checkbox(null, true, updateHideElement, span('隱藏空欄位'));
 	const checkBox = checkBoxOuter.input;
 	let headerCols = null;
 	const hideElements = [];

@@ -47,7 +47,7 @@ $object-layer2-dark: #828282;
                         width: 4em;
                     }
 
-                    &::before{
+                    &::before {
                         content: '';
                         height: 100%;
                         width: 0.1em;
@@ -117,6 +117,55 @@ $object-layer2-dark: #828282;
                         margin-left: 10px;
                     }
                 }
+            }
+
+        }
+
+        > .filterFeature {
+            width: 80%;
+            max-width: 1200px;
+            margin: 30px auto;
+            overflow: hidden;
+
+            // Select box animation
+            .animationBox {
+                background: #262b32;
+                padding: 50px 20px;
+                border-radius: 10px;
+                position: relative;
+                text-align: center;
+                overflow: hidden;
+
+                .checkbox {
+                    font-size: 30px;
+                    margin: 20px 5%;
+                    filter: drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.2));
+                    display: inline-block;
+                    white-space: nowrap;
+                    @include transition(transform 200ms linear);
+
+                    &.gray > .checkmark {
+                        background: #BDBDBD;
+                    }
+                }
+            }
+
+            > h2 {
+                font-size: 48px;
+                margin: 30px 0 0 50px;
+            }
+
+            > p {
+                max-width: 500px;
+                font-size: 24px;
+                margin-left: 50px;
+            }
+
+            > img {
+                width: 200px;
+                height: 200px;
+                margin-top: 30px;
+                float: right;
             }
         }
 
@@ -203,6 +252,21 @@ $object-layer2-dark: #828282;
         }
 
         @media only screen and ($small-screen) {
+            > .filterFeature {
+                    // TODO: animation box RWD
+                > .animationBox {
+                    display: none;
+                }
+
+                > h2, > p {
+                    margin-left: 0;
+                }
+
+                img {
+                    display: none;
+                }
+            }
+
             > .main {
                 padding: 10vh 0 0 15px;
 
@@ -222,6 +286,7 @@ $object-layer2-dark: #828282;
 
                     > button {
                         width: 80px;
+
                         > span {
                             display: none;
                         }
