@@ -308,18 +308,18 @@ $login-bg-color: #0a0a0af2;
     > .bottomRow {
         margin-top: 25px;
         position: relative;
-        text-align: right;
+        overflow: hidden;
 
         > button.loginField {
             background: $primary;
             border-radius: 10px;
             display: inline-block;
+            float: right;
         }
 
         > .loginDeclaration {
             position: absolute;
             bottom: 5px;
-            text-align: left;
 
             > span {
                 font-size: 18px;
@@ -493,12 +493,12 @@ footer {
         border-radius: 5px;
         position: relative;
         margin-right: 5px;
-        vertical-align: top;
+        vertical-align: middle;
         display: inline-block;
     }
 
     > span {
-        vertical-align: top;
+        vertical-align: middle;
     }
 
     &:hover > .checkmark {

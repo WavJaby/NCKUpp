@@ -199,7 +199,7 @@ window.pageLoading = new Signal(false);
 				showLoginWindow.set(!showLoginWindow.state);
 				return false; // Not open select list
 			},
-			img('./res/assets/login_icon.svg'),
+			img('./res/assets/login_icon.svg', 'x`'),
 			span(TextState(userLoginData, /**@param{LoginData}state*/state => state && state.login ? state.studentID : '登入')),
 		),
 	);
