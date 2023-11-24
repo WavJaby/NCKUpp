@@ -12,46 +12,11 @@ export default function (router) {
 	const styles = mountableStylesheet('./res/pages/home.css');
 	let /**@type{PageStorage}*/pageStorage;
 
-	// Feature introduction
-	const introduction = div('introduction',
-		div('block',
-			img('./res/assets/page_home/sort_function.png'),
-			h2('排序功能', 'title'),
-			p('可對搜尋結果的任意欄位進行排序')
-		),
-		div('block',
-			img('./res/assets/page_home/ncku_hub_comment_function.png'),
-			h2('NCKU HUB評論', 'title'),
-			p('點擊課程評分即可查看評論')
-		),
-		div('block',
-			img('./res/assets/page_home/urschool_instructor_info_function.png'),
-			h2('UrSchool教授評價', 'title'),
-			p('點擊教師姓名查看講師評價、詳細資料及評論')
-		),
-		div('block',
-			img('./res/assets/page_home/category_filter_function.png'),
-			h2('搜尋結果篩選', 'title'),
-			p('可以自由選擇篩選條件，提供衝堂、精確節次、班別等篩選器')
-		),
-		div('block',
-			img('./res/assets/page_home/schedule_download_function.png'),
-			h2('課表下載', 'title'),
-			p('提供預排課表檢視，課表下載功能，下載漂亮的課表🥰')
-		),
-		div('block',
-			img('./res/assets/page_home/add_course_function.png'),
-			h2('支援預排、選課', 'title'),
-			p('登入後可跟選課網站連動，進行預排、志願登記、單科加選等操作'),
-			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
-		)
-	);
-
 	const mainBoxElement = mainBox();
 	const siteInfo = div('siteInfo',
 		mainBoxElement,
 		filterFeatureBox(),
-		// introduction,
+		// featureIntroduction(),
 		// a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
 	);
 	const scrollDownIndicator = div('scrollDownIndicator', {onclick: scrollDown},
@@ -67,9 +32,7 @@ export default function (router) {
 		div('splitLine'),
 		div('items')
 	);
-	let pageOpened = false;
 	let scrollDownIndicatorState = false;
-	let lastScrollTime = 0;
 
 	const bulletinTitleMap = {
 		enrollmentAnnouncement: '選課公告',
@@ -82,15 +45,6 @@ export default function (router) {
 	const linkCanonical = document.createElement('link');
 	linkCanonical.rel = 'canonical';
 	linkCanonical.href = 'https://wavjaby.github.io/NCKUpp/';
-
-	let introductionHover = false;
-	let introductionScrollTarget = 0;
-	introduction.onmouseenter = function () {
-		introductionHover = true;
-	};
-	introduction.onmouseleave = function () {
-		introductionHover = false;
-	};
 
 	function onRender() {
 		console.log('Home Render');
@@ -114,10 +68,6 @@ export default function (router) {
 
 		mainBoxElement.onPageOpen();
 		router.element.addEventListener('scroll', onscroll);
-		router.element.addEventListener('wheel', onwheel);
-		pageOpened = true;
-		lastScrollTime = Date.now();
-		introductionAnimation();
 	}
 
 	function onPageClose() {
@@ -127,91 +77,14 @@ export default function (router) {
 
 		mainBoxElement.onPageClose();
 		router.element.removeEventListener('scroll', onscroll);
-		router.element.removeEventListener('wheel', onwheel);
-		pageOpened = false;
-	}
-
-	let introductionAnimationRollingTemp = 0, introductionAnimationLastScrollPos = 0;
-	let introductionAnimationDirection = false, introductionAnimationPause = true;
-
-	function introductionAnimation() {
-		const now = Date.now();
-		const time = now - lastScrollTime;
-
-		// Interrupt by user
-		if (introduction.scrollLeft !== introductionAnimationLastScrollPos) {
-			introductionAnimationLastScrollPos = introduction.scrollLeft;
-			introductionAnimationPause = true;
-			lastScrollTime = now;
-			requestAnimationFrame(introductionAnimation);
-			return;
-		}
-		// Pausing
-		if (introductionAnimationPause) {
-			if (time > 2000) {
-				introductionAnimationPause = false;
-				lastScrollTime = now;
-			}
-			requestAnimationFrame(introductionAnimation);
-			return;
-		}
-
-		// Update scroll
-		lastScrollTime = now;
-		introductionAnimationRollingTemp += time / 1000 * 40;
-		if (introductionAnimationRollingTemp > 1) {
-			if (introductionAnimationDirection)
-				introduction.scrollLeft -= 1;
-			else
-				introduction.scrollLeft += 1;
-			introductionAnimationLastScrollPos = introduction.scrollLeft;
-			introductionAnimationRollingTemp %= 1;
-		}
-
-		if (introduction.scrollLeft === 0)
-			introductionAnimationDirection = false;
-		else if (introduction.scrollWidth - introduction.clientWidth - introduction.scrollLeft < 1) {
-			introductionAnimationDirection = true;
-			introductionAnimationPause = true;
-			// if (introduction.scrollTo) {
-			// 	introduction.scrollTo({left: 0, behavior: 'smooth'});
-			// } else
-			// 	introduction.scrollLeft = 0;
-		}
-
-		if (pageOpened)
-			requestAnimationFrame(introductionAnimation);
 	}
 
 	function scrollDown() {
-		introductionAnimationPause = true;
 		if (isMobile()) {
 			if (this.lastElementChild.scrollIntoView)
 				this.lastElementChild.scrollIntoView({behavior: 'smooth'});
 		} else if (this.scrollIntoView)
 			this.scrollIntoView({behavior: 'smooth'});
-	}
-
-	function onwheel(e) {
-		if (introductionHover) {
-			e.preventDefault();
-			if (!introductionAnimationPause)
-				introductionScrollTarget = introduction.scrollLeft;
-			introductionAnimationPause = true;
-			if (introduction.scrollTo) {
-				introductionScrollTarget += e.deltaY;
-				if (introductionScrollTarget < 0) {
-					introductionScrollTarget = 0;
-				}
-				if (introduction.scrollWidth - introduction.clientWidth - introductionScrollTarget < 0) {
-					introductionScrollTarget = introduction.scrollWidth - introduction.clientWidth;
-				}
-				if (introduction.scrollLeft !== introductionScrollTarget)
-					introduction.scrollTo({left: introductionScrollTarget, behavior: 'smooth'});
-			} else {
-				introduction.scrollLeft += e.deltaY;
-			}
-		}
 	}
 
 	function onscroll() {
@@ -363,7 +236,7 @@ function filterFeatureBox() {
 		checkbox('gray', true, null, span('外國語言')),
 		checkbox(null, true, null, span('Coursera')),
 	];
-	const mouseRadius = 10;
+	const mouseRadius = 200;
 	let mouseX = -mouseRadius, mouseY = -mouseRadius;
 
 	for (const checkbox of checkboxes) {
@@ -378,19 +251,18 @@ function filterFeatureBox() {
 			checkbox.y + 'px)';
 	}
 
-	setInterval(animation, 200);
+	setInterval(animation, 100);
 
 	function animation() {
-		// let i = 0;
 		for (const checkbox of checkboxes) {
-			// if (i++ === 0) {
-			// 	const x = mouseX - checkbox.offsetLeft;
-			// 	const y = mouseY - checkbox.offsetTop;
-			// 	const distance = Math.sqrt(x * x + y * y);
-			// 	console.log(distance);
-			// 	if (distance < mouseRadius) {
-			// 	}
-			// }
+			let offsetX = 0, offsetY = 0;
+			const vx = mouseX - checkbox.offsetLeft - checkbox.offsetWidth / 2;
+			const vy = mouseY - checkbox.offsetTop - checkbox.offsetHeight / 2;
+			const distance = Math.sqrt(vx * vx + vy * vy);
+			if (distance < mouseRadius) {
+				offsetX = -(vx / distance) * (mouseRadius - distance) * 0.5;
+				offsetY = -(vy / distance) * (mouseRadius - distance) * 0.5;
+			}
 
 			checkbox.direction += (5) / 180 * Math.PI
 			const x = Math.cos(checkbox.direction) * checkbox.speed;
@@ -398,15 +270,16 @@ function filterFeatureBox() {
 			checkbox.x += x;
 			checkbox.y += y;
 			checkbox.style.transform = 'translate(' +
-				checkbox.x + 'px,' +
-				checkbox.y + 'px)';
+				(checkbox.x + offsetX) + 'px,' +
+				(checkbox.y + offsetY) + 'px)';
 		}
 	}
 
 	function onmousemove(e) {
-		mouseX = e.offsetX;
-		mouseY = e.offsetY;
-		// console.log(e);
+		// if (e.target !== e.currentTarget) return;
+		const rect = e.currentTarget.getBoundingClientRect();
+		mouseX = e.pageX - rect.left;
+		mouseY = e.pageY - rect.top;
 	}
 
 	return div('filterFeature',
@@ -415,4 +288,127 @@ function filterFeatureBox() {
 		h2('搜尋結果篩選'),
 		p('可以自由選擇篩選條件，提供衝堂、精選節次、班別等篩選器，讓你選課不卡卡！'),
 	);
+}
+
+function featureIntroduction() {
+	// Feature introduction
+	const introduction = div('introduction',
+		div('block', {onwheel: onwheel},
+			img('./res/assets/page_home/sort_function.png'),
+			h2('排序功能', 'title'),
+			p('可對搜尋結果的任意欄位進行排序')
+		),
+		div('block',
+			img('./res/assets/page_home/ncku_hub_comment_function.png'),
+			h2('NCKU HUB評論', 'title'),
+			p('點擊課程評分即可查看評論')
+		),
+		div('block',
+			img('./res/assets/page_home/urschool_instructor_info_function.png'),
+			h2('UrSchool教授評價', 'title'),
+			p('點擊教師姓名查看講師評價、詳細資料及評論')
+		),
+		div('block',
+			img('./res/assets/page_home/category_filter_function.png'),
+			h2('搜尋結果篩選', 'title'),
+			p('可以自由選擇篩選條件，提供衝堂、精確節次、班別等篩選器')
+		),
+		div('block',
+			img('./res/assets/page_home/schedule_download_function.png'),
+			h2('課表下載', 'title'),
+			p('提供預排課表檢視，課表下載功能，下載漂亮的課表🥰')
+		),
+		div('block',
+			img('./res/assets/page_home/add_course_function.png'),
+			h2('支援預排、選課', 'title'),
+			p('登入後可跟選課網站連動，進行預排、志願登記、單科加選等操作'),
+			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
+		)
+	);
+
+	let introductionHover = false;
+	let introductionScrollTarget = 0;
+	let lastScrollTime = 0;
+	let introductionAnimationRollingTemp = 0, introductionAnimationLastScrollPos = 0;
+	let introductionAnimationDirection = false, introductionAnimationPause = true;
+	let pageOpened = false;
+	introduction.onmouseenter = function () {
+		introductionHover = true;
+	};
+	introduction.onmouseleave = function () {
+		introductionHover = false;
+	};
+
+	function introductionAnimation() {
+		const now = Date.now();
+		const time = now - lastScrollTime;
+
+		// Interrupt by user
+		if (introduction.scrollLeft !== introductionAnimationLastScrollPos) {
+			introductionAnimationLastScrollPos = introduction.scrollLeft;
+			introductionAnimationPause = true;
+			lastScrollTime = now;
+			requestAnimationFrame(introductionAnimation);
+			return;
+		}
+		// Pausing
+		if (introductionAnimationPause) {
+			if (time > 2000) {
+				introductionAnimationPause = false;
+				lastScrollTime = now;
+			}
+			requestAnimationFrame(introductionAnimation);
+			return;
+		}
+
+		// Update scroll
+		lastScrollTime = now;
+		introductionAnimationRollingTemp += time / 1000 * 40;
+		if (introductionAnimationRollingTemp > 1) {
+			if (introductionAnimationDirection)
+				introduction.scrollLeft -= 1;
+			else
+				introduction.scrollLeft += 1;
+			introductionAnimationLastScrollPos = introduction.scrollLeft;
+			introductionAnimationRollingTemp %= 1;
+		}
+
+		if (introduction.scrollLeft === 0)
+			introductionAnimationDirection = false;
+		else if (introduction.scrollWidth - introduction.clientWidth - introduction.scrollLeft < 1) {
+			introductionAnimationDirection = true;
+			introductionAnimationPause = true;
+			// if (introduction.scrollTo) {
+			// 	introduction.scrollTo({left: 0, behavior: 'smooth'});
+			// } else
+			// 	introduction.scrollLeft = 0;
+		}
+
+		if (pageOpened)
+			requestAnimationFrame(introductionAnimation);
+	}
+
+	function onwheel(e) {
+		if (introductionHover) {
+			e.preventDefault();
+			if (!introductionAnimationPause)
+				introductionScrollTarget = introduction.scrollLeft;
+			introductionAnimationPause = true;
+			if (introduction.scrollTo) {
+				introductionScrollTarget += e.deltaY;
+				if (introductionScrollTarget < 0) {
+					introductionScrollTarget = 0;
+				}
+				if (introduction.scrollWidth - introduction.clientWidth - introductionScrollTarget < 0) {
+					introductionScrollTarget = introduction.scrollWidth - introduction.clientWidth;
+				}
+				if (introduction.scrollLeft !== introductionScrollTarget)
+					introduction.scrollTo({left: introductionScrollTarget, behavior: 'smooth'});
+			} else {
+				introduction.scrollLeft += e.deltaY;
+			}
+		}
+	}
+
+	return introduction;
 }

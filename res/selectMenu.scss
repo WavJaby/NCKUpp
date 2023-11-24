@@ -90,11 +90,14 @@
             overflow: auto;
 
             > .groupTitle {
+                background: none;
                 width: 100%;
-                line-height: 1.5em;
+                padding: 5px 0;
                 display: block;
                 border-radius: 5px;
+                text-align: left;
                 cursor: pointer;
+                box-shadow: none;
 
                 &::before {
                     content: '';

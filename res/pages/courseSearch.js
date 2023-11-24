@@ -272,7 +272,7 @@ export default function (router, loginState, userGuideTool) {
 	// Element
 	const courseSearchResultInfo = span();
 	// Static data
-	let avalibleNckuHubCourseID = null;
+	let availableNckuHubCourseID = null;
 	let urSchoolData = null;
 
 	// query string
@@ -290,13 +290,13 @@ export default function (router, loginState, userGuideTool) {
 			if (!externalSearch)
 				loadLastSearch(false);
 		});
-		// Search from other page
-		if (!externalSearch)
-			loadLastSearch(true);
+		// // Search from other page
+		// if (!externalSearch)
+		// 	loadLastSearch(true);
 	}
 
 	function onPageOpen(isHistory) {
-		console.log('Course search Open');
+		console.log('Course search Open', isHistory);
 		styles.enable();
 		if (isHistory)
 			loadLastSearch(true);
@@ -325,26 +325,26 @@ export default function (router, loginState, userGuideTool) {
 
 	function loadLastSearch(performSearch) {
 		const rawQuery = window.urlHashData['searchRawQuery'];
+		if (!rawQuery)
+			return;
 
+		let hasQuery = false;
 		for (const node of courseSearchForm.getElementsByTagName('input')) {
-			let found = false;
-			if (rawQuery)
-				for (const rawQueryElement of rawQuery) {
-					if (node.id === rawQueryElement[0]) {
-						// From select menu
-						if (node.selectMenu)
-							node.selectMenu.selectItemByValue(rawQueryElement[1]);
-						else
-							node.value = rawQueryElement[1];
-						found = true;
-						break;
-					}
-				}
-			if (!found)
-				node.value = '';
+			if (!node.id || node.id.length === 0)
+				continue;
+
+			const value = rawQuery[node.id];
+			if (!value)
+				continue;
+			// From select menu
+			if (node.selectMenu)
+				node.selectMenu.selectItemByValue(value);
+			else
+				node.value = value;
+			hasQuery = true;
 		}
 
-		if (performSearch && rawQuery && rawQuery.length > 0)
+		if (performSearch && hasQuery)
 			search(rawQuery, false);
 	}
 
@@ -379,7 +379,7 @@ export default function (router, loginState, userGuideTool) {
 	let nckuHubLoadingTaskCount = 0;
 
 	/**
-	 * @param {string[][]} [rawQuery] [key, value][]
+	 * @param {Object.<String,any>} [rawQuery] [key, value][]
 	 * @param {boolean} [saveQuery] Will save query string if not provide or true
 	 * @return {void}
 	 */
@@ -391,11 +391,11 @@ export default function (router, loginState, userGuideTool) {
 		nckuHubLoadingOverlayHide();
 
 		// get all course ID
-		const getAvailableNckuHubID = avalibleNckuHubCourseID === null ? fetchApi('/nckuhub', 'Get NCKU Hub id') : null;
+		const getAvailableNckuHubID = availableNckuHubCourseID === null ? fetchApi('/nckuhub', 'Get NCKU Hub id') : null;
 		// get urSchool data
 		const getUrSchoolData = urSchoolData === null ? fetchApi('/urschool', 'Get UrSchool data') : null;
 		if (getAvailableNckuHubID)
-			avalibleNckuHubCourseID = (await getAvailableNckuHubID).data;
+			availableNckuHubCourseID = (await getAvailableNckuHubID).data;
 		if (getUrSchoolData)
 			urSchoolData = (await getUrSchoolData).data;
 
@@ -403,26 +403,34 @@ export default function (router, loginState, userGuideTool) {
 		let queryData = rawQuery;
 		if (!queryData) {
 			// Generate query from form
-			queryData = [];
+			queryData = {};
 			for (const node of courseSearchForm.getElementsByTagName('input')) {
-				if (node.id && node.id.length > 0 && node.value) {
-					let value;
-					// From select menu
-					if (node.parentElement instanceof HTMLLabelElement &&
-						node.parentElement.getSelectedValue)
-						value = node.parentElement.getSelectedValue();
-					else
-						value = node.value.trim();
-
-					// console.log(value);
-					if (value.length > 0)
-						queryData.push([node.id, value]);
-				}
+				if (!node.id || node.id.length === 0 || !node.value)
+					continue;
+				let value;
+				// From select menu
+				if (node.selectMenu && node.selectMenu.getSelectedValue)
+					value = node.selectMenu.getSelectedValue();
+				else
+					value = node.value.trim();
+				// console.log(value);
+				if (value.length > 0)
+					queryData[node.id] = value;
 			}
 		}
+		// Parse time
+		const queryArr = [];
+		for (const entry of Object.entries(queryData)) {
+			if (entry[0] === 'dayOfWeek' || entry[0] === 'section')
+				continue;
+			queryArr.push(entry[0] + '=' + encodeURIComponent(entry[1]));
+		}
+		if (queryData.dayOfWeek || queryData.section) {
+			queryArr.push('time=' + queryData.dayOfWeek + (queryData.section ? ')' + queryData.section.join('_') : ''));
+		}
 		// To query string
-		const queryString = queryData.map(i => i[0] + '=' + encodeURIComponent(i[1])).join('&');
-		const isSearchA9 = queryData.some(i => i[0] === 'dept' && i[1] === 'A9');
+		const queryString = queryArr.join('&');
+		const isSearchA9 = queryData.dept === 'A9';
 
 		if (queryData.length === 0) {
 			window.messageAlert.addInfo('課程搜尋', '請輸入搜尋資料', 2000);
@@ -473,7 +481,7 @@ export default function (router, loginState, userGuideTool) {
 
 			// Prepare nckuHub if available
 			if (courseData.serialNumber != null) {
-				if (avalibleNckuHubCourseID.indexOf(courseData.serialNumber) !== -1)
+				if (availableNckuHubCourseID.indexOf(courseData.serialNumber) !== -1)
 					nckuHubResult[courseData.serialNumber] = {courseData, signal: new Signal()};
 			}
 		}
@@ -1438,7 +1446,7 @@ function textSearchFilter(onFilterUpdate) {
 	return {
 		condition: condition,
 		element: label('searchBar', null,
-			img('./res/assets/funnel_icon.svg', ''),
+			img('./res/assets/filter_menu_icon.svg', ''),
 			searchInput,
 		),
 		fullLine: true,

@@ -142,7 +142,7 @@ $object-layer2-dark: #828282;
                     filter: drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.2));
                     display: inline-block;
                     white-space: nowrap;
-                    @include transition(transform 200ms linear);
+                    @include transition(transform 100ms linear);
 
                     &.gray > .checkmark {
                         background: #BDBDBD;
@@ -162,8 +162,8 @@ $object-layer2-dark: #828282;
             }
 
             > img {
-                width: 200px;
-                height: 200px;
+                width: 180px;
+                height: 180px;
                 margin-top: 30px;
                 float: right;
             }

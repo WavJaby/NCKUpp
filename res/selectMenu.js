@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkbox, div, img, input, label, li, span, text, ul} from './minjs_v000/domHelper.min.js';
+import {checkbox, div, img, input, label, li, span, text, ul, button} from './minjs_v000/domHelper.min.js';
 
 /**
  * [itemValue, displayName] or [groupName, ItemData[]]
@@ -64,9 +64,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		createItemsElement(itemsContainer, items, false);
 
 	selectMenu.onclick = function (e) {
-		if (!(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLLabelElement))
-			e.preventDefault();
-		if (e.target === resultBox || e.target === selectMenu) {
+		if (e.target === resultBox) {
 			// Close search box
 			if (searchBox.classList.contains('open'))
 				closeSelectMenu();
@@ -289,13 +287,13 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 			if (item[1] instanceof Array) {
 				// Create group
 				const base = ul('group');
-				parent.appendChild(span(item[0], 'groupTitle', {onclick: expandGroupToggle}));
+				parent.appendChild(button('groupTitle', item[0], expandGroupToggle));
 				parent.appendChild(base);
 				createItemsElement(base, /**@type{[string, Array]}*/item[1], defaultSelected);
 			} else {
 				// Create item
 				if (options.multiple) {
-					const checkbox_ = checkbox(null, defaultSelected, onCheckBoxClick, text(item[1]));
+					const checkbox_ = checkbox(null, defaultSelected, onCheckBoxClick, span(item[1]));
 					parent.appendChild(li('item multi', checkbox_, {itemValue: item[0], itemName: item[1]}));
 					if (defaultSelected)
 						selectedItems.push([item[0], item[1]]);
@@ -312,7 +310,6 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	}
 
 	function onItemClick() {
-		closeSelectMenu();
 		selectItem(this);
 	}
 }
