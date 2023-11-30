@@ -8,6 +8,7 @@ import com.wavjaby.api.search.SearchQuery;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.lib.Cookie;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -94,9 +95,9 @@ public class CourseWatcher implements Runnable, Module {
         addListenDept("A9");
         scheduler.scheduleAtFixedRate(this, 0, updateInterval, TimeUnit.MILLISECONDS);
 
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        fetchCoursePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
-        messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Scheduler"));
+        fetchCoursePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory(TAG + "-Cos-Fetch"));
+        messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Msg"));
     }
 
     @Override

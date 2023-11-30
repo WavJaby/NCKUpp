@@ -90,7 +90,7 @@ public class Search implements Module {
         this.urSchool = urSchool;
         this.robotCode = robotCode;
         this.proxyManager = proxyManager;
-        this.cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("CosPreT-"));
+        this.cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory(TAG + "-Cos-Pre"));
         this.cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize(), true);
     }
 
@@ -362,7 +362,7 @@ public class Search implements Module {
             progressbar.setProgress(0);
             CountDownLatch taskLeft = new CountDownLatch(allDeptData.deptCount);
             ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
-                    Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+                    Executors.newFixedThreadPool(MULTITHREADING_SEARCH_THREAD_COUNT, new ThreadFactory(TAG + "-All"));
             Semaphore fetchPoolLock = new Semaphore(MULTITHREADING_SEARCH_THREAD_COUNT, true);
             // Get cookie fragments
             AllDeptData[] fragments = new AllDeptData[MULTITHREADING_SEARCH_THREAD_COUNT];
@@ -454,7 +454,8 @@ public class Search implements Module {
         else if (searchQuery.getSerial() || searchQuery.multipleTime()) {
             SearchResult result = new SearchResult();
             List<CourseData> courseDataList = new ArrayList<>();
-            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MULTI_QUERY_SEARCH_THREAD_COUNT, new ThreadFactory("SearchT-"));
+            ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
+                    Executors.newFixedThreadPool(MULTI_QUERY_SEARCH_THREAD_COUNT, new ThreadFactory(TAG + "-Multi"));
             Semaphore fetchPoolLock = new Semaphore(MULTI_QUERY_SEARCH_THREAD_COUNT, true);
             AtomicBoolean allSuccess = new AtomicBoolean(true);
             CourseSearchQuery[] courseSearchQuery = searchQuery.getSerial()

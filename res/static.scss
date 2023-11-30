@@ -12,6 +12,7 @@ body {
     color: $font-color;
     font-family: 'Noto Sans TC', sans-serif;
     -webkit-tap-highlight-color: transparent;
+    font-size: $default-font-size;
 }
 
 ::placeholder {
@@ -27,7 +28,7 @@ button {
     text-align: center;
     text-decoration: none;
     display: block;
-    font-size: $font-size;
+    font-size: $default-font-size;
 
     &:hover {
         background: $button-hover-color;
@@ -53,7 +54,7 @@ input {
     border-radius: 5px;
     @include box-sizing-border;
     text-decoration: none;
-    font-size: $font-size;
+    font-size: $default-font-size;
 
     // Input auto fill color
     &:-webkit-autofill,

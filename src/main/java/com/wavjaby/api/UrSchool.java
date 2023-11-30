@@ -42,7 +42,7 @@ public class UrSchool implements Module {
     private static final long CACHE_UPDATE_INTERVAL = 10 * 60 * 1000;
     private static final int UPDATE_THREAD_COUNT = 8;
     private static final String URSCHOOL_FILE_PATH = "./api_file/urschool.json";
-    private final ExecutorService pool = Executors.newFixedThreadPool(6, new ThreadFactory("UrSchool-"));
+    private final ExecutorService pool = Executors.newFixedThreadPool(6, new ThreadFactory(TAG + "-Fetch"));
     private final CookieStore urSchoolCookie = new CookieManager().getCookieStore();
     private File urSchoolFile;
 
@@ -391,7 +391,7 @@ public class UrSchool implements Module {
             // Get the rest of the page
             ThreadPoolExecutor fetchPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
                     UPDATE_THREAD_COUNT,
-                    new ThreadFactory("UrSchool-", Thread.NORM_PRIORITY - 1)
+                    new ThreadFactory(TAG + "-All", Thread.NORM_PRIORITY - 1)
             );
             Semaphore fetchPoolLock = new Semaphore(UPDATE_THREAD_COUNT, true);
             CountDownLatch fetchLeft = new CountDownLatch(maxPage[0] - 1);

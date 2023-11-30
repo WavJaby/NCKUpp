@@ -9,14 +9,14 @@ public class ThreadFactory implements java.util.concurrent.ThreadFactory {
     public ThreadFactory(String namePrefix) {
         SecurityManager s = System.getSecurityManager();
         this.group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-        this.namePrefix = namePrefix;
+        this.namePrefix = namePrefix + '-';
         this.priority = Thread.NORM_PRIORITY;
     }
 
     public ThreadFactory(String namePrefix, int priority) {
         SecurityManager s = System.getSecurityManager();
         this.group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-        this.namePrefix = namePrefix;
+        this.namePrefix = namePrefix + '-';
         this.priority = priority;
     }
 

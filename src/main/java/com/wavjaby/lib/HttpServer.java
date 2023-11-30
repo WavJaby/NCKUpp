@@ -170,7 +170,7 @@ public class HttpServer {
     }
 
     public boolean start() {
-        return start(Executors.newCachedThreadPool());
+        return start(Executors.newCachedThreadPool(new ThreadFactory("Http")));
     }
 
     public boolean start(Executor executor) {

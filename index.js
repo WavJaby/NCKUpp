@@ -423,7 +423,8 @@ window.pageLoading = new Signal(false);
 	function LoginWindow(onLoginStateChange) {
 		const username = input('loginField', '學號', null, {onkeyup, type: 'email', autocomplete: 'username'});
 		const password = input('loginField', '密碼', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
-		const loginDeclarationCheck = checkbox('loginDeclaration', false, null,
+		const loginDeclarationCheck = checkbox('loginDeclaration', localStorage.getItem('loginDeclaration') === 'true',
+			function () {localStorage.setItem('loginDeclaration', this.checked)},
 			span('我已閱讀'), button(null, '登入聲明', loginDeclaration),
 		);
 		let loading = false;
@@ -459,11 +460,11 @@ window.pageLoading = new Signal(false);
 				loginDeclarationWindow.windowSet(div('loginDeclarationWindow',
 					h1('聲明: '),
 					p(null, 'declaration',
-						span('本網站不會將密碼以任何形式暫存或儲存', 'red'), text('，登入功能僅代替使用者將資料轉至成功入口，並回傳登入狀態(Session Cookie)\n'),
-						span('本網站僅儲存學號以及登入狀態(Session Cookie)，提供附加功能之登入驗證使用\n', 'red'),
-						text('這是不得已的，成大不像其他學校，成大並未公開auth驗證系統的api，如果會擔心的使用者可在使用完畢後登出，且不登入也可以使用查詢功能\n' +
-							'將來會嘗試爭取成功入口驗證系統之api，作為本網站之登入方式\n' +
-							'本網站開源，如對以上聲明還是有疑慮，請自行將專案下載後執行')
+						span('本網站不會將密碼以任何形式暫存或儲存', 'red'), text('，登入功能僅代替使用者將資料轉至成功入口，並回傳登入狀態(Session Cookie)。\n'),
+						span('本網站僅儲存學號以及登入狀態(Session Cookie)，提供附加功能之登入驗證使用', 'red'),
+						text('。\n\n成功大學並未公開驗證系統的api，將來會嘗試爭取成功入口驗證系統作為本網站之登入方式。\n' +
+							'如果還會擔心請在使用完畢後登出，且不需登入也可以使用查詢功能。\n' +
+							'本網站開源，如對以上聲明有疑慮，請自行將專案下載後執行。')
 					),
 				));
 			}

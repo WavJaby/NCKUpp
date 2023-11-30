@@ -1,6 +1,6 @@
 'use strict';
 
-import {a, button, div, h1, h2, img, input, mountableStylesheet, p, span, text, checkbox} from '../minjs_v000/domHelper.min.js';
+import {a, button, checkbox, div, h1, h2, img, input, mountableStylesheet, p, span} from '../minjs_v000/domHelper.min.js';
 import {fetchApi, isMobile} from '../lib/lib.js';
 
 /**
@@ -13,9 +13,10 @@ export default function (router) {
 	let /**@type{PageStorage}*/pageStorage;
 
 	const mainBoxElement = mainBox();
+	const filterFeatureBoxElement = filterFeatureBox();
 	const siteInfo = div('siteInfo',
 		mainBoxElement,
-		filterFeatureBox(),
+		filterFeatureBoxElement,
 		// featureIntroduction(),
 		// a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
 	);
@@ -24,6 +25,7 @@ export default function (router) {
 		// h1('最新消息', 'title')
 	);
 	const newsPanel = div('newsPanel',
+		h1('最新消息', 'title'),
 		div('splitLine'),
 		div('items')
 	);
@@ -67,6 +69,7 @@ export default function (router) {
 		document.head.appendChild(linkCanonical);
 
 		mainBoxElement.onPageOpen();
+		filterFeatureBoxElement.startAnimation();
 		router.element.addEventListener('scroll', onscroll);
 	}
 
@@ -76,6 +79,7 @@ export default function (router) {
 		document.head.removeChild(linkCanonical);
 
 		mainBoxElement.onPageClose();
+		filterFeatureBoxElement.stopAnimation();
 		router.element.removeEventListener('scroll', onscroll);
 	}
 
@@ -137,7 +141,7 @@ export default function (router) {
 	return div('home',
 		{onRender, onPageClose, onPageOpen},
 		siteInfo,
-		scrollDownIndicator,
+		// scrollDownIndicator,
 		div('panels',
 			newsPanel,
 			bulletinPanel,
@@ -171,7 +175,7 @@ function mainBox() {
 			}
 		},
 	});
-	const titleAnimation = span(null, 'slideOut', img('./res/assets/page_home/logo_plusplus_text.svg', '++'));
+	const titleAnimation = span(null, 'slideOut', img('./res/assets/page_home/logo_plusplus_text.svg', '++'), {style: 'width:0'});
 
 	return div('main', {
 			init: (pageStorage_) => {
@@ -180,14 +184,13 @@ function mainBox() {
 				iconImageStyle = pageStorage.data['iconImageStyle'] || 0;
 				iconImageParent.appendChild(iconImages[iconImageStyle]);
 			},
-			onPageOpen: () =>
-				setTimeout(() => titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px', 700),
-			onPageClose: () => titleAnimation.style.width = null
+			onPageOpen: () => setTimeout(expandTitle, 700),
+			onPageClose: () => titleAnimation.style.width = '0'
 		},
 		h1(null, 'title', iconImageParent, img('./res/assets/page_home/logo_text.svg', 'NCKU'), titleAnimation),
 		p(null, 'description',
-			span('結合 NCKU HUB・UrSchool・成大選課系統', null, {style: 'letter-spacing: 3.2px'}),
-			span('眾多功能，提供更好的選課環境。', null, {style: 'font-size:48px;font-weight:700;letter-spacing:4.8px'})
+			span('結合 NCKU HUB・UrSchool・成大選課系統', 'l1'),
+			span('眾多功能，提供更好的選課環境。', 'l2')
 		),
 		div('quickSearch',
 			input('searchInput', 'Search...', null, null),
@@ -196,6 +199,11 @@ function mainBox() {
 			),
 		),
 	);
+
+	function expandTitle() {
+		titleAnimation.style.width = titleAnimation.firstElementChild.offsetWidth + 'px';
+		setTimeout(() => titleAnimation.style.width = null, 400);
+	}
 
 	function createRipple(event) {
 		const target = event.currentTarget;
@@ -232,26 +240,37 @@ function filterFeatureBox() {
 		checkbox(null, true, null, span('英語授課')),
 		checkbox('gray', true, null, span('大學國文')),
 		checkbox(null, true, null, span('新聞傳播學程')),
-		checkbox('gray', true, null, span('社會資料科學學分學程')),
+		checkbox('gray', true, null, span('生物科技學程')),
 		checkbox('gray', true, null, span('外國語言')),
 		checkbox(null, true, null, span('Coursera')),
 	];
 	const mouseRadius = 200;
 	let mouseX = -mouseRadius, mouseY = -mouseRadius;
+	let interval;
 
 	for (const checkbox of checkboxes) {
 		checkbox.direction = Math.random() * 2 * Math.PI;
 		// checkbox.direction = 180 / 180 * Math.PI;
-		checkbox.speed = Math.random() * 1.5 + 0.5;
+		checkbox.speed = Math.random() * 1.5 + 0.2;
 		// checkbox.speed = 0;
 		checkbox.x = 0;
 		checkbox.y = 0;
+		checkbox.angle = Math.random() < 0.5 ? 5 : -5;
+		checkbox.scale = 'scale(' + (Math.random() * 0.5 + 0.7) + ')';
 		checkbox.style.transform = 'translate(' +
 			checkbox.x + 'px,' +
-			checkbox.y + 'px)';
+			checkbox.y + 'px) ' + checkbox.scale;
 	}
 
-	setInterval(animation, 100);
+	return div('filterFeature', {
+			startAnimation: () => interval = setInterval(animation, 100),
+			stopAnimation: () => clearInterval(interval)
+		},
+		div('animationBox', checkboxes, {onmousemove: onmousemove}),
+		h2('搜尋結果篩選'),
+		img('./res/assets/filter_menu_icon.svg', ''),
+		p('可以自由選擇篩選條件，提供衝堂、精選節次、班別等篩選器，讓你選課不卡卡！'),
+	);
 
 	function animation() {
 		for (const checkbox of checkboxes) {
@@ -264,14 +283,14 @@ function filterFeatureBox() {
 				offsetY = -(vy / distance) * (mouseRadius - distance) * 0.5;
 			}
 
-			checkbox.direction += (5) / 180 * Math.PI
+			checkbox.direction += checkbox.angle / 180 * Math.PI
 			const x = Math.cos(checkbox.direction) * checkbox.speed;
 			const y = Math.sin(checkbox.direction) * checkbox.speed;
 			checkbox.x += x;
 			checkbox.y += y;
 			checkbox.style.transform = 'translate(' +
 				(checkbox.x + offsetX) + 'px,' +
-				(checkbox.y + offsetY) + 'px)';
+				(checkbox.y + offsetY) + 'px) ' + checkbox.scale;
 		}
 	}
 
@@ -281,13 +300,6 @@ function filterFeatureBox() {
 		mouseX = e.pageX - rect.left;
 		mouseY = e.pageY - rect.top;
 	}
-
-	return div('filterFeature',
-		div('animationBox', checkboxes, {onmousemove: onmousemove}),
-		img('./res/assets/filter_menu_icon.svg', ''),
-		h2('搜尋結果篩選'),
-		p('可以自由選擇篩選條件，提供衝堂、精選節次、班別等篩選器，讓你選課不卡卡！'),
-	);
 }
 
 function featureIntroduction() {

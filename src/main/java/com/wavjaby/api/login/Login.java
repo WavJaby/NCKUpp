@@ -9,6 +9,7 @@ import com.wavjaby.api.CourseSchedule;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
@@ -47,8 +48,8 @@ public class Login implements Module {
     private PreparedStatement addUserLoginData, updateUserLoginData, getUserLoginState;
 
     private final Map<String, CookieStore> loginUserCookie = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService keepLoginUpdater = Executors.newSingleThreadScheduledExecutor();
-    private final ThreadPoolExecutor loginCosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+    private final ScheduledExecutorService keepLoginUpdater = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Checker"));
+    private final ThreadPoolExecutor loginCosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Pre-Check"));
 
     private static class UserShortInfo {
         public final String studentID, name, deptGradeInfo, PHPSESSID;

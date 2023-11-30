@@ -37,7 +37,6 @@ $object-layer2-dark: #828282;
                 }
 
                 > .slideOut {
-                    width: 0;
                     display: inline-block;
                     overflow: hidden;
                     position: relative;
@@ -66,12 +65,22 @@ $object-layer2-dark: #828282;
             }
 
             > .description {
-                font-size: 32px;
                 margin-bottom: 55px;
 
                 > span {
                     display: block;
                     margin-top: 24px;
+                }
+
+                > .l1 {
+                    font-size: 2rem;
+                    letter-spacing: 3.2px;
+                }
+
+                > .l2 {
+                    font-size: 3rem;
+                    font-weight: 700;
+                    letter-spacing: 4.8px;
                 }
             }
 
@@ -124,11 +133,14 @@ $object-layer2-dark: #828282;
         > .filterFeature {
             width: 80%;
             max-width: 1200px;
-            margin: 30px auto;
+            margin: 0 auto;
+            padding: 30px 5px;
             overflow: hidden;
+            box-sizing: border-box;
+            font-size: 30px;
 
             // Select box animation
-            .animationBox {
+            > .animationBox {
                 background: #262b32;
                 padding: 50px 20px;
                 border-radius: 10px;
@@ -136,8 +148,7 @@ $object-layer2-dark: #828282;
                 text-align: center;
                 overflow: hidden;
 
-                .checkbox {
-                    font-size: 30px;
+                > .checkbox {
                     margin: 20px 5%;
                     filter: drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.2));
                     display: inline-block;
@@ -151,20 +162,20 @@ $object-layer2-dark: #828282;
             }
 
             > h2 {
-                font-size: 48px;
+                font-size: 3rem;
                 margin: 30px 0 0 50px;
             }
 
             > p {
                 max-width: 500px;
-                font-size: 24px;
+                font-size: 1.5rem;
                 margin-left: 50px;
             }
 
             > img {
                 width: 180px;
                 height: 180px;
-                margin-top: 30px;
+                margin: -3rem 100px 0 0;
                 float: right;
             }
         }
@@ -252,18 +263,39 @@ $object-layer2-dark: #828282;
         }
 
         @media only screen and ($small-screen) {
-            > .filterFeature {
-                    // TODO: animation box RWD
-                > .animationBox {
-                    display: none;
+            > .main > .description {
+                .l1 {
+                    font-size: 1.5rem;
                 }
 
-                > h2, > p {
-                    margin-left: 0;
+                .l2 {
+                    font-size: 2rem;
+                }
+            }
+
+            > .filterFeature {
+                width: 100%;
+                font-size: 20px;
+
+                > .animationBox {
+                    padding: 10px;
+                }
+
+                > h2 {
+                    font-size: 2rem;
+                    margin-top: 10px;
+                    margin-left: 10px;
+                }
+
+                > p {
+                    font-size: 1.2rem;
+                    margin-left: 10px;
                 }
 
                 img {
-                    display: none;
+                    width: 100px;
+                    height: 100px;
+                    margin: 0;
                 }
             }
 

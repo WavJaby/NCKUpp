@@ -26,7 +26,7 @@ public class ProxyManager implements Module {
     private static final Logger logger = new Logger(TAG);
     private static final int TEST_TIMEOUT = 1500;
     private final PropertiesReader properties;
-    private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory("ProxyChecker"));
+    private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Checker"));
     private final List<ProxyData> proxies = new ArrayList<>();
     private File proxyFile;
     private long proxyFileLastModified;

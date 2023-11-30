@@ -1,5 +1,7 @@
 package com.wavjaby.logger;
 
+import com.wavjaby.lib.ThreadFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -66,7 +68,7 @@ public class Logger {
             logFileOut = Files.newOutputStream(logFile.toPath(), CREATE, APPEND);
             logFileOutBuff = new ByteArrayOutputStream();
             if (scheduledExecutor == null) {
-                scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+                scheduledExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory("Logger"));
                 scheduledExecutor.scheduleWithFixedDelay(Logger::flushLog, 100, 100, TimeUnit.MILLISECONDS);
             }
         } catch (IOException e) {

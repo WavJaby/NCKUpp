@@ -1,6 +1,6 @@
 'use strict';
 
-import {checkbox, div, img, input, label, li, span, text, ul, button} from './minjs_v000/domHelper.min.js';
+import {button, checkbox, div, img, input, label, li, span, text, ul} from './minjs_v000/domHelper.min.js';
 
 /**
  * [itemValue, displayName] or [groupName, ItemData[]]
@@ -248,8 +248,10 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		function checkItem(group) {
 			let findItem = false;
 			for (const item of group.children) {
+				console.log(searchValue.length)
+
 				// Check item group
-				if (item instanceof HTMLSpanElement && item.classList.contains('groupTitle')) {
+				if (item instanceof HTMLButtonElement && item.classList.contains('groupTitle')) {
 					// Not searching, reset group expand
 					if (searchValue.length === 0)
 						resetGroupExpand(item);
@@ -265,7 +267,9 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 				}
 				// Check item
 				else if (item instanceof HTMLLIElement && item.classList.contains('item')) {
-					if (item.itemName.indexOf(searchValue) !== -1 || (options.searchValue && item.itemValue.indexOf(searchValue) !== -1)) {
+					if (searchValue.length === 0 ||
+						item.itemName.indexOf(searchValue) !== -1 ||
+						(options.searchValue && item.itemValue.indexOf(searchValue) !== -1)) {
 						item.classList.remove('hide');
 						findItem = true;
 					} else {

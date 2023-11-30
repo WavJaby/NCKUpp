@@ -6,6 +6,7 @@ import com.wavjaby.api.search.SearchQuery;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 
 import java.io.File;
@@ -89,8 +90,8 @@ public class CourseEnrollmentTracker implements Runnable, Module {
             }
         }
 
-        messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+        messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Msg"));
+        scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Schedule"));
         scheduler.scheduleAtFixedRate(this, 10000, updateInterval, TimeUnit.MILLISECONDS);
     }
 
@@ -139,15 +140,19 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         Search.SearchResult searchResult = null;
         for (int i = 0; i < 4; i++) {
             start = System.currentTimeMillis();
-            searchResult = search.querySearch(searchQuery, baseCookieStore);
-            if (searchResult.isSuccess())
+            try {
+                searchResult = search.querySearch(searchQuery, baseCookieStore);
+            } catch (Exception e) {
+                logger.errTrace(e);
+                continue;
+            }
+            if (searchResult != null && searchResult.isSuccess())
                 break;
             else {
                 logger.warn(count + " Failed " + (System.currentTimeMillis() - start) + "ms, Retry");
                 try {
                     Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    logger.errTrace(e);
+                } catch (InterruptedException ignore) {
                 }
             }
         }

@@ -189,7 +189,7 @@ public class CourseData {
 
         public static TimeData fromString(String raw) {
             String[] s = raw.split(",", 6);
-            if(s.length == 1)
+            if (s.length == 1)
                 return new TimeData(s[0]);
             return new TimeData(
                     s[0].isEmpty() ? null : Byte.parseByte(s[0]),

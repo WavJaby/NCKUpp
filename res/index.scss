@@ -200,7 +200,7 @@ $login-bg-color: #0a0a0af2;
         height: 35px;
         margin: ($navbar-height - 35px) / 2 10px 0 0;
         padding: 0 10px;
-        border-radius: 10px;
+        border-radius: 5px;
         float: right;
 
         > img {
@@ -328,7 +328,7 @@ $login-bg-color: #0a0a0af2;
             > button {
                 background: none;
                 color: #ff6f6a;
-                font-size: 18px;
+                font-size: 20px;
                 padding: 0;
                 display: inline-block;
                 box-shadow: none;
@@ -427,29 +427,21 @@ footer {
     position: absolute;
     margin: 0;
     overflow: auto;
-}
 
-.router > div {
-    width: 100%;
-    min-height: 100%;
-    display: inline-block;
-}
-
-.expandable {
-    transition: height 0.2s;
-    -webkit-transition: height 0.2s;
-    -moz-transition: height 0.2s;
-    -ms-transition: height 0.2s;
-    -o-transition: height 0.2s;
-    overflow: hidden;
+    > div {
+        width: 100%;
+        min-height: 100%;
+        display: inline-block;
+    }
 }
 
 .loginDeclarationWindow {
     > h1 {
-        margin: 5px 0;
+        margin: 30px 0 5px 0;
     }
 
     > .declaration {
+        margin-left: 5px;
         > .red {
             color: #f94c3b;
             font-size: 1.1em;
@@ -463,6 +455,10 @@ footer {
     display: inline-block;
     position: relative;
     cursor: pointer;
+
+    &:hover > .checkmark {
+        background: $button-hover-color;
+    }
 
     > input {
         width: 0;
@@ -493,16 +489,11 @@ footer {
         border-radius: 5px;
         position: relative;
         margin-right: 5px;
-        vertical-align: middle;
         display: inline-block;
     }
 
-    > span {
+    > * {
         vertical-align: middle;
-    }
-
-    &:hover > .checkmark {
-        background: $button-hover-color;
     }
 
     > .checkmark::after {

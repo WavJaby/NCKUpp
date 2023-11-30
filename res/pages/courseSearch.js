@@ -290,9 +290,9 @@ export default function (router, loginState, userGuideTool) {
 			if (!externalSearch)
 				loadLastSearch(false);
 		});
-		// // Search from other page
-		// if (!externalSearch)
-		// 	loadLastSearch(true);
+		// Search from other page
+		if (!externalSearch)
+			loadLastSearch(true);
 	}
 
 	function onPageOpen(isHistory) {
@@ -1211,14 +1211,14 @@ function InstructorInfoBubble() {
 		State(signal, /**@param{target:any, data: UrSchoolInstructorSimple, offsetY: float}state*/state => {
 			if (!state) return div();
 
-			const bound = state.target.getBoundingClientRect();
 			/**@type UrSchoolInstructorSimple*/
 			const instructor = state.data;
 			const element = instructorInfoElement(instructor);
 			element.insertBefore(span(instructor.name), element.firstChild);
 
+			const bound = state.target.getBoundingClientRect();
 			offsetElement.style.left = bound.left + 'px';
-			offsetElement.style.top = (bound.top + state.offsetY - 40) + 'px';
+			offsetElement.style.top = (bound.top + state.offsetY) + 'px';
 			classList.add('show');
 			return element;
 		})

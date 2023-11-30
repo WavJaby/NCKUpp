@@ -647,7 +647,7 @@ $instructor-info-fade-time: 200ms;
     > .instructorInfoOffset {
         position: absolute;
         right: 0;
-        margin: auto;
+        margin: -$navbar-height auto 0 auto;
         opacity: 0;
         visibility: hidden;
         @include transition((visibility var($instructor-info-fade-time), opacity var($instructor-info-fade-time) ease-in));
@@ -715,8 +715,13 @@ $instructor-info-fade-time: 200ms;
 
     // Instructor detail window
     .instructorDetailWindow {
+
+
         > .title {
             display: inline-block;
+            padding-left: 30px;
+            font-size: 1.5rem;
+            line-height: 1.5rem;
 
             > span {
                 margin-right: 0.5em;

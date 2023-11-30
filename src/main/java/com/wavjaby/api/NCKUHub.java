@@ -39,8 +39,8 @@ public class NCKUHub implements Module {
     private int lastCacheSize = 0;
     private int cacheSize = 0;
     private final Map<Integer, NckuHubCourseData> courseInfoCache = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor();
-    private final ThreadPoolExecutor courseInfoGetter = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory("Ncku-Hub-"));
+    private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Cache"));
+    private final ThreadPoolExecutor courseInfoGetter = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory(TAG + "-Cos-Fetch"));
     private final Semaphore courseInfoGetterLock = new Semaphore(courseInfoGetter.getCorePoolSize(), true);
 
     private static class NckuHubCourseData {

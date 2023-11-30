@@ -4,6 +4,7 @@ import com.wavjaby.api.*;
 import com.wavjaby.api.login.Login;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.lib.PropertiesReader;
+import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RestApiServer;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
@@ -178,7 +179,7 @@ public class Main {
     private void startModules() {
         if (running) return;
         running = true;
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Module"));
         Semaphore lock = new Semaphore(executor.getMaximumPoolSize());
         CountDownLatch taskCount = new CountDownLatch(modules.size());
         for (Module module : modules) {
