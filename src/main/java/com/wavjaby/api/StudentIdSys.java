@@ -8,6 +8,7 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
+import com.wavjaby.sql.SQLite;
 import com.wavjaby.svgbuilder.*;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -22,6 +23,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,8 +41,6 @@ public class StudentIdSys implements Module {
     private static final Logger logger = new Logger(TAG);
     private static final String loginCheckString = "/ncku/qrys02.asp";
     private static final String NORMAL_DIST_FOLDER = "./api_file/CourseScoreDistribution";
-    private final File normalDistFolder;
-
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
             {0b00100, 0b01100, 0b10100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111},
@@ -51,6 +53,9 @@ public class StudentIdSys implements Module {
             {0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110},
             {0b01110, 0b10001, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b11100},
     };
+    private final File normalDistFolder;
+    private final SQLite sqLite;
+    private PreparedStatement getAllDistribution;
 
     public static class SemesterOverview {
         final String semester;
@@ -282,7 +287,9 @@ public class StudentIdSys implements Module {
         }
     }
 
-    public StudentIdSys() {
+    public StudentIdSys(SQLite sqLite) {
+        this.sqLite = sqLite;
+
         File normalDistFolder = new File(NORMAL_DIST_FOLDER);
         if (!normalDistFolder.exists()) {
             if (!normalDistFolder.mkdirs()) {
@@ -301,6 +308,13 @@ public class StudentIdSys implements Module {
 
     @Override
     public void start() {
+        try {
+            getAllDistribution = sqLite.getDatabase().prepareStatement(
+                    "SELECT * FROM grades_distribution_contribute"
+            );
+        } catch (SQLException e) {
+            SQLite.printSqlError(e);
+        }
     }
 
     @Override
@@ -333,6 +347,10 @@ public class StudentIdSys implements Module {
         String mode = query.get("mode");
         if (mode == null) {
             response.errorBadQuery("Query require \"mode\"");
+        }
+        // Get all distribution data from database
+        else if (mode.equals("allDistribution")) {
+            getAllDistribution(cookieStore, response);
         }
         // Get semester info
         else if (mode.equals("semInfo")) {
@@ -373,6 +391,16 @@ public class StudentIdSys implements Module {
         // Unknown mode
         else
             response.errorBadQuery("Unknown mode: " + mode);
+    }
+
+    private void getAllDistribution(CookieStore cookieStore, ApiResponse response) {
+        try {
+            ResultSet result = getAllDistribution.executeQuery();
+//            boolean login = result.next() && result.getString("student_id") != null;
+            result.close();
+        } catch (SQLException e) {
+            SQLite.printSqlError(e);
+        }
     }
 
     private void getSemestersOverview(CookieStore cookieStore, ApiResponse response) {

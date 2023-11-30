@@ -133,7 +133,7 @@ public class Main {
         addModule(new HomeInfo(proxyManager));
         addModule(new UsefulWebsite());
         addModule(new ClientDebugLog());
-        addModule(new StudentIdSys());
+        addModule(new StudentIdSys(sqLite));
 
         if (serverSettings.getPropertyBoolean("courseWatcher", false))
             addModule(new CourseWatcher(search, watchDog, serverSettings));

@@ -16,41 +16,43 @@ $object-layer1-dark: #484848;
     }
 }
 
-.stuIdSysGrades {
-    > .semesters, .semesterInfo {
-        float: left;
-    }
+.myGrades {
+    .semesterInfos {
+        width: 100%;
+        overflow: hidden;
 
-    .semesterInfo {
-        background: $object-layer1-dark;
-        cursor: pointer;
-        display: block;
-        padding: 10px;
-        @include box-sizing-border;
-        border-radius: 10px;
-        margin: 5px 0 0 5px;
+        .semesterInfo {
+            background: $object-layer1-dark;
+            cursor: pointer;
+            display: block;
+            padding: 10px;
+            @include box-sizing-border;
+            border-radius: 10px;
+            margin: 5px 0 0 5px;
+            float: left;
 
-        &:hover {
-            background: #161a25;
-        }
+            &:hover {
+                background: #161a25;
+            }
 
-        // Title
-        > h1 {
-            font-size: 24px;
-            margin: 5px;
-            text-align: center;
-        }
+            // Title
+            > h1 {
+                font-size: 24px;
+                margin: 5px;
+                text-align: center;
+            }
 
-        // Info
-        > span {
-            @extend #infoText;
+            // Info
+            > span {
+                @extend #infoText;
+            }
         }
     }
 
     > .semesterGrades {
         padding: 5px;
         text-align: center;
-        border-top: white 1px solid;
+        //border-top: white 1px solid;
         clear: both;
 
         > div {
@@ -76,21 +78,11 @@ $object-layer1-dark: #484848;
     }
 
     > .loading {
-        background: $overlay-transparent-bg-color;
-        position: fixed;
-        top: $navbar-height;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        margin: auto;
+        text-align: center;
+        padding: 50px;
 
         > .loaderCircle {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            margin: auto;
+            display: inline-block;
         }
     }
 }
