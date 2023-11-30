@@ -70,6 +70,7 @@ public class AllDept implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/alldept")
     public RestApiResponse getAlldept(HttpExchange req) {
         long startTime = System.currentTimeMillis();

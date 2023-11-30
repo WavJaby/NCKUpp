@@ -8,13 +8,12 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.RequestBody;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
-import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -23,7 +22,6 @@ import java.util.*;
 import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
-import static com.wavjaby.lib.Lib.readRequestBody;
 
 @RequestMapping("/api/v0")
 public class DeptWatchdog implements Module {
@@ -151,6 +149,7 @@ public class DeptWatchdog implements Module {
         }
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/watchdog", method = RequestMethod.GET)
     public RestApiResponse getWatchdog(HttpExchange req) {
         long startTime = System.currentTimeMillis();
@@ -172,8 +171,13 @@ public class DeptWatchdog implements Module {
         return apiResponse;
     }
 
+    public static class WatchDogRequest {
+        public String studentID, courseSerial, removeCourseSerial;
+    }
+
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/watchdog", method = RequestMethod.POST)
-    public RestApiResponse postWatchdog(HttpExchange req) {
+    public RestApiResponse postWatchdog(HttpExchange req, @RequestBody WatchDogRequest request) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
@@ -186,25 +190,16 @@ public class DeptWatchdog implements Module {
             return response;
         }
 
-        Map<String, String> query = null;
-        try {
-            query = parseUrlEncodedForm(readRequestBody(req, StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            response.errorBadPayload("Read payload failed");
-            logger.errTrace(e);
-        }
-        if (query != null) {
-            String studentID = query.get("studentID");
-            String courseSerial;
-            if (studentID == null) {
-                response.errorBadPayload("Form require \"studentID\"");
-            } else if ((courseSerial = query.get("courseSerial")) != null) {
-                addWatchDog(courseSerial, studentID, PHPSESSID, response);
-            } else if ((courseSerial = query.get("removeCourseSerial")) != null) {
-                removeWatchDog(courseSerial, studentID, PHPSESSID, response);
-            } else
-                response.errorBadPayload("Form require one of \"courseSerial\" or \"removeCourseSerial\"");
-        }
+        String studentID = request.studentID;
+        String courseSerial;
+        if (studentID == null) {
+            response.errorBadPayload("Form require \"studentID\"");
+        } else if ((courseSerial = request.courseSerial) != null) {
+            addWatchDog(courseSerial, studentID, PHPSESSID, response);
+        } else if ((courseSerial = request.removeCourseSerial) != null) {
+            removeWatchDog(courseSerial, studentID, PHPSESSID, response);
+        } else
+            response.errorBadPayload("Form require one of \"courseSerial\" or \"removeCourseSerial\"");
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
         logger.log((System.currentTimeMillis() - startTime) + "ms");

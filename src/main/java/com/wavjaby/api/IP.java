@@ -23,18 +23,11 @@ public class IP implements Module {
     }
 
     @Override
-    public void start() {
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
     public String getTag() {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/ip")
     public IpInfo ip(HttpExchange req) {
         String ip = getClientIP(req);

@@ -71,6 +71,7 @@ public class UsefulWebsite implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/usefulWebsite")
     public RestApiResponse usefulWebsite() {
         long startTime = System.currentTimeMillis();

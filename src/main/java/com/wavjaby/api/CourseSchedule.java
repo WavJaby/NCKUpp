@@ -110,6 +110,7 @@ public class CourseSchedule implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/courseSchedule", method = RequestMethod.GET)
     public RestApiResponse getCourseSchedule(HttpExchange req) {
         long startTime = System.currentTimeMillis();
@@ -129,6 +130,7 @@ public class CourseSchedule implements Module {
         return apiResponse;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/courseSchedule", method = RequestMethod.POST)
     public RestApiResponse postCourseSchedule(HttpExchange req) {
         long startTime = System.currentTimeMillis();

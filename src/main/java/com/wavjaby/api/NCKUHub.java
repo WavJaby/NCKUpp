@@ -100,6 +100,7 @@ public class NCKUHub implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/nckuhub")
     public RestApiResponse nckuhub(HttpExchange req) {
         long startTime = System.currentTimeMillis();

@@ -24,14 +24,6 @@ public class FileHost implements Module {
     private final FileNameMap fileNameMap = URLConnection.getFileNameMap();
 
     @Override
-    public void start() {
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
     public String getTag() {
         return TAG;
     }
@@ -47,6 +39,7 @@ public class FileHost implements Module {
             logger.err("Quizlet file path not found");
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/**")
     @CustomResponse
     public void fileHost(HttpExchange req) {

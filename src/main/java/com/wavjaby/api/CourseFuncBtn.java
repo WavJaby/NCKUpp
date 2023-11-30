@@ -57,6 +57,7 @@ public class CourseFuncBtn implements Module {
     }
 
 
+    @SuppressWarnings("unused")
     @RequestMapping("/courseFuncBtn")
     public RestApiResponse courseFuncBtn(HttpExchange req) {
         long startTime = System.currentTimeMillis();

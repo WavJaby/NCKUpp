@@ -33,6 +33,7 @@ public class Template implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/template")
     public RestApiResponse template(HttpExchange req) {
         long startTime = System.currentTimeMillis();

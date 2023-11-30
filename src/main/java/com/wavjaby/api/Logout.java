@@ -31,18 +31,11 @@ public class Logout implements Module {
     }
 
     @Override
-    public void start() {
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
     public String getTag() {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/logout")
     public RestApiResponse logout(HttpExchange req) {
         long startTime = System.currentTimeMillis();

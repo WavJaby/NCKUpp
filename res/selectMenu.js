@@ -248,7 +248,6 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		function checkItem(group) {
 			let findItem = false;
 			for (const item of group.children) {
-				console.log(searchValue.length)
 
 				// Check item group
 				if (item instanceof HTMLButtonElement && item.classList.contains('groupTitle')) {

@@ -92,6 +92,7 @@ public class A9Registered implements Module {
     }
 
 
+    @SuppressWarnings("unused")
     @RequestMapping("/A9Registered")
     public RestApiResponse getA9Registered(HttpExchange req) {
         long startTime = System.currentTimeMillis();

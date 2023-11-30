@@ -35,6 +35,11 @@ public class ClientDebugLog implements Module {
 
     @Override
     public void stop() {
+        try {
+            logFileOut.close();
+        } catch (IOException e) {
+            logger.errTrace(e);
+        }
     }
 
     @Override
@@ -42,6 +47,7 @@ public class ClientDebugLog implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/clientDebugLog", method = RequestMethod.POST)
     public RestApiResponse clientDebugLog(HttpExchange req) {
         long startTime = System.currentTimeMillis();

@@ -45,6 +45,7 @@ export function checkLocalStorage() {
 /**
  * @typedef {Object} CustomApiFetch
  * @property {int} [timeout] Fetch timeout time millisecond
+ * @property {string | Object} [body] A BodyInit object or null to set request's body.
  *
  * @typedef {RequestInit & CustomApiFetch} ApiFetch
  */
@@ -58,6 +59,10 @@ export function checkLocalStorage() {
 export function fetchApi(endpoint, showState, option) {
 	if (option) option.credentials = 'include';
 	else option = {credentials: 'include'};
+	// Stringify to JSON string
+	if (option.body instanceof Object)
+		option.body = JSON.stringify(option.body);
+	// Abort timer, add if available
 	let abortTimeout;
 	if (window.AbortController && option.timeout) {
 		const controller = new AbortController();

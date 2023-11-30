@@ -31,6 +31,7 @@ public class WebSocket implements Module, SocketServerEvent {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/socket")
     @CustomResponse
     public void socket(HttpExchange req) {

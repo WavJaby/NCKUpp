@@ -108,6 +108,7 @@ public class Search implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/search")
     public RestApiResponse search(HttpExchange req) {
         String ip = getClientIP(req);

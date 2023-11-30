@@ -28,7 +28,7 @@ import {
 } from './res/minjs_v000/domHelper.min.js';
 
 import {metaSet, metaType} from './res/lib/metaTag.js';
-import {fetchApi, isLocalNetwork} from './res/lib/lib.js';
+import {fetchApi, isLocalNetwork, isMobile} from './res/lib/lib.js';
 import {UserGuideTool} from './res/userGuide.js';
 import PopupWindow from './res/popupWindow.js';
 
@@ -247,6 +247,8 @@ window.pageLoading = new Signal(false);
 		while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
 		document.body.appendChild(root);
 		queryRouter.initFirstPage();
+		if (isMobile())
+			window.messageAlert.addInfo('可使用電腦來獲得最佳體驗', '手機版具完整功能，但介面正在調整中，請見諒', 10000);
 	};
 
 	// functions

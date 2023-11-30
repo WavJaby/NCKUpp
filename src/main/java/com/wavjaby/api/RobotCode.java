@@ -99,6 +99,7 @@ public class RobotCode implements Module {
     }
 
 
+    @SuppressWarnings("unused")
     @RequestMapping("/robotCode")
     public RestApiResponse robotCode(HttpExchange req) {
         long startTime = System.currentTimeMillis();

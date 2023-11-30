@@ -140,6 +140,7 @@ public class UrSchool implements Module {
     }
 
 
+    @SuppressWarnings("unused")
     @RequestMapping("/urschool")
     public RestApiResponse urschool(HttpExchange req) {
         long startTime = System.currentTimeMillis();

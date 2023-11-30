@@ -467,7 +467,6 @@ export default function (router, loginState, userGuideTool) {
 		}
 
 		// Parse result
-		nckuHubLoadingOverlayShow();
 		const nckuHubResult = {};
 		/**@type CourseData[]*/
 		const courseResult = [];
@@ -490,6 +489,8 @@ export default function (router, loginState, userGuideTool) {
 		const chunkSize = 20;
 		const courseSerialNumbers = Object.keys(nckuHubResult);
 		nckuHubLoadingTaskCount = Math.ceil(courseSerialNumbers.length / chunkSize);
+		if (courseSerialNumbers.length > 0)
+			nckuHubLoadingOverlayShow();
 		for (let i = 0; i < courseSerialNumbers.length; i += chunkSize) {
 			const chunk = courseSerialNumbers.slice(i, i + chunkSize);
 			fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
@@ -571,7 +572,7 @@ export default function (router, loginState, userGuideTool) {
 			console.log('add watch');
 			result = fetchApi('/watchdog', 'add course to watch list', {
 				method: 'POST',
-				body: `studentID=${loginState.state.studentID}&courseSerial=${courseData.serialNumber}`
+				body: {studentID: loginState.state.studentID, courseSerial: courseData.serialNumber}
 			});
 			this.textContent = '移除關注';
 			watchList.push(courseData.serialNumber);
@@ -579,7 +580,7 @@ export default function (router, loginState, userGuideTool) {
 			console.log('remove watch');
 			result = fetchApi('/watchdog', 'remove course from watch list', {
 				method: 'POST',
-				body: `studentID=${loginState.state.studentID}&removeCourseSerial=${courseData.serialNumber}`
+				body: {studentID: loginState.state.studentID, removeCourseSerial: courseData.serialNumber}
 			});
 			this.textContent = '加入關注';
 			watchList.splice(serialIndex, 1);
@@ -593,10 +594,13 @@ export default function (router, loginState, userGuideTool) {
 		}
 		fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
 			const eql = encodeURIComponent('&');
+			console.log(i)
 			watchList = [];
-			Object.entries(i.data).forEach(i => i[1].forEach(j => watchList.push(i[0] + '-' + j)));
-			const serialQuery = Object.entries(i.data).map(i => i[0] + '=' + i[1].join(',')).join(eql);
-			search([['serial', serialQuery]], false);
+			for (const entry of Object.entries(i.data)) {
+				for (const num of entry[1])
+					watchList.push(entry[0] + '-' + num);
+			}
+			search({serial: watchList.join(',')}, false);
 		})
 	}
 

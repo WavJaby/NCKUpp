@@ -23,20 +23,12 @@ public class Route implements Module {
     private static final String TAG = "Route";
     private static final Logger logger = new Logger(TAG);
 
-
-    @Override
-    public void start() {
-    }
-
-    @Override
-    public void stop() {
-    }
-
     @Override
     public String getTag() {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/quizlet")
     @CustomResponse
     public void quizlet(HttpExchange req) {

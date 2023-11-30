@@ -239,6 +239,7 @@ public class Login implements Module {
         return false;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/login", method = RequestMethod.GET)
     public RestApiResponse getLogin(HttpExchange req) {
         long startTime = System.currentTimeMillis();
@@ -248,6 +249,7 @@ public class Login implements Module {
         return response;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/login", method = RequestMethod.POST)
     public RestApiResponse postLogin(HttpExchange req, @RequestBody LoginData loginData) {
         long startTime = System.currentTimeMillis();

@@ -46,6 +46,7 @@ public class ExtractUrl implements Module {
     }
 
 
+    @SuppressWarnings("unused")
     @RequestMapping("/extract")
     public RestApiResponse extract(HttpExchange req) {
         long startTime = System.currentTimeMillis();

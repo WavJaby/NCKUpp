@@ -50,6 +50,7 @@ public class HomeInfo implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/homeInfo")
     public RestApiResponse homeInfo(HttpExchange req) {
         long startTime = System.currentTimeMillis();

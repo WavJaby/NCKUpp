@@ -62,6 +62,7 @@ public class PreferenceAdjust implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/preferenceAdjust", method = RequestMethod.GET)
     public RestApiResponse getPreferenceAdjust(HttpExchange req) {
         long startTime = System.currentTimeMillis();
@@ -77,6 +78,7 @@ public class PreferenceAdjust implements Module {
         return response;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/preferenceAdjust", method = RequestMethod.POST)
     public RestApiResponse postPreferenceAdjust(HttpExchange req) {
         long startTime = System.currentTimeMillis();

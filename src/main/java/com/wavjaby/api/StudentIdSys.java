@@ -312,6 +312,7 @@ public class StudentIdSys implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping("/stuIdSys")
     public RestApiResponse stuIdSys(HttpExchange req) {
         long startTime = System.currentTimeMillis();

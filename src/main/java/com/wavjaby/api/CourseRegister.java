@@ -55,6 +55,7 @@ public class CourseRegister implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/courseRegister", method = RequestMethod.GET)
     public RestApiResponse getCourseRegister(HttpExchange req) {
         long startTime = System.currentTimeMillis();
@@ -70,6 +71,7 @@ public class CourseRegister implements Module {
         return apiResponse;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/courseRegister", method = RequestMethod.POST)
     public RestApiResponse postCourseRegister(HttpExchange req) {
         long startTime = System.currentTimeMillis();

@@ -56,6 +56,7 @@ public class Profile implements Module {
         return TAG;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/profile", method = RequestMethod.GET)
     public RestApiResponse getProfile(HttpExchange req) {
         long startTime = System.currentTimeMillis();
@@ -79,6 +80,7 @@ public class Profile implements Module {
         return apiResponse;
     }
 
+    @SuppressWarnings("unused")
     @RequestMapping(value = "/profile", method = RequestMethod.POST)
     public RestApiResponse postProfile(HttpExchange req) {
         long startTime = System.currentTimeMillis();

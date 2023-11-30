@@ -102,7 +102,9 @@ public class RestApiServer extends HttpServer {
             // Create path failed
             if (subNode == null) continue;
             boolean selfHandleResponse = func.isAnnotationPresent(CustomResponse.class);
-            subNode.addEndpoint(new EndpointHandler(absolutePath, mapping.method(), selfHandleResponse, func, controller));
+            for (RequestMethod method : mapping.method()) {
+                subNode.addEndpoint(new EndpointHandler(absolutePath, method, selfHandleResponse, func, controller));
+            }
         }
     }
 
