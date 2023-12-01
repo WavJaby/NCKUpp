@@ -12,12 +12,13 @@ export default function (router) {
 	const styles = mountableStylesheet('./res/pages/home.css');
 	let /**@type{PageStorage}*/pageStorage;
 
-	const mainBoxElement = mainBox();
-	const filterFeatureBoxElement = filterFeatureBox();
+	const mainBoxElement = new MainBox();
+	const filterFeatureBoxElement = new FilterFeatureBox();
+	const featureIntroduction = new FeatureIntroduction();
 	const siteInfo = div('siteInfo',
-		mainBoxElement,
-		filterFeatureBoxElement,
-		// featureIntroduction(),
+		mainBoxElement.element,
+		filterFeatureBoxElement.element,
+		featureIntroduction.element,
 		// a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
 	);
 	const scrollDownIndicator = div('scrollDownIndicator', {onclick: scrollDown},
@@ -70,6 +71,7 @@ export default function (router) {
 
 		mainBoxElement.onPageOpen();
 		filterFeatureBoxElement.startAnimation();
+		featureIntroduction.startAnimation();
 		router.element.addEventListener('scroll', onscroll);
 	}
 
@@ -80,6 +82,7 @@ export default function (router) {
 
 		mainBoxElement.onPageClose();
 		filterFeatureBoxElement.stopAnimation();
+		featureIntroduction.stopAnimation();
 		router.element.removeEventListener('scroll', onscroll);
 	}
 
@@ -149,16 +152,16 @@ export default function (router) {
 	);
 };
 
-function mainBox() {
+function MainBox() {
 	let pageStorage;
 	// Main title
 	const iconImages = [
-		img('res/assets/icon/icon_64.svg', ''),
+		() => img('res/assets/icon/icon_64.svg', ''),
 		// 腸太郎萬歲 \o/ \o/ \o/
-		img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', ''),
-		img('https://sticker-assets.dcard.tw/images/b5c7eddc-8dd9-40e9-ba4b-358323a45713/full.png', ''),
-		img('https://sticker-assets.dcard.tw/images/84eddd38-497c-41d6-8845-ec8b57498c6a/full.png', ''),
-		img('https://sticker-assets.dcard.tw/images/102eb5ae-3f1e-4b28-8866-905a64f87c9b/full.png', ''),
+		() => img('https://sticker-assets.dcard.tw/images/4d5acaf6-fb1c-4110-8538-6d2d651b410a/full.png', ''),
+		() => img('https://sticker-assets.dcard.tw/images/b5c7eddc-8dd9-40e9-ba4b-358323a45713/full.png', ''),
+		() => img('https://sticker-assets.dcard.tw/images/84eddd38-497c-41d6-8845-ec8b57498c6a/full.png', ''),
+		() => img('https://sticker-assets.dcard.tw/images/102eb5ae-3f1e-4b28-8866-905a64f87c9b/full.png', ''),
 	];
 	let iconImageStyle = 0;
 	let clickCount = 0;
@@ -171,22 +174,25 @@ function mainBox() {
 					iconImageStyle = 0;
 				pageStorage.data['iconImageStyle'] = iconImageStyle;
 				pageStorage.save();
+				if (iconImages[iconImageStyle] instanceof Function)
+					iconImages[iconImageStyle] = iconImages[iconImageStyle]();
 				iconImageParent.replaceChild(iconImages[iconImageStyle], iconImageParent.firstChild);
 			}
 		},
 	});
 	const titleAnimation = span(null, 'slideOut', img('./res/assets/page_home/logo_plusplus_text.svg', '++'), {style: 'width:0'});
 
-	return div('main', {
-			init: (pageStorage_) => {
-				pageStorage = pageStorage_;
-				// Load iconImage style
-				iconImageStyle = pageStorage.data['iconImageStyle'] || 0;
-				iconImageParent.appendChild(iconImages[iconImageStyle]);
-			},
-			onPageOpen: () => setTimeout(expandTitle, 700),
-			onPageClose: () => titleAnimation.style.width = '0'
-		},
+	this.init = function (pageStorage_) {
+		pageStorage = pageStorage_;
+		// Load iconImage style
+		iconImageStyle = pageStorage.data['iconImageStyle'] || 0;
+		if (iconImages[iconImageStyle] instanceof Function)
+			iconImages[iconImageStyle] = iconImages[iconImageStyle]();
+		iconImageParent.appendChild(iconImages[iconImageStyle]);
+	};
+	this.onPageOpen = () => setTimeout(expandTitle, 700);
+	this.onPageClose = () => titleAnimation.style.width = '0';
+	this.element = div('main',
 		h1(null, 'title', iconImageParent, img('./res/assets/page_home/logo_text.svg', 'NCKU'), titleAnimation),
 		p(null, 'description',
 			span('結合 NCKU HUB・UrSchool・成大選課系統', 'l1'),
@@ -235,7 +241,7 @@ function mainBox() {
 	}
 }
 
-function filterFeatureBox() {
+function FilterFeatureBox() {
 	const checkboxes = [
 		checkbox(null, true, null, span('英語授課')),
 		checkbox('gray', true, null, span('大學國文')),
@@ -262,10 +268,9 @@ function filterFeatureBox() {
 			checkbox.y + 'px) ' + checkbox.scale;
 	}
 
-	return div('filterFeature', {
-			startAnimation: () => interval = setInterval(animation, 100),
-			stopAnimation: () => clearInterval(interval)
-		},
+	this.startAnimation = () => interval = setInterval(animation, 100);
+	this.stopAnimation = () => clearInterval(interval);
+	this.element = div('filterFeature',
 		div('animationBox', checkboxes, {onmousemove: onmousemove}),
 		h2('搜尋結果篩選'),
 		img('./res/assets/filter_menu_icon.svg', ''),
@@ -302,39 +307,38 @@ function filterFeatureBox() {
 	}
 }
 
-function featureIntroduction() {
+function FeatureIntroduction() {
 	// Feature introduction
-	const introduction = div('introduction',
+	const element = this.element = div('introduction',
 		div('block', {onwheel: onwheel},
-			img('./res/assets/page_home/sort_function.png'),
-			h2('排序功能', 'title'),
-			p('可對搜尋結果的任意欄位進行排序')
+			img('./res/assets/page_home/schedule_download_function.png'),
+			h2('課表下載', 'title'),
+			p('提供預排課表檢視和自訂課表下載功能，成為排課大師！')
 		),
-		div('block',
+		div('block bg1',
+			img('./res/assets/page_home/add_course_function.png'),
+			h2('支援預排、選課', 'title'),
+			p('登入後與成大連動，可進行預排、志願登記、單科加選等操作。'),
+		),
+		div('block bg2',
 			img('./res/assets/page_home/ncku_hub_comment_function.png'),
 			h2('NCKU HUB評論', 'title'),
-			p('點擊課程評分即可查看評論')
+			p('引入NCKU HUB，提供更人性化的評論查詢')
 		),
 		div('block',
-			img('./res/assets/page_home/urschool_instructor_info_function.png'),
-			h2('UrSchool教授評價', 'title'),
-			p('點擊教師姓名查看講師評價、詳細資料及評論')
+			img('./res/assets/page_home/sort_function.png'),
+			h2('排序功能', 'title'),
+			p('對搜尋結果的任意欄位進行排序，找到你的課程！')
 		),
-		div('block',
+		div('block bg1',
 			img('./res/assets/page_home/category_filter_function.png'),
 			h2('搜尋結果篩選', 'title'),
 			p('可以自由選擇篩選條件，提供衝堂、精確節次、班別等篩選器')
 		),
-		div('block',
-			img('./res/assets/page_home/schedule_download_function.png'),
-			h2('課表下載', 'title'),
-			p('提供預排課表檢視，課表下載功能，下載漂亮的課表🥰')
-		),
-		div('block',
-			img('./res/assets/page_home/add_course_function.png'),
-			h2('支援預排、選課', 'title'),
-			p('登入後可跟選課網站連動，進行預排、志願登記、單科加選等操作'),
-			p('搶課一律以成大系統為主，若使用本網站搶課未成功一概不負責', 'small')
+		div('block bg2',
+			img('./res/assets/page_home/urschool_instructor_info_function.png'),
+			h2('UrSchool教授評價', 'title'),
+			p('點擊教師姓名查看講師評價、詳細資料及評論')
 		)
 	);
 
@@ -343,24 +347,24 @@ function featureIntroduction() {
 	let lastScrollTime = 0;
 	let introductionAnimationRollingTemp = 0, introductionAnimationLastScrollPos = 0;
 	let introductionAnimationDirection = false, introductionAnimationPause = true;
-	let pageOpened = false;
-	introduction.onmouseenter = function () {
+	let animation = null;
+	this.onmouseenter = function () {
 		introductionHover = true;
 	};
-	introduction.onmouseleave = function () {
+	this.onmouseleave = function () {
 		introductionHover = false;
 	};
+	this.startAnimation = () => animation = setInterval(animationUpdate, 100);
 
-	function introductionAnimation() {
+	function animationUpdate() {
 		const now = Date.now();
 		const time = now - lastScrollTime;
 
 		// Interrupt by user
-		if (introduction.scrollLeft !== introductionAnimationLastScrollPos) {
-			introductionAnimationLastScrollPos = introduction.scrollLeft;
+		if (element.scrollLeft !== introductionAnimationLastScrollPos) {
+			introductionAnimationLastScrollPos = element.scrollLeft;
 			introductionAnimationPause = true;
 			lastScrollTime = now;
-			requestAnimationFrame(introductionAnimation);
 			return;
 		}
 		// Pausing
@@ -369,25 +373,22 @@ function featureIntroduction() {
 				introductionAnimationPause = false;
 				lastScrollTime = now;
 			}
-			requestAnimationFrame(introductionAnimation);
 			return;
 		}
 
 		// Update scroll
 		lastScrollTime = now;
-		introductionAnimationRollingTemp += time / 1000 * 40;
+		introductionAnimationRollingTemp += time / 1000 * 100;
 		if (introductionAnimationRollingTemp > 1) {
-			if (introductionAnimationDirection)
-				introduction.scrollLeft -= 1;
-			else
-				introduction.scrollLeft += 1;
-			introductionAnimationLastScrollPos = introduction.scrollLeft;
+			const scrollLeft = introductionAnimationDirection ? -1 : 1;
+			element.scrollLeft += scrollLeft;
+			introductionAnimationLastScrollPos = element.scrollLeft;
 			introductionAnimationRollingTemp %= 1;
 		}
 
-		if (introduction.scrollLeft === 0)
+		if (element.scrollLeft === 0)
 			introductionAnimationDirection = false;
-		else if (introduction.scrollWidth - introduction.clientWidth - introduction.scrollLeft < 1) {
+		else if (element.scrollWidth - element.clientWidth - element.scrollLeft < 1) {
 			introductionAnimationDirection = true;
 			introductionAnimationPause = true;
 			// if (introduction.scrollTo) {
@@ -395,32 +396,31 @@ function featureIntroduction() {
 			// } else
 			// 	introduction.scrollLeft = 0;
 		}
-
-		if (pageOpened)
-			requestAnimationFrame(introductionAnimation);
 	}
+
+	this.stopAnimation = function () {
+		clearInterval(animation);
+	};
 
 	function onwheel(e) {
 		if (introductionHover) {
 			e.preventDefault();
 			if (!introductionAnimationPause)
-				introductionScrollTarget = introduction.scrollLeft;
+				introductionScrollTarget = element.scrollLeft;
 			introductionAnimationPause = true;
-			if (introduction.scrollTo) {
+			if (element.scrollTo) {
 				introductionScrollTarget += e.deltaY;
 				if (introductionScrollTarget < 0) {
 					introductionScrollTarget = 0;
 				}
-				if (introduction.scrollWidth - introduction.clientWidth - introductionScrollTarget < 0) {
-					introductionScrollTarget = introduction.scrollWidth - introduction.clientWidth;
+				if (element.scrollWidth - element.clientWidth - introductionScrollTarget < 0) {
+					introductionScrollTarget = element.scrollWidth - element.clientWidth;
 				}
-				if (introduction.scrollLeft !== introductionScrollTarget)
-					introduction.scrollTo({left: introductionScrollTarget, behavior: 'smooth'});
+				if (element.scrollLeft !== introductionScrollTarget)
+					element.scrollTo({left: introductionScrollTarget, behavior: 'smooth'});
 			} else {
-				introduction.scrollLeft += e.deltaY;
+				element.scrollLeft += e.deltaY;
 			}
 		}
 	}
-
-	return introduction;
 }

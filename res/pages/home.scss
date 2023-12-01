@@ -23,9 +23,10 @@ $object-layer2-dark: #828282;
 
                 > .rippleable {
                     display: inline-block;
-                    margin-right: 40px;
+                    margin-right: 20px;
 
                     > img {
+                        width: 90px;
                         height: 90px;
                         vertical-align: bottom;
                     }
@@ -211,23 +212,24 @@ $object-layer2-dark: #828282;
         }
 
         > .introduction {
+            color: #1B1F24;
             max-width: 100%;
-            padding: 5px;
             display: inline-block;
             overflow: auto;
             white-space: nowrap;
             vertical-align: top;
+            text-align: center;
             @include hide-scroll-bar;
             @include box-sizing-border;
 
             > .block {
-                background: $pure-gray-900;
-                width: 450px;
-                //max-width: 100%;
+                background: #6C99FF;
+                width: 300px;
+                height: 400px;
                 border-radius: 20px;
                 overflow: hidden;
-                padding: 10px;
-                margin: 5px;
+                padding: 50px 20px 20px 20px;
+                margin: 30px;
                 display: inline-block;
                 vertical-align: top;
                 @include box-sizing-border;
@@ -236,12 +238,19 @@ $object-layer2-dark: #828282;
                     width: 400px;
                 }
 
+                &.bg1 {
+                    background: #FDFF9A;
+                }
+
+                &.bg2 {
+                    background: #BDBDBD;
+                }
+
                 > img {
-                    float: left;
                     width: 150px;
                     height: 150px;
                     border-radius: 100%;
-                    margin-right: 5px;
+                    display: inline-block;
                     border: white 2px solid;
                 }
 
@@ -256,8 +265,8 @@ $object-layer2-dark: #828282;
                 }
 
                 > p.small {
-                    color: $pure-gray-600;
-                    font-size: 14px;
+                    color: #aaa;
+                    font-size: 12px;
                 }
             }
         }

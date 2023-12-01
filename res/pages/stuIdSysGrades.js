@@ -111,7 +111,7 @@ export default function (router, loginState) {
 };
 
 function MyGrades(router) {
-	const loadingState = new Signal(true);
+	const loadingState = new Signal(false);
 	const normalDistImgWindow = new PopupWindow({root: router.element});
 	let stuIdLoadingCount = 0;
 	let stuIdLoading = false;
