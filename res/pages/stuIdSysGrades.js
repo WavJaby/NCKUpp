@@ -1,6 +1,6 @@
 'use strict';
 
-import {div, h1, mountableStylesheet, ShowIf, Signal, span, State, text, button} from '../minjs_v000/domHelper.min.js';
+import {button, div, h1, mountableStylesheet, ShowIf, Signal, span, text} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
@@ -10,6 +10,7 @@ import PopupWindow from '../popupWindow.js';
  * @typedef CourseGrade
  * @property {string} serialNumber
  * @property {string} systemNumber
+ * @property {string | null} classCode
  * @property {string} courseName
  * @property {string} remark
  * @property {float} credits
@@ -199,7 +200,8 @@ function MyGrades(router) {
 					// span(null, 'info', span('Remark'), text(': ' + course.remark)),
 					// span(null, 'info', span('Require'), text(': ' + course.require)),
 					span(null, 'info', span('課程序號', null, {title: 'Serial Number'}), text(': ' + course.serialNumber)),
-					span(null, 'info', span('課程碼', null, {title: 'System Number'}), text(': ' + course.systemNumber)),
+					span(null, 'info', span('課程碼', null, {title: 'System Number'}),
+						text(': ' + course.systemNumber + (course.classCode ? '-' + course.classCode : ''))),
 					span(null, 'info', span('學分'), text(': ' + course.credits)),
 					course.gpa === null ? null :
 						span(null, 'info', span('Gpa', null, {title: course.gpa}), text(': ' + gpaPointCalculate(course.gpa))),
@@ -239,7 +241,7 @@ function MyGrades(router) {
 			bar.style.left = barWidth * i + '%';
 			bars.push(bar);
 
-			const line = div(i * 10);
+			const line = div();
 			line.style.left = barWidth * i + '%';
 			labels.push(line);
 
@@ -289,7 +291,7 @@ function MyGrades(router) {
 		const courseInfo = this && this.courseInfo || inCourseInfo;
 		if (!courseInfo.imgQuery)
 			return;
-		fetchApi('/stuIdSys?mode=courseNormalDist&imgQuery=' + courseInfo.imgQuery).then(response => {
+		fetchApi('/stuIdSys?mode=courseGradesDistribution&imgQuery=' + courseInfo.imgQuery).then(response => {
 			if (response.success)
 				createDistWindow(courseInfo, response.data);
 			else {

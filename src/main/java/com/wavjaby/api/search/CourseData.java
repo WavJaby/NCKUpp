@@ -9,7 +9,7 @@ public class CourseData {
     final String departmentName; // Can be null
     final String serialNumber; // Can be null
     final String courseAttribute;
-    final String courseSystemNumber;
+    final String systemNumber;
     final Integer forGrade;  // Can be null
     final String forClass; // Can be null
     final String group;  // Can be null
@@ -38,7 +38,7 @@ public class CourseData {
 
         this.serialNumber = jsonObject.getString("sn");
         this.courseAttribute = jsonObject.getString("ca");
-        this.courseSystemNumber = jsonObject.getString("cs");
+        this.systemNumber = jsonObject.getString("cs");
 
         if (jsonObject.getObject("g") != null)
             this.forGrade = jsonObject.getInt("g");
@@ -87,7 +87,7 @@ public class CourseData {
 
     public CourseData(String semester,
                       String departmentName,
-                      String serialNumber, String courseAttribute, String courseSystemNumber,
+                      String serialNumber, String courseAttribute, String systemNumber,
                       Integer forGrade, String forClass, String group,
                       String category,
                       String courseName, String courseNote, String courseLimit, TagData[] tags,
@@ -101,7 +101,7 @@ public class CourseData {
         this.departmentName = departmentName;
         this.serialNumber = serialNumber;
         this.courseAttribute = courseAttribute;
-        this.courseSystemNumber = courseSystemNumber;
+        this.systemNumber = systemNumber;
         this.forGrade = forGrade;
         this.forClass = forClass;
         this.group = group;
@@ -236,7 +236,7 @@ public class CourseData {
 
         jsonBuilder.append("sn", serialNumber);
         jsonBuilder.append("ca", courseAttribute);
-        jsonBuilder.append("cs", courseSystemNumber);
+        jsonBuilder.append("cs", systemNumber);
 
         if (forGrade == null) jsonBuilder.append("g");
         else jsonBuilder.append("g", forGrade);
@@ -271,37 +271,12 @@ public class CourseData {
         return jsonBuilder.toString();
     }
 
-    public String toStringShort() {
-        // output
-        JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
-        jsonBuilder.append("sn", serialNumber);
-        jsonBuilder.append("ca", courseAttribute);
-        jsonBuilder.append("cs", courseSystemNumber);
-
-        if (forGrade == null) jsonBuilder.append("g");
-        else jsonBuilder.append("g", forGrade);
-        jsonBuilder.append("co", forClass);
-        jsonBuilder.append("cg", group);
-
-        jsonBuilder.append("cn", courseName);
-
-        jsonBuilder.append("i", toJsonArray(instructors));
-
-        if (selected == null) jsonBuilder.append("s");
-        else jsonBuilder.append("s", selected);
-        if (available == null) jsonBuilder.append("a");
-        else jsonBuilder.append("a", available);
-
-        jsonBuilder.append("t", toJsonArray(timeList));
-        return jsonBuilder.toString();
-    }
-
     public String getSerialNumber() {
         return serialNumber;
     }
 
-    public String getCourseSystemNumber() {
-        return courseSystemNumber;
+    public String getSystemNumber() {
+        return systemNumber;
     }
 
     public String[] getInstructors() {

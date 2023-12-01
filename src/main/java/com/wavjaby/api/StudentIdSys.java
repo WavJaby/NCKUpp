@@ -1,10 +1,14 @@
 package com.wavjaby.api;
 
+import com.sun.istack.internal.Nullable;
 import com.sun.net.httpserver.HttpExchange;
+import com.wavjaby.CourseEnrollmentTracker;
 import com.wavjaby.Main;
 import com.wavjaby.Module;
+import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
@@ -26,10 +30,7 @@ import java.net.CookieStore;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.wavjaby.Main.stuIdSysNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
@@ -55,7 +56,10 @@ public class StudentIdSys implements Module {
     };
     private final File normalDistFolder;
     private final SQLite sqLite;
-    private PreparedStatement getAllDistribution;
+    private final CourseEnrollmentTracker enrollmentTracker;
+    private PreparedStatement sqlGetAllDistribution;
+    // time with system code
+    private Map<String, CourseGradeInfo> courseInfoCache;
 
     public static class SemesterOverview {
         final String semester;
@@ -74,22 +78,7 @@ public class StudentIdSys implements Module {
 
         public SemesterOverview(Elements row) {
             semID = row.get(1).getElementsByTag("input").attr("value");
-            int yearStart = -1, yearEnd = -1;
-            for (int i = 0; i < semID.length(); i++) {
-                char c = semID.charAt(i);
-                if (yearStart == -1) {
-                    if (c != '0')
-                        yearStart = i;
-                } else if (c < '0' || c > '9') {
-                    yearEnd = i;
-                    break;
-                }
-            }
-            if (yearStart == -1)
-                semester = null;
-            else
-                semester = semID.substring(yearStart, yearEnd) +
-                        (semID.charAt(semID.length() - 1) == '上' ? '0' : '1');
+            semester = semesterIdToSemester(semID);
             requireCredits = Float.parseFloat(row.get(2).text().trim());
             electiveCredits = Float.parseFloat(row.get(3).text().trim());
             summerCourses = Float.parseFloat(row.get(4).text().trim());
@@ -141,6 +130,24 @@ public class StudentIdSys implements Module {
             }
         }
 
+        public static String semesterIdToSemester(String semesterId) {
+            int yearStart = -1, yearEnd = -1;
+            for (int i = 0; i < semesterId.length(); i++) {
+                char c = semesterId.charAt(i);
+                if (yearStart == -1) {
+                    if (c != '0')
+                        yearStart = i;
+                } else if (c < '0' || c > '9') {
+                    yearEnd = i;
+                    break;
+                }
+            }
+            if (yearStart == -1)
+                return null;
+            return semesterId.substring(yearStart, yearEnd) +
+                    (semesterId.endsWith("上") || semesterId.endsWith("Fall") ? '0' : '1');
+        }
+
         @Override
         public String toString() {
             return new JsonObjectStringBuilder()
@@ -164,9 +171,7 @@ public class StudentIdSys implements Module {
     }
 
     public static class CourseGrade {
-        final String serialNumber;
-        final String systemNumber;
-        final String courseName;
+        final CourseGradeInfo courseInfo;
         final String remark;
         final float credits;
         final String require;
@@ -174,20 +179,18 @@ public class StudentIdSys implements Module {
         final String gpa;
         final String normalDistImgQuery;
 
-        public CourseGrade(Elements row) {
-            String serialNumber_ = row.get(1).text().trim();
-            if (!serialNumber_.isEmpty()) {
-                int split = serialNumber_.indexOf(' ');
+        public CourseGrade(Elements row, int year, byte semester) {
+            String serialNumber = row.get(1).text().trim();
+            if (!serialNumber.isEmpty()) {
+                int split = serialNumber.indexOf(' ');
                 if (split != -1) {
-                    String dept = serialNumber_.substring(0, split);
-                    String num = serialNumber_.substring(split + 1);
+                    String dept = serialNumber.substring(0, split);
+                    String num = serialNumber.substring(split + 1);
                     serialNumber = dept + '-' + leftPad(num, 3, '0');
-
                 } else serialNumber = null;
             } else serialNumber = null;
 
-            systemNumber = row.get(2).text().trim();
-            courseName = row.get(3).text().trim();
+            String courseName = row.get(3).text().trim();
             // 課程別
             String remark_ = row.get(4).text().trim();
             remark = remark_.isEmpty() ? null : remark_;
@@ -214,28 +217,45 @@ public class StudentIdSys implements Module {
             gpa = row.get(8).text().trim();
 
             String[] link_ = row.get(2).children().attr("href").split("[?&=]", 9);
-            if (link_.length < 9)
-                normalDistImgQuery = null;
-            else {
-                String sYear = link_[2],
-                        sem = link_[4],
-                        co_no = link_[6],
-                        class_code = link_[8];
-                normalDistImgQuery = sYear + ',' + sem + ',' + co_no + ',' + class_code;
+            String systemNumber, classCode, yearRaw, semRaw;
+            if (link_.length < 9) {
+                String systemNumberRaw = row.get(2).text().trim();
+                if (systemNumberRaw.length() < 7) {
+                    systemNumber = systemNumberRaw;
+                    classCode = null;
+                } else {
+                    systemNumber = systemNumberRaw.substring(0, 7);
+                    classCode = systemNumberRaw.length() == 7 ? null : systemNumberRaw.substring(7);
+                }
+                yearRaw = String.valueOf(year);
+                semRaw = String.valueOf(semester);
+            } else {
+                int yStart;
+                yearRaw = link_[2];
+                for (yStart = 0; yStart < yearRaw.length(); yStart++) {
+                    if (yearRaw.charAt(yStart) != '0')
+                        break;
+                }
+                yearRaw = yearRaw.substring(yStart);
+                semRaw = link_[4].equals("1") ? "0" : "1";
+                systemNumber = link_[6];
+                classCode = link_[8];
             }
+            normalDistImgQuery = yearRaw + ',' + semRaw + ',' + systemNumber + ',' + classCode;
+            courseInfo = new CourseGradeInfo(serialNumber, systemNumber, classCode, courseName, year, semester);
         }
 
-        public CourseGrade(Elements row, String semester) {
+        // Current semester data
+        public CourseGrade(Elements row, int year, byte semester, boolean ignoredCurrent) {
             String[] requireAndRemark = row.get(0).text().trim().split("/", 2);
             require = requireAndRemark[0];
             remark = requireAndRemark[1].equals("通") ? "通識" : requireAndRemark[1];
 
             String dept = row.get(1).text().trim();
             String num = row.get(2).text().trim();
-            serialNumber = dept + '-' + leftPad(num, 3, '0');
+            String serialNumber = dept + '-' + leftPad(num, 3, '0');
 
-            systemNumber = row.get(3).text().trim();
-            courseName = row.get(4).text().trim();
+            String courseName = row.get(4).text().trim();
             credits = Float.parseFloat(row.get(5).text().trim());
             String grade_ = row.get(6).text().trim();
             float gradeFloat;
@@ -251,17 +271,26 @@ public class StudentIdSys implements Module {
 
             gpa = null;
 
-            String sYear = leftPad(semester.substring(0, semester.length() - 1), 4, '0');
-            char sem = sYear.charAt(semester.length() - 1) == '0' ? '1' : '2';
-            normalDistImgQuery = sYear + ',' + sem + ',' + systemNumber + ',';
+            String systemNumber = row.get(3).text().trim(), classCode;
+            if (systemNumber.length() < 7) {
+                classCode = null;
+            } else {
+                classCode = systemNumber.length() == 7 ? null : systemNumber.substring(7);
+                systemNumber = systemNumber.substring(0, 7);
+            }
+            normalDistImgQuery = leftPad(String.valueOf(year), 4, '0') + ',' +
+                    (semester == 0 ? '1' : '2') + ',' +
+                    systemNumber + (classCode == null ? ',' : ',' + classCode);
+            courseInfo = new CourseGradeInfo(serialNumber, systemNumber, classCode, courseName, year, semester);
         }
 
         @Override
         public String toString() {
             return new JsonObjectStringBuilder()
-                    .append("serialNumber", serialNumber)
-                    .append("systemNumber", systemNumber)
-                    .append("courseName", courseName)
+                    .append("serialNumber", courseInfo.serialNumber)
+                    .append("systemNumber", courseInfo.systemNumber)
+                    .append("classCode", courseInfo.classCode)
+                    .append("courseName", courseInfo.courseName)
                     .append("remark", remark)
                     .append("credits", credits)
                     .append("require", require)
@@ -272,23 +301,84 @@ public class StudentIdSys implements Module {
         }
     }
 
-    public static class ImageQuery {
-        public final String year, semester, systemNumber, classCode;
+    public static class CourseGradeInfo {
+        final String serialNumber, systemNumber, classCode;
+        final String courseName;
+        final int year;
+        final byte semester;
 
-        public ImageQuery(String year, String semester, String systemNumber, String classCode) {
-            this.year = year;
-            this.semester = semester;
+        public CourseGradeInfo(String serialNumber, String systemNumber, String classCode, String courseName, int year, byte semester) {
+            this.serialNumber = serialNumber;
             this.systemNumber = systemNumber;
             this.classCode = classCode;
+            this.courseName = courseName;
+            this.year = year;
+            this.semester = semester;
         }
 
-        public String toQuery() {
-            return "syear=" + year + "&sem=" + semester + "&co_no=" + systemNumber + "&class_code=" + classCode;
+        public String toKey() {
+            return toKey(String.valueOf(year), String.valueOf(semester), systemNumber, classCode);
+        }
+
+        public static String toKey(String year, String semester, String systemNumber, @Nullable String classCode) {
+            return String.valueOf(year) + '_' + semester + '_' + systemNumber +
+                    (classCode == null ? '_' : '_' + classCode);
         }
     }
 
-    public StudentIdSys(SQLite sqLite) {
+    public static class DistributionImage {
+        public final String year, semester, systemNumber, classCode;
+        private int[] studentCount;
+
+        public DistributionImage(String year, String semester, String systemNumber, String classCode) {
+            this.year = year;
+            this.semester = semester;
+            this.systemNumber = systemNumber;
+            this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
+        }
+
+        public DistributionImage(String year, String semester, String systemNumber, String classCode, String distStr) {
+            this(year, semester, systemNumber, classCode);
+            String[] dist = Lib.simpleSplit(distStr, ',');
+            studentCount = new int[dist.length];
+            for (int i = 0; i < dist.length; i++) {
+                studentCount[i] = Integer.parseInt(dist[i]);
+            }
+        }
+
+        public String getQuery() {
+            return "syear=" + leftPad(year, 4, '0') + "&sem=" + (semester.equals("0") ? '1' : '2') + "&co_no=" + systemNumber +
+                    (classCode == null ? "&class_code=" : "&class_code=" + classCode);
+        }
+
+        public void setDistData(int[] studentCount) {
+            this.studentCount = studentCount;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            builder.append('[');
+            for (int i = 0; i < studentCount.length; i++) {
+                if (i > 0)
+                    builder.append(',');
+                builder.append(studentCount[i]);
+            }
+            builder.append(']');
+
+            return new JsonObjectStringBuilder()
+                    .append("systemNumber", systemNumber)
+                    .append("classCode", classCode)
+                    .append("year", year)
+                    .append("semester", semester)
+                    .appendRaw("studentCount", builder.toString())
+                    .toString();
+        }
+    }
+
+    public StudentIdSys(SQLite sqLite, CourseEnrollmentTracker enrollmentTracker) {
         this.sqLite = sqLite;
+        this.enrollmentTracker = enrollmentTracker;
 
         File normalDistFolder = new File(NORMAL_DIST_FOLDER);
         if (!normalDistFolder.exists()) {
@@ -308,8 +398,9 @@ public class StudentIdSys implements Module {
 
     @Override
     public void start() {
+        courseInfoCache = new HashMap<>();
         try {
-            getAllDistribution = sqLite.getDatabase().prepareStatement(
+            sqlGetAllDistribution = sqLite.getDatabase().prepareStatement(
                     "SELECT * FROM grades_distribution_contribute"
             );
         } catch (SQLException e) {
@@ -370,13 +461,12 @@ public class StudentIdSys implements Module {
             getSemesterGradeTable(semId, cookieStore, response);
         }
         // Get semester course grade normal distribution
-        else if (mode.equals("courseNormalDist")) {
+        else if (mode.equals("courseGradesDistribution")) {
             String imageQueryRaw = query.get("imgQuery");
             if (imageQueryRaw == null) {
-                response.errorBadQuery("Query \"courseNormalDist\" mode require \"imgQuery\"");
+                response.errorBadQuery("Query \"courseGradesDistribution\" mode require \"imgQuery\"");
                 return;
             }
-            logger.log(imageQueryRaw);
 
             String[] cache = imageQueryRaw.split(",", 4);
             if (cache.length != 4) {
@@ -386,21 +476,44 @@ public class StudentIdSys implements Module {
             }
 
             // Get image
-            getDistributionGraph(new ImageQuery(cache[0], cache[1], cache[2], cache[3]), cookieStore, response);
+            getDistributionGraph(new DistributionImage(cache[0], cache[1], cache[2], cache[3]), cookieStore, response);
         }
         // Unknown mode
         else
             response.errorBadQuery("Unknown mode: " + mode);
     }
 
-    private void getAllDistribution(CookieStore cookieStore, ApiResponse response) {
+    private List<DistributionImage> sqlGetAllDistribution() {
         try {
-            ResultSet result = getAllDistribution.executeQuery();
-//            boolean login = result.next() && result.getString("student_id") != null;
+            ResultSet result = sqlGetAllDistribution.executeQuery();
+            List<DistributionImage> allDestImages = new ArrayList<>();
+            while (result.next()) {
+                allDestImages.add(new DistributionImage(
+                        result.getString("year"),
+                        result.getString("semester"),
+                        result.getString("system_id"),
+                        result.getString("class_code"),
+                        result.getString("distribution")
+                ));
+            }
             result.close();
+            return allDestImages;
         } catch (SQLException e) {
             SQLite.printSqlError(e);
         }
+        return null;
+    }
+
+    private void getAllDistribution(CookieStore cookieStore, ApiResponse response) {
+        List<DistributionImage> allDistribution = sqlGetAllDistribution();
+        if (allDistribution == null) {
+            response.errorServerDatabase("Failed to get all distribution image");
+            return;
+        }
+        JsonArrayStringBuilder builder = new JsonArrayStringBuilder();
+        for (DistributionImage distributionImage : allDistribution)
+            builder.appendRaw(distributionImage.toString());
+        response.setData(builder.toString());
     }
 
     private void getSemestersOverview(CookieStore cookieStore, ApiResponse response) {
@@ -508,7 +621,8 @@ public class StudentIdSys implements Module {
         }
 
         // Parse semester
-        String semester;
+        int year;
+        byte sem;
         {
             String semesterRaw = tableRows.get(0).text();
             int firstIndex, secondIndex, thirdIndex, forthIndex;
@@ -526,18 +640,20 @@ public class StudentIdSys implements Module {
                 response.errorParse("Current semester time parse error");
                 return;
             }
-            semester = semesterRaw.substring(firstIndex, secondIndex) +
-                    (semesterRaw.substring(thirdIndex, forthIndex).equals("1") ? '0' : '1');
+            year = Integer.parseInt(semesterRaw.substring(firstIndex, secondIndex));
+            sem = (byte) (semesterRaw.substring(thirdIndex, forthIndex).equals("1") ? 0 : 1);
         }
 
         // Parse course grade
         List<CourseGrade> courseGradeList = new ArrayList<>(tableRows.size() - 4);
         for (int i = 3; i < tableRows.size() - 1; i++) {
-            courseGradeList.add(new CourseGrade(tableRows.get(i).children(), semester));
+            CourseGrade courseGrade = new CourseGrade(tableRows.get(i).children(), year, sem, true);
+            courseGradeList.add(courseGrade);
+            courseInfoCache.put(courseGrade.courseInfo.toKey(), courseGrade.courseInfo);
         }
 
         JsonObjectStringBuilder out = new JsonObjectStringBuilder();
-        out.append("semester", semester);
+        out.append("semester", String.valueOf(year) + sem);
         out.appendRaw("courseGrades", courseGradeList.toString());
         response.setData(out.toString());
     }
@@ -574,6 +690,16 @@ public class StudentIdSys implements Module {
             return;
         }
 
+        String semesterStr = SemesterOverview.semesterIdToSemester(semesterID);
+        int year;
+        byte semester;
+        if (semesterStr == null)
+            year = semester = -1;
+        else {
+            year = Integer.parseInt(semesterStr.substring(0, semesterStr.length() - 1));
+            semester = (byte) (semesterStr.charAt(semesterStr.length() - 1) == '0' ? 0 : 1);
+        }
+
         List<CourseGrade> courseGradeList = new ArrayList<>(tableRows.size() - 4);
         for (int i = 2; i < tableRows.size() - 2; i++) {
             Element row = tableRows.get(i);
@@ -581,15 +707,17 @@ public class StudentIdSys implements Module {
                 response.errorParse("Semester grade table row not found");
                 return;
             }
-            courseGradeList.add(new CourseGrade(row.children()));
+            CourseGrade courseGrade = new CourseGrade(row.children(), year, semester);
+            courseGradeList.add(courseGrade);
+            courseInfoCache.put(courseGrade.courseInfo.toKey(), courseGrade.courseInfo);
         }
         response.setData(courseGradeList.toString());
     }
 
-    private void getDistributionGraph(ImageQuery query, CookieStore cookieStore, ApiResponse response) {
+    private void getDistributionGraph(DistributionImage distImageInfo, CookieStore cookieStore, ApiResponse response) {
         BufferedImage image;
         try {
-            BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + query.toQuery())
+            BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + distImageInfo.getQuery())
                     .header("Connection", "keep-alive")
                     .ignoreContentType(true)
                     .cookieStore(cookieStore).execute().bodyStream();
@@ -612,18 +740,19 @@ public class StudentIdSys implements Module {
             response.setMessageDisplay("Normal distribution graph not found");
             return;
         }
-
+        String key = CourseGradeInfo.toKey(distImageInfo.year, distImageInfo.semester, distImageInfo.systemNumber, distImageInfo.classCode);
+        CourseGradeInfo courseInfo = courseInfoCache.get(key);
+        logger.log(courseInfo.toKey());
         try {
-            File imageFile = new File(normalDistFolder, query.year + '_' + query.semester + '_' + query.systemNumber + '_' + query.classCode + ".png");
+            File imageFile = new File(normalDistFolder, key + ".png");
             ImageIO.write(image, "png", imageFile);
             setFilePermission(imageFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
         } catch (IOException e) {
             logger.errTrace(e);
         }
 
-        response.setData(new JsonObjectStringBuilder()
-                .appendRaw("studentCount", Arrays.toString(studentCount))
-                .toString());
+        distImageInfo.setDistData(studentCount);
+        response.setData(distImageInfo.toString());
     }
 
     private String buildNormalDistSvg(int[] studentCount) {

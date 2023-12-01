@@ -123,6 +123,8 @@ public class Main {
         addModule(login);
         DeptWatchdog watchDog = new DeptWatchdog(login, sqLite);
         addModule(watchDog);
+        CourseEnrollmentTracker enrollmentTracker = new CourseEnrollmentTracker(search, serverSettings);
+        addModule(enrollmentTracker);
         addModule(new AllDept(search));
         addModule(new Logout(proxyManager));
         addModule(new A9Registered(proxyManager));
@@ -133,13 +135,11 @@ public class Main {
         addModule(new HomeInfo(proxyManager));
         addModule(new UsefulWebsite());
         addModule(new ClientDebugLog());
-        addModule(new StudentIdSys(sqLite));
+        addModule(new StudentIdSys(sqLite, enrollmentTracker));
 
         if (serverSettings.getPropertyBoolean("courseWatcher", false))
             addModule(new CourseWatcher(search, watchDog, serverSettings));
 
-        if (serverSettings.getPropertyBoolean("courseEnrollmentTracker", false))
-            addModule(new CourseEnrollmentTracker(search, serverSettings));
 
 //        logger.log("Server started, " + server.hostname + ':' + server.port);
 

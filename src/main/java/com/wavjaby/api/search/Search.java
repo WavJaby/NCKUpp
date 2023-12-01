@@ -699,7 +699,6 @@ public class Search implements Module {
 
     public CookieStore createCookieStore() {
         CookieStore cookieStore = new CookieManager().getCookieStore();
-        cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
         try {
             HttpConnection.connect(courseNckuOrg + "/index.php")
                     .header("Connection", "keep-alive")
@@ -711,6 +710,9 @@ public class Search implements Module {
                     .execute();
         } catch (IOException e) {
             logger.errTrace(e);
+            byte[] array = new byte[16];
+            new Random().nextBytes(array);
+            cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", Base64.getEncoder().encodeToString(array), courseNcku));
         }
 
 //        logger.log(cookieStore.getCookies().toString());
@@ -1609,7 +1611,7 @@ public class Search implements Module {
                 if (i + 1 == MAX_ROBOT_CHECK_REQUEST_TRY)
                     logger.errTrace(e);
                 else
-                    logger.warn("Fetch page failed: " + e.getMessage() + ", Retry...");
+                    logger.warn("Fetch page failed(" + (i + 1) + "): " + e.getMessage() + ", Retry...");
                 continue;
             }
 

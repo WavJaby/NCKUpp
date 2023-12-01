@@ -6,6 +6,7 @@ import com.wavjaby.api.search.SearchQuery;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
 
@@ -18,7 +19,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -31,7 +35,8 @@ public class CourseEnrollmentTracker implements Runnable, Module {
     private static final String TAG = "EnrollmentTrack";
     private static final Logger logger = new Logger(TAG);
     private static final String ENROLLMENT_TRACKER_FOLDER = "./api_file/CourseEnrollmentTracker";
-    private static final String CACHE_FILE_NAME = "cache.json";
+    private static final String ALL_COURSE_FILE_NAME = "allCourse.json";
+    private final boolean courseEnrollmentTracker;
     private final Search search;
     private CookieStore baseCookieStore;
     private ScheduledExecutorService scheduler;
@@ -48,8 +53,20 @@ public class CourseEnrollmentTracker implements Runnable, Module {
     private List<CourseData> lastCourseDataList;
     // Serial, index
     private Map<String, Integer> tableIndex;
+    private Map<String, SharedCourse> systemNumberMap;
 
-    public CourseEnrollmentTracker(Search search, Properties serverSettings) {
+    public static class SharedCourse {
+        public final String[] serialIds;
+        public final CourseData courseData;
+
+        public SharedCourse(String[] serialIds, CourseData courseData) {
+            this.serialIds = serialIds;
+            this.courseData = courseData;
+        }
+    }
+
+    public CourseEnrollmentTracker(Search search, PropertiesReader serverSettings) {
+        courseEnrollmentTracker = serverSettings.getPropertyBoolean("courseEnrollmentTracker", false);
         this.search = search;
     }
 
@@ -71,29 +88,55 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         this.folder = folder;
 
         lastCourseDataList = new ArrayList<>();
-        // Read cache
+        // Read all course
         if (folder != null) {
-            File cacheFile = new File(folder, CACHE_FILE_NAME);
+            File allCourseFile = new File(folder, ALL_COURSE_FILE_NAME);
+            JsonObject cache = null;
             try {
-                if (!cacheFile.exists()) {
-                    if (cacheFile.createNewFile())
-                        setFilePermission(cacheFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
+                if (!allCourseFile.exists()) {
+                    if (allCourseFile.createNewFile())
+                        setFilePermission(allCourseFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
                     else
                         logger.err("EnrollmentTracker cache file failed to create");
-                } else {
-                    JsonObject cache = new JsonObject(Files.newInputStream(cacheFile.toPath()));
-                    for (Object o : cache.getArray("data"))
-                        lastCourseDataList.add(new CourseData((JsonObject) o));
-                }
+                } else
+                    cache = new JsonObject(Files.newInputStream(allCourseFile.toPath()));
             } catch (IOException e) {
                 logger.errTrace(e);
             }
+
+//            systemNumberMap = new HashMap<>();
+//            // Parse all course
+//            if (cache != null) {
+//                Map<String, List<String>> systemNumberMapBuilder = new HashMap<>();
+//                Map<String, CourseData> systemNumberMapBuilderCourse = new HashMap<>();
+//                for (Object o : cache.getArray("data")) {
+//                    CourseData courseData = new CourseData((JsonObject) o);
+//                    lastCourseDataList.add(courseData);
+//                    // Add course, check shared system number
+//                    systemNumberMapBuilder.computeIfAbsent(courseData.getSystemNumber(), (i) -> new ArrayList<>())
+//                            .add(courseData.getSerialNumber());
+//                    systemNumberMapBuilderCourse.putIfAbsent(courseData.getSystemNumber(), courseData);
+//                }
+//                // Add to systemNumberMap
+//                for (Map.Entry<String, List<String>> entry : systemNumberMapBuilder.entrySet()) {
+//                        systemNumberMap.put(entry.getKey(), new SharedCourse(
+//                                entry.getValue().toArray(new String[0]),
+//                                systemNumberMapBuilderCourse.get(entry.getKey())
+//                        ));
+//                }
+//            }
         }
 
-        messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Msg"));
-        scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Schedule"));
-        scheduler.scheduleAtFixedRate(this, 10000, updateInterval, TimeUnit.MILLISECONDS);
+        if (courseEnrollmentTracker) {
+            messageSendPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Msg"));
+            scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Schedule"));
+            scheduler.scheduleAtFixedRate(this, 10000, updateInterval, TimeUnit.MILLISECONDS);
+        }
     }
+
+//    public SharedCourse getCourseDataBySystemNumber(String systemNumber) {
+//        return systemNumberMap.get(systemNumber);
+//    }
 
     @Override
     public void stop() {
@@ -181,7 +224,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                         entry.setValue(i++);
                 }
                 // Create file
-                File cacheFile = new File(folder, CACHE_FILE_NAME);
+                File cacheFile = new File(folder, ALL_COURSE_FILE_NAME);
                 JsonObjectStringBuilder out = new JsonObjectStringBuilder();
                 out.append("time", now);
                 JsonArrayStringBuilder courseJsonArray = new JsonArrayStringBuilder();
@@ -189,7 +232,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                 for (CourseData courseData : newCourseDataList) {
                     if (courseData.getSerialNumber() == null || courseData.getSelected() == null)
                         continue;
-                    courseJsonArray.appendRaw(courseData.toStringShort());
+                    courseJsonArray.appendRaw(courseData.toString());
 
                     Integer index = tableIndex.get(courseData.getSerialNumber());
                     if (index == null) {
