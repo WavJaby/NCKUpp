@@ -65,7 +65,7 @@ public class A9Registered implements Module {
 
     @Override
     public void start() {
-        cacheFile = getFileFromPath(CACHE_FILE_PATH, true);
+        cacheFile = getFileFromPath(CACHE_FILE_PATH, true, true);
         if (!cacheFile.exists()) {
             logger.err("A9Registered cache file not found");
             return;

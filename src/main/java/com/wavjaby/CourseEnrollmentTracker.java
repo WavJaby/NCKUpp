@@ -6,6 +6,7 @@ import com.wavjaby.api.search.SearchQuery;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.logger.Logger;
@@ -14,7 +15,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.CookieStore;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -29,7 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.lib.Lib.executorShutdown;
-import static com.wavjaby.lib.Lib.setFilePermission;
+import static com.wavjaby.lib.Lib.readFileToString;
 
 public class CourseEnrollmentTracker implements Runnable, Module {
     private static final String TAG = "EnrollmentTrack";
@@ -72,58 +73,37 @@ public class CourseEnrollmentTracker implements Runnable, Module {
 
     @Override
     public void start() {
-        File folder = new File(ENROLLMENT_TRACKER_FOLDER);
-        if (!folder.exists()) {
-            if (!folder.mkdirs()) {
-                logger.err("EnrollmentTracker folder failed to create");
-                folder = null;
-            }
-        }
-        if (folder != null && !folder.isDirectory()) {
-            logger.err("EnrollmentTracker folder is not Directory");
-            folder = null;
-        }
-        if (folder != null)
-            setFilePermission(folder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
-        this.folder = folder;
+        this.folder = Lib.getDirectoryFromPath(ENROLLMENT_TRACKER_FOLDER, true);
+        String allCourseData = readFileToString(new File(folder, ALL_COURSE_FILE_NAME), true, StandardCharsets.UTF_8);
 
         lastCourseDataList = new ArrayList<>();
         // Read all course
-        if (folder != null) {
-            File allCourseFile = new File(folder, ALL_COURSE_FILE_NAME);
-            JsonObject cache = null;
-            try {
-                if (!allCourseFile.exists()) {
-                    if (allCourseFile.createNewFile())
-                        setFilePermission(allCourseFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
-                    else
-                        logger.err("EnrollmentTracker cache file failed to create");
-                } else
-                    cache = new JsonObject(Files.newInputStream(allCourseFile.toPath()));
-            } catch (IOException e) {
-                logger.errTrace(e);
+        if (allCourseData != null && !allCourseData.isEmpty()) {
+            JsonObject cache = new JsonObject(allCourseData);
+
+            for (Object o : cache.getArray("data")) {
+                CourseData courseData = new CourseData((JsonObject) o);
+                lastCourseDataList.add(courseData);
             }
 
 //            systemNumberMap = new HashMap<>();
 //            // Parse all course
-//            if (cache != null) {
-//                Map<String, List<String>> systemNumberMapBuilder = new HashMap<>();
-//                Map<String, CourseData> systemNumberMapBuilderCourse = new HashMap<>();
-//                for (Object o : cache.getArray("data")) {
-//                    CourseData courseData = new CourseData((JsonObject) o);
-//                    lastCourseDataList.add(courseData);
-//                    // Add course, check shared system number
-//                    systemNumberMapBuilder.computeIfAbsent(courseData.getSystemNumber(), (i) -> new ArrayList<>())
-//                            .add(courseData.getSerialNumber());
-//                    systemNumberMapBuilderCourse.putIfAbsent(courseData.getSystemNumber(), courseData);
-//                }
-//                // Add to systemNumberMap
-//                for (Map.Entry<String, List<String>> entry : systemNumberMapBuilder.entrySet()) {
-//                        systemNumberMap.put(entry.getKey(), new SharedCourse(
-//                                entry.getValue().toArray(new String[0]),
-//                                systemNumberMapBuilderCourse.get(entry.getKey())
-//                        ));
-//                }
+//            Map<String, List<String>> systemNumberMapBuilder = new HashMap<>();
+//            Map<String, CourseData> systemNumberMapBuilderCourse = new HashMap<>();
+//            for (Object o : cache.getArray("data")) {
+//                CourseData courseData = new CourseData((JsonObject) o);
+//                lastCourseDataList.add(courseData);
+//                // Add course, check shared system number
+//                systemNumberMapBuilder.computeIfAbsent(courseData.getSystemNumber(), (i) -> new ArrayList<>())
+//                        .add(courseData.getSerialNumber());
+//                systemNumberMapBuilderCourse.putIfAbsent(courseData.getSystemNumber(), courseData);
+//            }
+//            // Add to systemNumberMap
+//            for (Map.Entry<String, List<String>> entry : systemNumberMapBuilder.entrySet()) {
+//                systemNumberMap.put(entry.getKey(), new SharedCourse(
+//                        entry.getValue().toArray(new String[0]),
+//                        systemNumberMapBuilderCourse.get(entry.getKey())
+//                ));
 //            }
         }
 
@@ -140,8 +120,10 @@ public class CourseEnrollmentTracker implements Runnable, Module {
 
     @Override
     public void stop() {
-        executorShutdown(scheduler, 5000, TAG);
-        executorShutdown(messageSendPool, 5000, TAG + "Message Pool");
+        if (scheduler != null)
+            executorShutdown(scheduler, 5000, TAG);
+        if (messageSendPool != null)
+            executorShutdown(messageSendPool, 5000, TAG + "Message Pool");
     }
 
     @Override
@@ -245,7 +227,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
 
                 try {
                     // Store history Data
-                    if (folder != null && cacheFile.isFile()) {
+                    if (folder.exists() && folder.isDirectory()) {
                         String date = OffsetDateTime.ofInstant(Instant.ofEpochMilli(now), ZoneId.systemDefault())
                                 .format(DateTimeFormatter.ISO_LOCAL_DATE);
                         File historyFile = new File(folder, date + ".csv");

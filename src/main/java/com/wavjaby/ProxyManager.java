@@ -178,7 +178,7 @@ public class ProxyManager implements Module {
 
     @Override
     public void start() {
-        proxyFile = getFileFromPath("./proxy.txt", false);
+        proxyFile = getFileFromPath("./proxy.txt", false, true);
         useProxy = properties.getPropertyBoolean("useProxy", true);
 
         if (useProxy) {

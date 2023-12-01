@@ -75,6 +75,11 @@ public class SQLite implements Module {
 
     @Override
     public void stop() {
+        try {
+            sqlite.close();
+        } catch (SQLException e) {
+            logger.errTrace(e);
+        }
     }
 
     @Override

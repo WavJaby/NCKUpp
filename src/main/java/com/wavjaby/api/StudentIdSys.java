@@ -3,7 +3,6 @@ package com.wavjaby.api;
 import com.sun.istack.internal.Nullable;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.CourseEnrollmentTracker;
-import com.wavjaby.Main;
 import com.wavjaby.Module;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObjectStringBuilder;
@@ -30,6 +29,9 @@ import java.net.CookieStore;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 import static com.wavjaby.Main.stuIdSysNckuOrg;
@@ -41,7 +43,8 @@ public class StudentIdSys implements Module {
     private static final String TAG = "StuIdSys";
     private static final Logger logger = new Logger(TAG);
     private static final String loginCheckString = "/ncku/qrys02.asp";
-    private static final String NORMAL_DIST_FOLDER = "./api_file/CourseScoreDistribution";
+    private static final String NORMAL_DIST_FOLDER = "./api_file/CourseGradesDistribution";
+    private static final String COURSE_MAPPER_PATH = "courseMapping.json";
     private static final byte[][] numbers = {
             {0b00100, 0b01010, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100},
             {0b00100, 0b01100, 0b10100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111},
@@ -57,7 +60,7 @@ public class StudentIdSys implements Module {
     private final File normalDistFolder;
     private final SQLite sqLite;
     private final CourseEnrollmentTracker enrollmentTracker;
-    private PreparedStatement sqlGetAllDistribution;
+    private PreparedStatement sqlGetAllDistribution, sqlGetDistribution, sqlAddDistribution, sqlSetDistributionSerialNumber;
     // time with system code
     private Map<String, CourseGradeInfo> courseInfoCache;
 
@@ -310,44 +313,48 @@ public class StudentIdSys implements Module {
         public CourseGradeInfo(String serialNumber, String systemNumber, String classCode, String courseName, int year, byte semester) {
             this.serialNumber = serialNumber;
             this.systemNumber = systemNumber;
-            this.classCode = classCode;
+            this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
             this.courseName = courseName;
             this.year = year;
             this.semester = semester;
         }
 
         public String toKey() {
-            return toKey(String.valueOf(year), String.valueOf(semester), systemNumber, classCode);
+            return toKey(year, semester, systemNumber, classCode);
         }
 
-        public static String toKey(String year, String semester, String systemNumber, @Nullable String classCode) {
+        public static String toKey(int year, byte semester, String systemNumber, @Nullable String classCode) {
             return String.valueOf(year) + '_' + semester + '_' + systemNumber +
                     (classCode == null ? '_' : '_' + classCode);
         }
     }
 
     public static class DistributionImage {
-        public final String year, semester, systemNumber, classCode;
+        public final int year;
+        public final byte semester;
+        public final String systemNumber, classCode;
+        private String[] serialNumbers;
         private int[] studentCount;
 
-        public DistributionImage(String year, String semester, String systemNumber, String classCode) {
+        public DistributionImage(int year, byte semester, String systemNumber, String classCode) {
             this.year = year;
             this.semester = semester;
             this.systemNumber = systemNumber;
             this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
         }
 
-        public DistributionImage(String year, String semester, String systemNumber, String classCode, String distStr) {
+        public DistributionImage(int year, byte semester, String systemNumber, String classCode, String serialNumbersStr, String distStr) {
             this(year, semester, systemNumber, classCode);
             String[] dist = Lib.simpleSplit(distStr, ',');
             studentCount = new int[dist.length];
             for (int i = 0; i < dist.length; i++) {
                 studentCount[i] = Integer.parseInt(dist[i]);
             }
+            serialNumbers = Lib.simpleSplit(serialNumbersStr, ',');
         }
 
         public String getQuery() {
-            return "syear=" + leftPad(year, 4, '0') + "&sem=" + (semester.equals("0") ? '1' : '2') + "&co_no=" + systemNumber +
+            return "syear=" + leftPad(String.valueOf(year), 4, '0') + "&sem=" + (semester == 0 ? '1' : '2') + "&co_no=" + systemNumber +
                     (classCode == null ? "&class_code=" : "&class_code=" + classCode);
         }
 
@@ -360,8 +367,7 @@ public class StudentIdSys implements Module {
             StringBuilder builder = new StringBuilder();
             builder.append('[');
             for (int i = 0; i < studentCount.length; i++) {
-                if (i > 0)
-                    builder.append(',');
+                if (i > 0) builder.append(',');
                 builder.append(studentCount[i]);
             }
             builder.append(']');
@@ -374,34 +380,59 @@ public class StudentIdSys implements Module {
                     .appendRaw("studentCount", builder.toString())
                     .toString();
         }
+
+        public String studentCountToString() {
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < studentCount.length; i++) {
+                if (i > 0) builder.append(',');
+                builder.append(studentCount[i]);
+            }
+            return builder.toString();
+        }
+
+        public String serialNumbersToString() {
+            return String.join(",", serialNumbers);
+        }
+
+        public void AddSerialNumber(CourseGradeInfo courseInfo) {
+            boolean find = false;
+            for (String serialNumber : serialNumbers) {
+                if (serialNumber.equals(courseInfo.serialNumber)) {
+                    find = true;
+                    break;
+                }
+            }
+            if (find)
+                return;
+            // Append
+            String[] serialNumbers = new String[this.serialNumbers.length + 1];
+            System.arraycopy(this.serialNumbers, 0, serialNumbers, 0, this.serialNumbers.length);
+            serialNumbers[this.serialNumbers.length] = courseInfo.serialNumber;
+            this.serialNumbers = serialNumbers;
+        }
     }
 
     public StudentIdSys(SQLite sqLite, CourseEnrollmentTracker enrollmentTracker) {
         this.sqLite = sqLite;
         this.enrollmentTracker = enrollmentTracker;
-
-        File normalDistFolder = new File(NORMAL_DIST_FOLDER);
-        if (!normalDistFolder.exists()) {
-            if (!normalDistFolder.mkdirs()) {
-                logger.err("Normal dist image folder failed to create");
-                normalDistFolder = null;
-            }
-        }
-        if (normalDistFolder != null && !normalDistFolder.isDirectory()) {
-            logger.err("Normal dist image folder is not directory");
-            normalDistFolder = null;
-        }
-        if (normalDistFolder != null)
-            setFilePermission(normalDistFolder, Main.userPrincipal, Main.groupPrincipal, Main.folderPermission);
-        this.normalDistFolder = normalDistFolder;
+        this.normalDistFolder = Lib.getDirectoryFromPath(NORMAL_DIST_FOLDER, true);
     }
 
     @Override
     public void start() {
         courseInfoCache = new HashMap<>();
         try {
-            sqlGetAllDistribution = sqLite.getDatabase().prepareStatement(
-                    "SELECT * FROM grades_distribution_contribute"
+            sqlGetAllDistribution = sqLite.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute");
+            sqlGetDistribution = sqLite.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute " +
+                    "WHERE \"year\"=? AND \"semester\"=? AND \"system_code\"=? AND \"class_code\"=?"
+            );
+            sqlAddDistribution = sqLite.getDatabase().prepareStatement("INSERT INTO grades_distribution_contribute " +
+                    "(\"year\", \"semester\", \"system_code\", \"class_code\", \"serial_number\", \"student_id\", \"upload\", \"distribution\") " +
+                    "VALUES (?,?,?,?,?,?,?,?)"
+            );
+            sqlSetDistributionSerialNumber = sqLite.getDatabase().prepareStatement("UPDATE grades_distribution_contribute " +
+                    "SET \"serial_number\"=? " +
+                    "WHERE \"year\"=? AND \"semester\"=? AND \"system_code\"=? AND \"class_code\"=?"
             );
         } catch (SQLException e) {
             SQLite.printSqlError(e);
@@ -437,7 +468,7 @@ public class StudentIdSys implements Module {
         Map<String, String> query = parseUrlEncodedForm(rawQuery);
         String mode = query.get("mode");
         if (mode == null) {
-            response.errorBadQuery("Query require \"mode\"");
+            response.errorBadQuery("Query require 'mode'");
         }
         // Get all distribution data from database
         else if (mode.equals("allDistribution")) {
@@ -455,7 +486,7 @@ public class StudentIdSys implements Module {
         else if (mode.equals("semCourse")) {
             String semId = query.get("semId");
             if (semId == null) {
-                response.errorBadQuery("Query \"semCourse\" mode require \"semId\"");
+                response.errorBadQuery("Query 'semCourse' mode require 'semId'");
                 return;
             }
             getSemesterGradeTable(semId, cookieStore, response);
@@ -463,20 +494,22 @@ public class StudentIdSys implements Module {
         // Get semester course grade normal distribution
         else if (mode.equals("courseGradesDistribution")) {
             String imageQueryRaw = query.get("imgQuery");
+            boolean addToDatabase = "true".equals(query.get("addToDatabase"));
             if (imageQueryRaw == null) {
-                response.errorBadQuery("Query \"courseGradesDistribution\" mode require \"imgQuery\"");
+                response.errorBadQuery("Query 'courseGradesDistribution' mode require 'imgQuery'");
                 return;
             }
 
             String[] cache = imageQueryRaw.split(",", 4);
             if (cache.length != 4) {
                 int len = cache.length == 1 && cache[0].isEmpty() ? 0 : cache.length;
-                response.errorBadQuery("\"" + imageQueryRaw + "\" (Only give " + len + " value instead of 4)");
+                response.errorBadQuery("'" + imageQueryRaw + "' (Only give " + len + " value instead of 4)");
                 return;
             }
 
             // Get image
-            getDistributionGraph(new DistributionImage(cache[0], cache[1], cache[2], cache[3]), cookieStore, response);
+            getDistributionGraph(new DistributionImage(Integer.parseInt(cache[0]), Byte.parseByte(cache[1]), cache[2], cache[3]),
+                    addToDatabase, cookieStore, response);
         }
         // Unknown mode
         else
@@ -489,10 +522,11 @@ public class StudentIdSys implements Module {
             List<DistributionImage> allDestImages = new ArrayList<>();
             while (result.next()) {
                 allDestImages.add(new DistributionImage(
-                        result.getString("year"),
-                        result.getString("semester"),
-                        result.getString("system_id"),
+                        result.getInt("year"),
+                        result.getByte("semester"),
+                        result.getString("system_code"),
                         result.getString("class_code"),
+                        result.getString("serial_number"),
                         result.getString("distribution")
                 ));
             }
@@ -502,6 +536,68 @@ public class StudentIdSys implements Module {
             SQLite.printSqlError(e);
         }
         return null;
+    }
+
+    private DistributionImage sqlGetDistribution(CourseGradeInfo courseInfo) {
+        try {
+            sqlGetDistribution.setInt(1, courseInfo.year);
+            sqlGetDistribution.setInt(2, courseInfo.semester);
+            sqlGetDistribution.setString(3, courseInfo.systemNumber);
+            sqlGetDistribution.setString(4, courseInfo.classCode);
+            ResultSet result = sqlGetDistribution.executeQuery();
+            sqlGetDistribution.clearParameters();
+            if (!result.next())
+                return null;
+
+            DistributionImage distributionImage = new DistributionImage(
+                    result.getInt("year"),
+                    result.getByte("semester"),
+                    result.getString("system_code"),
+                    result.getString("class_code"),
+                    result.getString("serial_number"),
+                    result.getString("distribution")
+            );
+            result.close();
+            return distributionImage;
+        } catch (SQLException e) {
+            SQLite.printSqlError(e);
+        }
+        return null;
+    }
+
+    private int sqlSetDistributionSerialNumber(DistributionImage courseInfo) {
+        try {
+            sqlSetDistributionSerialNumber.setString(1, courseInfo.serialNumbersToString());
+            sqlSetDistributionSerialNumber.setInt(2, courseInfo.year);
+            sqlSetDistributionSerialNumber.setInt(3, courseInfo.semester);
+            sqlSetDistributionSerialNumber.setString(4, courseInfo.systemNumber);
+            sqlSetDistributionSerialNumber.setString(5, courseInfo.classCode);
+            int result = sqlSetDistributionSerialNumber.executeUpdate();
+            sqlSetDistributionSerialNumber.clearParameters();
+            return result;
+        } catch (SQLException e) {
+            SQLite.printSqlError(e);
+            return -1;
+        }
+    }
+
+    private int sqlAddDistribution(CourseGradeInfo courseInfo, DistributionImage distributionImage) {
+        try {
+            sqlAddDistribution.setInt(1, courseInfo.year);
+            sqlAddDistribution.setInt(2, courseInfo.semester);
+            sqlAddDistribution.setString(3, courseInfo.systemNumber);
+            sqlAddDistribution.setString(4, courseInfo.classCode);
+            sqlAddDistribution.setString(5, courseInfo.serialNumber);
+            sqlAddDistribution.setString(6, "SYSTEM");
+            sqlAddDistribution.setTimestamp(7, Timestamp.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            sqlAddDistribution.setString(8, distributionImage.studentCountToString());
+            int result = sqlAddDistribution.executeUpdate();
+            sqlAddDistribution.clearParameters();
+            return result;
+        } catch (SQLException e) {
+            SQLite.printSqlError(e);
+            return -1;
+        }
     }
 
     private void getAllDistribution(CookieStore cookieStore, ApiResponse response) {
@@ -714,7 +810,7 @@ public class StudentIdSys implements Module {
         response.setData(courseGradeList.toString());
     }
 
-    private void getDistributionGraph(DistributionImage distImageInfo, CookieStore cookieStore, ApiResponse response) {
+    private void getDistributionGraph(DistributionImage distImageInfo, boolean addToDatabase, CookieStore cookieStore, ApiResponse response) {
         BufferedImage image;
         try {
             BufferedInputStream in = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/histogram.asp?" + distImageInfo.getQuery())
@@ -740,18 +836,31 @@ public class StudentIdSys implements Module {
             response.setMessageDisplay("Normal distribution graph not found");
             return;
         }
+        distImageInfo.setDistData(studentCount);
+
+        // Add distribution to database if 'addToDatabase' parameter is true
         String key = CourseGradeInfo.toKey(distImageInfo.year, distImageInfo.semester, distImageInfo.systemNumber, distImageInfo.classCode);
         CourseGradeInfo courseInfo = courseInfoCache.get(key);
-        logger.log(courseInfo.toKey());
+        if (courseInfo != null && addToDatabase) {
+            logger.log(courseInfo.toKey());
+            DistributionImage result = sqlGetDistribution(courseInfo);
+            // No record found
+            if (result == null) {
+                sqlAddDistribution(courseInfo, distImageInfo);
+            } else {
+                result.AddSerialNumber(courseInfo);
+                sqlSetDistributionSerialNumber(result);
+            }
+        }
+
         try {
             File imageFile = new File(normalDistFolder, key + ".png");
             ImageIO.write(image, "png", imageFile);
-            setFilePermission(imageFile, Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
+            setFilePermission(imageFile, Lib.userPrincipal, Lib.groupPrincipal, Lib.filePermission);
         } catch (IOException e) {
             logger.errTrace(e);
         }
 
-        distImageInfo.setDistData(studentCount);
         response.setData(distImageInfo.toString());
     }
 

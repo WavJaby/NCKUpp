@@ -39,7 +39,7 @@ public class AllDept implements Module {
     @Override
     public void start() {
         // Read cache
-        allDeptFile = getFileFromPath(ALLDEPT_FILE_PATH, true);
+        allDeptFile = getFileFromPath(ALLDEPT_FILE_PATH, true, true);
         if (allDeptFile.exists()) {
             deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
         }

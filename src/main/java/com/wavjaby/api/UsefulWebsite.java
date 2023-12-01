@@ -58,7 +58,7 @@ public class UsefulWebsite implements Module {
 
     @Override
     public void start() {
-        file = getFileFromPath(WEBSITE_FILE_PATH, true);
+        file = getFileFromPath(WEBSITE_FILE_PATH, true, true);
         updateData();
     }
 

@@ -11,15 +11,14 @@ import org.jsoup.nodes.Element;
 
 import java.io.*;
 import java.net.CookieStore;
+import java.net.InetAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.attribute.GroupPrincipal;
-import java.nio.file.attribute.PosixFileAttributeView;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +28,28 @@ import static com.wavjaby.Main.accessControlAllowOrigin;
 public class Lib {
     private static final String TAG = "Lib";
     private static final Logger logger = new Logger(TAG);
+    public final static UserPrincipal userPrincipal;
+    public final static GroupPrincipal groupPrincipal;
+    public final static Set<PosixFilePermission> filePermission;
+    public final static Set<PosixFilePermission> directoryPermission;
+
+    static {
+        // Get permission
+        filePermission = PosixFilePermissions.fromString("rw-rw-r--");
+        directoryPermission = PosixFilePermissions.fromString("rwxrw-r--");
+        UserPrincipalLookupService lookupService = FileSystems.getDefault().getUserPrincipalLookupService();
+        UserPrincipal userPrincipal_ = null;
+        GroupPrincipal groupPrincipal_ = null;
+        try {
+            String userHostName = InetAddress.getLocalHost().getHostName();
+            userPrincipal_ = lookupService.lookupPrincipalByName(userHostName);
+            groupPrincipal_ = lookupService.lookupPrincipalByGroupName(userHostName);
+        } catch (IOException e) {
+            logger.warn(e);
+        }
+        userPrincipal = userPrincipal_;
+        groupPrincipal = groupPrincipal_;
+    }
 
     public static void cosPreCheck(String urlOrigin, String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
         String cosPreCheckKey = null;
@@ -156,57 +177,70 @@ public class Lib {
         }
     }
 
-    public static File getFileFromPath(String filePath, boolean mkdir) {
-        File file = new File(filePath);
+    public static File getDirectoryFromPath(String filePath, boolean mkdir) {
+        return getDirectory(new File(filePath), mkdir, null, null, null);
+    }
 
-        // Check parent folder
-        File folder = file.getParentFile();
+    public static File getDirectory(File folder, boolean mkdir,
+                                    UserPrincipal user, GroupPrincipal group, Set<PosixFilePermission> permission) {
+        // Exist but not folder
         if (folder.exists() && !folder.isDirectory()) {
             logger.err(folder.getAbsolutePath() + " is file not directory");
-            return file;
+            return folder;
         }
 
         if (!mkdir)
-            return file;
+            return folder;
 
         // Create parent folder if not exist
         if (!folder.exists()) {
-            if (!folder.mkdirs())
+            if (!folder.mkdirs()) {
                 logger.err("Failed to create directory: " + folder.getAbsolutePath());
+                return folder;
+            }
+            setFilePermission(folder, user, group, permission);
+        }
+        return folder;
+    }
+
+    public static File getFileFromPath(String filePath, boolean mkdir, boolean createIfNotExist) {
+        return getFile(new File(filePath), mkdir, createIfNotExist, null, null, null, null);
+    }
+
+    public static File getFile(File file, boolean mkdir, boolean createIfNotExist,
+                               UserPrincipal user, GroupPrincipal group, Set<PosixFilePermission> directoryPermission, Set<PosixFilePermission> filePermission) {
+        // Check parent folder
+        File folder = getDirectory(file.getParentFile(), mkdir, user, group, directoryPermission);
+        if (!folder.exists() || !folder.isDirectory()) {
+            return file;
+        }
+
+        // Exist but not file
+        if (file.exists() && !file.isFile()) {
+            logger.err(file.getAbsolutePath() + " is directory not file");
+            return file;
+        }
+
+        // Create file if not exist
+        if (!file.exists() && createIfNotExist) {
+            try {
+                if (!file.createNewFile()) {
+                    logger.err("Failed to create directory: " + folder.getAbsolutePath());
+                    return file;
+                }
+            } catch (IOException e) {
+                logger.errTrace(e);
+                return file;
+            }
+            setFilePermission(folder, user, group, filePermission);
         }
         return file;
     }
 
-    public static boolean createFileIfNotExist(File file) {
-        if (!file.exists()) {
-            try {
-                return file.createNewFile();
-            } catch (IOException e) {
-                logger.errTrace(e);
-                return false;
-            }
-        } else if (file.isDirectory()) {
-            logger.err(file.getAbsolutePath() + " is a directory");
-            return false;
-        }
-        return true;
-    }
-
     public static String readFileToString(File file, boolean createIfNotExist, Charset charset) {
+        getFile(file, createIfNotExist, createIfNotExist, null, null, null, null);
         // Check parent folder
-        File folder = file.getParentFile();
-        if (folder.exists() && !folder.isDirectory()) {
-            logger.err(folder.getAbsolutePath() + " is file not directory");
-            return null;
-        }
-
-        if (createIfNotExist) {
-            if (!createFileIfNotExist(file))
-                return null;
-        } else if (!file.exists()) {
-            return null;
-        } else if (file.isDirectory()) {
-            logger.err(file.getAbsolutePath() + " is directory");
+        if (!file.exists() || !file.isFile()) {
             return null;
         }
 
@@ -341,19 +375,30 @@ public class Lib {
         return builder + input;
     }
 
-    public static void setFilePermission(File imageFile, UserPrincipal user, GroupPrincipal group, Set<PosixFilePermission> permission) {
-        PosixFileAttributeView attributeView = Files.getFileAttributeView(imageFile.toPath(), PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-        if (attributeView != null) {
-            try {
-                if (user != null)
-                    attributeView.setOwner(user);
-                if (group != null)
-                    attributeView.setGroup(group);
-                if (permission != null)
-                    attributeView.setPermissions(permission);
-            } catch (IOException e) {
-                logger.errTrace(e);
+    public static void setFilePermission(File file, UserPrincipal user, GroupPrincipal group, Set<PosixFilePermission> permission) {
+        PosixFileAttributeView attributeView = Files.getFileAttributeView(file.toPath(), PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        if (attributeView == null)
+            return;
+        try {
+            if (user != null)
+                attributeView.setOwner(user);
+            else if (userPrincipal != null)
+                attributeView.setOwner(userPrincipal);
+            if (group != null)
+                attributeView.setGroup(group);
+            else if (groupPrincipal != null)
+                attributeView.setGroup(groupPrincipal);
+            if (permission != null)
+                attributeView.setPermissions(permission);
+            else if (file.isFile()) {
+                if (filePermission != null)
+                    attributeView.setPermissions(filePermission);
+            } else if (file.isDirectory()) {
+                if (directoryPermission != null)
+                    attributeView.setPermissions(directoryPermission);
             }
+        } catch (IOException e) {
+            logger.errTrace(e);
         }
     }
 }

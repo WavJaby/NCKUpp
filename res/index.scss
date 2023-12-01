@@ -308,7 +308,6 @@ $login-bg-color: #0a0a0af2;
     > .bottomRow {
         margin-top: 25px;
         position: relative;
-        overflow: hidden;
 
         > button.loginField {
             background: $primary;
@@ -319,7 +318,7 @@ $login-bg-color: #0a0a0af2;
 
         > .loginDeclaration {
             position: absolute;
-            bottom: 5px;
+            top: 0;
 
             > span {
                 font-size: 18px;

@@ -114,7 +114,7 @@ public class UrSchool implements Module {
 
     @Override
     public void start() {
-        urSchoolFile = getFileFromPath(URSCHOOL_FILE_PATH, true);
+        urSchoolFile = getFileFromPath(URSCHOOL_FILE_PATH, true, true);
         if (urSchoolFile.exists()) {
             urSchoolData = new ArrayList<>();
             urSchoolDataJson = readFileToString(urSchoolFile, false, StandardCharsets.UTF_8);

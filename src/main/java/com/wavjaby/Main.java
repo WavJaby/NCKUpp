@@ -3,6 +3,7 @@ package com.wavjaby;
 import com.wavjaby.api.*;
 import com.wavjaby.api.login.Login;
 import com.wavjaby.api.search.Search;
+import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RestApiServer;
@@ -40,10 +41,6 @@ public class Main {
     public static final String stuIdSysNckuOrg = "https://" + stuIdSysNcku;
     public static final String courseQueryNcku = "course-query.acad.ncku.edu.tw";
     public static final String courseQueryNckuOrg = "https://" + courseQueryNcku;
-    public static UserPrincipal userPrincipal;
-    public static GroupPrincipal groupPrincipal;
-    public static Set<PosixFilePermission> filePermission;
-    public static Set<PosixFilePermission> folderPermission;
 
     public static final URI courseNckuOrgUri;
     public static final URI courseQueryNckuOrgUri;
@@ -76,19 +73,8 @@ public class Main {
         Logger.setTraceClassFilter(serverSettings.getProperty("traceFilter", "com.wavjaby"));
         cookieDomain = serverSettings.getProperty("domain", "localhost");
 
-        // Get permission
-        Main.filePermission = PosixFilePermissions.fromString("rw-rw-r--");
-        Main.folderPermission = PosixFilePermissions.fromString("rwxrw-r--");
-        UserPrincipalLookupService lookupService = FileSystems.getDefault().getUserPrincipalLookupService();
-        try {
-            String userHostName = InetAddress.getLocalHost().getHostName();
-            Main.userPrincipal = lookupService.lookupPrincipalByName(userHostName);
-            Main.groupPrincipal = lookupService.lookupPrincipalByGroupName(userHostName);
-        } catch (IOException e) {
-            logger.warn(e);
-        }
         // Set log permission
-        setFilePermission(Logger.getLogFile(), Main.userPrincipal, Main.groupPrincipal, Main.filePermission);
+        setFilePermission(Logger.getLogFile(), Lib.userPrincipal, Lib.groupPrincipal, Lib.filePermission);
 
         if (!cacheFolder.exists())
             if (!cacheFolder.mkdir())
