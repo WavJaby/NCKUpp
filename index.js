@@ -87,7 +87,7 @@ window.pageLoading = new Signal(false);
 		console.log('Debug disable');
 
 	// main code
-	const loginDeclarationWindow = new PopupWindow();
+	const loginDeclarationWindow = new PopupWindow({small: true, padding: false});
 	const userGuideTool = new UserGuideTool();
 	const pageIdName = {
 		Home: '成功大學課程資訊及選課系統',
@@ -426,7 +426,9 @@ window.pageLoading = new Signal(false);
 		const username = input('loginField', '學號', null, {onkeyup, type: 'email', autocomplete: 'username'});
 		const password = input('loginField', '密碼', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
 		const loginDeclarationCheck = checkbox('loginDeclaration', localStorage.getItem('loginDeclaration') === 'true',
-			function () {localStorage.setItem('loginDeclaration', this.checked)},
+			function () {
+				localStorage.setItem('loginDeclaration', this.checked)
+			},
 			span('我已閱讀'), button(null, '登入聲明', loginDeclaration),
 		);
 		let loading = false;
@@ -460,7 +462,7 @@ window.pageLoading = new Signal(false);
 		function loginDeclaration() {
 			if (loginDeclarationWindow.isEmpty()) {
 				loginDeclarationWindow.windowSet(div('loginDeclarationWindow',
-					h1('聲明: '),
+					h1('聲明'),
 					p(null, 'declaration',
 						span('本網站不會將密碼以任何形式暫存或儲存', 'red'), text('，登入功能僅代替使用者將資料轉至成功入口，並回傳登入狀態(Session Cookie)。\n'),
 						span('本網站僅儲存學號以及登入狀態(Session Cookie)，提供附加功能之登入驗證使用', 'red'),

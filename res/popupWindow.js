@@ -2,11 +2,13 @@ import {button, div} from './minjs_v000/domHelper.min.js';
 
 /**
  * @typedef PopupWindowOption
- * @property {HTMLElement} [root] Root element for window. Default document.body
+ * @property {HTMLElement} [root] Root element for window. Default: document.body
  * @property {int} [windowType] 0: Default, 1: Dialog
  * @property {string} [conformButton]
  * @property {string} [cancelButton]
  * @property {function(conform:boolean)} [onclose]
+ * @property {boolean} [small]
+ * @property {boolean} [padding] Default top padding for close button, Default: true
  */
 
 /**
@@ -31,6 +33,8 @@ export default function PopupWindow(options) {
 		options = {root: document.body};
 	if (!options.root)
 		options.root = document.body
+	if (options.padding == null)
+		options.padding = true;
 
 	const closeButton = button('closeButton', null, windowClose, div('icon'));
 	const functionButtons = options.windowType === PopupWindow.WIN_TYPE_DIALOG ? div('buttons') : null;
@@ -40,6 +44,9 @@ export default function PopupWindow(options) {
 	);
 	let lastContentElement = null;
 
+	if (options.padding)
+		popupWindow.classList.add('padding');
+	popupWindow.classList.add(options.small ? 'small' : 'normal');
 	if (options.windowType == null || options.windowType === PopupWindow.WIN_TYPE_DEFAULT) {
 		popupWindow.classList.add('default');
 	} else if (options.windowType === PopupWindow.WIN_TYPE_DIALOG) {

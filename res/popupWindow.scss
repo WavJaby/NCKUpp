@@ -1,6 +1,8 @@
 @import './variables';
 
 $popupWindow-bg-color: $pure-gray-900;
+$popupWindow-close-btn-size: 34px;
+$popupWindow-close-btn-icon-size: 24px;
 
 .popupWindowOverlay {
     background: $overlay-transparent-bg-color;
@@ -37,10 +39,11 @@ $popupWindow-bg-color: $pure-gray-900;
 
         > .closeButton {
             background: none;
-            padding: 2px;
-            top: 5px;
-            left: 5px;
-            position: sticky;
+            width: $popupWindow-close-btn-size;
+            height: $popupWindow-close-btn-size;
+            padding: $popupWindow-close-btn-size - $popupWindow-close-btn-icon-size 0 0 $popupWindow-close-btn-size - $popupWindow-close-btn-icon-size;
+            position: absolute;
+            top: 0;
             cursor: pointer;
             z-index: 1;
 
@@ -50,19 +53,17 @@ $popupWindow-bg-color: $pure-gray-900;
 
             > .icon {
                 content: '';
-                background: $icon-close no-repeat 0 0 / 24px;
-                width: 24px;
-                height: 24px;
+                background: $icon-close no-repeat 0 0/#{$popupWindow-close-btn-icon-size};
+                width: $popupWindow-close-btn-icon-size;
+                height: $popupWindow-close-btn-icon-size;
             }
         }
 
         > .popupWindowBody {
             width: 100%;
             height: 100%;
-            position: absolute;
             overflow: auto;
-            padding: 5px;
-            top: 0;
+            padding: 0 5px;
             @include box-sizing-border;
         }
     }
@@ -75,14 +76,32 @@ $popupWindow-bg-color: $pure-gray-900;
         @include transform(translateY(-50%));
     }
 
-    &.default > .popupWindow {
+    &.normal > .popupWindow {
         max-width: 1000px;
         top: 5%;
         bottom: 5%;
         left: 40px;
         right: 40px;
+    }
 
-        @media only screen and ($small-screen) {
+    &.small {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        > .popupWindow {
+            max-width: 700px;
+            margin: 0 10%;
+            position: relative;
+        }
+    }
+
+    &.padding > .popupWindow {
+        padding-top: $popupWindow-close-btn-size + 5;
+    }
+
+    @media only screen and ($small-screen) {
+        &.normal > .popupWindow {
             width: 100%;
             height: 100%;
             border-radius: 0;
@@ -90,10 +109,12 @@ $popupWindow-bg-color: $pure-gray-900;
             @include box-sizing-border;
 
             > .closeButton > .icon {
-                background: $icon-down-arrow no-repeat 0 0/24px;
+                background: $icon-down-arrow no-repeat 0 0/#{$popupWindow-close-btn-icon-size};
                 @include transform(rotate(90deg));
             }
         }
+        &.small > .popupWindow {
+            margin: 0 5px;
+        }
     }
-
 }

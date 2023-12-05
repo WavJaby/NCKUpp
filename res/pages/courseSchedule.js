@@ -333,7 +333,7 @@ export default function (router, loginState) {
 };
 
 /**
- * @param {Element} windowRoot
+ * @param {HTMLElement} windowRoot
  * @param updatePreScheduleData
  * @constructor
  */
@@ -615,7 +615,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
  */
 
 /**
- * @param {Element} windowRoot
+ * @param {HTMLElement} windowRoot
  * @param {function()} updatePreScheduleData
  * @constructor
  */

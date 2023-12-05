@@ -4,12 +4,7 @@ $object-layer1-dark: #D9D9D91E;
 $object-layer2-dark: #828282;
 
 .home {
-    > .siteInfo {
-        //height: 100vh;
-        //position: sticky;
-        //top: 0;
-        //overflow: auto;
-        //padding-bottom: 200px;
+    > .siteIntro {
         @include box-sizing-border;
 
         > .main {
@@ -131,53 +126,114 @@ $object-layer2-dark: #828282;
 
         }
 
-        > .filterFeature {
-            width: 80%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 30px 5px;
-            overflow: hidden;
-            box-sizing: border-box;
-            font-size: 30px;
+        > .intro {
+            margin: 0 10%;
 
-            // Select box animation
-            > .animationBox {
-                background: #262b32;
-                padding: 50px 20px;
-                border-radius: 10px;
-                position: relative;
-                text-align: center;
+            > div {
+                margin-bottom: 50px;
+            }
+
+            > .filterFeature {
+                max-width: 1200px;
                 overflow: hidden;
+                box-sizing: border-box;
+                font-size: 30px;
 
-                > .checkbox {
-                    margin: 20px 5%;
-                    filter: drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.2));
-                    display: inline-block;
-                    white-space: nowrap;
-                    @include transition(transform 100ms linear);
+                // Select box animation
+                > .animationBox {
+                    background: #262b32;
+                    padding: 50px 20px;
+                    border-radius: 10px;
+                    position: relative;
+                    text-align: center;
+                    overflow: hidden;
 
-                    &.gray > .checkmark {
-                        background: #BDBDBD;
+                    > .checkbox {
+                        margin: 20px 5%;
+                        filter: drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.2));
+                        display: inline-block;
+                        white-space: nowrap;
+                        @include transition(transform 100ms linear);
+
+                        &.gray > .checkmark {
+                            background: #BDBDBD;
+                        }
                     }
+                }
+
+                > h2 {
+                    font-size: 3rem;
+                    margin: 30px 0 0 50px;
+                }
+
+                > p {
+                    max-width: 500px;
+                    font-size: 1.5rem;
+                    margin-left: 50px;
+                }
+
+                > img {
+                    width: 180px;
+                    height: 180px;
+                    margin: -3rem 100px 0 0;
+                    float: right;
                 }
             }
 
-            > h2 {
-                font-size: 3rem;
-                margin: 30px 0 0 50px;
-            }
+            > .featureList {
+                color: #1B1F24;
+                width: 100%;
+                display: block;
+                overflow: auto;
+                white-space: nowrap;
+                vertical-align: top;
+                text-align: center;
+                border-radius: 20px;
+                @include hide-scroll-bar;
 
-            > p {
-                max-width: 500px;
-                font-size: 1.5rem;
-                margin-left: 50px;
-            }
+                > .block {
+                    background: #6C99FF;
+                    width: 300px;
+                    height: 400px;
+                    border-radius: 20px;
+                    overflow: hidden;
+                    padding: 50px 20px 20px 20px;
+                    margin: 0 30px;
+                    display: inline-block;
+                    vertical-align: top;
+                    @include box-sizing-border;
 
-            > img {
-                width: 180px;
-                height: 180px;
-                margin: -3rem 100px 0 0;
-                float: right;
+                    &.bg1 {
+                        background: #FDFF9A;
+                    }
+
+                    &.bg2 {
+                        background: #BDBDBD;
+                    }
+
+                    > img {
+                        width: 150px;
+                        height: 150px;
+                        border-radius: 100%;
+                        display: inline-block;
+                        border: white 2px solid;
+                    }
+
+                    > .title {
+                        font-size: 30px;
+                        margin: 10px 0;
+                        white-space: pre-wrap;
+                    }
+
+                    > p {
+                        font-size: 18px;
+                    }
+
+                    > p.small {
+                        color: #aaa;
+                        font-size: 12px;
+                    }
+                }
             }
         }
 
@@ -211,103 +267,7 @@ $object-layer2-dark: #828282;
             }
         }
 
-        > .introduction {
-            color: #1B1F24;
-            max-width: 100%;
-            display: inline-block;
-            overflow: auto;
-            white-space: nowrap;
-            vertical-align: top;
-            text-align: center;
-            @include hide-scroll-bar;
-            @include box-sizing-border;
-
-            > .block {
-                background: #6C99FF;
-                width: 300px;
-                height: 400px;
-                border-radius: 20px;
-                overflow: hidden;
-                padding: 50px 20px 20px 20px;
-                margin: 30px;
-                display: inline-block;
-                vertical-align: top;
-                @include box-sizing-border;
-
-                @media only screen and ($small-screen) {
-                    width: 400px;
-                }
-
-                &.bg1 {
-                    background: #FDFF9A;
-                }
-
-                &.bg2 {
-                    background: #BDBDBD;
-                }
-
-                > img {
-                    width: 150px;
-                    height: 150px;
-                    border-radius: 100%;
-                    display: inline-block;
-                    border: white 2px solid;
-                }
-
-                > .title {
-                    font-size: 30px;
-                    margin: 10px 0;
-                    white-space: pre-wrap;
-                }
-
-                > p {
-                    font-size: 18px;
-                }
-
-                > p.small {
-                    color: #aaa;
-                    font-size: 12px;
-                }
-            }
-        }
-
         @media only screen and ($small-screen) {
-            > .main > .description {
-                .l1 {
-                    font-size: 1.5rem;
-                }
-
-                .l2 {
-                    font-size: 2rem;
-                }
-            }
-
-            > .filterFeature {
-                width: 100%;
-                font-size: 20px;
-
-                > .animationBox {
-                    padding: 10px;
-                }
-
-                > h2 {
-                    font-size: 2rem;
-                    margin-top: 10px;
-                    margin-left: 10px;
-                }
-
-                > p {
-                    font-size: 1.2rem;
-                    margin-left: 10px;
-                }
-
-                img {
-                    width: 100px;
-                    height: 100px;
-                    margin: 0;
-                }
-            }
-
             > .main {
                 padding: 10vh 0 0 15px;
 
@@ -318,6 +278,16 @@ $object-layer2-dark: #828282;
 
                 > .title > img, > .title > .slideOut {
                     height: 40px;
+                }
+
+                > .description {
+                    .l1 {
+                        font-size: 1.5rem;
+                    }
+
+                    .l2 {
+                        font-size: 2rem;
+                    }
                 }
 
                 > .quickSearch {
@@ -331,6 +301,34 @@ $object-layer2-dark: #828282;
                         > span {
                             display: none;
                         }
+                    }
+                }
+            }
+
+            > .intro {
+                margin: 0;
+
+                > .filterFeature {
+                    > .animationBox {
+                        padding: 10px;
+                        font-size: 20px;
+                    }
+
+                    > h2 {
+                        font-size: 2rem;
+                        margin-top: 10px;
+                        margin-left: 10px;
+                    }
+
+                    > p {
+                        font-size: 1.2rem;
+                        margin-left: 10px;
+                    }
+
+                    img {
+                        width: 100px;
+                        height: 100px;
+                        margin: 0;
                     }
                 }
             }

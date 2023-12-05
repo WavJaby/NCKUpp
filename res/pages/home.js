@@ -14,11 +14,13 @@ export default function (router) {
 
 	const mainBoxElement = new MainBox();
 	const filterFeatureBoxElement = new FilterFeatureBox();
-	const featureIntroduction = new FeatureIntroduction();
-	const siteInfo = div('siteInfo',
+	const featureList = new FeatureList();
+	const siteInfo = div('siteIntro',
 		mainBoxElement.element,
-		filterFeatureBoxElement.element,
-		featureIntroduction.element,
+		div('intro',
+			filterFeatureBoxElement.element,
+			featureList.element,
+		),
 		// a(null, './?page=CourseSearch', 'toCourseSearchLink', toCourseSearchBtnClick, span('前往課程查詢')),
 	);
 	const scrollDownIndicator = div('scrollDownIndicator', {onclick: scrollDown},
@@ -71,7 +73,7 @@ export default function (router) {
 
 		mainBoxElement.onPageOpen();
 		filterFeatureBoxElement.startAnimation();
-		featureIntroduction.startAnimation();
+		featureList.startAnimation();
 		router.element.addEventListener('scroll', onscroll);
 	}
 
@@ -82,7 +84,7 @@ export default function (router) {
 
 		mainBoxElement.onPageClose();
 		filterFeatureBoxElement.stopAnimation();
-		featureIntroduction.stopAnimation();
+		featureList.stopAnimation();
 		router.element.removeEventListener('scroll', onscroll);
 	}
 
@@ -307,9 +309,9 @@ function FilterFeatureBox() {
 	}
 }
 
-function FeatureIntroduction() {
+function FeatureList() {
 	// Feature introduction
-	const element = this.element = div('introduction',
+	const element = this.element = div('featureList',
 		div('block', {onwheel: onwheel},
 			img('./res/assets/page_home/schedule_download_function.png'),
 			h2('課表下載', 'title'),
