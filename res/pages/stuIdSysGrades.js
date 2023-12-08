@@ -81,6 +81,7 @@ export default function (router, loginState) {
 	function onLoginState(state) {
 		// Login
 		if (state && state.login) {
+			myGrades.loading();
 			fetchApi('/login?mode=stuId', 'Login identification system').then(i => {
 				// Student Identification System login success
 				if (i.success && i.data && i.data.login) {
@@ -117,6 +118,7 @@ function MyGrades(router) {
 	let stuIdLoading = false;
 
 	let semestersInfoData = null, currentSemInfoData = null;
+	let lastSemID = null;
 
 	const semesterInfoElements = div('semesterInfos');
 	const semesterGradesElement = div('semesterGrades');
@@ -127,14 +129,17 @@ function MyGrades(router) {
 		ShowIf(loadingState, div('loading', window.loadingElement.cloneNode(true))),
 	);
 
+	this.loading = function () {
+		loadingState.set(true);
+	}
+
 	this.updateMyGrades = function () {
 		if (stuIdLoading)
 			return;
 		stuIdLoading = true;
 		stuIdLoadingCount = 2;
-		loadingState.set(true);
 		getSemestersInfo();
-		currentSemesterGrade();
+		getCurrentSemesterInfo();
 	}
 
 	this.clear = function () {
@@ -151,7 +156,7 @@ function MyGrades(router) {
 			semesterInfoElements.removeChild(semesterInfoElements.firstChild);
 		// Semesters
 		for (const semInfo of semestersInfoData) {
-			semesterInfoElements.appendChild(div('semesterInfo', {onclick: getSemesterGrades, semID: semInfo.semID},
+			semesterInfoElements.appendChild(div('tableCell', div('semesterInfo', {onclick: getSemesterGrades, semID: semInfo.semID},
 				h1(parseSemesterStr(semInfo.semester)),
 				// span(null, 'info', span('Total Credits'), text(': ' + semInfo.totalC)),
 				// span(null, 'info', span('Earned Credits'), text(': ' + semInfo.earnedC)),
@@ -175,14 +180,14 @@ function MyGrades(router) {
 				span(null, 'info', span('平均分數'), text(': ' + semInfo.averageScore)),
 				span(null, 'info', span('班排'), text(': ' + semInfo.classRanking + '/' + semInfo.classRankingTotal)),
 				span(null, 'info', span('系排'), text(': ' + semInfo.deptRanking + '/' + semInfo.deptRankingTotal)),
-			));
+			)));
 		}
 		// Current
-		semesterInfoElements.appendChild(div('semesterInfo', {onclick: () => openSemesterGrades(currentSemInfoData.courseGrades)},
+		semesterInfoElements.appendChild(div('tableCell', div('semesterInfo', {onclick: () => openSemesterGrades(currentSemInfoData.courseGrades)},
 			h1('本學期'),
 			span(null, 'info', span('學期'), text(': ' + parseSemesterStr(currentSemInfoData.semester))),
 			span(null, 'info', span('總學分'), text(': ' + currentSemInfoData.courseGrades.reduce((a, b) => a + b.credits, 0))),
-		));
+		)));
 		loadingState.set(false);
 	}
 
@@ -190,56 +195,82 @@ function MyGrades(router) {
 		while (semesterGradesElement.firstChild)
 			semesterGradesElement.removeChild(semesterGradesElement.firstChild);
 		for (const course of courseGrades) {
-			semesterGradesElement.appendChild(div(null, {onclick: getNormalDistImg, courseInfo: course},
+			semesterGradesElement.appendChild(div(null, {courseInfo: course, onclick: createDistWindow},
+					span(course.serialNumber, 'serialNumber', {title: 'Serial Number'}),
 					h1(course.courseName),
-					// span(null, 'info', span('Serial Number'), text(': ' + course.serialNumber)),
 					// span(null, 'info', span('System Number'), text(': ' + course.systemNumber)),
 					// span(null, 'info', span('Credits'), text(': ' + course.credits)),
 					// span(null, 'info', span('Gpa'), text(': ' + course.gpa)),
 					// span(null, 'info', span('Grade'), text(': ' + course.grade)),
 					// span(null, 'info', span('Remark'), text(': ' + course.remark)),
 					// span(null, 'info', span('Require'), text(': ' + course.require)),
-					span(null, 'info', span('課程序號', null, {title: 'Serial Number'}), text(': ' + course.serialNumber)),
-					span(null, 'info', span('課程碼', null, {title: 'System Number'}),
-						text(': ' + course.systemNumber + (course.classCode ? '-' + course.classCode : ''))),
-					span(null, 'info', span('學分'), text(': ' + course.credits)),
+					span(course.systemNumber + (course.classCode ? '-' + course.classCode : ''), 'systemNumber'),
 					course.gpa === null ? null :
 						span(null, 'info', span('Gpa', null, {title: course.gpa}), text(': ' + gpaPointCalculate(course.gpa))),
 					span(null, 'info', span('分數'), text(': ' + gradeToText(course.grade))),
-					span(null, 'info', span('課程別'), text(': ' + (course.remark ? course.remark : '無'))),
-					span(null, 'info', span('課程'), text(': ' + course.require)),
+					createDistImage(course),
+					span(null, 'info', span('學分'), text(': ' + course.credits)),
+					span(null, 'info', span('課程別'), text(': ' + (course.remark ? course.remark : '無') + ', ' + course.require)),
 				)
 			);
 		}
 	}
 
-	function createDistWindow(courseInfo, courseDistData) {
-		normalDistImgWindow.windowSet(
-			div('normalDist',
-				h1(courseInfo.courseName),
-				createDistImage(courseDistData.studentCount),
-			)
-		);
-		normalDistImgWindow.windowOpen();
+	function createDistImage(courseInfo) {
+		const element = div('normalDist');
+		getNormalDistImg(courseInfo, (courseDistData) => {
+			element.appendChild(createDistImageFromData(courseDistData.studentCount, true));
+		});
+		return element;
+	}
+
+	function createDistWindow() {
+		getNormalDistImg(this.courseInfo, (courseDistData) => {
+			// Open window
+			normalDistImgWindow.windowSet(
+				div('normalDist',
+					h1(this.courseInfo.courseName),
+					createDistImageFromData(courseDistData.studentCount),
+				)
+			);
+			normalDistImgWindow.windowOpen();
+		});
 	}
 
 	/**
-	 * @param {int[]} counts
+	 * @param {int[] | null} counts
+	 * @param {boolean} [noLabel]
 	 */
-	function createDistImage(counts) {
+	function createDistImageFromData(counts, noLabel) {
+		if (counts == null) {
+			return div('distImage',
+				span('無成績分布圖', 'nodata')
+			);
+		}
+
 		const bars = [];
 		const labels = [];
-		const sum = counts.reduce((i, j) => i + j, 0);
+		let max;
+		if (noLabel) {
+			// Get max
+			max = counts.reduce((i, j) => j > i ? j : i, 0);
+		} else {
+			// Get sum
+			max = counts.reduce((i, j) => i + j, 0);
+		}
+
 		const barWidth = 100 / counts.length;
 		for (let i = 0; i < counts.length; i++) {
 			const count = counts[i];
 			const bar = div(null,
-				span(count, 'count')
+				noLabel && count === 0 ? null : span(count, 'count')
 			);
 			bar.style.width = barWidth + '%';
-			bar.style.height = 90 * count / sum + '%';
+			bar.style.height = 90 * count / max + '%';
 			bar.style.left = barWidth * i + '%';
 			bars.push(bar);
+			if (noLabel)
+				continue;
 
 			const line = div();
 			line.style.left = barWidth * i + '%';
@@ -250,13 +281,16 @@ function MyGrades(router) {
 			labels.push(label);
 		}
 
-		return div('distImage',
+		return div('distImage' + (noLabel ? ' noLabel' : ''),
 			div('bars', bars),
-			div('labels', labels)
+			noLabel ? null : div('labels', labels)
 		);
 	}
 
 	function getSemesterGrades() {
+		if (lastSemID === this.semID)
+			return;
+		lastSemID = this.semID;
 		fetchApi('/stuIdSys?mode=semCourse&semId=' + this.semID).then(i => {
 			openSemesterGrades(i.data);
 		});
@@ -273,7 +307,7 @@ function MyGrades(router) {
 		});
 	}
 
-	function currentSemesterGrade() {
+	function getCurrentSemesterInfo() {
 		fetchApi('/stuIdSys?mode=currentSemInfo').then(i => {
 			if (i.success)
 				currentSemInfoData = i.data;
@@ -285,16 +319,17 @@ function MyGrades(router) {
 	}
 
 	/**
-	 * @this {{courseInfo: CourseGrade}}
+	 * @param courseInfo {CourseGrade}
+	 * @param callback {function(any)}
 	 */
-	function getNormalDistImg(inCourseInfo) {
-		const courseInfo = this && this.courseInfo || inCourseInfo;
+	function getNormalDistImg(courseInfo, callback) {
 		if (!courseInfo.imgQuery)
 			return;
 		fetchApi('/stuIdSys?mode=courseGradesDistribution&imgQuery=' + courseInfo.imgQuery).then(response => {
 			if (response.success)
-				createDistWindow(courseInfo, response.data);
+				callback(response.data);
 			else {
+				callback({studentCount: null});
 				// // Normal distribution graph not exist
 				// if (i.msg) {
 				//     // Try

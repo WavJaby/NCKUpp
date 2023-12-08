@@ -24,6 +24,7 @@ import {
 	svg,
 	text,
 	TextState,
+	form,
 	ul
 } from './res/minjs_v000/domHelper.min.js';
 
@@ -199,7 +200,7 @@ window.pageLoading = new Signal(false);
 				showLoginWindow.set(!showLoginWindow.state);
 				return false; // Not open select list
 			},
-			img('./res/assets/login_icon.svg', 'x`'),
+			img('./res/assets/login_icon.svg', ''),
 			span(TextState(userLoginData, /**@param{LoginData}state*/state => state && state.login ? state.studentID : '登入')),
 		),
 	);
@@ -233,7 +234,7 @@ window.pageLoading = new Signal(false);
 		// Guide tutorial tool
 		userGuideTool.element,
 		// Login window
-		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange)),
+		ShowIf(showLoginWindow, LoginWindow(onLoginStateChange, showLoginWindow)),
 		// Page loading circle
 		ShowIf(window.pageLoading, div('loading', window.loadingElement.cloneNode(true))),
 		window.messageAlert.element,
@@ -279,7 +280,8 @@ window.pageLoading = new Signal(false);
 
 		// Success, set login data
 		userLoginData.set(loginData);
-		showLoginWindow.set(false);
+		if (loginData.login)
+			showLoginWindow.set(false);
 	}
 
 	/**
@@ -422,22 +424,40 @@ window.pageLoading = new Signal(false);
 		};
 	}
 
-	function LoginWindow(onLoginStateChange) {
-		const username = input('loginField', '學號', null, {onkeyup, type: 'email', autocomplete: 'username'});
+	function LoginWindow(onLoginStateChange, showLoginWindow) {
+		const username = input('loginField', '學號', null, {onkeyup, type: 'text', autocomplete: 'username'});
+		username.value = localStorage.getItem('studentId') || '';
 		const password = input('loginField', '密碼', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
 		const loginDeclarationCheck = checkbox('loginDeclaration', localStorage.getItem('loginDeclaration') === 'true',
 			function () {
 				localStorage.setItem('loginDeclaration', this.checked)
 			},
-			span('我已閱讀'), button(null, '登入聲明', loginDeclaration),
+			span('我已閱讀'), button(null, '登入聲明', loginDeclaration, {type: 'button'}),
 		);
 		let loading = false;
+		const loginWindow = form('loginWindow', login, {
+				onRender: () => {
+					window.addEventListener('click', checkIfClickOut);
+					username.focus();
+				}, onDestroy: () => window.removeEventListener('click', checkIfClickOut)
+			},
+			h2('登入'),
+			username,
+			password,
+			span('帳密與成功入口相同', 'description'),
+			div('bottomRow',
+				loginDeclarationCheck,
+				button('loginField', '登入', null, {type: 'submit'}),
+			),
+		);
+		return loginWindow;
 
 		function onkeyup(e) {
-			if (e.key === 'Enter') login();
+			if (e.key === 'Enter') login(e);
 		}
 
-		function login() {
+		function login(e) {
+			e.preventDefault();
 			if (!loading) {
 				if (!loginDeclarationCheck.input.checked) {
 					messageAlert.addError('請先閱讀登入聲明', '', 2000);
@@ -454,6 +474,8 @@ window.pageLoading = new Signal(false);
 				}).then(i => {
 					loading = false;
 					window.pageLoading.set(false);
+					if (i.success && i.data.login)
+						localStorage.setItem('studentId', username.value);
 					onLoginStateChange(i);
 				});
 			}
@@ -475,16 +497,19 @@ window.pageLoading = new Signal(false);
 			loginDeclarationWindow.windowOpen();
 		}
 
-		// element
-		return div('loginWindow', {onRender: () => username.focus()},
-			h2('登入'),
-			username,
-			password,
-			span('帳密與成功入口相同', 'description'),
-			div('bottomRow',
-				loginDeclarationCheck,
-				button('loginField', '登入', login, {type: 'submit'}),
-			),
-		);
+		function checkIfClickOut(e) {
+			let element = e.target;
+			while (element.parentElement) {
+				if (element === loginWindow ||
+					element === window.messageAlert.element ||
+					element.className === 'loginBtn' ||
+					element.className.startsWith('popupWindow'))
+					return;
+				else if (element === document.body)
+					break;
+				element = element.parentElement;
+			}
+			showLoginWindow.set(false);
+		}
 	}
 })();

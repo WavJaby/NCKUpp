@@ -635,6 +635,20 @@ function button(classN, text, onClick, ...options) {
 
 /**
  * @param {string | ClassList} [classN] Class Name
+ * @param {function(MouseEvent)} [onSubmit]
+ * @param [options] Options for element
+ * @return {HTMLFormElement}
+ */
+function form(classN, onSubmit, ...options) {
+	const element = document.createElement('form');
+	if (classN) parseClassInput(classN, element);
+	if (onSubmit) element.onsubmit = onSubmit;
+	if (options.length) addOption(element, options);
+	return element;
+}
+
+/**
+ * @param {string | ClassList} [classN] Class Name
  * @param [options] Options for element
  * @return {HTMLTableElement}
  */
@@ -1006,7 +1020,7 @@ export {
 	// Nav, list
 	nav, ul, li,
 	// Input
-	labelFor, label, input, checkboxDefault, checkbox, button,
+	labelFor, label, input, checkboxDefault, checkbox, button, form,
 	// Table
 	table, thead, tbody, colgroup, col, th, tr, td,
 	// Text
