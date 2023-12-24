@@ -11,22 +11,12 @@ import {button, div} from './minjs_v000/domHelper.min.js';
  * @property {boolean} [padding] Default top padding for close button, Default: true
  */
 
-/**
- * @typedef PopupWindow
- * @property {function(HTMLElement):void} windowSet
- * @property {function():void} windowClear
- * @property {function():void} windowOpen
- * @property {function():void} windowClose
- * @property {function():boolean} isEmpty
- */
-
 PopupWindow.WIN_TYPE_DEFAULT = 0;
 PopupWindow.WIN_TYPE_DIALOG = 1;
 
 /**
  * @param {PopupWindowOption} [options]
  * @constructor
- * @return {PopupWindow}
  */
 export default function PopupWindow(options) {
 	if (!options)
@@ -36,19 +26,18 @@ export default function PopupWindow(options) {
 	if (options.padding == null)
 		options.padding = true;
 
-	const closeButton = button('closeButton', null, windowClose, div('icon'));
+	const closeButton = button('closeButton', null, () => windowClose(false), div('icon'));
 	const functionButtons = options.windowType === PopupWindow.WIN_TYPE_DIALOG ? div('buttons') : null;
 	const popupWindowBody = div('popupWindowBody');
-	const popupWindow = div('popupWindowOverlay', {onclick: e => e.target === popupWindow && windowClose(false)},
+	const popupWindow = div('popupWindowOverlay', {onclick: onClickOverlay},
 		div('popupWindow', closeButton, popupWindowBody, functionButtons),
 	);
 	let lastContentElement = null;
 
 	if (options.padding)
 		popupWindow.classList.add('padding');
-	popupWindow.classList.add(options.small ? 'small' : 'normal');
 	if (options.windowType == null || options.windowType === PopupWindow.WIN_TYPE_DEFAULT) {
-		popupWindow.classList.add('default');
+		popupWindow.classList.add(options.small ? 'small' : 'normal');
 	} else if (options.windowType === PopupWindow.WIN_TYPE_DIALOG) {
 		popupWindow.classList.add('dialog');
 		if (options.conformButton != null)
@@ -74,12 +63,21 @@ export default function PopupWindow(options) {
 		return lastContentElement === null;
 	}
 
+	function onClickOverlay(e) {
+		if (e.target === popupWindow)
+			windowClose(false)
+	}
+
 	function windowSet(content) {
-		if (content == null || !(content instanceof HTMLElement)) {
-			popupWindowBody.removeChild(lastContentElement);
-			lastContentElement = null;
-		} else if (lastContentElement === null) {
-			popupWindowBody.insertBefore(content, functionButtons);
+		if (content == null) {
+			if (lastContentElement) {
+				popupWindowBody.removeChild(lastContentElement);
+				lastContentElement = null;
+			}
+		} else if (!(content instanceof HTMLElement))
+			console.error('Popup Window content is not HTMLElement', content);
+		else if (lastContentElement === null) {
+			popupWindowBody.appendChild(content);
 			lastContentElement = content;
 		} else {
 			popupWindowBody.replaceChild(content, lastContentElement);

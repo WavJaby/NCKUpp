@@ -32,7 +32,7 @@ console.log('File read');
 			toplevel: true,
 		},
 		sourceMap: {
-			root: 'https://wavjaby.github.io/NCKUpp',
+			root: 'https://localhost:8080/NCKUpp/res',
 			filename: inputFilePath,
 			url: outputFileName + '.map',
 		},

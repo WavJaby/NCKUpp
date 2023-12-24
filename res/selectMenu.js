@@ -300,8 +300,11 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 					parent.appendChild(li('item multi', checkbox_, {itemValue: item[0], itemName: item[1]}));
 					if (defaultSelected)
 						selectedItems.push([item[0], item[1]]);
-				} else
-					parent.appendChild(li('item', text(item[1]), {itemValue: item[0], itemName: item[1], onclick: onItemClick}));
+				} else {
+					parent.appendChild(li('item', text(item[1]), {itemValue: item[0], itemName: item[1], tabIndex: 0, onclick: onItemClick}));
+					if (defaultSelected)
+						selectedItems[0] = [item[0], item[1]];
+				}
 			}
 		}
 		if (defaultSelected)

@@ -116,6 +116,8 @@ public class FileHost implements Module {
                 mimeType = "image/svg+xml;charset=UTF-8";
             else if (filename.endsWith(".png"))
                 mimeType = "image/png";
+            else if (filename.endsWith(".map"))
+                mimeType = "application/json";
             else
                 mimeType = "application/octet-stream";
         }

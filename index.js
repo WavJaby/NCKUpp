@@ -425,9 +425,9 @@ window.pageLoading = new Signal(false);
 	}
 
 	function LoginWindow(onLoginStateChange, showLoginWindow) {
-		const username = input('loginField', '學號', null, {onkeyup, type: 'text', autocomplete: 'username'});
+		const username = input('loginField', '學號', null, {type: 'text', autocomplete: 'username'});
 		username.value = localStorage.getItem('studentId') || '';
-		const password = input('loginField', '密碼', null, {onkeyup, type: 'password', autocomplete: 'current-password'});
+		const password = input('loginField', '密碼', null, {type: 'password', autocomplete: 'current-password'});
 		const loginDeclarationCheck = checkbox('loginDeclaration', localStorage.getItem('loginDeclaration') === 'true',
 			function () {
 				localStorage.setItem('loginDeclaration', this.checked)
@@ -451,10 +451,6 @@ window.pageLoading = new Signal(false);
 			),
 		);
 		return loginWindow;
-
-		function onkeyup(e) {
-			if (e.key === 'Enter') login(e);
-		}
 
 		function login(e) {
 			e.preventDefault();

@@ -39,6 +39,10 @@ button {
     }
 }
 
+li:focus, label:focus {
+    outline: none;
+}
+
 // Input color
 textarea:focus, select:focus, input:focus, button:focus {
     outline: none;

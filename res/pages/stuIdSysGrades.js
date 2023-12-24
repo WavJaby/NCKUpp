@@ -1,12 +1,11 @@
 'use strict';
 
-import {button, div, h1, mountableStylesheet, ShowIf, Signal, span, text} from '../minjs_v000/domHelper.min.js';
+import {button, div, h1, h2, p, mountableStylesheet, ShowIf, Signal, span, text, img} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
+import SelectMenu from '../selectMenu.js';
 
 /**
- * - SemesterGrade: /stuIdSys?mode=semCourse&semId=SemID
- * - CurrentSemesterGrade: /stuIdSys?mode=currentSemInfo
  * @typedef CourseGrade
  * @property {string} serialNumber
  * @property {string} systemNumber
@@ -23,7 +22,7 @@ import PopupWindow from '../popupWindow.js';
  */
 
 /**
- * /stuIdSys?mode=semInfo
+ * - /stuIdSys?mode=semInfo
  * @typedef SemesterInfo
  * @property {string} semester
  * @property {string} semID
@@ -43,6 +42,13 @@ import PopupWindow from '../popupWindow.js';
  */
 
 /**
+ * - /stuIdSys?mode=currentSemInfo
+ * @typedef CurrentSemesterInfo
+ * @property {string} semester
+ * @property {CourseGrade[]} courseGrades
+ */
+
+/**
  * @param {QueryRouter} router
  * @param {Signal} loginState
  * @return {HTMLDivElement}
@@ -52,8 +58,8 @@ export default function (router, loginState) {
 	// static element
 	const styles = mountableStylesheet('./res/pages/stuIdSysGrades.css');
 	const myGrades = new MyGrades(router);
-	const myContribute = new MyContribute();
 	const allDistribution = new AllDistribution();
+	const myContribute = new MyContribute(router, loginState);
 
 	function onRender() {
 		console.log('StuIdSys grades Render');
@@ -86,7 +92,7 @@ export default function (router, loginState) {
 				// Student Identification System login success
 				if (i.success && i.data && i.data.login) {
 					myGrades.updateMyGrades();
-					// myContribute.updateContributeState();
+					myContribute.updateContributeState();
 				}
 				// Login failed
 				else {
@@ -105,7 +111,7 @@ export default function (router, loginState) {
 
 	return div('stuIdSysGrades',
 		{onRender, onPageOpen, onPageClose},
-		// myContribute.element,
+		myContribute.element,
 		myGrades.elements,
 		allDistribution.element,
 	);
@@ -117,7 +123,8 @@ function MyGrades(router) {
 	let stuIdLoadingCount = 0;
 	let stuIdLoading = false;
 
-	let semestersInfoData = null, currentSemInfoData = null;
+	let /**@type{SemesterInfo[]|null}*/semestersInfoData = null,
+		/**@type{CurrentSemesterInfo|null}*/currentSemInfoData = null;
 	let lastSemID = null;
 
 	const semesterInfoElements = div('semesterInfos');
@@ -143,12 +150,13 @@ function MyGrades(router) {
 	}
 
 	this.clear = function () {
-		semestersInfoData = null;
-		currentSemInfoData = null;
 		while (semesterInfoElements.firstChild)
 			semesterInfoElements.removeChild(semesterInfoElements.firstChild);
 		while (semesterGradesElement.firstChild)
 			semesterGradesElement.removeChild(semesterGradesElement.firstChild);
+		semestersInfoData = null;
+		currentSemInfoData = null;
+		stuIdLoading = false;
 	}
 
 	function renderMyGrades() {
@@ -211,7 +219,7 @@ function MyGrades(router) {
 					createDistImage(course),
 					span(null, 'info', span('學分'), text(': ' + course.credits)),
 					span(null, 'info', span('課程別'), text(': ' + (course.remark ? course.remark : '無') + ', ' + course.require)),
-				)
+				),
 			);
 		}
 	}
@@ -231,7 +239,7 @@ function MyGrades(router) {
 				div('normalDist',
 					h1(this.courseInfo.courseName),
 					createDistImageFromData(courseDistData.studentCount),
-				)
+				),
 			);
 			normalDistImgWindow.windowOpen();
 		});
@@ -244,7 +252,7 @@ function MyGrades(router) {
 	function createDistImageFromData(counts, noLabel) {
 		if (counts == null) {
 			return div('distImage',
-				span('無成績分布圖', 'nodata')
+				span('無成績分布圖', 'nodata'),
 			);
 		}
 
@@ -263,7 +271,7 @@ function MyGrades(router) {
 		for (let i = 0; i < counts.length; i++) {
 			const count = counts[i];
 			const bar = div(null,
-				noLabel && count === 0 ? null : span(count, 'count')
+				noLabel && count === 0 ? null : span(count, 'count'),
 			);
 			bar.style.width = barWidth + '%';
 			bar.style.height = 90 * count / max + '%';
@@ -283,7 +291,7 @@ function MyGrades(router) {
 
 		return div('distImage' + (noLabel ? ' noLabel' : ''),
 			div('bars', bars),
-			noLabel ? null : div('labels', labels)
+			noLabel ? null : div('labels', labels),
 		);
 	}
 
@@ -348,11 +356,6 @@ function MyGrades(router) {
 		});
 	}
 
-	function parseSemesterStr(semester) {
-		return semester.substring(0, semester.length - 1) +
-			(semester.charAt(semester.length - 1) === '0' ? '上學期' : '下學期');
-	}
-
 	const gpaPoint = {A: 4, B: 4, C: 3, D: 2, E: 1, F: 0, X: 0};
 
 	function gpaPointCalculate(gpa) {
@@ -387,24 +390,68 @@ function MyGrades(router) {
 	}
 }
 
-function MyContribute() {
+function parseSemesterStr(semester) {
+	return semester.substring(0, semester.length - 1) +
+		(semester.charAt(semester.length - 1) === '0' ? '上學期' : '下學期');
+}
+
+function MyContribute(router, loginState) {
+	const contributeSelectWindow = new PopupWindow({
+		root: router.element, windowType: PopupWindow.WIN_TYPE_DIALOG, conformButton: '確定', cancelButton: '取消', onclose: onClose,
+	});
 	// MyContribute state
 	const total = span('--');
+	const contributeBtn = button(null, '貢獻', contributeSelect, {disabled: true});
+	let selectMenu = null;
 
 	this.element = div('myContribute',
 		h1('我的貢獻 (Beta)'),
 		span(null, 'total', span('總貢獻: '), total, span('筆')),
-		button(null, '貢獻'),
+		contributeBtn,
 	);
 
 	this.updateContributeState = function () {
-		// fetchApi('/stuIdSys?mode=myContribute').then(i => {
-		// 	if (i.success) updateContributeState(i.data);
-		// });
+		contributeBtn.disabled = false;
+		fetchApi('/stuIdSys?mode=myContribute').then(i => {
+			if (i.success) updateContributeState(i.data);
+		});
 	}
 
 	this.clear = function () {
+		total.textContent = '--';
+		contributeBtn.disabled = true;
+	}
 
+	/** @param {SemesterInfo[]} semesterInfo*/
+	function updateSelectMenuItem(semesterInfo) {
+		selectMenu.setItems(semesterInfo.map(i => [i.semID, parseSemesterStr(i.semester)]), true);
+	}
+
+	function contributeSelect() {
+		selectMenu = new SelectMenu('選擇學期', 'contributeSemesterSelect', 'contributeSemesterSelect', null, {multiple: true});
+		fetchApi('/stuIdSys?mode=semInfo').then(i => {
+			if (i.success)
+				updateSelectMenuItem(i.data)
+		});
+		contributeSelectWindow.windowSet(div('contributeSemester',
+			h2('請選擇學期'),
+			p(null, null,
+				img('./res/assets/info_icon.svg', 'info'), span('本網站僅會蒐集選擇學期內的課程，\n並只會儲存該課程的成績分布圖'),
+			),
+			selectMenu.element,
+		));
+		contributeSelectWindow.windowOpen();
+	}
+
+	function onClose(conform) {
+		if (!conform || !loginState.state || !loginState.state.login)
+			return;
+		fetchApi('/stuIdSys?mode=addContribute&semesterIds=' +
+			selectMenu.getSelectedValue().join(',') +
+			'&studentId=' + loginState.state.studentID,
+		).then(i => {
+
+		});
 	}
 
 	function updateContributeState(data) {

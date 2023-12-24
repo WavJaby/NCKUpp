@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.wavjaby.lib.Lib.*;
 
@@ -118,11 +119,12 @@ public class UrSchool implements Module {
         if (urSchoolFile.exists()) {
             urSchoolData = new ArrayList<>();
             urSchoolDataJson = readFileToString(urSchoolFile, false, StandardCharsets.UTF_8);
-            assert urSchoolDataJson != null;
-            for (Object i : new JsonArray(urSchoolDataJson)) {
-                urSchoolData.add(new ProfessorSummary((JsonArray) i));
+            if (urSchoolDataJson != null && !urSchoolDataJson.isEmpty()) {
+                for (Object i : new JsonArray(urSchoolDataJson)) {
+                    urSchoolData.add(new ProfessorSummary((JsonArray) i));
+                }
+                lastFileUpdateTime = urSchoolFile.lastModified();
             }
-            lastFileUpdateTime = urSchoolFile.lastModified();
         }
 
         if (checkTimeUpdateUrSchoolData())
@@ -396,26 +398,33 @@ public class UrSchool implements Module {
             );
             Semaphore fetchPoolLock = new Semaphore(UPDATE_THREAD_COUNT, true);
             CountDownLatch fetchLeft = new CountDownLatch(maxPage[0] - 1);
+            AtomicBoolean success = new AtomicBoolean(true);
             for (int i = 1; i < maxPage[0]; i++) {
                 try {
                     fetchPoolLock.acquire();
                 } catch (InterruptedException ignore) {
-                    // Stop all
-                    executorShutdown(fetchPool, 1000, "UrSchoolFetch");
-                    return;
+                    success.set(false);
                 }
+                if (pool.isShutdown())
+                    success.set(false);
                 // Stop all
-                if (pool.isShutdown()) {
-                    executorShutdown(fetchPool, 1000, "UrSchoolFetch");
-                    return;
+                if (!success.get()) {
+                    while (fetchLeft.getCount() > 0)
+                        fetchLeft.countDown();
+                    break;
                 }
 
+                // Fetch UrSchool page
                 int finalI = i + 1;
                 fetchPool.submit(() -> {
                     List<ProfessorSummary> page = fetchUrSchoolData(finalI, null);
                     fetchPoolLock.release();
-                    if (page != null)
-                        result.addAll(page);
+                    if (page == null)
+                        success.set(false);
+                    else
+                        synchronized (result) {
+                            result.addAll(page);
+                        }
                     fetchLeft.countDown();
                     progressbar.setProgress(((float) (maxPage[0] - fetchLeft.getCount() + 1) / maxPage[0]) * 100);
                 });
@@ -428,18 +437,19 @@ public class UrSchool implements Module {
                 return;
             }
             executorShutdown(fetchPool, 1000, "UrSchoolFetch");
-
             progressbar.setProgress(100f);
 
-            String resultString = result.toString();
-            urSchoolDataJson = resultString;
-            urSchoolData = result;
-            try {
-                FileWriter fileWriter = new FileWriter(urSchoolFile);
-                fileWriter.write(resultString);
-                fileWriter.close();
-            } catch (IOException e) {
-                logger.errTrace(e);
+            if (success.get()) {
+                String resultString = result.toString();
+                urSchoolDataJson = resultString;
+                urSchoolData = result;
+                try {
+                    FileWriter fileWriter = new FileWriter(urSchoolFile);
+                    fileWriter.write(resultString);
+                    fileWriter.close();
+                } catch (IOException e) {
+                    logger.errTrace(e);
+                }
             }
 
             logger.log("Used " + (System.currentTimeMillis() - start) + "ms");
@@ -461,9 +471,11 @@ public class UrSchool implements Module {
                     resultBody = pageFetch.execute().body();
                     break;
                 } catch (IOException | UncheckedIOException ignore) {
+                    logger.warn("UrSchool fetch retry");
                 }
-                if (pool.isShutdown())
+                if (pool.isShutdown()) {
                     return null;
+                }
             }
 
             if (maxPage != null) {
@@ -471,7 +483,7 @@ public class UrSchool implements Module {
                 if ((maxPageStart = resultBody.lastIndexOf("https://urschool.org/ncku/list?page=")) == -1 ||
                         (maxPageStart = resultBody.lastIndexOf("https://urschool.org/ncku/list?page=", maxPageStart - 36)) == -1 ||
                         (maxPageEnd = resultBody.indexOf('"', maxPageStart + 36)) == -1) {
-                    logger.log("Max page number not found");
+                    logger.err("Max page number not found");
                     return null;
                 }
                 maxPage[0] = Integer.parseInt(resultBody.substring(maxPageStart + 36, maxPageEnd));
@@ -479,7 +491,7 @@ public class UrSchool implements Module {
 
             int resultTableStart;
             if ((resultTableStart = resultBody.indexOf("<table")) == -1) {
-                logger.log("Result table not found");
+                logger.err("Result table not found");
                 return null;
             }
             // get table body
@@ -487,7 +499,7 @@ public class UrSchool implements Module {
             if ((resultTableBodyStart = resultBody.indexOf("<tbody", resultTableStart + 7)) == -1 ||
                     (resultTableBodyEnd = resultBody.indexOf("</tbody>", resultTableBodyStart + 6)) == -1
             ) {
-                logger.log("Result table body not found");
+                logger.err("Result table body not found");
                 return null;
             }
 
@@ -502,14 +514,14 @@ public class UrSchool implements Module {
                 if ((idStart = id.indexOf('\'')) == -1 ||
                         (idEnd = id.indexOf('\'', idStart + 1)) == -1
                 ) {
-                    logger.log("Instructor ID not found");
+                    logger.err("Instructor ID not found");
                     return null;
                 }
                 int modeStart, modeEnd;
                 if ((modeStart = id.indexOf('\'', idEnd + 1)) == -1 ||
                         (modeEnd = id.indexOf('\'', modeStart + 1)) == -1
                 ) {
-                    logger.log("Open mode not found");
+                    logger.err("Open mode not found");
                     return null;
                 }
                 String mode = id.substring(modeStart + 1, modeEnd);
@@ -519,7 +531,7 @@ public class UrSchool implements Module {
                 // table data
                 Elements elements = i.children();
                 if (elements.size() < 13) {
-                    logger.log("Professor summary parse error");
+                    logger.err("Professor summary parse error");
                     return null;
                 }
 

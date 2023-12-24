@@ -108,4 +108,14 @@ public class ArraysLib {
             b.append(',');
         }
     }
+
+    public static boolean contains(String[] a, String key) {
+        if(a == null)
+            return false;
+        for (String s : a) {
+            if(s.equals(key))
+                return true;
+        }
+        return false;
+    }
 }

@@ -16,6 +16,7 @@ $popupWindow-close-btn-icon-size: 24px;
     > .popupWindow {
         background: $popupWindow-bg-color;
         border-radius: 10px;
+        padding: 0 5px 5px 5px;
         position: absolute;
         overflow: hidden;
         margin: auto;
@@ -25,7 +26,7 @@ $popupWindow-close-btn-icon-size: 24px;
                 background: $button-dark-bg-color;
                 border-radius: 10px;
                 display: inline-block;
-                margin: 0 5px;
+                margin: 5px;
             }
 
             > .conform:hover {
@@ -44,6 +45,7 @@ $popupWindow-close-btn-icon-size: 24px;
             padding: $popupWindow-close-btn-size - $popupWindow-close-btn-icon-size 0 0 $popupWindow-close-btn-size - $popupWindow-close-btn-icon-size;
             position: absolute;
             top: 0;
+            left: 0;
             cursor: pointer;
             z-index: 1;
 
@@ -68,14 +70,6 @@ $popupWindow-close-btn-icon-size: 24px;
         }
     }
 
-    &.dialog > .popupWindow {
-        max-width: 400px;
-        top: 50%;
-        left: 15px;
-        right: 15px;
-        @include transform(translateY(-50%));
-    }
-
     &.normal > .popupWindow {
         max-width: 1000px;
         top: 5%;
@@ -84,14 +78,14 @@ $popupWindow-close-btn-icon-size: 24px;
         right: 40px;
     }
 
-    &.small {
+    &.small, &.dialog {
         display: flex;
         justify-content: center;
         align-items: center;
 
         > .popupWindow {
             max-width: 700px;
-            margin: 0 10%;
+            margin: 0 15px;
             position: relative;
         }
     }
@@ -112,9 +106,6 @@ $popupWindow-close-btn-icon-size: 24px;
                 background: $icon-down-arrow no-repeat 0 0/#{$popupWindow-close-btn-icon-size};
                 @include transform(rotate(90deg));
             }
-        }
-        &.small > .popupWindow {
-            margin: 0 5px;
         }
     }
 }

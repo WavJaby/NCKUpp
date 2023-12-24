@@ -4,9 +4,11 @@ import com.sun.istack.internal.Nullable;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.CourseEnrollmentTracker;
 import com.wavjaby.Module;
+import com.wavjaby.api.login.Login;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.ArraysLib;
 import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RestApiResponse;
@@ -34,6 +36,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 
+import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.Main.stuIdSysNckuOrg;
 import static com.wavjaby.lib.Cookie.*;
 import static com.wavjaby.lib.Lib.*;
@@ -60,6 +63,7 @@ public class StudentIdSys implements Module {
     private final File normalDistFolder;
     private final SQLite sqLite;
     private final CourseEnrollmentTracker enrollmentTracker;
+    private final Login login;
     private PreparedStatement sqlGetAllDistribution, sqlGetDistribution, sqlAddDistribution, sqlSetDistributionSerialNumber;
     // time with system code
     private Map<String, CourseGradeInfo> courseInfoCache;
@@ -281,8 +285,7 @@ public class StudentIdSys implements Module {
                 classCode = systemNumber.length() == 7 ? null : systemNumber.substring(7);
                 systemNumber = systemNumber.substring(0, 7);
             }
-            normalDistImgQuery = leftPad(String.valueOf(year), 4, '0') + ',' +
-                    (semester == 0 ? '1' : '2') + ',' +
+            normalDistImgQuery = String.valueOf(year) + ',' + (semester == 0 ? '1' : '2') + ',' +
                     systemNumber + (classCode == null ? ',' : ',' + classCode);
             courseInfo = new CourseGradeInfo(serialNumber, systemNumber, classCode, courseName, year, semester);
         }
@@ -333,6 +336,7 @@ public class StudentIdSys implements Module {
         public final int year;
         public final byte semester;
         public final String systemNumber, classCode;
+        private String courseName;
         private String[] serialNumbers;
         private int[] studentCount;
 
@@ -343,8 +347,9 @@ public class StudentIdSys implements Module {
             this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
         }
 
-        public DistributionImage(int year, byte semester, String systemNumber, String classCode, String serialNumbersStr, String distStr) {
+        public DistributionImage(int year, byte semester, String systemNumber, String classCode, String serialNumbersStr, String courseName, String distStr) {
             this(year, semester, systemNumber, classCode);
+            this.courseName = courseName;
             String[] dist = Lib.simpleSplit(distStr, ',');
             studentCount = new int[dist.length];
             for (int i = 0; i < dist.length; i++) {
@@ -412,9 +417,10 @@ public class StudentIdSys implements Module {
         }
     }
 
-    public StudentIdSys(SQLite sqLite, CourseEnrollmentTracker enrollmentTracker) {
+    public StudentIdSys(SQLite sqLite, CourseEnrollmentTracker enrollmentTracker, Login login) {
         this.sqLite = sqLite;
         this.enrollmentTracker = enrollmentTracker;
+        this.login = login;
         this.normalDistFolder = Lib.getDirectoryFromPath(NORMAL_DIST_FOLDER, true);
     }
 
@@ -424,15 +430,15 @@ public class StudentIdSys implements Module {
         try {
             sqlGetAllDistribution = sqLite.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute");
             sqlGetDistribution = sqLite.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute " +
-                    "WHERE \"year\"=? AND \"semester\"=? AND \"system_code\"=? AND \"class_code\"=?"
+                    "WHERE \"year\"=? AND semester=? AND system_code=? AND class_code is ? AND distribution=?"
             );
             sqlAddDistribution = sqLite.getDatabase().prepareStatement("INSERT INTO grades_distribution_contribute " +
-                    "(\"year\", \"semester\", \"system_code\", \"class_code\", \"serial_number\", \"student_id\", \"upload\", \"distribution\") " +
-                    "VALUES (?,?,?,?,?,?,?,?)"
+                    "(\"year\", semester, system_code, class_code, serial_number, name, student_id, upload, distribution) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?)"
             );
             sqlSetDistributionSerialNumber = sqLite.getDatabase().prepareStatement("UPDATE grades_distribution_contribute " +
-                    "SET \"serial_number\"=? " +
-                    "WHERE \"year\"=? AND \"semester\"=? AND \"system_code\"=? AND \"class_code\"=?"
+                    "SET serial_number=?, name=? " +
+                    "WHERE \"year\"=? AND semester=? AND system_code=? AND class_code is ?"
             );
         } catch (SQLException e) {
             SQLite.printSqlError(e);
@@ -469,54 +475,73 @@ public class StudentIdSys implements Module {
         String mode = query.get("mode");
         if (mode == null) {
             response.errorBadQuery("Query require 'mode'");
+            return;
         }
-        // Get all distribution data from database
-        else if (mode.equals("allDistribution")) {
-            getAllDistribution(cookieStore, response);
-        }
-        // Get semester info
-        else if (mode.equals("semInfo")) {
-            getSemestersOverview(cookieStore, response);
-        }
-        // Get current semester info
-        else if (mode.equals("currentSemInfo")) {
-            getCurrentSemesterGradeTable(cookieStore, response);
-        }
-        // Get semester course grade
-        else if (mode.equals("semCourse")) {
-            String semId = query.get("semId");
-            if (semId == null) {
-                response.errorBadQuery("Query 'semCourse' mode require 'semId'");
-                return;
-            }
-            getSemesterGradeTable(semId, cookieStore, response);
-        }
-        // Get semester course grade normal distribution
-        else if (mode.equals("courseGradesDistribution")) {
-            String imageQueryRaw = query.get("imgQuery");
-            boolean addToDatabase = "true".equals(query.get("addToDatabase"));
-            if (imageQueryRaw == null) {
-                response.errorBadQuery("Query 'courseGradesDistribution' mode require 'imgQuery'");
-                return;
-            }
 
-            String[] cache = imageQueryRaw.split(",", 4);
-            if (cache.length != 4) {
-                int len = cache.length == 1 && cache[0].isEmpty() ? 0 : cache.length;
-                response.errorBadQuery("'" + imageQueryRaw + "' (Only give " + len + " value instead of 4)");
-                return;
-            }
+        switch (mode) {
+            // Get all distribution data from database
+            case "allDistribution":
+                getAllDistribution(cookieStore, response);
+                break;
+            // Get semester info
+            case "semInfo":
+                getSemestersOverview(cookieStore, response);
+                break;
+            // Get current semester info
+            case "currentSemInfo":
+                getCurrentSemesterGradeTable(cookieStore, response);
+                break;
+            // Get semester course grade
+            case "semCourse":
+                String semId = query.get("semId");
+                if (semId == null) {
+                    response.errorBadQuery("Query 'semCourse' mode require 'semId'");
+                    return;
+                }
+                CourseGrade[] courseGrades = getSemesterGradeTable(semId, cookieStore, response);
+                if (courseGrades != null)
+                    response.setData(ArraysLib.toString(courseGrades));
+                break;
+            // Get semester course grade normal distribution
+            case "courseGradesDistribution":
+                String imageQueryRaw = query.get("imgQuery");
+                if (imageQueryRaw == null) {
+                    response.errorBadQuery("Query 'courseGradesDistribution' mode require 'imgQuery'");
+                    return;
+                }
 
-            // Get image
-            getDistributionGraph(new DistributionImage(Integer.parseInt(cache[0]), Byte.parseByte(cache[1]), cache[2], cache[3]),
-                    addToDatabase, cookieStore, response);
+                String[] cache = imageQueryRaw.split(",", 4);
+                if (cache.length != 4) {
+                    int len = cache.length == 1 && cache[0].isEmpty() ? 0 : cache.length;
+                    response.errorBadQuery("'" + imageQueryRaw + "' (Only give " + len + " value instead of 4)");
+                    return;
+                }
+                // Get image
+                getDistributionGraph(new DistributionImage(Integer.parseInt(cache[0]), Byte.parseByte(cache[1]), cache[2], cache[3]), false, cookieStore, response);
+                break;
+            case "myContribute":
+
+                break;
+            case "addContribute":
+                String studentId = query.get("studentId");
+                if (studentId == null) {
+                    response.errorBadQuery("Query require 'studentId'");
+                    return;
+                }
+                String semesterIds = query.get("semesterIds");
+                if (semesterIds == null) {
+                    response.errorBadQuery("Query 'addContribute' mode require 'semesterIds'");
+                    return;
+                }
+                addUserContribute(Lib.simpleSplit(semesterIds, ','), studentId, cookieStore, response);
+                break;
+            default:
+                // Unknown mode
+                response.errorBadQuery("Unknown mode: " + mode);
         }
-        // Unknown mode
-        else
-            response.errorBadQuery("Unknown mode: " + mode);
     }
 
-    private List<DistributionImage> sqlGetAllDistribution() {
+    private synchronized List<DistributionImage> sqlGetAllDistribution() {
         try {
             ResultSet result = sqlGetAllDistribution.executeQuery();
             List<DistributionImage> allDestImages = new ArrayList<>();
@@ -527,6 +552,7 @@ public class StudentIdSys implements Module {
                         result.getString("system_code"),
                         result.getString("class_code"),
                         result.getString("serial_number"),
+                        result.getString("name"),
                         result.getString("distribution")
                 ));
             }
@@ -538,12 +564,13 @@ public class StudentIdSys implements Module {
         return null;
     }
 
-    private DistributionImage sqlGetDistribution(CourseGradeInfo courseInfo) {
+    private synchronized DistributionImage sqlGetDistribution(CourseGradeInfo courseInfo, DistributionImage distImageInfo) {
         try {
             sqlGetDistribution.setInt(1, courseInfo.year);
             sqlGetDistribution.setInt(2, courseInfo.semester);
             sqlGetDistribution.setString(3, courseInfo.systemNumber);
             sqlGetDistribution.setString(4, courseInfo.classCode);
+            sqlGetDistribution.setString(5, distImageInfo.studentCountToString());
             ResultSet result = sqlGetDistribution.executeQuery();
             sqlGetDistribution.clearParameters();
             if (!result.next())
@@ -555,6 +582,7 @@ public class StudentIdSys implements Module {
                     result.getString("system_code"),
                     result.getString("class_code"),
                     result.getString("serial_number"),
+                    result.getString("name"),
                     result.getString("distribution")
             );
             result.close();
@@ -565,13 +593,14 @@ public class StudentIdSys implements Module {
         return null;
     }
 
-    private int sqlSetDistributionSerialNumber(DistributionImage courseInfo) {
+    private synchronized int sqlSetDistributionSerialNumber(DistributionImage courseInfo) {
         try {
             sqlSetDistributionSerialNumber.setString(1, courseInfo.serialNumbersToString());
-            sqlSetDistributionSerialNumber.setInt(2, courseInfo.year);
-            sqlSetDistributionSerialNumber.setInt(3, courseInfo.semester);
-            sqlSetDistributionSerialNumber.setString(4, courseInfo.systemNumber);
-            sqlSetDistributionSerialNumber.setString(5, courseInfo.classCode);
+            sqlSetDistributionSerialNumber.setString(2, courseInfo.courseName);
+            sqlSetDistributionSerialNumber.setInt(3, courseInfo.year);
+            sqlSetDistributionSerialNumber.setInt(4, courseInfo.semester);
+            sqlSetDistributionSerialNumber.setString(5, courseInfo.systemNumber);
+            sqlSetDistributionSerialNumber.setString(6, courseInfo.classCode);
             int result = sqlSetDistributionSerialNumber.executeUpdate();
             sqlSetDistributionSerialNumber.clearParameters();
             return result;
@@ -581,16 +610,17 @@ public class StudentIdSys implements Module {
         }
     }
 
-    private int sqlAddDistribution(CourseGradeInfo courseInfo, DistributionImage distributionImage) {
+    private synchronized int sqlAddDistribution(CourseGradeInfo courseInfo, DistributionImage distributionImage, String studentId) {
         try {
             sqlAddDistribution.setInt(1, courseInfo.year);
             sqlAddDistribution.setInt(2, courseInfo.semester);
             sqlAddDistribution.setString(3, courseInfo.systemNumber);
             sqlAddDistribution.setString(4, courseInfo.classCode);
             sqlAddDistribution.setString(5, courseInfo.serialNumber);
-            sqlAddDistribution.setString(6, "SYSTEM");
-            sqlAddDistribution.setTimestamp(7, Timestamp.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
-            sqlAddDistribution.setString(8, distributionImage.studentCountToString());
+            sqlAddDistribution.setString(6, courseInfo.courseName);
+            sqlAddDistribution.setString(7, studentId);
+            sqlAddDistribution.setTimestamp(8, Timestamp.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            sqlAddDistribution.setString(9, distributionImage.studentCountToString());
             int result = sqlAddDistribution.executeUpdate();
             sqlAddDistribution.clearParameters();
             return result;
@@ -612,7 +642,7 @@ public class StudentIdSys implements Module {
         response.setData(builder.toString());
     }
 
-    private void getSemestersOverview(CookieStore cookieStore, ApiResponse response) {
+    private SemesterOverview[] getSemestersOverviewArray(CookieStore cookieStore, ApiResponse response) {
         Element tbody;
         try {
             Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
@@ -622,23 +652,23 @@ public class StudentIdSys implements Module {
             String body = res.body();
             if (body.contains(loginCheckString)) {
                 response.errorLoginRequire();
-                return;
+                return null;
             }
             Elements tbodyElements = Jsoup.parse(body).body().getElementsByTag("tbody");
             if (tbodyElements.size() < 4 || (tbody = tbodyElements.get(3)) == null) {
                 response.errorParse("Semester overview table not found");
-                return;
+                return null;
             }
         } catch (IOException e) {
             logger.errTrace(e);
             response.errorNetwork(e);
-            return;
+            return null;
         }
 
         Elements tableRows = tbody.children();
         if (tableRows.size() < 3) {
             response.errorParse("Semester overview table row not found");
-            return;
+            return null;
         }
 
         // Parse semester overview
@@ -647,12 +677,19 @@ public class StudentIdSys implements Module {
             Element row = tableRows.get(i);
             if (row.childrenSize() < 13) {
                 response.errorParse("Semester overview table row parse error");
-                return;
+                return null;
             }
             semesterOverviewList.add(new SemesterOverview(row.children()));
         }
 
-        response.setData(semesterOverviewList.toString());
+        return semesterOverviewList.toArray(new SemesterOverview[0]);
+    }
+
+    private void getSemestersOverview(CookieStore cookieStore, ApiResponse response) {
+        SemesterOverview[] result = getSemestersOverviewArray(cookieStore, response);
+        if (result == null)
+            return;
+        response.setData(ArraysLib.toString(result));
     }
 
     private void getCurrentSemesterGradeTable(CookieStore cookieStore, ApiResponse response) {
@@ -754,7 +791,7 @@ public class StudentIdSys implements Module {
         response.setData(out.toString());
     }
 
-    private void getSemesterGradeTable(String semesterID, CookieStore cookieStore, ApiResponse response) {
+    private CourseGrade[] getSemesterGradeTable(String semesterID, CookieStore cookieStore, ApiResponse response) {
         Element tbody;
         try {
             Connection.Response res = HttpConnection.connect(stuIdSysNckuOrg + "/ncku/qrys05.asp")
@@ -767,23 +804,23 @@ public class StudentIdSys implements Module {
             String body = res.body();
             if (body.contains(loginCheckString)) {
                 response.errorLoginRequire();
-                return;
+                return new CourseGrade[0];
             }
             Elements tbodyElements = Jsoup.parse(body).body().getElementsByTag("tbody");
             if (tbodyElements.size() < 4 || (tbody = tbodyElements.get(3)) == null) {
                 response.errorParse("Semester grade table not found");
-                return;
+                return new CourseGrade[0];
             }
         } catch (IOException e) {
             logger.errTrace(e);
             response.errorNetwork(e);
-            return;
+            return new CourseGrade[0];
         }
 
         Elements tableRows = tbody.children();
         if (tableRows.size() < 4) {
             response.errorParse("Semester grade table row not found");
-            return;
+            return new CourseGrade[0];
         }
 
         String semesterStr = SemesterOverview.semesterIdToSemester(semesterID);
@@ -801,13 +838,13 @@ public class StudentIdSys implements Module {
             Element row = tableRows.get(i);
             if (row.childrenSize() < 10) {
                 response.errorParse("Semester grade table row not found");
-                return;
+                return null;
             }
             CourseGrade courseGrade = new CourseGrade(row.children(), year, semester);
             courseGradeList.add(courseGrade);
             courseInfoCache.put(courseGrade.courseInfo.toKey(), courseGrade.courseInfo);
         }
-        response.setData(courseGradeList.toString());
+        return courseGradeList.toArray(new CourseGrade[0]);
     }
 
     private void getDistributionGraph(DistributionImage distImageInfo, boolean addToDatabase, CookieStore cookieStore, ApiResponse response) {
@@ -843,11 +880,12 @@ public class StudentIdSys implements Module {
         CourseGradeInfo courseInfo = courseInfoCache.get(key);
         if (courseInfo != null && addToDatabase) {
             logger.log(courseInfo.toKey());
-            DistributionImage result = sqlGetDistribution(courseInfo);
+            DistributionImage result = sqlGetDistribution(courseInfo, distImageInfo);
             // No record found
             if (result == null) {
-                sqlAddDistribution(courseInfo, distImageInfo);
+                sqlAddDistribution(courseInfo, distImageInfo, "SYSTEM");
             } else {
+                result.courseName = courseInfo.courseName;
                 result.AddSerialNumber(courseInfo);
                 sqlSetDistributionSerialNumber(result);
             }
@@ -862,6 +900,33 @@ public class StudentIdSys implements Module {
         }
 
         response.setData(distImageInfo.toString());
+    }
+
+    private void addUserContribute(String[] semesterIds, String studentId, CookieStore cookieStore, ApiResponse response) {
+        String PHPSESSID = getCookie("PHPSESSID", courseNckuOrgUri, cookieStore);
+        if (!login.getUserLoginState(studentId, PHPSESSID)) {
+            response.errorLoginRequire();
+            return;
+        }
+        SemesterOverview[] result = getSemestersOverviewArray(cookieStore, response);
+        if (result == null)
+            return;
+        for (SemesterOverview overview : result) {
+            if (!ArraysLib.contains(semesterIds, overview.semID)) continue;
+
+            CourseGrade[] courseGrades = getSemesterGradeTable(overview.semID, cookieStore, response);
+            if (courseGrades == null)
+                return;
+
+            for (CourseGrade grade : courseGrades) {
+                CourseGradeInfo info = grade.courseInfo;
+                getDistributionGraph(new DistributionImage(info.year, info.semester, info.systemNumber, info.classCode), true, cookieStore, response);
+            }
+        }
+    }
+
+    private void getUserContribute() {
+
     }
 
     private String buildNormalDistSvg(int[] studentCount) {

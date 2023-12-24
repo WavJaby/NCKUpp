@@ -613,6 +613,7 @@ function checkbox(classN, defaultState, onchange, ...options) {
 	element.appendChild(input);
 	element.appendChild(checkmark);
 	element.input = input;
+	element.tabIndex = 0;
 	if (options.length) addOption(element, options);
 	return element;
 }

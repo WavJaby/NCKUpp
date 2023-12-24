@@ -480,7 +480,7 @@ $instructor-info-fade-time: 200ms;
                 > tr {
                     display: block;
                     overflow-x: auto;
-                    @include calc(width, "100vw - 20px");
+                    @include calc(width, '100vw - 20px');
 
                     > th.filterOptions {
                         white-space: nowrap;

@@ -1629,7 +1629,6 @@ public class Search implements Module {
             logger.warn("Crack robot code");
             for (int j = 0; j < MAX_ROBOT_CHECK_TRY; j++) {
                 String code = robotCode.getCode(urlOriginUri + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
-                logger.warn("Crack code: " + code);
                 if (code == null || code.isEmpty())
                     continue;
                 try {
@@ -1646,7 +1645,9 @@ public class Search implements Module {
                                     "&code=" + code)
                             .execute().body();
 //                    logger.log(result);
-                    if (new JsonObject(result).getBoolean("status"))
+                    boolean success = new JsonObject(result).getBoolean("status");
+                    logger.warn("Crack code: " + code + ", " + (success ? "success" : "retry"));
+                    if (success)
                         break;
                 } catch (JsonException e) {
                     logger.errTrace(e);

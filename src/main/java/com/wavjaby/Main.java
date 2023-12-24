@@ -121,7 +121,7 @@ public class Main {
         addModule(new HomeInfo(proxyManager));
         addModule(new UsefulWebsite());
         addModule(new ClientDebugLog());
-        addModule(new StudentIdSys(sqLite, enrollmentTracker));
+        addModule(new StudentIdSys(sqLite, enrollmentTracker, login));
 
         if (serverSettings.getPropertyBoolean("courseWatcher", false))
             addModule(new CourseWatcher(search, watchDog, serverSettings));
