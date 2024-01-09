@@ -144,6 +144,9 @@ window.pageLoading = new Signal(false);
 		pageButtons[pageId] = li(null, a(pageIdName[pageId], './?page=' + pageId, null, pageButtonClick, {pageId: pageId}));
 	}
 	queryRouter.onPageOpen = function (lastPageId, pageId) {
+		// check login
+		fetchApi('/login?mode=' + getLoginMode(pageId), 'Check login').then(onLoginStateChange);
+
 		const lastPageButton = pageButtons[lastPageId];
 		if (lastPageId && lastPageButton)
 			lastPageButton.classList.remove('opened');
@@ -222,9 +225,6 @@ window.pageLoading = new Signal(false);
 		else
 			navbar.classList.add('scroll');
 	});
-
-	// check login
-	fetchApi('/login?mode=course', 'Check login').then(onLoginStateChange);
 
 	const root = div('root',
 		// Navbar menu
@@ -463,7 +463,7 @@ window.pageLoading = new Signal(false);
 				loading = true;
 				window.pageLoading.set(true);
 				const usr = username.value.endsWith('@ncku.edu.tw') ? username : username.value + '@ncku.edu.tw';
-				fetchApi('/login?mode=course', 'login', {
+				fetchApi('/login?mode=' + getLoginMode(queryRouter.getCurrentPage()), 'login', {
 					method: 'POST',
 					body: JSON.stringify({username: usr, password: password.value}),
 					timeout: 10000,
@@ -507,5 +507,9 @@ window.pageLoading = new Signal(false);
 			}
 			showLoginWindow.set(false);
 		}
+	}
+
+	function getLoginMode(pageName){
+		return pageName === 'GradeInquiry' ? 'stuId' : 'course';
 	}
 })();

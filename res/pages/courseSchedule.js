@@ -114,7 +114,7 @@ export default function (router, loginState) {
 		console.log('Course schedule Open');
 		styles.enable();
 		loginState.addListener(onLoginState);
-		onLoginState(loginState.state);
+		// onLoginState(loginState.state);
 	}
 
 

@@ -1041,8 +1041,8 @@ public class Search implements Module {
             } else {
                 urlOrigin = courseNckuOrgUri;
                 postCookieStore = cookieStore;
-//                // Get searchID if it's null
-//                if (searchQuery.searchID.searchID == null) {
+                // Get searchID if it's null
+//                if (searchQuery.searchID == null || searchQuery.searchID.searchID == null) {
 //                    logger.log("Renew search id");
 //
 //                    Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
@@ -1050,20 +1050,25 @@ public class Search implements Module {
 //                            .cookieStore(cookieStore)
 //                            .ignoreContentType(true)
 //                            .proxy(proxyManager.getProxy());
-//                    ResponseData responseData = new ResponseData();
-//                    HttpResponseData httpResponseData = checkRobot(courseNckuOrg, request, cookieStore, responseData);
-//                    if (httpResponseData.state != ResponseState.SUCCESS)
+//                    HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
+//                    if (httpResponseData.state != ResponseState.SUCCESS) {
+//                        result.errorFetch("Failed to renew search id");
 //                        return null;
+//                    }
 //
-//                    cosPreCheck(courseNckuOrg, responseData.data, cookieStore, response, proxyManager);
-//                    if ((searchQuery.searchID = getSearchID(responseData.data, response)) == null)
+//                    cosPreCheck(courseNckuOrg, httpResponseData.data, cookieStore, null, proxyManager);
+//                    String searchID = getSearchID(httpResponseData.data, result);
+//                    if (searchID == null) {
+//                        result.errorFetch("Failed to renew search id");
 //                        return null;
+//                    }
+//                    postData.append("id=").append(URLEncoder.encode(searchID, "UTF-8"));
 //                }
-//                postData.append("id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+
 
                 // Write post data
-                postData.append("id=");
-                if (searchQuery.searchID != null) postData.append(URLEncoder.encode(searchQuery.searchID.searchID, "UTF-8"));
+                if (searchQuery.searchID != null && searchQuery.searchID.searchID != null)
+                    postData.append(URLEncoder.encode(searchQuery.searchID.searchID, "UTF-8"));
                 if (searchQuery.courseName != null)
                     postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
                 if (searchQuery.instructor != null)

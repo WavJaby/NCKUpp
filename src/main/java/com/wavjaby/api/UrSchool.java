@@ -20,6 +20,10 @@ import org.jsoup.nodes.Node;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,6 +31,8 @@ import java.io.UncheckedIOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -386,9 +392,11 @@ public class UrSchool implements Module {
             Progressbar progressbar = Logger.addProgressbar(TAG + " update");
             int[] maxPage = new int[1];
             List<ProfessorSummary> firstPage = fetchUrSchoolData(1, maxPage);
-            progressbar.setProgress((float) 1 / maxPage[0] * 100);
-            if (firstPage == null)
+            if (firstPage == null) {
+                Logger.removeProgressbar(progressbar);
                 return;
+            }
+            progressbar.setProgress((float) 1 / maxPage[0] * 100);
             List<ProfessorSummary> result = new ArrayList<>(firstPage);
 
             // Get the rest of the page
@@ -470,8 +478,9 @@ public class UrSchool implements Module {
                 try {
                     resultBody = pageFetch.execute().body();
                     break;
-                } catch (IOException | UncheckedIOException ignore) {
-                    logger.warn("UrSchool fetch retry");
+                } catch (IOException | UncheckedIOException e) {
+                    logger.warn("UrSchool fetch failed: " + e.getMessage());
+                    Thread.sleep(100);
                 }
                 if (pool.isShutdown()) {
                     return null;

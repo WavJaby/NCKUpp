@@ -401,4 +401,18 @@ public class Lib {
             logger.errTrace(e);
         }
     }
+
+    public static String findStringBetween(String input, String where, String from, String end) {
+        int startIndex = input.indexOf(where), endIndex = -1;
+        if (startIndex != -1) startIndex = input.indexOf(from, startIndex + where.length());
+        if (startIndex != -1) endIndex = input.indexOf(end, startIndex + from.length());
+        return startIndex == -1 || endIndex == -1 ? null : input.substring(startIndex + from.length(), endIndex);
+    }
+
+    public static String findStringBetween(String input, int beginIndex, String from, String end) {
+        int startIndex = beginIndex, endIndex = -1;
+        if (startIndex != -1) startIndex = input.indexOf(from, startIndex);
+        if (startIndex != -1) endIndex = input.indexOf(end, startIndex + from.length());
+        return startIndex == -1 || endIndex == -1 ? null : input.substring(startIndex + from.length(), endIndex);
+    }
 }

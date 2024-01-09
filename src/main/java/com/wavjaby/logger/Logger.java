@@ -25,7 +25,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.time.temporal.ChronoField.*;
 
 public class Logger {
-    private static final List<Progressbar> PROGRESSBARS = new ArrayList<>();
+    private static final List<Progressbar> PROGRESSBAR = new ArrayList<>();
     private static final DecimalFormat format = new DecimalFormat("#.##");
     private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
             .appendValue(MONTH_OF_YEAR, 2).appendLiteral('-').appendValue(DAY_OF_MONTH, 2)
@@ -152,8 +152,13 @@ public class Logger {
 
     public static Progressbar addProgressbar(final String tag) {
         Progressbar progressbar = new Progressbar(tag, PROGRESS_EVENT);
-        PROGRESSBARS.add(progressbar);
+        PROGRESSBAR.add(progressbar);
         return progressbar;
+    }
+
+    public static void removeProgressbar(final Progressbar progressbar) {
+        System.out.print("\33[2K\r" + getTimeStamp() + " [" + progressbar.tag + "] finish" + "\n>  ");
+        PROGRESSBAR.remove(progressbar);
     }
 
     public static void setTraceClassFilter(String traceClassFilters) {
@@ -190,18 +195,13 @@ public class Logger {
 
     private static void renderProgressbar() {
         StringBuilder builder = new StringBuilder();
-        for (Progressbar progressbar : PROGRESSBARS) {
+        for (Progressbar progressbar : PROGRESSBAR) {
             builder.append('[').append(progressbar.tag).append("] ");
             if (progressbar.message != null)
                 builder.append(progressbar.message).append(' ');
             builder.append(format.format(progressbar.progress)).append("% ");
         }
         System.out.print("\33[2K\r" + builder + ">  ");
-    }
-
-    private static void removeProgressbar(final Progressbar progressbar) {
-        System.out.print("\33[2K\r" + getTimeStamp() + " [" + progressbar.tag + "] finish" + "\n>  ");
-        PROGRESSBARS.remove(progressbar);
     }
 
     private static String getTimeStamp() {

@@ -9,6 +9,7 @@ import com.wavjaby.api.CourseSchedule;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
+import com.wavjaby.lib.LoginVerifyCode;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
@@ -340,40 +341,88 @@ public class Login implements Module {
             }
 
 //            logger.log("Login use portal");
-            // Use portal
-            Connection.Response portalPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
-                    .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .proxy(proxyManager.getProxy())
-                    .userAgent(Main.USER_AGENT)
-                    .execute();
-            // If redirect to portal (portal not auto login)
-            if (!portalPage.url().getHost().equals(courseNcku)) {
-                if (get) {
-                    // GET
+            // Check of login portal available
+            String result;
+            if (checkResult.contains("oauth2")) {
+                // Use portal
+                Connection.Response portalPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .proxy(proxyManager.getProxy())
+                        .userAgent(Main.USER_AGENT)
+                        .execute();
+                // If redirect to portal (portal not auto login)
+                if (!portalPage.url().getHost().equals(courseNcku)) {
+                    if (get) {
+                        // GET
+                        response.setData("{\"login\":false}");
+                        return;
+                    } else {
+                        // POST
+                        // Portal login
+                        logger.log("POST portal login data");
+                        portalPage = portalLogin(loginData, portalPage.body(), cookieStore, response);
+                        if (portalPage == null) {
+                            response.setData("{\"login\":false}");
+                            return;
+                        }
+                    }
+                }
+
+                // Check if login success
+                logger.log("Check if login success");
+                Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response, proxyManager.getProxy());
+                if (loginCheck == null) {
                     response.setData("{\"login\":false}");
                     return;
-                } else {
-                    // POST
-                    // Portal login
-                    logger.log("POST portal login data");
-                    portalPage = portalLogin(loginData, portalPage.body(), cookieStore, response);
-                    if (portalPage == null) {
+                }
+                result = loginCheck.body();
+            }
+            // Use regular login
+            else {
+                // Post login
+                if (!get) {
+                    String code = LoginVerifyCode.parseCode(cookieStore, proxyManager);
+                    if (code == null) {
+                        response.errorParse("Login 'code' not found");
                         response.setData("{\"login\":false}");
                         return;
                     }
-                }
-            }
+                    String token = findStringBetween(checkResult, "name=\"csrftoken\"", "value=\"", "\"");
+                    if (token == null) {
+                        response.errorParse("Login 'csrftoken' not found");
+                        response.setData("{\"login\":false}");
+                        return;
+                    }
 
-            // Check if login success
-            logger.log("Check if login success");
-            Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response, proxyManager.getProxy());
-            if (loginCheck == null) {
-                response.setData("{\"login\":false}");
-                return;
+
+                    String username = loginData.username.substring(0, loginData.username.indexOf('@'));
+                    Connection.Response portalPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=login")
+                            .header("Connection", "keep-alive")
+                            .cookieStore(cookieStore)
+                            .ignoreContentType(true)
+                            .proxy(proxyManager.getProxy())
+                            .userAgent(Main.USER_AGENT)
+                            .method(Connection.Method.POST)
+                            .requestBody("user_id=" + URLEncoder.encode(username, "UTF-8") +
+                                    "&passwd=" + URLEncoder.encode(loginData.password, "UTF-8") +
+                                    "&code=" + code +
+                                    "&csrftoken=" + token)
+                            .execute();
+
+                    result = portalPage.body();
+
+                    String errorMessage = findStringBetween(result, "$(\"#code\")", "show_note_msg(\"", "\"");
+                    if (errorMessage != null) {
+                        response.errorBadPayload(errorMessage);
+                        return;
+                    }
+                }
+                // Check login
+                else
+                    result = checkResult;
             }
-            String result = loginCheck.body();
 
             // checkPass if force login
             if (result.contains("/index.php?c=auth&m=force_login")) {
@@ -520,9 +569,7 @@ public class Login implements Module {
 
     private Connection.Response portalLogin(LoginData loginData, String portalBody, CookieStore cookieStore, ApiResponse response) {
         // In portal page
-        String username = loginData.username;
-        String password = loginData.password;
-        if (username == null || password == null) {
+        if (loginData.username == null || loginData.password == null) {
             response.errorBadPayload("Login data not send");
             return null;
         }
@@ -552,17 +599,30 @@ public class Login implements Module {
                     .method(Connection.Method.POST)
                     .header("Referer", loginUrl)
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .requestBody("UserName=" + URLEncoder.encode(username, "UTF-8") +
-                            "&Password=" + URLEncoder.encode(password, "UTF-8") +
+                    .requestBody("UserName=" + URLEncoder.encode(loginData.username, "UTF-8") +
+                            "&Password=" + URLEncoder.encode(loginData.password, "UTF-8") +
                             "&AuthMethod=FormsAuthentication");
             Connection.Response portalResponse = postLogin.execute();
 
             // Redirect
-            while (portalResponse.statusCode() == 302) {
+            while (portalResponse.statusCode() == 302 || portalResponse.statusCode() == 301) {
                 String location = portalResponse.header("Location");
                 if (location == null) {
                     response.errorParse("Redirect location not found");
                     return null;
+                }
+                // Check if not start with origin
+                if (location.startsWith("./") ||
+                        !location.startsWith("http://") && !location.startsWith("https://")) {
+                    URL url = portalResponse.url();
+                    String origin = url.getProtocol() + "://" + url.getHost();
+                    // Get parent path
+                    if (url.getPath() != null && !location.startsWith("/")) {
+                        int end;
+                        if ((end = url.getPath().lastIndexOf('/')) != -1)
+                            origin += url.getPath().substring(0, end);
+                    }
+                    location = origin + '/' + location.substring(location.startsWith("./") ? 2 : location.startsWith("/") ? 1 : 0);
                 }
                 Connection redirect = HttpConnection.connect(location)
                         .header("Connection", "keep-alive")

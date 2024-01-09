@@ -71,7 +71,7 @@ export default function (router, loginState) {
 		styles.enable();
 		loginState.addListener(onLoginState);
 		allDistribution.updateAllDistribution();
-		onLoginState(loginState.state);
+		// onLoginState(loginState.state);
 	}
 
 
