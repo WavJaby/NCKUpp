@@ -438,13 +438,14 @@ public class Login implements Module {
             }
 
             // checkPass login state
-            logger.log("Check login state");
+            logger.log("Check user info");
             shortInfo = getCourseLoginUserInfo(result, cookieStore);
             if (shortInfo == null) {
                 response.setData("{\"login\":false}");
                 return;
             }
             shortInfo.setDataToApiResponse(response);
+            logger.log("Login success");
 
             String finalResult = result;
             loginCosPreCheckPool.execute(() ->

@@ -253,7 +253,6 @@ public class CourseSchedule implements Module {
                     : "action=" + action + "&info=" + URLEncoder.encode(info, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);
-            response.errorParse("Unsupported encoding");
             return;
         }
 

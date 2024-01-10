@@ -857,9 +857,12 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	function parseData2DayTable(tableWidth, tableHeight, scheduleData) {
 		// Parse schedule
 		const dayTable = new Array(tableWidth);
+		const dayTableOut = new Array(tableWidth);
 		const dayUndecided = [];
-		for (let i = 0; i < tableWidth; i++)
+		for (let i = 0; i < tableWidth; i++) {
 			dayTable[i] = new Array(tableHeight);
+			dayTableOut[i] = new Array(tableHeight);
+		}
 		for (const eachCourse of scheduleData.schedule) {
 			const serialNumber = eachCourse.serialNumber;
 			if (courseDetail[serialNumber] === undefined)
@@ -886,24 +889,26 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 		console.log(dayTable)
 
 		for (let i = 0; i < tableWidth; i++)
-			for (let j = 0; j < tableHeight; j++)
-				if (dayTable[i][j]) {
-					const /**@type{CourseWithTime[]}*/ courseTimeData = dayTable[i][j] = Object.values(dayTable[i][j]);
-					// Course in section
-					for (const courseData of courseTimeData) {
-						const courseTime = courseData[1];
-						if (j !== courseTime.sectionStart)
-							continue;
-						const length = courseTime.sectionEnd - courseTime.sectionStart + 1;
-						// Fill time, push room info
-						for (let k = 1; k < length; k++) {
-							let courseTimeDataNext = dayTable[i][j + k];
-							if (!courseTimeDataNext) courseTimeDataNext = dayTable[i][j + k] = [];
-							courseTimeDataNext.push(courseData);
-						}
+			for (let j = 0; j < tableHeight; j++) {
+				if (!dayTable[i][j]) continue;
+
+				const /**@type{CourseWithTime[]}*/ courseTimeData = Object.values(dayTable[i][j]);
+				// Course in section
+				for (const courseData of courseTimeData) {
+					const courseTime = courseData[1];
+					// if (j !== courseTime.sectionStart)
+					// 	continue;
+					const length = courseTime.sectionEnd - courseTime.sectionStart + 1;
+					// Fill time, push room info
+					for (let k = 0; k < length; k++) {
+						let courseTimeDataNext = dayTableOut[i][j + k];
+						if (!courseTimeDataNext) courseTimeDataNext = dayTableOut[i][j + k] = [];
+						courseTimeDataNext.push(courseData);
 					}
 				}
-		return {dayTable: dayTable, dayUndecided: dayUndecided};
+			}
+		console.log(dayTableOut)
+		return {dayTable: dayTableOut, dayUndecided: dayUndecided};
 	}
 
 	/**
