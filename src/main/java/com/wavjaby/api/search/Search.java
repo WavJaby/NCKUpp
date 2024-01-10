@@ -30,10 +30,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.URI;
-import java.net.URLEncoder;
+import java.net.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -582,17 +579,17 @@ public class Search implements Module {
 
     public static class SaveQueryToken {
         private final URI urlOrigin;
-        private final String search;
+        private final String url;
         private final CookieStore cookieStore;
 
-        public SaveQueryToken(URI urlOrigin, String search, CookieStore cookieStore) {
+        public SaveQueryToken(URI urlOrigin, String url, CookieStore cookieStore) {
             this.urlOrigin = urlOrigin;
-            this.search = search;
+            this.url = url;
             this.cookieStore = cookieStore;
         }
 
         public String getUrl() {
-            return urlOrigin + "/index.php?c=qry11215" + search;
+            return url;
         }
     }
 
@@ -1065,6 +1062,37 @@ public class Search implements Module {
 //                    postData.append("id=").append(URLEncoder.encode(searchID, "UTF-8"));
 //                }
 
+                // Maybe temporary
+                Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                        .header("Connection", "keep-alive")
+                        .cookieStore(cookieStore)
+                        .ignoreContentType(true)
+                        .proxy(proxyManager.getProxy());
+                HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
+                if (httpResponseData.state != ResponseState.SUCCESS) {
+                    result.errorFetch("Failed to renew search id");
+                    return null;
+                }
+                String url = findStringBetween(httpResponseData.data, "iframe", "src=\"", "\"");
+                if (url != null) {
+                    try {
+                        urlOrigin = new URI(courseQueryNckuOrgUri.toString() + "/query");
+                    } catch (URISyntaxException e) {
+                        logger.errTrace(e);
+                        return null;
+                    }
+                    Connection requestCookie = HttpConnection.connect(url)
+                            .header("Connection", "keep-alive")
+                            .cookieStore(cookieStore)
+                            .ignoreContentType(true)
+                            .proxy(proxyManager.getProxy());
+                    HttpResponseData res = sendRequestAndCheckRobot(urlOrigin, requestCookie, cookieStore);
+                    if (res.state != ResponseState.SUCCESS) {
+                        result.errorFetch("Failed to get renew cookie");
+                        return null;
+                    }
+                    cosPreCheck(courseNckuOrg, res.data, cookieStore, null, proxyManager);
+                }
 
                 // Write post data
                 if (searchQuery.searchID != null && searchQuery.searchID.searchID != null)
@@ -1104,7 +1132,6 @@ public class Search implements Module {
                 .timeout(9000)
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .header("X-Requested-With", "XMLHttpRequest");
-        boolean enQuery;
         String body;
         try {
             body = request.execute().body();
@@ -1114,9 +1141,6 @@ public class Search implements Module {
             return null;
         }
 
-        enQuery = body.startsWith("&m=en_query");
-//        if (enQuery)
-//            logger.log(urlOrigin + "/index.php?c=qry11215" + body);
 
         if (body.equals("0")) {
             result.errorParse("Condition not set");
@@ -1130,17 +1154,22 @@ public class Search implements Module {
             result.errorParse("Can not create save query");
             return null;
         }
-        if (!enQuery) {
+        if (body.contains("id=\"loader\"")) {
+            String url = findStringBetween(body, "id=\"loader\"", "src=\"", "\"");
+            return new SaveQueryToken(urlOrigin, url, postCookieStore);
+        }
+        if (!body.startsWith("&m=en_query")) {
             result.errorFetch("Unknown error");
             return null;
         }
-        return new SaveQueryToken(urlOrigin, body, postCookieStore);
+        return new SaveQueryToken(urlOrigin, urlOrigin + "/index.php?c=qry11215" + body, postCookieStore);
     }
 
     private HttpResponseData getCourseNCKU(SaveQueryToken saveQueryToken) {
 //            logger.log(TAG + "Get search result");
         Connection request = HttpConnection.connect(saveQueryToken.getUrl())
                 .header("Connection", "keep-alive")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
@@ -1643,9 +1672,10 @@ public class Search implements Module {
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy())
                             .method(Connection.Method.POST)
+//                            .header("Referer", "https://course-query.acad.ncku.edu.tw/query/index.php?c=qry11215&m=en_query")
                             .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                             .header("X-Requested-With", "XMLHttpRequest")
-                            .requestBody("time=" + (System.currentTimeMillis() / 1000) +
+                            .requestBody("sid=&time=" + (System.currentTimeMillis() / 1000) +
                                     "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
                                     "&code=" + code)
                             .execute().body();

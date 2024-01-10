@@ -4,16 +4,16 @@ import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.logger.Logger;
+import org.jsoup.Connection;
+import org.jsoup.helper.HttpConnection;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,10 +24,10 @@ import static com.wavjaby.lib.Lib.*;
 public class ProxyManager implements Module {
     private static final String TAG = "ProxyManager";
     private static final Logger logger = new Logger(TAG);
-    private static final int TEST_TIMEOUT = 1500;
+    private static final int TEST_TIMEOUT = 2000;
     private final PropertiesReader properties;
     private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Checker"));
-    private final List<ProxyData> proxies = new ArrayList<>();
+    private final List<ProxyData> proxies = new CopyOnWriteArrayList<>();
     private File proxyFile;
     private long proxyFileLastModified;
     private ProxyData proxy;
@@ -136,43 +136,45 @@ public class ProxyManager implements Module {
     }
 
     private final Runnable proxyCheckFunc = () -> {
-        final String testUrl = "https://course.ncku.edu.tw/";
-
         updateProxy();
         int newProxyIndex = proxyIndex;
-        ProxyData testingProxy;
+        ProxyData testingProxy = proxies.get(newProxyIndex);
         for (int i = 0; i < proxies.size(); i++) {
-            testingProxy = proxies.get(newProxyIndex);
             try {
-                HttpURLConnection conn = (HttpURLConnection) new URL(testUrl).openConnection(testingProxy.toProxy());
-                conn.setConnectTimeout(TEST_TIMEOUT);
-                conn.setReadTimeout(TEST_TIMEOUT);
-                conn.setUseCaches(false);
-                conn.setRequestProperty("Connection", "close");
-
-                if (conn.getResponseCode() == 200) {
-                    readInputStreamToString(conn.getInputStream(), StandardCharsets.UTF_8);
-                    conn.disconnect();
+                Connection.Response conn = HttpConnection.connect("https://course.ncku.edu.tw/index.php?c=auth")
+                        .timeout(TEST_TIMEOUT)
+                        .proxy(testingProxy.toProxy())
+                        .ignoreContentType(true)
+                        .userAgent(Main.USER_AGENT)
+                        .execute();
+                if (conn.statusCode() == 200) {
+                    String body = conn.body();
                     // Success
-                    if (proxyIndex != newProxyIndex) {
-                        proxyIndex = newProxyIndex;
-                        proxy = proxies.get(proxyIndex);
-                        getUsingProxy();
+                    if (body != null && body.contains("./index.php?c=verifycode")) {
+                        // Update proxy
+                        if (proxyIndex != newProxyIndex) {
+                            proxyIndex = newProxyIndex;
+                            proxy = proxies.get(proxyIndex);
+                            getUsingProxy();
+                        }
+                        return;
                     }
-                    return;
-                } else {
-                    logger.log("Test: " + newProxyIndex + '/' + proxies.size() + ' ' + testingProxy.toUrl() + ' ' + conn.getResponseCode() + conn.getResponseMessage());
-                }
-                conn.disconnect();
-            } catch (IOException e) {
+                    // Verify code not found
+                    else
+                        logger.log("Test: " + newProxyIndex + '/' + proxies.size() + ' ' + testingProxy.toUrl() + " verify code not found");
+                } else
+                    logger.log("Test: " + newProxyIndex + '/' + proxies.size() + ' ' + testingProxy.toUrl() + ' ' +
+                            conn.statusCode() + conn.statusMessage());
+            } catch (Exception e) {
                 String m = e.getMessage();
                 if (m.length() > 20)
                     m = m.substring(0, 20) + "...";
                 logger.log("Test: " + newProxyIndex + '/' + proxies.size() + ' ' + testingProxy.toUrl() + ' ' + m);
-                // Next proxy
-                if (++newProxyIndex >= proxies.size())
-                    newProxyIndex = 0;
             }
+            // Next proxy
+            if (++newProxyIndex >= proxies.size())
+                newProxyIndex = 0;
+            testingProxy = proxies.get(newProxyIndex);
         }
     };
 
@@ -234,11 +236,9 @@ public class ProxyManager implements Module {
             }
 
             // Update proxy
-            synchronized (proxies) {
-                proxies.clear();
-                proxies.addAll(oldProxy);
-                proxies.addAll(newProxy);
-            }
+            proxies.clear();
+            proxies.addAll(oldProxy);
+            proxies.addAll(newProxy);
         }
         if (!proxies.isEmpty()) {
             proxyIndex = 0;

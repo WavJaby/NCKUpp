@@ -20,11 +20,11 @@ $label-height: 50px;
 
 #distImage {
     > .distImage {
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        position: absolute;
+        //top: 0;
+        //bottom: 0;
+        //left: 0;
+        //right: 0;
+        //position: absolute;
 
         &.noLabel {
             > .bars {
@@ -228,6 +228,29 @@ $label-height: 50px;
 
             > .loaderCircle {
                 display: inline-block;
+            }
+        }
+    }
+
+    > .allDistribution {
+        > .normalDistImages {
+            > .courseInfo {
+                width: 300px;
+                margin: 10px;
+                display: inline-block;
+
+                > span {
+                    display: block;
+                    text-align: center;
+                }
+
+                > .distImage {
+                    width: 100%;
+                    height: 300px;
+                    position: relative;
+                }
+
+                @extend #distImage;
             }
         }
     }

@@ -97,7 +97,7 @@ export default function (router, loginState) {
 		console.log('Course schedule Open');
 		styles.enable();
 		loginState.addListener(onLoginState);
-		// onLoginState(loginState.state);
+		onLoginState(loginState.state);
 	}
 
 
@@ -886,7 +886,6 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 					sectionCourse.push(timeLocInfo);
 			}
 		}
-		console.log(dayTable)
 
 		for (let i = 0; i < tableWidth; i++)
 			for (let j = 0; j < tableHeight; j++) {
@@ -907,7 +906,6 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 					}
 				}
 			}
-		console.log(dayTableOut)
 		return {dayTable: dayTableOut, dayUndecided: dayUndecided};
 	}
 

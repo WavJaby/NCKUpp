@@ -379,6 +379,7 @@ public class StudentIdSys implements Module {
             builder.append(']');
 
             return new JsonObjectStringBuilder()
+                    .append("courseName", courseName)
                     .append("systemNumber", systemNumber)
                     .append("classCode", classCode)
                     .append("year", year)

@@ -231,6 +231,7 @@ public class NCKUHub implements Module {
         Connection.Response nckuHubCourse;
         try {
             nckuHubCourse = HttpConnection.connect("https://nckuhub.com/course/")
+                    .header("Accept-Encoding","gzip")
                     .ignoreContentType(true)
                     .execute();
         } catch (IOException e) {

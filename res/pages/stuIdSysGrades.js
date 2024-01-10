@@ -1,6 +1,6 @@
 'use strict';
 
-import {button, div, h1, h2, p, mountableStylesheet, ShowIf, Signal, span, text, img} from '../minjs_v000/domHelper.min.js';
+import {button, div, h1, h2, img, mountableStylesheet, p, ShowIf, Signal, span, text} from '../minjs_v000/domHelper.min.js';
 import {fetchApi} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 import SelectMenu from '../selectMenu.js';
@@ -245,56 +245,6 @@ function MyGrades(router) {
 		});
 	}
 
-	/**
-	 * @param {int[] | null} counts
-	 * @param {boolean} [noLabel]
-	 */
-	function createDistImageFromData(counts, noLabel) {
-		if (counts == null) {
-			return div('distImage',
-				span('無成績分布圖', 'nodata'),
-			);
-		}
-
-		const bars = [];
-		const labels = [];
-		let max;
-		if (noLabel) {
-			// Get max
-			max = counts.reduce((i, j) => j > i ? j : i, 0);
-		} else {
-			// Get sum
-			max = counts.reduce((i, j) => i + j, 0);
-		}
-
-		const barWidth = 100 / counts.length;
-		for (let i = 0; i < counts.length; i++) {
-			const count = counts[i];
-			const bar = div(null,
-				noLabel && count === 0 ? null : span(count, 'count'),
-			);
-			bar.style.width = barWidth + '%';
-			bar.style.height = 90 * count / max + '%';
-			bar.style.left = barWidth * i + '%';
-			bars.push(bar);
-			if (noLabel)
-				continue;
-
-			const line = div();
-			line.style.left = barWidth * i + '%';
-			labels.push(line);
-
-			const label = span(i * 10, i === 0 ? null : 'center');
-			label.style.left = barWidth * i + '%';
-			labels.push(label);
-		}
-
-		return div('distImage' + (noLabel ? ' noLabel' : ''),
-			div('bars', bars),
-			noLabel ? null : div('labels', labels),
-		);
-	}
-
 	function getSemesterGrades() {
 		if (lastSemID === this.semID)
 			return;
@@ -446,12 +396,10 @@ function MyContribute(router, loginState) {
 	function onClose(conform) {
 		if (!conform || !loginState.state || !loginState.state.login)
 			return;
-		fetchApi('/stuIdSys?mode=addContribute&semesterIds=' +
-			selectMenu.getSelectedValue().join(',') +
-			'&studentId=' + loginState.state.studentID,
-		).then(i => {
-
-		});
+		// fetchApi('/stuIdSys?mode=addContribute&semesterIds=' +
+		// 	selectMenu.getSelectedValue().join(',') +
+		// 	'&studentId=' + loginState.state.studentID,
+		// ).then();
 	}
 
 	function updateContributeState(data) {
@@ -461,10 +409,12 @@ function MyContribute(router, loginState) {
 
 function AllDistribution() {
 	const total = span('--');
+	const allDist = div('normalDistImages');
 
 	this.element = div('allDistribution',
 		h1('所有成績分佈 (Beta)'),
 		span(null, 'total', span('共收錄: '), total, span('筆')),
+		allDist
 	);
 
 	this.updateAllDistribution = function () {
@@ -473,7 +423,67 @@ function AllDistribution() {
 		});
 	};
 
-	function updateAllDistribution() {
-
+	function updateAllDistribution(data) {
+		total.textContent = data.length;
+		const fragment = document.createDocumentFragment();
+		for (let distData of data) {
+			fragment.appendChild(div('courseInfo',
+				createDistImageFromData(distData.studentCount),
+				span(distData.year + '-' + (distData.semester + 1) + ' ' +
+					distData.systemNumber + (distData.classCode ? '-' + distData.classCode + ' ' : ' ') +
+					distData.courseName)
+			));
+		}
+		allDist.appendChild(fragment);
 	}
+}
+
+/**
+ * @param {int[] | null} counts
+ * @param {boolean} [noLabel]
+ */
+function createDistImageFromData(counts, noLabel) {
+	if (counts == null) {
+		return div('distImage',
+			span('無成績分布圖', 'nodata'),
+		);
+	}
+
+	const bars = [];
+	const labels = [];
+	let max;
+	if (noLabel) {
+		// Get max
+		max = counts.reduce((i, j) => j > i ? j : i, 0);
+	} else {
+		// Get sum
+		max = counts.reduce((i, j) => i + j, 0);
+	}
+
+	const barWidth = 100 / counts.length;
+	for (let i = 0; i < counts.length; i++) {
+		const count = counts[i];
+		const bar = div(null,
+			noLabel && count === 0 ? null : span(count, 'count'),
+		);
+		bar.style.width = barWidth + '%';
+		bar.style.height = 90 * count / max + '%';
+		bar.style.left = barWidth * i + '%';
+		bars.push(bar);
+		if (noLabel)
+			continue;
+
+		const line = div();
+		line.style.left = barWidth * i + '%';
+		labels.push(line);
+
+		const label = span(i * 10, i === 0 ? null : 'center');
+		label.style.left = barWidth * i + '%';
+		labels.push(label);
+	}
+
+	return div('distImage' + (noLabel ? ' noLabel' : ''),
+		div('bars', bars),
+		noLabel ? null : div('labels', labels),
+	);
 }

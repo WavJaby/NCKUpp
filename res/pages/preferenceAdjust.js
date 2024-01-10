@@ -32,7 +32,7 @@ export default function (router, loginState) {
 	function onPageOpen() {
 		console.log('Preference adjust Open');
 		styles.enable();
-		// onLoginState(loginState.state);
+		onLoginState(loginState.state);
 		loginState.addListener(onLoginState);
 	}
 
@@ -251,7 +251,7 @@ function AdjustList() {
 	const adjustItemHolder = div('adjustItemHolder');
 	/**@type{HTMLDivElement}*/
 	const adjustListBody = div('body');
-	const element = this.element = div('adjustList',
+	this.element = div('adjustList',
 		adjustItemHolder,
 		adjustListBody,
 	);

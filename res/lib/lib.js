@@ -3,7 +3,7 @@ export const isLocalNetwork = window.location.hostname === 'localhost' || window
 const customServer = localStorage.getItem('customServer');
 const apiEndPoint = isLocalNetwork
 	? customServer || window.location.origin + '/api/v0'
-	: 'https://api.wavjaby.nckuctf.org/api/v0';
+	: 'https://37a2-2001-b400-e285-37e9-b913-f26-1403-da61.ngrok-free.app/api/v0';
 
 // const isSafari = navigator.userAgent &&
 // 	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1 &&
