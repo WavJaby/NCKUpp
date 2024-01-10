@@ -143,7 +143,7 @@ export function fetchApi(endpoint, showState, option) {
 export function removePreSchedule(courseData, removeKey, onSuccess, onFailed) {
 	const courseName = '[' + courseData.serialNumber + '] ' + courseData.courseName;
 	fetchApi('/courseSchedule?pre=true', 'Delete pre schedule',
-		{method: 'post', body: 'action=delete&info=' + removeKey}
+		{method: 'post', body: {action: 'delete', info: removeKey}}
 	).then(response => {
 		if (response.success)
 			onSuccess && onSuccess(response.msg, courseName);

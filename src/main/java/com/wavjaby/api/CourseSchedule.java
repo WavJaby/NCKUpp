@@ -11,6 +11,8 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.RequestBody;
+import com.wavjaby.lib.restapi.request.RequestParam;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -19,12 +21,10 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,23 +130,21 @@ public class CourseSchedule implements Module {
         return apiResponse;
     }
 
+    public static class CourseScheduleRequest {
+        String action, info;
+    }
+
     @SuppressWarnings("unused")
     @RequestMapping(value = "/courseSchedule", method = RequestMethod.POST)
-    public RestApiResponse postCourseSchedule(HttpExchange req) {
+    public RestApiResponse postCourseSchedule(HttpExchange req, @RequestParam("pre") String pre, @RequestBody CourseScheduleRequest request) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
-        Map<String, String> query = parseUrlEncodedForm(req.getRequestURI().getRawQuery());
 
         ApiResponse response = new ApiResponse();
         // Post pre schedule
-        if ("true".equals(query.get("pre"))) {
-            try {
-                postPreCourseSchedule(readRequestBody(req, StandardCharsets.UTF_8), cookieStore, response);
-            } catch (IOException e) {
-                response.errorBadPayload("Read payload failed");
-                logger.err(e);
-            }
+        if ("true".equals(pre)) {
+            postPreCourseSchedule(request, cookieStore, response);
         } else
             response.errorUnsupportedHttpMethod(req.getRequestMethod());
         packCourseLoginStateCookie(req, loginState, cookieStore);
@@ -231,10 +229,9 @@ public class CourseSchedule implements Module {
         response.setData(builder.toString());
     }
 
-    public void postPreCourseSchedule(String postData, CookieStore cookieStore, ApiResponse response) {
-        Map<String, String> form = parseUrlEncodedForm(postData);
-        String action = form.get("action");
-        String info = form.get("info");
+    public void postPreCourseSchedule(CourseScheduleRequest form, CookieStore cookieStore, ApiResponse response) {
+        String action = form.action;
+        String info = form.info;
         if (action == null || action.isEmpty()) {
             response.errorBadPayload("Payload form require \"action\"");
             return;

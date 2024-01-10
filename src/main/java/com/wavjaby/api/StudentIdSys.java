@@ -268,6 +268,7 @@ public class StudentIdSys implements Module {
             float gradeFloat;
             try {
                 gradeFloat = grade_.equals("成績未到") ? -2
+                        : grade_.equals("抵免") ? -4
                         : grade_.equals("退選") ? -5
                         : Float.parseFloat(grade_);
             } catch (NumberFormatException e) {

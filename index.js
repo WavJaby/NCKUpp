@@ -7,6 +7,7 @@ import {
 	div,
 	doomHelperDebug,
 	footer,
+	form,
 	h1,
 	h2,
 	h3,
@@ -24,7 +25,6 @@ import {
 	svg,
 	text,
 	TextState,
-	form,
 	ul
 } from './res/minjs_v000/domHelper.min.js';
 
@@ -145,7 +145,8 @@ window.pageLoading = new Signal(false);
 	}
 	queryRouter.onPageOpen = function (lastPageId, pageId) {
 		// check login
-		fetchApi('/login?mode=' + getLoginMode(pageId), 'Check login').then(onLoginStateChange);
+		if (pageId === 'GradeInquiry' || !userLoginData.state)
+			fetchApi('/login?mode=' + getLoginMode(pageId), 'Check login').then(onLoginStateChange);
 
 		const lastPageButton = pageButtons[lastPageId];
 		if (lastPageId && lastPageButton)
@@ -509,7 +510,7 @@ window.pageLoading = new Signal(false);
 		}
 	}
 
-	function getLoginMode(pageName){
+	function getLoginMode(pageName) {
 		return pageName === 'GradeInquiry' ? 'stuId' : 'course';
 	}
 })();

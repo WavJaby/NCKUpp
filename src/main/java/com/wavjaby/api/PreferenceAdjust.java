@@ -11,6 +11,7 @@ import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.RequestBody;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -21,14 +22,13 @@ import org.jsoup.nodes.TextNode;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Map;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.checkCourseNckuLoginRequiredPage;
+import static com.wavjaby.lib.Lib.checkCourseNckuPageError;
 
 @RequestMapping("/api/v0")
 public class PreferenceAdjust implements Module {
@@ -78,20 +78,19 @@ public class PreferenceAdjust implements Module {
         return response;
     }
 
+    public static class PreferenceAdjustRequest {
+        String mode, type, expectA9RegVal, modifyItems, removeItem;
+    }
+
     @SuppressWarnings("unused")
     @RequestMapping(value = "/preferenceAdjust", method = RequestMethod.POST)
-    public RestApiResponse postPreferenceAdjust(HttpExchange req) {
+    public RestApiResponse postPreferenceAdjust(HttpExchange req, @RequestBody PreferenceAdjustRequest request) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
         ApiResponse response = new ApiResponse();
-        try {
-            updatePreferenceAdjustList(readRequestBody(req, StandardCharsets.UTF_8), response, cookieStore);
-        } catch (IOException e) {
-            response.errorBadPayload("Read payload failed");
-            logger.err(e);
-        }
+        updatePreferenceAdjustList(request, response, cookieStore);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
 
@@ -99,11 +98,10 @@ public class PreferenceAdjust implements Module {
         return response;
     }
 
-    private void updatePreferenceAdjustList(String postData, ApiResponse response, CookieStore cookieStore) {
-        Map<String, String> form = parseUrlEncodedForm(postData);
-        String mode = form.get("mode");
-        String type = form.get("type");
-        String expectA9RegVal = form.get("expectA9RegVal");
+    private void updatePreferenceAdjustList(PreferenceAdjustRequest form, ApiResponse response, CookieStore cookieStore) {
+        String mode = form.mode;
+        String type = form.type;
+        String expectA9RegVal = form.expectA9RegVal;
         if (mode == null || mode.isEmpty()) {
             response.errorBadPayload("Payload form require \"mode\"");
             return;
@@ -115,13 +113,13 @@ public class PreferenceAdjust implements Module {
 
         StringBuilder payload = new StringBuilder();
         String modifyItems, removeItem;
-        if ((modifyItems = form.get("modifyItems")) != null && !modifyItems.isEmpty()) {
+        if ((modifyItems = form.modifyItems) != null && !modifyItems.isEmpty()) {
             for (String itemId : modifyItems.split(",")) {
                 if (payload.length() > 0)
                     payload.append('&');
                 payload.append("list_data%5B%5D=").append(itemId);
             }
-        } else if ((removeItem = form.get("removeItem")) != null && !removeItem.isEmpty()) {
+        } else if ((removeItem = form.removeItem) != null && !removeItem.isEmpty()) {
             payload.append("time=").append(System.currentTimeMillis() / 1000)
                     .append("&type=").append(type)
                     .append("&item=").append(removeItem);

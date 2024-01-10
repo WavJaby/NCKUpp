@@ -651,7 +651,7 @@ export default function (router, loginState, userGuideTool) {
 				// Add course to preference enter list
 				fetchApi(`/courseRegister?mode=genEdu`, 'Add preference', {
 					method: 'POST',
-					body: `prechk=${course.prechk}&cosdata=${course.cosdata}&action=${data.action}&preSkip=${data.preSkip}`
+					body: {prechk: course.prechk, cosdata: course.cosdata, action: data.action, preSkip: data.preSkip}
 				}).then(response => {
 					if (!response.success) {
 						window.messageAlert.addError(title + '失敗', response.msg, 10000);

@@ -138,15 +138,16 @@ export default function (router, loginState) {
 	}
 
 	function showInSearch() {
-		const rawQuery = [['serial', this.serialIds.join(',')], ['dept', 'A9']];
+		const rawQuery = {serial: this.serialIds.join(',')};
 		courseSearch(router, rawQuery);
 	}
 
 	function saveExpectA9RegVal() {
 		// console.log(this.input.value);
-
-		const form = 'mode=' + this.mode + '&expectA9RegVal=' + this.input.value;
-		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
+		fetchApi('/preferenceAdjust', 'Update preference', {
+			method: 'POST',
+			body: {mode: this.mode, expectA9RegVal: this.input.value}
+		}).then(response => {
 			if (response.success) {
 				window.messageAlert.addSuccess('設定通識期望抽中科目數成功', response.msg, 5000);
 			} else
@@ -162,8 +163,10 @@ export default function (router, loginState) {
 		if (!deleteConform)
 			return;
 
-		const form = 'mode=' + removeKey + '&type=' + typeKey + '&removeItem=' + course.key;
-		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
+		fetchApi('/preferenceAdjust', 'Update preference', {
+			method: 'POST',
+			body: {mode: removeKey, type: typeKey, removeItem: course.key}
+		}).then(response => {
 			updatePreferenceAdjust();
 			if (response.success) {
 				window.messageAlert.addSuccess('志願排序刪除成功', response.msg, 5000);
@@ -198,8 +201,10 @@ export default function (router, loginState) {
 			orderKeys.push(item.key);
 		const itemsStr = orderKeys.join(',');
 		const typeKey = lastAdjustList.typeKey;
-		const form = 'mode=' + actionKey + '&type=' + typeKey + '&modifyItems=' + itemsStr;
-		fetchApi('/preferenceAdjust', 'Update preference', {method: 'POST', body: form}).then(response => {
+		fetchApi('/preferenceAdjust', 'Update preference', {
+			method: 'POST',
+			body: {mode: actionKey, type: typeKey, modifyItems: itemsStr}
+		}).then(response => {
 			if (response.success) {
 				window.messageAlert.addSuccess('志願排序儲存成功', response.msg, 5000);
 			} else {

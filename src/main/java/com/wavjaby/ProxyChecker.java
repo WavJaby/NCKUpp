@@ -200,12 +200,12 @@ public class ProxyChecker {
         Semaphore checkConnectionLock = new Semaphore(threadCount * 2, true);
         CountDownLatch taskLeft = new CountDownLatch(proxyDataList.size());
         final boolean conforming = conformTry != -1;
-        final String testUrl = conforming
-                ? "https://course.ncku.edu.tw/index.php"
-                : "https://api.wavjaby.nckuctf.org/api/v0/ip";
+//        final String testUrl = conforming
+//                ? "https://course.ncku.edu.tw/index.php"
+//                : "https://api.wavjaby.nckuctf.org/api/v0/ip";
 //                : "https://ifconfig.me/ip";
 //        final String testUrl = "https://api.wavjaby.nckuctf.org/api/ip";
-//        final String testUrl = "https://ifconfig.me/ip";
+        final String testUrl = "https://ifconfig.me/ip";
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(onProxyTestStart());

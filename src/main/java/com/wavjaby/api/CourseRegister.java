@@ -7,11 +7,12 @@ import com.wavjaby.ProxyManager;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
-import com.wavjaby.lib.ApiRequestParser;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
+import com.wavjaby.lib.restapi.request.RequestBody;
+import com.wavjaby.lib.restapi.request.RequestParam;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -21,13 +22,12 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
-import java.nio.charset.StandardCharsets;
 
 import static com.wavjaby.Main.courseNckuOrg;
-import static com.wavjaby.lib.ApiRequestParser.parseApiRequest;
 import static com.wavjaby.lib.Cookie.getDefaultCookie;
 import static com.wavjaby.lib.Cookie.packCourseLoginStateCookie;
-import static com.wavjaby.lib.Lib.*;
+import static com.wavjaby.lib.Lib.checkCourseNckuLoginRequiredPage;
+import static com.wavjaby.lib.Lib.checkCourseNckuPageError;
 
 
 @RequestMapping("/api/v0")
@@ -57,13 +57,13 @@ public class CourseRegister implements Module {
 
     @SuppressWarnings("unused")
     @RequestMapping(value = "/courseRegister", method = RequestMethod.GET)
-    public RestApiResponse getCourseRegister(HttpExchange req) {
+    public RestApiResponse getCourseRegister(HttpExchange req, @RequestParam("mode") String mode) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
         ApiResponse apiResponse = new ApiResponse();
-        getCoursePreRegisterList(req.getRequestURI().getRawQuery(), apiResponse, cookieStore);
+        getCoursePreRegisterList(mode, apiResponse, cookieStore);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
 
@@ -73,18 +73,13 @@ public class CourseRegister implements Module {
 
     @SuppressWarnings("unused")
     @RequestMapping(value = "/courseRegister", method = RequestMethod.POST)
-    public RestApiResponse postCourseRegister(HttpExchange req) {
+    public RestApiResponse postCourseRegister(HttpExchange req, @RequestParam("mode") String mode, @RequestBody CoursePreRegisterRequest request) {
         long startTime = System.currentTimeMillis();
         CookieStore cookieStore = new CookieManager().getCookieStore();
         String loginState = getDefaultCookie(req, cookieStore);
 
         ApiResponse response = new ApiResponse();
-        try {
-            postCoursePreRegisterList(req.getRequestURI().getRawQuery(), readRequestBody(req, StandardCharsets.UTF_8), response, cookieStore);
-        } catch (IOException e) {
-            response.errorBadPayload("Read payload failed");
-            logger.errTrace(e);
-        }
+        postCoursePreRegisterList(mode, request, response, cookieStore);
 
         packCourseLoginStateCookie(req, loginState, cookieStore);
 
@@ -92,28 +87,15 @@ public class CourseRegister implements Module {
         return response;
     }
 
-    private static class CoursePreRegisterRequest extends ApiRequestParser.ApiRequestLib {
-        @ApiRequestParser.Required
-        private String mode;
-
-        @ApiRequestParser.Required
-        @ApiRequestParser.Payload
+    public static class CoursePreRegisterRequest {
         private String action;
-        @ApiRequestParser.Required
-        @ApiRequestParser.Payload
         private String cosdata;
-        @ApiRequestParser.Payload
-        private String preSkip;
-        @ApiRequestParser.Payload
+        private Boolean preSkip;
         private String prechk;
     }
 
-    private void getCoursePreRegisterList(String rawQuery, ApiResponse response, CookieStore cookieStore) {
-        CoursePreRegisterRequest request = parseApiRequest(new CoursePreRegisterRequest(), rawQuery, null, response);
-        if (request == null)
-            return;
-
-        if (request.mode.equals("genEdu")) {
+    private void getCoursePreRegisterList(String mode, ApiResponse response, CookieStore cookieStore) {
+        if (mode.equals("genEdu")) {
             Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21362")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
@@ -196,7 +178,7 @@ public class CourseRegister implements Module {
             }
             result.append("courseList", course);
             response.setData(result.toString());
-        } else if (request.mode.equals("course")) {
+        } else if (mode.equals("course")) {
             Connection conn = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21322")
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
@@ -266,7 +248,7 @@ public class CourseRegister implements Module {
             result.append("courseList", course);
             response.setData(result.toString());
         } else {
-            response.errorBadQuery("Invalid mode: \"" + request.mode + '"');
+            response.errorBadQuery("Invalid mode: \"" + mode + '"');
         }
     }
 
@@ -284,16 +266,9 @@ public class CourseRegister implements Module {
         return tbody;
     }
 
-    private void postCoursePreRegisterList(String rawQuery, String payload, ApiResponse response, CookieStore cookieStore) {
-        CoursePreRegisterRequest request = parseApiRequest(new CoursePreRegisterRequest(), rawQuery, payload, response);
-        if (request == null)
-            return;
-
-        if (request.mode.equals("genEdu")) {
-            String prechk = request.prechk;
-            String cosdata = request.cosdata;
-            String action = request.action;
-            boolean preSkip = request.preSkip.equals("true");
+    private void postCoursePreRegisterList(String mode, CoursePreRegisterRequest request, ApiResponse response, CookieStore cookieStore) {
+        if (mode.equals("genEdu")) {
+            boolean preSkip = request.preSkip;
 
             try {
                 if (!preSkip) {
@@ -305,7 +280,7 @@ public class CourseRegister implements Module {
                             .proxy(proxyManager.getProxy())
                             .userAgent(Main.USER_AGENT)
                             .method(Connection.Method.POST)
-                            .requestBody("prechk=" + prechk + "&time=" + time)
+                            .requestBody("prechk=" + request.prechk + "&time=" + time)
                             .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                             .header("X-Requested-With", "XMLHttpRequest")
                             .execute();
@@ -320,20 +295,20 @@ public class CourseRegister implements Module {
                 }
 
                 long time = (System.currentTimeMillis() / 1000);
-                Connection.Response postCourse = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21362&m=" + action)
+                Connection.Response postCourse = HttpConnection.connect(courseNckuOrg + "/index.php?c=cos21362&m=" + request.action)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy())
                         .userAgent(Main.USER_AGENT)
                         .method(Connection.Method.POST)
-                        .requestBody("time=" + time + "&cosdata=" + cosdata)
+                        .requestBody("time=" + time + "&cosdata=" + request.cosdata)
                         .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                         .header("X-Requested-With", "XMLHttpRequest")
                         .execute();
 
                 JsonObject postResult = new JsonObject(postCourse.body());
-                action = postResult.getString("addid");
+                String action = postResult.getString("addid");
 
                 String message = postResult.getString("msg");
                 if (!postResult.getBoolean("status"))
@@ -350,7 +325,7 @@ public class CourseRegister implements Module {
                 logger.errTrace(e);
                 response.errorNetwork(e);
             }
-        } else if (request.mode.equals("course")) {
+        } else if (mode.equals("course")) {
             long time = (System.currentTimeMillis() / 1000);
             String action = request.action;
             String cosdata = request.cosdata;
@@ -410,7 +385,7 @@ public class CourseRegister implements Module {
                 response.errorNetwork(e);
             }
         } else {
-            response.errorBadQuery("Invalid mode: \"" + request.mode + '"');
+            response.errorBadQuery("Invalid mode: \"" + mode + '"');
         }
     }
 

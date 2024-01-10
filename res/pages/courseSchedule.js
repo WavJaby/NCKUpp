@@ -1,23 +1,6 @@
 'use strict';
 
-import {
-	a,
-	button,
-	checkbox,
-	div,
-	h1,
-	h2,
-	mountableStylesheet,
-	p,
-	span,
-	table,
-	tbody,
-	td,
-	text,
-	th,
-	thead,
-	tr
-} from '../minjs_v000/domHelper.min.js';
+import {a, button, checkbox, div, h1, h2, mountableStylesheet, p, span, table, tbody, td, text, th, thead, tr} from '../minjs_v000/domHelper.min.js';
 import {addPreSchedule, checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 import {createSelectAvailableStr, createSyllabusUrl, NckuHubDetailWindow, nckuHubScoreToSpan} from './courseSearch.js';
@@ -56,7 +39,7 @@ export default function (router, loginState) {
 	const styles = mountableStylesheet('./res/pages/courseSchedule.css');
 	let /**@type{PageStorage}*/pageStorage;
 	const showClassroomCheckbox = checkbox(null, false, null, span('顯示教室'));
-	const showPreScheduleCheckbox = checkbox(null, false,null, span('顯示預排'));
+	const showPreScheduleCheckbox = checkbox(null, false, null, span('顯示預排'));
 	const scheduleTableInfo = span(null, 'scheduleTableInfo');
 	const windowRoot = div();
 	const scheduleTable = new ScheduleTable(windowRoot, updatePreScheduleData);
@@ -545,13 +528,13 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 		const title = courseData.courseName + ' 加入志願';
 		fetchApi(`/courseRegister?mode=genEdu`, 'Add preference', {
 			method: 'POST',
-			body: `prechk=${this.prechk}&cosdata=${this.key}&action=${preRegAction}&preSkip=${preRegPreSkip}`
+			body: {prechk: this.prechk, cosdata: this.key, action: preRegAction, preSkip: preRegPreSkip}
 		}).then(response => {
-			preRegAction = response.data.action;
 			if (!response.success) {
 				window.messageAlert.addError(title + '失敗', response.msg, 10000);
 				return;
 			}
+			preRegAction = response.data.action;
 			window.messageAlert.addSuccess(title + '成功', response.msg, 5000);
 			button.style.display = 'none';
 			// Add course back after preference enter
@@ -566,7 +549,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 		const title = courseData.courseName + ' 單科加選';
 		fetchApi(`/courseRegister?mode=course`, 'Add course', {
 			method: 'POST',
-			body: `action=${regAction}&cosdata=${this.key}`
+			body: {action: regAction, cosdata: this.key}
 		}).then(response => {
 			regAction = response.data.action;
 			if (!response.success) {
@@ -775,38 +758,6 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 		// Create table
 		initTable(scheduleTable);
 		createScheduleTable(scheduleTable, dayTable, dayUndecided.length > 0, tableWidth, tableHeight);
-
-		// // Add course cell
-		// const rowSize = new Int32Array(tableHeight);
-		// for (let i = 0; i < tableWidth; i++) {
-		// 	for (let j = 0; j < tableHeight; j++) {
-		// 		const dayCourse = dayTable[i][j];
-		// 		if (!dayCourse) continue;
-		// 		const course = dayCourse[0];
-		// 		// Fill time section
-		// 		if (i - rowSize[j] > 0)
-		// 			rows[j].insertCell().colSpan = i - rowSize[j];
-		//
-		// 		// Build cell
-		// 		const cell = rows[j].insertCell();
-		// 		createCourseCell(cell, course, false).classList.add('fullHeight');
-		//
-		// 		// Add space
-		// 		if (course[1].parsedTime.length === 3) {
-		// 			const length = course[1].parsedTime[2] - course[1].parsedTime[1] + 1;
-		// 			cell.rowSpan = length * 2 - 1;
-		// 			rowSize[j] = i + 1;
-		// 			for (let k = 1; k < length; k++) {
-		// 				// fill space
-		// 				if (i - rowSize[j + k] > 0)
-		// 					rows[j + k].insertCell().colSpan = i - rowSize[j + k];
-		// 				rowSize[j + k] = i + 1;
-		// 			}
-		// 		} else if (course[1].parsedTime.length === 2)
-		// 			rowSize[j] = i + 1;
-		// 	}
-		// }
-
 		createCourseUndecided(dayUndecided, scheduleTable);
 	}
 
@@ -932,6 +883,8 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 					sectionCourse.push(timeLocInfo);
 			}
 		}
+		console.log(dayTable)
+
 		for (let i = 0; i < tableWidth; i++)
 			for (let j = 0; j < tableHeight; j++)
 				if (dayTable[i][j]) {
@@ -950,7 +903,6 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 						}
 					}
 				}
-
 		return {dayTable: dayTable, dayUndecided: dayUndecided};
 	}
 
