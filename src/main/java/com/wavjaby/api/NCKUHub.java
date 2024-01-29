@@ -31,7 +31,7 @@ public class NCKUHub implements Module {
 
     private final Map<String, Map<String, Integer>> nckuHubCourseIdMap = new HashMap<>();
     private String availableSerialId;
-    private final long courseIDUpdateInterval = 10 * 60 * 1000;
+    private final long courseIDUpdateInterval = 20 * 60 * 1000;
     private static final int maxCacheSize = 20 * 1000 * 1000;
     private static final int maxCacheTime = 10 * 60 * 1000;
     private static final int cacheCleanerInterval = 30 * 1000;
@@ -40,7 +40,7 @@ public class NCKUHub implements Module {
     private int cacheSize = 0;
     private final Map<Integer, NckuHubCourseData> courseInfoCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Cache"));
-    private final ThreadPoolExecutor courseInfoGetter = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory(TAG + "-Cos-Fetch"));
+    private final ThreadPoolExecutor courseInfoGetter = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Cos-Fetch"));
     private final Semaphore courseInfoGetterLock = new Semaphore(courseInfoGetter.getCorePoolSize(), true);
 
     private static class NckuHubCourseData {

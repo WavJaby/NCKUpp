@@ -2,6 +2,7 @@ package com.wavjaby;
 
 import com.wavjaby.api.*;
 import com.wavjaby.api.login.Login;
+import com.wavjaby.api.search.RobotCheck;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.PropertiesReader;
@@ -11,13 +12,9 @@ import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLite;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
-import java.net.InetAddress;
 import java.net.URI;
-import java.nio.file.FileSystems;
-import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -84,26 +81,30 @@ public class Main {
         server = new RestApiServer(serverSettings);
         if (!server.ready || !server.start()) return;
 
+        // Service
         ProxyManager proxyManager = new ProxyManager(serverSettings);
         addModule(proxyManager);
         SQLite sqLite = new SQLite();
         addModule(sqLite);
         addModule(new WebSocket());
         addModule(new IP());
-        addModule(new Route());
+//        addModule(new Route());
         addModule(new FileHost(serverSettings));
 
         // API
+        RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
+        addModule(robotCode);
         addModule(new NCKUHub());
         UrSchool urSchool = new UrSchool();
         addModule(urSchool);
-        RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
-        addModule(robotCode);
         CourseFuncBtn courseFunctionButton = new CourseFuncBtn(proxyManager, robotCode);
         addModule(courseFunctionButton);
         CourseSchedule courseSchedule = new CourseSchedule(proxyManager);
         addModule(courseSchedule);
-        Search search = new Search(urSchool, robotCode, proxyManager);
+        RobotCheck robotCheck = new RobotCheck(robotCode, proxyManager); // Lib
+        AllDept allDept = new AllDept(robotCheck, proxyManager);
+        addModule(allDept);
+        Search search = new Search(urSchool, allDept, robotCheck, proxyManager);
         addModule(search);
         Login login = new Login(search, courseFunctionButton, courseSchedule, sqLite, proxyManager);
         addModule(login);
@@ -111,7 +112,6 @@ public class Main {
         addModule(watchDog);
         CourseEnrollmentTracker enrollmentTracker = new CourseEnrollmentTracker(search, serverSettings);
         addModule(enrollmentTracker);
-        addModule(new AllDept(search));
         addModule(new Logout(proxyManager));
         addModule(new A9Registered(proxyManager));
         addModule(new Profile(login, sqLite));
@@ -124,7 +124,7 @@ public class Main {
         addModule(new StudentIdSys(sqLite, enrollmentTracker, login));
 
         if (serverSettings.getPropertyBoolean("courseWatcher", false))
-            addModule(new CourseWatcher(search, watchDog, serverSettings));
+            addModule(new CourseWatcher(search, allDept, watchDog, serverSettings));
 
 
 //        logger.log("Server started, " + server.hostname + ':' + server.port);

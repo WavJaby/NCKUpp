@@ -361,7 +361,7 @@ function MyContribute(router, loginState) {
 	);
 
 	this.updateContributeState = function () {
-		contributeBtn.disabled = false;
+		// contributeBtn.disabled = false;
 		fetchApi('/stuIdSys?mode=myContribute').then(i => {
 			if (i.success) updateContributeState(i.data);
 		});

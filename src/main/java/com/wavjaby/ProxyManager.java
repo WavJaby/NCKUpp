@@ -131,7 +131,7 @@ public class ProxyManager implements Module {
         }
     }
 
-    ProxyManager(PropertiesReader properties) {
+    public ProxyManager(PropertiesReader properties) {
         this.properties = properties;
     }
 

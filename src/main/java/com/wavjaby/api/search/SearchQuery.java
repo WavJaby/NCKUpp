@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class SearchQuery {
-    final CourseSearchID searchID;
-    final CourseHistorySearch historySearch;
+    final String searchID;
+    final CourseHistorySearchQuery historySearch;
     final String deptNo;            // 系所 AX
     final String courseName;        // 課程名稱
     final String instructor;        // 教師姓名
@@ -18,9 +18,9 @@ public class SearchQuery {
     final boolean getAll;
     final String error;
 
-    SearchQuery(CourseSearchID courseSearchID,
+    SearchQuery(String courseSearchID,
                 Map<String, Set<String>> serialIdNumber,
-                CourseHistorySearch historySearch,
+                CourseHistorySearchQuery historySearch,
                 String deptNo,
                 CourseSearchQuery.TimeQuery[] time,
                 String courseName, String instructor, String grade) {
@@ -156,10 +156,6 @@ public class SearchQuery {
 
     boolean getSerial() {
         return serialIdNumber != null;
-    }
-
-    public CourseSearchID getSearchID() {
-        return searchID;
     }
 
     boolean multipleTime() {

@@ -252,12 +252,6 @@ window.pageLoading = new Signal(false);
 		queryRouter.initFirstPage();
 		if (isMobile())
 			window.messageAlert.addInfo('可使用電腦來獲得最佳體驗', '手機版具完整功能，但介面正在調整中，請見諒', 10000);
-		if (document.location.host.startsWith('wavjaby.github.io'))
-			window.messageAlert.addErrorElement('主要伺服器目前不穩定', div(null,
-				span('主要伺服器目前不穩定，請使用備用伺服器。(歉🥹'),
-				br(),
-				a(' 點我進入備用伺服器', 'https://37a2-2001-b400-e285-37e9-b913-f26-1403-da61.ngrok-free.app/NCKUpp/')
-			), 100000);
 	};
 
 	// functions

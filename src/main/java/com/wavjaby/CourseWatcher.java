@@ -1,6 +1,7 @@
 package com.wavjaby;
 
 import com.sun.istack.internal.NotNull;
+import com.wavjaby.api.AllDept;
 import com.wavjaby.api.DeptWatchdog;
 import com.wavjaby.api.search.CourseData;
 import com.wavjaby.api.search.Search;
@@ -19,7 +20,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.wavjaby.Main.courseNcku;
 import static com.wavjaby.Main.courseNckuOrgUri;
 import static com.wavjaby.lib.Lib.executorShutdown;
 
@@ -45,6 +45,7 @@ public class CourseWatcher implements Runnable, Module {
     private final Map<String, List<CourseData>> deptCourseDataList = new HashMap<>();
     private final String botToken;
     private final HashMap<String, String> userDmChannelCache = new HashMap<>();
+    private final AllDept allDept;
 
     public static class CourseDataDifference {
         public enum Type {
@@ -73,8 +74,9 @@ public class CourseWatcher implements Runnable, Module {
         }
     }
 
-    public CourseWatcher(Search search, DeptWatchdog watchDog, Properties serverSettings) {
+    public CourseWatcher(Search search, AllDept allDept, DeptWatchdog watchDog, Properties serverSettings) {
         this.search = search;
+        this.allDept = allDept;
         this.watchDog = watchDog;
         botToken = serverSettings.getProperty("botToken");
     }
@@ -215,7 +217,7 @@ public class CourseWatcher implements Runnable, Module {
                 if (deptToken != null) {
                     // Get dept course data
                     Search.SearchResult searchResult = new Search.SearchResult();
-                    if (!search.getDeptCourseData(deptToken, false, searchResult)) {
+                    if (!search.getDeptCourseData(deptToken, searchResult)) {
                         logger.log("Dept " + dept + " failed");
                         if (!done.get())
                             deptTokenMap.put(dept, null);
@@ -381,8 +383,8 @@ public class CourseWatcher implements Runnable, Module {
 
     private Search.DeptToken renewDeptToken(String deptNo, CookieStore cookieStore) {
         logger.log("Renew dept token " + deptNo);
-        cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", "ID", courseNcku));
-        Search.AllDeptData allDeptData = search.getAllDeptData(cookieStore, null);
+        Cookie.addCookie("PHPSESSID", "ID", courseNckuOrgUri, cookieStore);
+        Search.AllDeptData allDeptData = allDept.getAllDeptData(cookieStore, null);
         if (allDeptData == null) {
             logger.err("Can not get allDeptData");
             return null;

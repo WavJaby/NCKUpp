@@ -343,7 +343,7 @@ public class Login implements Module {
 //            logger.log("Login use portal");
             // Check of login portal available
             String result;
-            if (checkResult.contains("oauth2")) {
+            if (checkResult.contains("m=oauth")) {
                 // Use portal
                 Connection.Response portalPage = HttpConnection.connect(courseNckuOrg + "/index.php?c=auth&m=oauth&time=" + (System.currentTimeMillis() / 1000))
                         .header("Connection", "keep-alive")
@@ -459,6 +459,7 @@ public class Login implements Module {
 
     public void loginNckuStudentIdSystem(boolean get, LoginData loginData, ApiResponse response, CookieStore cookieStore) {
         try {
+            logger.log("Check login state");
             Connection.Response checkLoginPage;
             if (get) {
                 // GET
@@ -506,6 +507,7 @@ public class Login implements Module {
                 } else {
                     // POST
                     // Portal login
+                    logger.log("POST portal login data");
                     portalPage = portalLogin(loginData, portalPage.body(), cookieStore, response);
                     if (portalPage == null) {
                         response.setData("{\"login\":false}");
@@ -515,15 +517,17 @@ public class Login implements Module {
             }
 
             // Check if login success
+            logger.log("Check if login success");
             Connection.Response loginCheck = checkPortalLogin(portalPage, cookieStore, response, null);
             if (loginCheck == null) {
                 response.setData("{\"login\":false}");
                 return;
             }
             String result = loginCheck.body();
-            if (result.lastIndexOf("logouts.asp") != -1)
+            if (result.lastIndexOf("logouts.asp") != -1) {
+                logger.log("Login success");
                 response.setData("{\"login\":true}");
-            else
+            } else
                 response.setData("{\"login\":false}");
         } catch (IOException e) {
             logger.errTrace(e);

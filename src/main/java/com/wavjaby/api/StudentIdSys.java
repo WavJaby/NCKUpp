@@ -893,13 +893,13 @@ public class StudentIdSys implements Module {
             }
         }
 
-        try {
-            File imageFile = new File(normalDistFolder, key + ".png");
-            ImageIO.write(image, "png", imageFile);
-            setFilePermission(imageFile, Lib.userPrincipal, Lib.groupPrincipal, Lib.filePermission);
-        } catch (IOException e) {
-            logger.errTrace(e);
-        }
+//        try {
+//            File imageFile = new File(normalDistFolder, key + ".png");
+//            ImageIO.write(image, "png", imageFile);
+//            setFilePermission(imageFile, Lib.userPrincipal, Lib.groupPrincipal, Lib.filePermission);
+//        } catch (IOException e) {
+//            logger.errTrace(e);
+//        }
 
         response.setData(distImageInfo.toString());
     }

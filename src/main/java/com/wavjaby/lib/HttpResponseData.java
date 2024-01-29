@@ -12,15 +12,18 @@ public class HttpResponseData {
     public final ResponseState state;
 
     public final String data;
+    public final String baseUrl;
 
-    public HttpResponseData(ResponseState state, String data) {
+    public HttpResponseData(ResponseState state, String data, String baseUrl) {
         this.state = state;
         this.data = data;
+        this.baseUrl = baseUrl;
     }
 
     public HttpResponseData(ResponseState errorState) {
         this.state = errorState;
         this.data = null;
+        this.baseUrl = null;
     }
 
     public boolean isSuccess() {

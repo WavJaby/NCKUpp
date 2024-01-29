@@ -17,7 +17,7 @@ import static com.wavjaby.Main.*;
 public class Cookie {
     private static final Logger logger = new Logger("Cookie");
 
-    public static HttpCookie createHttpCookie(String key, String value, String domain) {
+    private static HttpCookie createHttpCookie(String key, String value, String domain) {
         HttpCookie httpCookie = new HttpCookie(key, value);
         httpCookie.setPath("/");
         httpCookie.setVersion(0);
@@ -39,6 +39,10 @@ public class Cookie {
             if (httpCookie.startsWith(name + '='))
                 return httpCookie.substring(name.length() + 1);
         return null;
+    }
+
+    public static void addCookie(String name, String value, URI uri, CookieStore cookieStore) {
+        cookieStore.add(uri, createHttpCookie(name, value, uri.getHost()));
     }
 
     public static String unpackAuthCookie(String[] cookieIn, CookieStore cookieStore) {

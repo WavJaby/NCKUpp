@@ -4,7 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Main;
 import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
-import com.wavjaby.api.RobotCode;
+import com.wavjaby.api.AllDept;
 import com.wavjaby.api.UrSchool;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
@@ -19,7 +19,6 @@ import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.logger.Progressbar;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -28,11 +27,8 @@ import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -50,8 +46,6 @@ import static com.wavjaby.lib.Lib.*;
 public class Search implements Module {
     private static final String TAG = "Search";
     private static final Logger logger = new Logger(TAG);
-    private static final int MAX_ROBOT_CHECK_REQUEST_TRY = 3;
-    private static final int MAX_ROBOT_CHECK_TRY = 2;
     private static final int COS_PRE_CHECK_COOKIE_LOCK = 2;
     private static final int MULTITHREADING_SEARCH_THREAD_COUNT = 4;
     private static final int MULTI_QUERY_SEARCH_THREAD_COUNT = 4;
@@ -70,7 +64,8 @@ public class Search implements Module {
     private final Map<String, CookieLock> cosPreCheckCookieLock = new ConcurrentHashMap<>();
 
     private final UrSchool urSchool;
-    private final RobotCode robotCode;
+    private final AllDept allDept;
+    private final RobotCheck robotCheck;
     private final ProxyManager proxyManager;
 
     private static class CookieLock {
@@ -83,9 +78,10 @@ public class Search implements Module {
         }
     }
 
-    public Search(UrSchool urSchool, RobotCode robotCode, ProxyManager proxyManager) {
+    public Search(UrSchool urSchool, AllDept allDept, RobotCheck robotCheck, ProxyManager proxyManager) {
         this.urSchool = urSchool;
-        this.robotCode = robotCode;
+        this.allDept = allDept;
+        this.robotCheck = robotCheck;
         this.proxyManager = proxyManager;
         this.cosPreCheckPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory(TAG + "-Cos-Pre"));
         this.cosPreCheckPoolLock = new Semaphore(cosPreCheckPool.getMaximumPoolSize(), true);
@@ -142,7 +138,7 @@ public class Search implements Module {
             packCourseLoginStateCookie(req, loginState, cookieStore);
             if (response.isSuccess()) {
                 if (searchResult.getSearchID() != null)
-                    addCookieToHeader("searchID", searchResult.getSearchID().getAsCookieValue(), "/", req);
+                    addCookieToHeader("searchID", searchResult.getSearchID(), "/", req);
             } else
                 addRemoveCookieToHeader("searchID", "/", req);
         }
@@ -157,28 +153,7 @@ public class Search implements Module {
 
     public SearchQuery getSearchQueryFromRequest(Map<String, String> query, String[] cookieIn, ApiResponse response) {
         // Get search ID
-        String searchIDs = Cookie.getCookie("searchID", cookieIn);
-        CourseSearchID courseSearchID = null;
-        if (searchIDs != null) {
-            int split = searchIDs.indexOf('|');
-            String searchID = searchIDs.isEmpty() || split == 0 ? null
-                    : searchIDs.substring(0, split);
-            // "searchID,PHPSESSID"
-            String historySearchIDAndCookie = split == -1 || split + 1 == searchIDs.length() ? null
-                    : searchIDs.substring(split + 1);
-            String historySearchID = null, historySearchPHPSESSID = null;
-            if (historySearchIDAndCookie != null) {
-                int idSplit = historySearchIDAndCookie.indexOf(',');
-                if (idSplit == -1 || idSplit == 0 || idSplit + 1 == historySearchIDAndCookie.length()) {
-                    if (response != null)
-                        response.addWarn("'searchID' Format error, Not provide correct 'searchID' will impact response time, please use correct searchID from response cookie.");
-                } else {
-                    historySearchID = historySearchIDAndCookie.substring(0, idSplit);
-                    historySearchPHPSESSID = historySearchIDAndCookie.substring(idSplit + 1);
-                }
-            }
-            courseSearchID = new CourseSearchID(searchID, historySearchID, historySearchPHPSESSID);
-        }
+        String searchID = Cookie.getCookie("searchID", cookieIn);
 
         // Get with serial
         String rawSerial = query.get("serial");
@@ -201,7 +176,7 @@ public class Search implements Module {
 
         // History search
         String queryTimeBegin = query.get("semBegin"), queryTimeEnd = query.get("semEnd");
-        CourseHistorySearch historySearch = null;
+        CourseHistorySearchQuery historySearch = null;
         if (queryTimeBegin != null || queryTimeEnd != null) {
             int yearBegin = -1, semBegin = -1, yearEnd = -1, semEnd = -1;
             if (queryTimeBegin == null) {
@@ -233,7 +208,7 @@ public class Search implements Module {
                     }
                 }
             }
-            historySearch = new CourseHistorySearch(yearBegin, semBegin, yearEnd, semEnd);
+            historySearch = new CourseHistorySearchQuery(yearBegin, semBegin, yearEnd, semEnd);
         }
 
         // Parse time query
@@ -336,7 +311,7 @@ public class Search implements Module {
         // TODO: Check grade valid
         String dept = query.get("dept");
 
-        return new SearchQuery(courseSearchID,
+        return new SearchQuery(searchID,
                 serialIdNumber,
                 historySearch,
                 dept, timeQueries,
@@ -352,7 +327,7 @@ public class Search implements Module {
         // get all course
         if (searchQuery.getAll()) {
             SearchResult result = new SearchResult();
-            AllDeptData allDeptData = getAllDeptData(cookieStore, result);
+            AllDeptData allDeptData = allDept.getAllDeptData(cookieStore, result);
             if (!result.success)
                 return result;
             // start getting dept
@@ -374,7 +349,7 @@ public class Search implements Module {
                     fetchPool.submit(() -> {
                         try {
                             SearchResult allDeptResult = new SearchResult();
-                            fragments[finalI] = getAllDeptData(createCookieStore(), allDeptResult);
+                            fragments[finalI] = allDept.getAllDeptData(createCookieStore(), allDeptResult);
                             if (!allDeptResult.success && result.success)
                                 synchronized (result) {
                                     allDeptResult.passDataTo(result);
@@ -411,7 +386,7 @@ public class Search implements Module {
                     fetchPool.submit(() -> {
                         try {
                             long start = System.currentTimeMillis();
-                            SearchResult deptCourseData = getDeptCourseData(dept, fragment, false);
+                            SearchResult deptCourseData = getDeptCourseData(dept, fragment);
                             if (allSuccess.get() && deptCourseData.isSuccess()) {
                                 synchronized (courseDataList) {
                                     courseDataList.addAll(deptCourseData.courseDataList);
@@ -620,7 +595,7 @@ public class Search implements Module {
     public static class SearchResult {
         private List<CourseData> courseDataList = new ArrayList<>();
         private boolean success = true;
-        private CourseSearchID searchID;
+        private String searchID;
         private String parseError, fetchError;
 
         public void setCourseData(List<CourseData> courseDataList) {
@@ -635,11 +610,11 @@ public class Search implements Module {
             return success;
         }
 
-        public void setSearchID(CourseSearchID searchID) {
+        public void setSearchID(String searchID) {
             this.searchID = searchID;
         }
 
-        public CourseSearchID getSearchID() {
+        public String getSearchID() {
             return searchID;
         }
 
@@ -709,91 +684,25 @@ public class Search implements Module {
             logger.errTrace(e);
             byte[] array = new byte[16];
             new Random().nextBytes(array);
-            cookieStore.add(courseNckuOrgUri, Cookie.createHttpCookie("PHPSESSID", Base64.getEncoder().encodeToString(array), courseNcku));
+            Cookie.addCookie("PHPSESSID", Base64.getEncoder().encodeToString(array), courseNckuOrgUri, cookieStore);
         }
 
 //        logger.log(cookieStore.getCookies().toString());
         return cookieStore;
     }
 
-    public AllDeptData getAllDeptData(CookieStore cookieStore, SearchResult result) {
-        Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
-                .header("Connection", "keep-alive")
-                .cookieStore(cookieStore)
-                .ignoreContentType(true)
-                .proxy(proxyManager.getProxy())
-                .userAgent(Main.USER_AGENT)
-                .timeout(5000);
-        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
-        if (!httpResponseData.isSuccess()) {
-            result.errorFetch("Failed to fetch all dept data");
-            return null;
-        }
-        String body = httpResponseData.data;
-
-        cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
-
-        Set<String> allDept = new HashSet<>();
-        for (Element element : Jsoup.parse(body).getElementsByClass("pnl_dept"))
-            allDept.addAll(element.getElementsByAttribute("data-dept").eachAttr("data-dept"));
-
-        int cryptStart, cryptEnd;
-        if ((cryptStart = body.indexOf("'crypt'")) == -1 ||
-                (cryptStart = body.indexOf('\'', cryptStart + 7)) == -1 ||
-                (cryptEnd = body.indexOf('\'', ++cryptStart)) == -1
-        ) {
-            result.errorParse("Get all dept 'crypt' data not found");
-            return null;
-        }
-        return new AllDeptData(body.substring(cryptStart, cryptEnd), allDept, cookieStore);
-    }
-
-    public AllDeptGroupData getAllDeptGroupData(CookieStore cookieStore) {
-        Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
-                .header("Connection", "keep-alive")
-                .cookieStore(cookieStore)
-                .ignoreContentType(true)
-                .proxy(proxyManager.getProxy())
-                .userAgent(USER_AGENT)
-                .timeout(5000);
-        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
-        if (!httpResponseData.isSuccess())
-            return null;
-        String body = httpResponseData.data;
-
-        cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
-
-        int total = 0;
-        List<AllDeptGroupData.Group> groups = new ArrayList<>();
-        for (Element deptGroup : Jsoup.parse(body).getElementsByClass("pnl_dept")) {
-            List<AllDeptGroupData.DeptData> dept = new ArrayList<>();
-            for (Element deptEle : deptGroup.getElementsByAttribute("data-dept")) {
-                String deptName = deptEle.text();
-                dept.add(new AllDeptGroupData.DeptData(
-                        deptEle.attr("data-dept"),
-                        deptName.substring(deptName.indexOf(')') + 1)
-                ));
-                total++;
-            }
-            String groupName = deptGroup.getElementsByClass("panel-heading").text();
-            groups.add(new AllDeptGroupData.Group(groupName, dept));
-        }
-
-        return new AllDeptGroupData(groups, total);
-    }
-
-    public SearchResult getDeptCourseData(String deptNo, AllDeptData allDeptData, boolean addUrSchoolCache) {
+    public SearchResult getDeptCourseData(String deptNo, AllDeptData allDeptData) {
         SearchResult result = new SearchResult();
         DeptToken deptToken = createDeptToken(deptNo, allDeptData, result);
         if (deptToken == null) {
             result.setSuccess(false);
             return result;
         }
-        result.setSuccess(getDeptCourseData(deptToken, addUrSchoolCache, result));
+        result.setSuccess(getDeptCourseData(deptToken, result));
         return result;
     }
 
-    public boolean getDeptCourseData(DeptToken deptToken, boolean addUrSchoolCache, SearchResult result) {
+    public boolean getDeptCourseData(DeptToken deptToken, SearchResult result) {
         HttpResponseData searchResult = getDeptNCKU(deptToken);
         if (!searchResult.isSuccess()) {
             result.errorFetch("Failed to fetch dept search result: " + deptToken.deptNo);
@@ -810,7 +719,6 @@ public class Search implements Module {
                 table,
                 searchResultBody,
                 null,
-                addUrSchoolCache,
                 false,
                 result
         );
@@ -872,7 +780,7 @@ public class Search implements Module {
                 .userAgent(Main.USER_AGENT)
                 .timeout(9000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, deptToken.cookieStore);
+        HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, deptToken.cookieStore);
 
         if (httpResponseData.isSuccess())
             cosPreCheckCookie(courseNckuOrgUri, httpResponseData.data, deptToken.cookieStore);
@@ -888,157 +796,66 @@ public class Search implements Module {
             result.setSuccess(false);
             return result;
         }
-        result.setSuccess(getQueryCourseData(searchQuery, saveQueryToken, result));
+        getQueryCourseData(searchQuery, saveQueryToken, result);
         return result;
     }
 
-    public boolean getQueryCourseData(CourseSearchQuery searchQuery, SaveQueryToken saveQueryToken,
-                                      SearchResult result) {
+    public void getQueryCourseData(CourseSearchQuery searchQuery, SaveQueryToken saveQueryToken,
+                                   SearchResult result) {
         // Get search result
         HttpResponseData searchResult = getCourseNCKU(saveQueryToken);
         if (!searchResult.isSuccess()) {
             result.errorFetch("Failed to fetch course search result");
-            return false;
+            return;
         }
         String searchResultBody = searchResult.data;
 
         // Get searchID
         String searchID = getSearchID(searchResultBody, result);
         if (searchID == null) {
-            return false;
+            return;
         }
 
-        // Renew searchID
-        if (searchQuery.historySearch()) {
-            String PHPSESSID = Cookie.getCookie("PHPSESSID", saveQueryToken.urlOrigin, saveQueryToken.cookieStore);
-            if (PHPSESSID == null) {
-                result.errorParse("Cookie historySearch 'PHPSESSID' not found");
-                return false;
-            }
-            result.setSearchID(new CourseSearchID(searchID, PHPSESSID));
-        } else
-            result.setSearchID(new CourseSearchID(searchID));
+        result.setSearchID(searchID);
 
         Element table = findCourseTable(searchResultBody, "Query", result);
         if (table == null) {
-            return false;
+            return;
         }
 
         parseCourseTable(
                 table,
                 searchResultBody,
                 searchQuery.serialFilter,
-                true,
                 searchQuery.historySearch(),
                 result
         );
 
-        return true;
+        // Add UrSchool cache
+        if (result.success && urSchool != null) {
+            Set<String> urSchoolCache = new HashSet<>();
+            for (CourseData courseData : result.courseDataList) {
+                if (courseData.instructors == null) continue;
+                for (String instructor : courseData.instructors) {
+                    urSchoolCache.add(instructor.replace("*", ""));
+                }
+            }
+
+            // Flush to add urSchool cache
+            if (!urSchoolCache.isEmpty())
+                urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
+        }
     }
 
     public SaveQueryToken createSaveQueryToken(CourseSearchQuery searchQuery, CookieStore cookieStore, SearchResult result) {
         StringBuilder postData = new StringBuilder();
-        URI urlOrigin;
+        String baseUrl;
         CookieStore postCookieStore;
         // Build query
         try {
-            if (searchQuery.historySearch()) {
-                urlOrigin = courseQueryNckuOrgUri;
-                postCookieStore = new CookieManager().getCookieStore();
-
-                if (searchQuery.searchID.historySearchID == null) {
-//                    logger.log("Renew search id");
-//                    Connection request = HttpConnection.connect(courseQueryNckuOrg + "/index.php?c=qry11215&m=en_query")
-//                            .header("Connection", "keep-alive")
-//                            .cookieStore(postCookieStore)
-//                            .ignoreContentType(true)
-//                            .proxy(proxyManager.getProxy());
-//                    HttpResponseData httpResponseData = checkRobot(courseQueryNckuOrg, request, postCookieStore);
-//                    if (httpResponseData.state != ResponseState.SUCCESS)
-//                        return null;
-//
-//                    cosPreCheck(courseQueryNckuOrg, httpResponseData.data, postCookieStore, response, proxyManager);
-//                    String searchID = getSearchID(httpResponseData.data, response);
-//                    if (searchID == null)
-//                        return null;
-//
-//                    // Get PHPSESSID cookie
-//                    String PHPSESSID = getCourseQueryNckuCookiePHPSESSID(postCookieStore);
-//                    if (PHPSESSID == null) {
-//                        response.errorFetch(TAG + "Course query PHPSESSID cookie not found");
-//                        return null;
-//                    }
-//                    // Add searchID
-//                    postData.append("id=").append(searchID);
-//                    searchQuery.histroySearchID = searchID + ',' + PHPSESSID;
-                    postData.append("id=");
-                } else {
-                    postData.append("id=").append(searchQuery.searchID.historySearchID);
-                    postCookieStore.add(courseQueryNckuOrgUri, createHttpCookie("PHPSESSID", searchQuery.searchID.historySearchPHPSESSID, courseQueryNcku));
-                }
-
-                // Write post data
-                postData.append("&syear_b=").append(searchQuery.historySearch.yearBegin);
-                postData.append("&syear_e=").append(searchQuery.historySearch.yearEnd);
-                postData.append("&sem_b=").append(searchQuery.historySearch.semBegin);
-                postData.append("&sem_e=").append(searchQuery.historySearch.semEnd);
-
-                if (searchQuery.courseName != null)
-                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.instructor != null)
-                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
-                if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
-
-//                Connection request = HttpConnection.connect(courseQueryNckuOrg + "/index.php?c=qry11215&m=en_query")
-//                        .header("Connection", "keep-alive")
-//                        .cookieStore(postCookieStore)
-//                        .ignoreContentType(true)
-//                        .proxy(proxyManager.getProxy());
-//                HttpResponseData httpResponseData = checkRobot(courseQueryNckuOrg, request, postCookieStore);
-//                if (httpResponseData.state != ResponseState.SUCCESS)
-//                    return null;
-//                cosPreCheck(courseQueryNckuOrg, httpResponseData.data, postCookieStore, response, proxyManager);
-
-                // Required
-                String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-                String[] requests = new String[]{
-//                        urlOrigin + "/js/modernizr-custom.js?" + date,
-//                        urlOrigin + "/js/bootstrap-select/css/bootstrap-select.min.css?" + date,
-//                        urlOrigin + "/js/bootstrap-select/js/bootstrap-select.min.js?" + date,
-//                        urlOrigin + "/js/jquery.cookie.js?" + date,
-                        urlOrigin + "/js/common.js?" + date, // 20230912
-//                        urlOrigin + "/js/mis_grid.js?" + date,
-//                        urlOrigin + "/js/jquery-ui/jquery-ui.min.css?" + date,
-//                        urlOrigin + "/js/jquery-ui/jquery-ui.min.js?" + date,
-//                        urlOrigin + "/js/fontawesome/css/solid.min.css?" + date,
-//                        urlOrigin + "/js/fontawesome/css/regular.min.css?" + date, // 20230624
-//                        urlOrigin + "/js/fontawesome/css/fontawesome.min.css?" + date,
-//                        urlOrigin + "/js/epack/css/font-awesome.min.css?" + date,
-//                        urlOrigin + "/js/epack/css/elements/list.css?" + date,
-//                        urlOrigin + "/js/epack/css/elements/note.css?" + date, // 20230625
-//                        urlOrigin + "/js/performance.now-polyfill.js?" + date,
-//                        urlOrigin + "/js/mdb-sortable/js/addons/jquery-ui-touch-punch.min.js?" + date,
-                        urlOrigin + "/js/jquery.taphold.js?" + date, // 20230625, 20230912
-//                        urlOrigin + "/js/jquery.patch.js?" + date,
-                };
-                for (String url : requests) {
-//                    logger.log("get require: " + url.substring(urlOrigin.length()));
-                    try {
-                        HttpConnection.connect(url)
-                                .header("Connection", "keep-alive")
-                                .cookieStore(postCookieStore)
-                                .ignoreContentType(true)
-                                .proxy(proxyManager.getProxy())
-                                .userAgent(Main.USER_AGENT)
-                                .execute();
-                    } catch (IOException e) {
-                        logger.errTrace(e);
-                    }
-                }
-            } else {
-                urlOrigin = courseNckuOrgUri;
-                postCookieStore = cookieStore;
-                // Get searchID if it's null
+            baseUrl = courseNckuOrg;
+            postCookieStore = cookieStore;
+            // Get searchID if it's null
 //                if (searchQuery.searchID == null || searchQuery.searchID.searchID == null) {
 //                    logger.log("Renew search id");
 //
@@ -1047,7 +864,7 @@ public class Search implements Module {
 //                            .cookieStore(cookieStore)
 //                            .ignoreContentType(true)
 //                            .proxy(proxyManager.getProxy());
-//                    HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
+//                    HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrgUri, request, cookieStore);
 //                    if (httpResponseData.state != ResponseState.SUCCESS) {
 //                        result.errorFetch("Failed to renew search id");
 //                        return null;
@@ -1062,66 +879,60 @@ public class Search implements Module {
 //                    postData.append("id=").append(URLEncoder.encode(searchID, "UTF-8"));
 //                }
 
-                // Maybe temporary
-                Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+            // Maybe temporary
+            Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .proxy(proxyManager.getProxy());
+            HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, cookieStore);
+            if (httpResponseData.state != ResponseState.SUCCESS) {
+                result.errorFetch("Failed to renew search id");
+                return null;
+            }
+            String url = findStringBetween(httpResponseData.data, "iframe", "src=\"", "\"");
+            if (url != null) {
+                baseUrl = courseQueryNckuOrg + "/query";
+                Connection requestCookie = HttpConnection.connect(url)
                         .header("Connection", "keep-alive")
                         .cookieStore(cookieStore)
                         .ignoreContentType(true)
                         .proxy(proxyManager.getProxy());
-                HttpResponseData httpResponseData = sendRequestAndCheckRobot(courseNckuOrgUri, request, cookieStore);
-                if (httpResponseData.state != ResponseState.SUCCESS) {
-                    result.errorFetch("Failed to renew search id");
+                HttpResponseData res = robotCheck.sendRequest(baseUrl, requestCookie, cookieStore);
+                if (res.state != ResponseState.SUCCESS) {
+                    result.errorFetch("Failed to get renew cookie");
                     return null;
                 }
-                String url = findStringBetween(httpResponseData.data, "iframe", "src=\"", "\"");
-                if (url != null) {
-                    try {
-                        urlOrigin = new URI(courseQueryNckuOrgUri.toString() + "/query");
-                    } catch (URISyntaxException e) {
-                        logger.errTrace(e);
-                        return null;
-                    }
-                    Connection requestCookie = HttpConnection.connect(url)
-                            .header("Connection", "keep-alive")
-                            .cookieStore(cookieStore)
-                            .ignoreContentType(true)
-                            .proxy(proxyManager.getProxy());
-                    HttpResponseData res = sendRequestAndCheckRobot(urlOrigin, requestCookie, cookieStore);
-                    if (res.state != ResponseState.SUCCESS) {
-                        result.errorFetch("Failed to get renew cookie");
-                        return null;
-                    }
-                    cosPreCheck(courseNckuOrg, res.data, cookieStore, null, proxyManager);
-                }
-
-                // Write post data
-                if (searchQuery.searchID != null && searchQuery.searchID.searchID != null)
-                    postData.append(URLEncoder.encode(searchQuery.searchID.searchID, "UTF-8"));
-                if (searchQuery.courseName != null)
-                    postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
-                if (searchQuery.instructor != null)
-                    postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
-                if (searchQuery.time != null) {
-                    postData.append("&wk=").append(searchQuery.time.dayOfWeek + 1);
-                    if (searchQuery.time.sectionOfDay != null) {
-                        StringBuilder b = new StringBuilder();
-                        for (byte i : searchQuery.time.sectionOfDay) {
-                            if (b.length() > 0) b.append("%2C");
-                            b.append(i + 1);
-                        }
-                        postData.append("&cl=").append(b);
-                    }
-                }
-                if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
-                if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
+                cosPreCheck(courseNckuOrg, res.data, cookieStore, null, proxyManager);
             }
+
+            // Write post data
+            if (searchQuery.searchID != null)
+                postData.append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+            if (searchQuery.courseName != null)
+                postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
+            if (searchQuery.instructor != null)
+                postData.append("&teaname=").append(URLEncoder.encode(searchQuery.instructor, "UTF-8"));
+            if (searchQuery.time != null) {
+                postData.append("&wk=").append(searchQuery.time.dayOfWeek + 1);
+                if (searchQuery.time.sectionOfDay != null) {
+                    StringBuilder b = new StringBuilder();
+                    for (byte i : searchQuery.time.sectionOfDay) {
+                        if (b.length() > 0) b.append("%2C");
+                        b.append(i + 1);
+                    }
+                    postData.append("&cl=").append(b);
+                }
+            }
+            if (searchQuery.deptNo != null) postData.append("&dept_no=").append(searchQuery.deptNo);
+            if (searchQuery.grade != null) postData.append("&degree=").append(searchQuery.grade);
         } catch (UnsupportedEncodingException e) {
             logger.errTrace(e);
             return null;
         }
 
         // Post save query
-        Connection request = HttpConnection.connect(urlOrigin + "/index.php?c=qry11215&m=save_qry")
+        Connection request = HttpConnection.connect(baseUrl + "/index.php?c=qry11215&m=save_qry")
                 .header("Connection", "keep-alive")
                 .cookieStore(postCookieStore)
                 .ignoreContentType(true)
@@ -1156,29 +967,40 @@ public class Search implements Module {
         }
         if (body.contains("id=\"loader\"")) {
             String url = findStringBetween(body, "id=\"loader\"", "src=\"", "\"");
-            return new SaveQueryToken(urlOrigin, url, postCookieStore);
+            try {
+                return new SaveQueryToken(new URI(baseUrl), url, postCookieStore);
+            } catch (URISyntaxException e) {
+                logger.errTrace(e);
+                result.errorParse("Can not parse target url");
+                return null;
+            }
         }
         if (!body.startsWith("&m=en_query")) {
             result.errorFetch("Unknown error");
             return null;
         }
-        return new SaveQueryToken(urlOrigin, urlOrigin + "/index.php?c=qry11215" + body, postCookieStore);
+        try {
+            return new SaveQueryToken(new URI(baseUrl), baseUrl + "/index.php?c=qry11215" + body, postCookieStore);
+        } catch (URISyntaxException e) {
+            logger.errTrace(e);
+            result.errorParse("Can not parse base url");
+            return null;
+        }
     }
 
     private HttpResponseData getCourseNCKU(SaveQueryToken saveQueryToken) {
 //            logger.log(TAG + "Get search result");
         Connection request = HttpConnection.connect(saveQueryToken.getUrl())
                 .header("Connection", "keep-alive")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
                 .userAgent(Main.USER_AGENT)
                 .timeout(9000)
                 .maxBodySize(20 * 1024 * 1024);
-        HttpResponseData httpResponseData = sendRequestAndCheckRobot(saveQueryToken.urlOrigin, request, saveQueryToken.cookieStore);
+        HttpResponseData httpResponseData = robotCheck.sendRequest(saveQueryToken.urlOrigin.toString(), request, saveQueryToken.cookieStore);
 
-        if (httpResponseData.state == ResponseState.SUCCESS)
+        if (httpResponseData.isSuccess())
             cosPreCheckCookie(saveQueryToken.urlOrigin, httpResponseData.data, saveQueryToken.cookieStore);
 
         return httpResponseData;
@@ -1226,7 +1048,7 @@ public class Search implements Module {
         });
     }
 
-    private Element findCourseTable(String html, String errorPrefix, SearchResult result) {
+    public static Element findCourseTable(String html, String errorPrefix, SearchResult result) {
         int resultTableStart;
         if ((resultTableStart = html.indexOf("<table")) == -1) {
             result.errorParse(errorPrefix + " result table not found");
@@ -1251,12 +1073,11 @@ public class Search implements Module {
      * @param tbody              Input: Course data table
      * @param searchResultBody   Input: Full document for finding style
      * @param serialNumberFilter Serial number filter
-     * @param addUrSchoolCache   True for adding UrSchool cache
      * @param historySearch      Add col offset if search course history
      * @param result             Output: Search result
      */
-    private void parseCourseTable(Element tbody, String searchResultBody,
-                                  Set<String> serialNumberFilter, boolean addUrSchoolCache, boolean historySearch, SearchResult result) {
+    public static void parseCourseTable(Element tbody, String searchResultBody,
+                                        Set<String> serialNumberFilter, boolean historySearch, SearchResult result) {
         List<Map.Entry<String, Boolean>> styles = new ArrayList<>();
         // Find style section
         int styleStart, styleEnd = 0;
@@ -1298,7 +1119,6 @@ public class Search implements Module {
             }
         }
 
-        Set<String> urSchoolCache = addUrSchoolCache ? new HashSet<>() : null;
         int sectionOffset = historySearch ? 1 : 0;
 
         // get course list
@@ -1439,11 +1259,8 @@ public class Search implements Module {
             String[] courseData_instructors = null;
             String instructors = section.get(sectionOffset + 6).text();
             if (!instructors.isEmpty() && !instructors.equals("未定")) {
-                instructors = instructors.replace("*", "");
+//                instructors = instructors.replace("*", "");
                 courseData_instructors = simpleSplit(instructors, ' ');
-                // Add urSchool cache
-                if (addUrSchoolCache && urSchool != null)
-                    urSchoolCache.addAll(Arrays.asList(courseData_instructors));
             }
 
             // Get time list
@@ -1604,16 +1421,9 @@ public class Search implements Module {
                     courseData_btnPreferenceEnter, courseData_btnAddCourse, courseData_btnPreRegister, courseData_btnAddRequest);
             result.courseDataList.add(courseData);
         }
-
-        // Add urSchool cache
-        if (addUrSchoolCache && urSchool != null) {
-            // Flush to add urSchool cache
-            if (!urSchoolCache.isEmpty())
-                urSchool.addInstructorCache(urSchoolCache.toArray(new String[0]));
-        }
     }
 
-    private String getSearchID(String body, SearchResult result) {
+    public static String getSearchID(String body, SearchResult result) {
         // get entry function
         int searchFunctionStart = body.indexOf("function setdata()");
         if (searchFunctionStart == -1) {
@@ -1630,71 +1440,5 @@ public class Search implements Module {
             return null;
         }
         return body.substring(idStart + 1, idEnd);
-    }
-
-    public HttpResponseData sendRequestAndCheckRobot(URI urlOriginUri, Connection request, CookieStore cookieStore) {
-        boolean networkError = false;
-        for (int i = 0; i < MAX_ROBOT_CHECK_REQUEST_TRY; i++) {
-            String response;
-            try {
-                response = request.execute().body();
-                networkError = false;
-            } catch (UncheckedIOException | IOException e) {
-                networkError = true;
-                // Last try failed
-                if (i + 1 == MAX_ROBOT_CHECK_REQUEST_TRY)
-                    logger.errTrace(e);
-                else
-                    logger.warn("Fetch page failed(" + (i + 1) + "): " + e.getMessage() + ", Retry...");
-                continue;
-            }
-
-            // Check if no robot
-            int codeTicketStart, codeTicketEnd;
-            if ((codeTicketStart = response.indexOf("index.php?c=portal&m=robot")) == -1 ||
-                    (codeTicketStart = response.indexOf("code_ticket=", codeTicketStart)) == -1 ||
-                    (codeTicketEnd = response.indexOf("&", codeTicketStart)) == -1
-            ) {
-                return new HttpResponseData(ResponseState.SUCCESS, response);
-            }
-            String codeTicket = response.substring(codeTicketStart + 12, codeTicketEnd);
-
-            // Crack robot
-            logger.warn("Crack robot code");
-            for (int j = 0; j < MAX_ROBOT_CHECK_TRY; j++) {
-                String code = robotCode.getCode(urlOriginUri + "/index.php?c=portal&m=robot", cookieStore, RobotCode.Mode.MULTIPLE_CHECK, RobotCode.WordType.ALPHA);
-                if (code == null || code.isEmpty())
-                    continue;
-                try {
-                    String result = HttpConnection.connect(urlOriginUri + "/index.php?c=portal&m=robot")
-                            .header("Connection", "keep-alive")
-                            .cookieStore(cookieStore)
-                            .ignoreContentType(true)
-                            .proxy(proxyManager.getProxy())
-                            .method(Connection.Method.POST)
-//                            .header("Referer", "https://course-query.acad.ncku.edu.tw/query/index.php?c=qry11215&m=en_query")
-                            .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                            .header("X-Requested-With", "XMLHttpRequest")
-                            .requestBody("sid=&time=" + (System.currentTimeMillis() / 1000) +
-                                    "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
-                                    "&code=" + code)
-                            .execute().body();
-//                    logger.log(result);
-                    boolean success = new JsonObject(result).getBoolean("status");
-                    logger.warn("Crack code: " + code + ", " + (success ? "success" : "retry"));
-                    if (success)
-                        break;
-                } catch (JsonException e) {
-                    logger.errTrace(e);
-                } catch (IOException e) {
-                    logger.errTrace(e);
-                    networkError = true;
-                }
-            }
-        }
-        if (networkError)
-            return new HttpResponseData(ResponseState.NETWORK_ERROR);
-        else
-            return new HttpResponseData(ResponseState.ROBOT_CODE_CRACK_ERROR);
     }
 }

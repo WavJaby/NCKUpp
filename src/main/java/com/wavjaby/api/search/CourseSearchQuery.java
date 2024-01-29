@@ -3,13 +3,13 @@ package com.wavjaby.api.search;
 import java.util.Set;
 
 public class CourseSearchQuery {
-    final CourseSearchID searchID;
+    final String searchID;
     final String deptNo;            // 系所 A...
     final String courseName;        // 課程名稱
     final String instructor;        // 教師姓名
     final String grade;             // 年級 1 ~ 4
     final TimeQuery time;
-    final CourseHistorySearch historySearch;
+    final CourseHistorySearchQuery historySearch;
     final Set<String> serialFilter;
 
     public CourseSearchQuery(SearchQuery searchQuery, TimeQuery time) {
@@ -25,7 +25,7 @@ public class CourseSearchQuery {
 
 
     public CourseSearchQuery(SearchQuery searchQuery, String deptNo, Set<String> serialFilter) {
-        this.searchID = searchQuery.getSearchID();
+        this.searchID = searchQuery.searchID;
         this.deptNo = deptNo;
         this.serialFilter = serialFilter;
 

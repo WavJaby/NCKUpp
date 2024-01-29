@@ -7,12 +7,11 @@ import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
 
-import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.FileNameMap;
 import java.net.URLConnection;
 import java.nio.file.Files;
+import java.util.zip.GZIPOutputStream;
 
 import static com.wavjaby.lib.Lib.setAllowOrigin;
 
@@ -44,7 +43,6 @@ public class FileHost implements Module {
     @CustomResponse
     public void fileHost(HttpExchange req) {
         String path = req.getRequestURI().getPath();
-        Headers responseHeader = req.getResponseHeaders();
         try {
             boolean filePass = false;
             boolean quizlet = false;
@@ -70,7 +68,7 @@ public class FileHost implements Module {
             }
 
             // Remove parent dir path
-            path = path.replace("/.", "");
+            path = path.replace("..", "");
 
             // Add default file ext
             if (path.lastIndexOf('.') < path.lastIndexOf('/'))
@@ -85,18 +83,43 @@ public class FileHost implements Module {
                 return;
             }
 
-            setContentType(file, responseHeader);
 
             InputStream in = Files.newInputStream(file.toPath());
-            setAllowOrigin(req.getRequestHeaders(), responseHeader);
+
+            // Check encoding
+            Headers requestHeader = req.getRequestHeaders();
+            Headers responseHeader = req.getResponseHeaders();
+            String encoding = requestHeader.getFirst("Accept-Encoding");
+            if (encoding != null && encoding.contains("gzip")) {
+                responseHeader.set("Content-Encoding", "gzip");
+                ByteArrayOutputStream gzipBytes = new ByteArrayOutputStream();
+                GZIPOutputStream out = new GZIPOutputStream(gzipBytes);
+                byte[] buff = new byte[1024];
+                int len;
+                while ((len = in.read(buff, 0, buff.length)) > 0)
+                    out.write(buff, 0, len);
+                out.close();
+                in = new ByteArrayInputStream(gzipBytes.toByteArray());
+            }
+
+            // Set header
+            setAllowOrigin(requestHeader, responseHeader);
+            setContentType(file, responseHeader);
+            responseHeader.set("Cache-Control", "public, max-age=6000");
+
             req.sendResponseHeaders(200, in.available());
-            OutputStream response = req.getResponseBody();
+
+            // Create output stream
+            OutputStream out = req.getResponseBody();
+
+            // Read file and write to output
             byte[] buff = new byte[1024];
             int len;
             while ((len = in.read(buff, 0, buff.length)) > 0)
-                response.write(buff, 0, len);
+                out.write(buff, 0, len);
             in.close();
-            response.flush();
+            out.flush();
+            out.close();
             req.close();
         } catch (Exception e) {
             req.close();
