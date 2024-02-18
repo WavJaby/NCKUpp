@@ -65,7 +65,6 @@ public class RobotCheck {
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy())
                             .method(Connection.Method.POST)
-//                            .header("Referer", "https://course-query.acad.ncku.edu.tw/query/index.php?c=qry11215&m=en_query")
                             .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                             .header("X-Requested-With", "XMLHttpRequest")
                             .requestBody("sid=&time=" + (System.currentTimeMillis() / 1000) +

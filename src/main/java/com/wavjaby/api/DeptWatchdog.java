@@ -10,7 +10,7 @@ import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.lib.restapi.request.RequestBody;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.sql.SQLite;
+import com.wavjaby.sql.SQLDriver;
 
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -27,34 +27,34 @@ import static com.wavjaby.lib.Lib.parseUrlEncodedForm;
 public class DeptWatchdog implements Module {
     private static final String TAG = "Watchdog";
     private static final Logger logger = new Logger(TAG);
-    private final SQLite sqLite;
+    private final SQLDriver sqlDriver;
     private final Login login;
     private PreparedStatement watchListAdd, watchListRemove, getWatchedUser, getUserWatchedCourse, getAllCourse;
 
     private final Set<String> newDeptData = new HashSet<>();
 
-    public DeptWatchdog(Login login, SQLite sqLite) {
+    public DeptWatchdog(Login login, SQLDriver sqlDriver) {
         this.login = login;
-        this.sqLite = sqLite;
+        this.sqlDriver = sqlDriver;
     }
 
     @Override
     public void start() {
         try {
-            watchListAdd = sqLite.getDatabase().prepareStatement(
+            watchListAdd = sqlDriver.getDatabase().prepareStatement(
                     "INSERT INTO watch_list (student_id, watched_serial_id) VALUES (?, ?)"
             );
-            watchListRemove = sqLite.getDatabase().prepareStatement(
+            watchListRemove = sqlDriver.getDatabase().prepareStatement(
                     "DELETE FROM watch_list WHERE student_id=? AND watched_serial_id=?"
             );
-            getWatchedUser = sqLite.getDatabase().prepareStatement(
+            getWatchedUser = sqlDriver.getDatabase().prepareStatement(
                     "SELECT login_data.student_id, user_data.discord_id, watch_list.watched_serial_id FROM watch_list, user_data" +
                             " JOIN login_data on user_data.student_id=login_data.student_id WHERE watch_list.watched_serial_id=?"
             );
-            getUserWatchedCourse = sqLite.getDatabase().prepareStatement(
+            getUserWatchedCourse = sqlDriver.getDatabase().prepareStatement(
                     "SELECT watched_serial_id FROM watch_list WHERE student_id=?"
             );
-            getAllCourse = sqLite.getDatabase().prepareStatement(
+            getAllCourse = sqlDriver.getDatabase().prepareStatement(
                     "SELECT watched_serial_id FROM watch_list"
             );
 
@@ -69,7 +69,7 @@ public class DeptWatchdog implements Module {
             result.close();
 
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 
@@ -89,7 +89,7 @@ public class DeptWatchdog implements Module {
             int returnValue = watchListAdd.executeUpdate();
             watchListAdd.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 
@@ -100,7 +100,7 @@ public class DeptWatchdog implements Module {
             int returnValue = watchListRemove.executeUpdate();
             watchListRemove.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 
@@ -118,7 +118,7 @@ public class DeptWatchdog implements Module {
             result.close();
             return discordIDs;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
         return null;
     }
@@ -134,7 +134,7 @@ public class DeptWatchdog implements Module {
             result.close();
             return watchedCurse;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
         return null;
     }

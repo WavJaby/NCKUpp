@@ -21,7 +21,6 @@
  * @property {int} s - selected
  * @property {int} a - available
  * @property {string[]} t - time
- * @property {string} m - moodle
  * @property {string} pe - preferenceEnter
  * @property {string} ac - addCourse
  * @property {string} pr - preRegister
@@ -50,7 +49,6 @@
  * @property {int} available
  * @property {CourseDataTime[]|null} time
  * @property {string} timeString
- * @property {string} moodle
  * @property {string} preferenceEnter
  * @property {string} addCourse
  * @property {string} preRegister

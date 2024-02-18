@@ -8,11 +8,11 @@ public class CourseData {
     final String semester;
     final String departmentName; // Can be null
     final String serialNumber; // Can be null
-    final String courseAttribute;
+    final String attributeCode;
     final String systemNumber;
     final Integer forGrade;  // Can be null
     final String forClass; // Can be null
-    final String group;  // Can be null
+    final String forClassGroup;  // Can be null
     final String category;  // Can be null
     final String courseName;
     final String courseNote; // Can be null
@@ -24,7 +24,6 @@ public class CourseData {
     final Integer selected; // Can be null
     final Integer available; // Can be null
     final TimeData[] timeList; // Can be null
-    final String moodle; // Can be null
     final String btnPreferenceEnter; // Can be null
     final String btnAddCourse; // Can be null
     final String btnPreRegister; // Can be null
@@ -37,7 +36,7 @@ public class CourseData {
         this.departmentName = jsonObject.getString("dn");
 
         this.serialNumber = jsonObject.getString("sn");
-        this.courseAttribute = jsonObject.getString("ca");
+        this.attributeCode = jsonObject.getString("ca");
         this.systemNumber = jsonObject.getString("cs");
 
         if (jsonObject.getObject("g") != null)
@@ -45,7 +44,7 @@ public class CourseData {
         else
             this.forGrade = null;
         this.forClass = jsonObject.getString("co");
-        this.group = jsonObject.getString("cg");
+        this.forClassGroup = jsonObject.getString("cg");
 
         this.category = jsonObject.getString("ct");
 
@@ -78,7 +77,6 @@ public class CourseData {
             this.timeList = jsonObject.getArray("t").stream().map(i -> TimeData.fromString((String) i)).toArray(TimeData[]::new);
         else this.timeList = null;
 
-        this.moodle = jsonObject.getString("m");
         this.btnPreferenceEnter = jsonObject.getString("pe");
         this.btnAddCourse = jsonObject.getString("ac");
         this.btnPreRegister = jsonObject.getString("pr");
@@ -87,24 +85,23 @@ public class CourseData {
 
     public CourseData(String semester,
                       String departmentName,
-                      String serialNumber, String courseAttribute, String systemNumber,
-                      Integer forGrade, String forClass, String group,
+                      String serialNumber, String systemNumber, String attributeCode,
+                      Integer forGrade, String forClass, String forClassGroup,
                       String category,
                       String courseName, String courseNote, String courseLimit, TagData[] tags,
                       Float credits, Boolean required,
                       String[] instructors,
                       Integer selected, Integer available,
                       TimeData[] timeList,
-                      String moodle,
                       String btnPreferenceEnter, String btnAddCourse, String btnPreRegister, String btnAddRequest) {
         this.semester = semester;
         this.departmentName = departmentName;
         this.serialNumber = serialNumber;
-        this.courseAttribute = courseAttribute;
         this.systemNumber = systemNumber;
+        this.attributeCode = attributeCode;
         this.forGrade = forGrade;
         this.forClass = forClass;
-        this.group = group;
+        this.forClassGroup = forClassGroup;
         this.category = category;
         this.courseName = courseName;
         this.courseNote = courseNote;
@@ -116,7 +113,6 @@ public class CourseData {
         this.selected = selected;
         this.available = available;
         this.timeList = timeList;
-        this.moodle = moodle;
         this.btnPreferenceEnter = btnPreferenceEnter;
         this.btnAddCourse = btnAddCourse;
         this.btnPreRegister = btnPreRegister;
@@ -124,26 +120,26 @@ public class CourseData {
     }
 
     public static class TagData {
-        final String tag;
+        final String name;
         final String colorID;
         final String url; // Can be null
 
-        public TagData(String tag, String colorID, String url) {
-            this.tag = tag;
+        public TagData(String name, String colorID, String url) {
+            this.name = name;
             this.colorID = colorID;
             this.url = url;
         }
 
         public static TagData fromString(String raw) {
-            String[] s = raw.split(",");
+            String[] s = raw.split("\\|");
             return new TagData(s[0], s[1], s.length == 3 ? s[2] : null);
         }
 
         @Override
         public String toString() {
             if (url == null)
-                return tag + ',' + colorID + ',';
-            return tag + ',' + colorID + ',' + url;
+                return name + '|' + colorID + '|';
+            return name + '|' + colorID + '|' + url;
         }
     }
 
@@ -160,20 +156,20 @@ public class CourseData {
          * Can be null, 0 ~ 15
          */
         final Byte sectionEnd;
-        final String mapLocation; // Can be null
-        final String mapRoomNo; // Can be null
-        final String mapRoomName; // Can be null
+        final String buildingId; // Can be null
+        final String roomId; // Can be null
+        final String roomName; // Can be null
         // Detailed time data
         final String detailedTimeData; // Can be null
 
         public TimeData(Byte dayOfWeek, Byte sectionStart, Byte sectionEnd,
-                        String mapLocation, String mapRoomNo, String mapRoomName) {
+                        String buildingId, String roomId, String roomName) {
             this.dayOfWeek = dayOfWeek;
             this.sectionStart = sectionStart;
             this.sectionEnd = sectionEnd;
-            this.mapLocation = mapLocation;
-            this.mapRoomNo = mapRoomNo;
-            this.mapRoomName = mapRoomName;
+            this.buildingId = buildingId;
+            this.roomId = roomId;
+            this.roomName = roomName;
             this.detailedTimeData = null;
         }
 
@@ -181,9 +177,9 @@ public class CourseData {
             this.dayOfWeek = null;
             this.sectionStart = null;
             this.sectionEnd = null;
-            this.mapLocation = null;
-            this.mapRoomNo = null;
-            this.mapRoomName = null;
+            this.buildingId = null;
+            this.roomId = null;
+            this.roomName = null;
             this.detailedTimeData = detailedTimeData;
         }
 
@@ -195,7 +191,15 @@ public class CourseData {
                     s[0].isEmpty() ? null : Byte.parseByte(s[0]),
                     s[1].isEmpty() ? null : Byte.parseByte(s[1]),
                     s[2].isEmpty() ? null : Byte.parseByte(s[2]),
-                    s[3], s[4], s[5]);
+                    s[3].isEmpty() ? null : s[3],
+                    s[4].isEmpty() ? null : s[4],
+                    s[5].isEmpty() ? null : s[5]);
+        }
+
+        public boolean roomExist() {
+            return this.buildingId != null &&
+                    this.roomId != null &&
+                    this.roomName != null;
         }
 
         @Override
@@ -210,11 +214,11 @@ public class CourseData {
             builder.append(',');
             if (sectionEnd != null) builder.append(sectionEnd);
             builder.append(',');
-            if (mapLocation != null) builder.append(mapLocation);
+            if (buildingId != null) builder.append(buildingId);
             builder.append(',');
-            if (mapRoomNo != null) builder.append(mapRoomNo);
+            if (roomId != null) builder.append(roomId);
             builder.append(',');
-            if (mapRoomName != null) builder.append(mapRoomName);
+            if (roomName != null) builder.append(roomName);
             return builder.toString();
         }
     }
@@ -235,13 +239,13 @@ public class CourseData {
         jsonBuilder.append("dn", departmentName);
 
         jsonBuilder.append("sn", serialNumber);
-        jsonBuilder.append("ca", courseAttribute);
+        jsonBuilder.append("ca", attributeCode);
         jsonBuilder.append("cs", systemNumber);
 
         if (forGrade == null) jsonBuilder.append("g");
         else jsonBuilder.append("g", forGrade);
         jsonBuilder.append("co", forClass);
-        jsonBuilder.append("cg", group);
+        jsonBuilder.append("cg", forClassGroup);
 
         jsonBuilder.append("ct", category);
 
@@ -263,7 +267,6 @@ public class CourseData {
         else jsonBuilder.append("a", available);
 
         jsonBuilder.append("t", toJsonArray(timeList));
-        jsonBuilder.append("m", moodle);
         jsonBuilder.append("pe", btnPreferenceEnter);
         jsonBuilder.append("ac", btnAddCourse);
         jsonBuilder.append("pr", btnPreRegister);
@@ -283,8 +286,8 @@ public class CourseData {
         return instructors;
     }
 
-    public String getGroup() {
-        return group;
+    public String getForClassGroup() {
+        return forClassGroup;
     }
 
     public String getForClass() {

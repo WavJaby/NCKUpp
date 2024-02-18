@@ -9,7 +9,7 @@ import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RestApiServer;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.sql.SQLite;
+import com.wavjaby.sql.SQLDriver;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
@@ -81,15 +81,18 @@ public class Main {
         server = new RestApiServer(serverSettings);
         if (!server.ready || !server.start()) return;
 
+
         // Service
+        addModule(new FileHost(serverSettings));
         ProxyManager proxyManager = new ProxyManager(serverSettings);
         addModule(proxyManager);
-        SQLite sqLite = new SQLite();
-        addModule(sqLite);
+        String mainDatabasePath = "./database.db";
+        SQLDriver SQLDriver = new SQLDriver(mainDatabasePath,"jdbc:sqlite:" + mainDatabasePath,
+                "./sqlite-jdbc-3.40.0.0.jar", "org.sqlite.JDBC", null, null);
+        addModule(SQLDriver);
         addModule(new WebSocket());
         addModule(new IP());
 //        addModule(new Route());
-        addModule(new FileHost(serverSettings));
 
         // API
         RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
@@ -106,22 +109,22 @@ public class Main {
         addModule(allDept);
         Search search = new Search(urSchool, allDept, robotCheck, proxyManager);
         addModule(search);
-        Login login = new Login(search, courseFunctionButton, courseSchedule, sqLite, proxyManager);
+        Login login = new Login(search, courseFunctionButton, courseSchedule, SQLDriver, proxyManager);
         addModule(login);
-        DeptWatchdog watchDog = new DeptWatchdog(login, sqLite);
+        DeptWatchdog watchDog = new DeptWatchdog(login, SQLDriver);
         addModule(watchDog);
         CourseEnrollmentTracker enrollmentTracker = new CourseEnrollmentTracker(search, serverSettings);
         addModule(enrollmentTracker);
         addModule(new Logout(proxyManager));
         addModule(new A9Registered(proxyManager));
-        addModule(new Profile(login, sqLite));
+        addModule(new Profile(login, SQLDriver));
         addModule(new CourseRegister(proxyManager, robotCode));
         addModule(new ExtractUrl(proxyManager));
         addModule(new PreferenceAdjust(proxyManager));
         addModule(new HomeInfo(proxyManager));
         addModule(new UsefulWebsite());
         addModule(new ClientDebugLog());
-        addModule(new StudentIdSys(sqLite, enrollmentTracker, login));
+        addModule(new StudentIdSys(SQLDriver, enrollmentTracker, login));
 
         if (serverSettings.getPropertyBoolean("courseWatcher", false))
             addModule(new CourseWatcher(search, allDept, watchDog, serverSettings));

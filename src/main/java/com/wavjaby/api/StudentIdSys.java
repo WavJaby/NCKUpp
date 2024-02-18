@@ -13,7 +13,7 @@ import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.sql.SQLite;
+import com.wavjaby.sql.SQLDriver;
 import com.wavjaby.svgbuilder.*;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -61,7 +61,7 @@ public class StudentIdSys implements Module {
             {0b01110, 0b10001, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b11100},
     };
     private final File normalDistFolder;
-    private final SQLite sqLite;
+    private final SQLDriver sqlDriver;
     private final CourseEnrollmentTracker enrollmentTracker;
     private final Login login;
     private PreparedStatement sqlGetAllDistribution, sqlGetDistribution, sqlAddDistribution, sqlSetDistributionSerialNumber;
@@ -419,8 +419,8 @@ public class StudentIdSys implements Module {
         }
     }
 
-    public StudentIdSys(SQLite sqLite, CourseEnrollmentTracker enrollmentTracker, Login login) {
-        this.sqLite = sqLite;
+    public StudentIdSys(SQLDriver sqlDriver, CourseEnrollmentTracker enrollmentTracker, Login login) {
+        this.sqlDriver = sqlDriver;
         this.enrollmentTracker = enrollmentTracker;
         this.login = login;
         this.normalDistFolder = Lib.getDirectoryFromPath(NORMAL_DIST_FOLDER, true);
@@ -430,20 +430,20 @@ public class StudentIdSys implements Module {
     public void start() {
         courseInfoCache = new HashMap<>();
         try {
-            sqlGetAllDistribution = sqLite.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute");
-            sqlGetDistribution = sqLite.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute " +
+            sqlGetAllDistribution = sqlDriver.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute");
+            sqlGetDistribution = sqlDriver.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute " +
                     "WHERE \"year\"=? AND semester=? AND system_code=? AND class_code is ? AND distribution=?"
             );
-            sqlAddDistribution = sqLite.getDatabase().prepareStatement("INSERT INTO grades_distribution_contribute " +
+            sqlAddDistribution = sqlDriver.getDatabase().prepareStatement("INSERT INTO grades_distribution_contribute " +
                     "(\"year\", semester, system_code, class_code, serial_number, name, student_id, upload, distribution) " +
                     "VALUES (?,?,?,?,?,?,?,?,?)"
             );
-            sqlSetDistributionSerialNumber = sqLite.getDatabase().prepareStatement("UPDATE grades_distribution_contribute " +
+            sqlSetDistributionSerialNumber = sqlDriver.getDatabase().prepareStatement("UPDATE grades_distribution_contribute " +
                     "SET serial_number=?, name=? " +
                     "WHERE \"year\"=? AND semester=? AND system_code=? AND class_code is ?"
             );
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 
@@ -561,7 +561,7 @@ public class StudentIdSys implements Module {
             result.close();
             return allDestImages;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
         return null;
     }
@@ -590,7 +590,7 @@ public class StudentIdSys implements Module {
             result.close();
             return distributionImage;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
         return null;
     }
@@ -607,7 +607,7 @@ public class StudentIdSys implements Module {
             sqlSetDistributionSerialNumber.clearParameters();
             return result;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
             return -1;
         }
     }
@@ -627,7 +627,7 @@ public class StudentIdSys implements Module {
             sqlAddDistribution.clearParameters();
             return result;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
             return -1;
         }
     }

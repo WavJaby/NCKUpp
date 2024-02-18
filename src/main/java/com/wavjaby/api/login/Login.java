@@ -16,7 +16,7 @@ import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.lib.restapi.request.RequestBody;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.sql.SQLite;
+import com.wavjaby.sql.SQLDriver;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.parser.Parser;
@@ -41,7 +41,7 @@ public class Login implements Module {
     private static final Logger logger = new Logger(TAG);
     public static final String loginCheckString = "/index.php?c=auth&m=logout";
 
-    private final SQLite sqLite;
+    private final SQLDriver sqlDriver;
     private final Search search;
     private final ProxyManager proxyManager;
     private final CourseFuncBtn courseFunctionButton;
@@ -90,28 +90,28 @@ public class Login implements Module {
         }
     }
 
-    public Login(Search search, CourseFuncBtn courseFunctionButton, CourseSchedule courseSchedule, SQLite sqLite, ProxyManager proxyManager) {
+    public Login(Search search, CourseFuncBtn courseFunctionButton, CourseSchedule courseSchedule, SQLDriver sqlDriver, ProxyManager proxyManager) {
         this.search = search;
         this.courseFunctionButton = courseFunctionButton;
         this.courseSchedule = courseSchedule;
-        this.sqLite = sqLite;
+        this.sqlDriver = sqlDriver;
         this.proxyManager = proxyManager;
     }
 
     @Override
     public void start() {
         try {
-            addUserLoginData = sqLite.getDatabase().prepareStatement(
+            addUserLoginData = sqlDriver.getDatabase().prepareStatement(
                     "INSERT INTO login_data (student_id, name,dept_grade_info, PHPSESSID) VALUES (?, ?, ?, ?)"
             );
-            updateUserLoginData = sqLite.getDatabase().prepareStatement(
+            updateUserLoginData = sqlDriver.getDatabase().prepareStatement(
                     "UPDATE login_data SET student_id=?, name=?, dept_grade_info=?, PHPSESSID=? WHERE student_id=?"
             );
-            getUserLoginState = sqLite.getDatabase().prepareStatement(
+            getUserLoginState = sqlDriver.getDatabase().prepareStatement(
                     "SELECT student_id FROM login_data WHERE student_id=? AND PHPSESSID=?"
             );
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
 
         keepLoginUpdater.scheduleAtFixedRate(() -> {
@@ -208,7 +208,7 @@ public class Login implements Module {
             }
             updateUserLoginData.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 
@@ -221,7 +221,7 @@ public class Login implements Module {
             addUserLoginData.executeUpdate();
             addUserLoginData.clearParameters();
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 
@@ -235,7 +235,7 @@ public class Login implements Module {
             result.close();
             return login;
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
         return false;
     }

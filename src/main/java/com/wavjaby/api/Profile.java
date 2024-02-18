@@ -8,7 +8,7 @@ import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.lib.restapi.RequestMethod;
 import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
-import com.wavjaby.sql.SQLite;
+import com.wavjaby.sql.SQLDriver;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -27,23 +27,23 @@ import static com.wavjaby.lib.Lib.readRequestBody;
 public class Profile implements Module {
     private static final String TAG = "Profile";
     private static final Logger logger = new Logger(TAG);
-    private final SQLite sqLite;
+    private final SQLDriver sqlDriver;
     private final Login login;
     private PreparedStatement getUserSettings;
 
-    public Profile(Login login, SQLite sqLite) {
+    public Profile(Login login, SQLDriver sqlDriver) {
         this.login = login;
-        this.sqLite = sqLite;
+        this.sqlDriver = sqlDriver;
     }
 
     @Override
     public void start() {
         try {
-            getUserSettings = sqLite.getDatabase().prepareStatement(
+            getUserSettings = sqlDriver.getDatabase().prepareStatement(
                     "SELECT discord_id FROM user_data WHERE student_id=?"
             );
         } catch (SQLException e) {
-            SQLite.printSqlError(e);
+            sqlDriver.printStackTrace(e);
         }
     }
 

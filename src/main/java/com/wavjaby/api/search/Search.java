@@ -1139,31 +1139,29 @@ public class Search implements Module {
 
             // get serial number
             List<Node> section1 = section.get(sectionOffset + 1).childNodes();
-            String serialNumber = ((Element) section1.get(0)).ownText().trim();
+            // Get serial number
+            String courseData_serialNumber = ((Element) section1.get(0)).ownText().trim();
+            if (courseData_serialNumber.isEmpty()) courseData_serialNumber = null;
             if (serialNumberFilter != null) {
-                String serialNumberStr = serialNumber.substring(serialNumber.indexOf('-') + 1);
+                if (courseData_serialNumber == null) continue;
+                String serialNumberStr = courseData_serialNumber.substring(courseData_serialNumber.indexOf('-') + 1);
                 // Skip if we don't want
                 if (!serialNumberFilter.contains(serialNumberStr))
                     continue;
             }
-            // Get serial number
-            String courseData_serialNumber = serialNumber.isEmpty() ? null : serialNumber;
 
             // Get system number
-            String courseData_courseSystemNumber = ((TextNode) section1.get(1)).text().trim();
+            String courseData_systemNumber = ((TextNode) section1.get(section1.size() - 3)).text().trim();
+            if (courseData_systemNumber.isEmpty()) courseData_systemNumber = null;
 
             // Get attribute code
-            String courseData_courseAttributeCode = null;
-            String courseAttributeCode = ((TextNode) section1.get(3)).text().trim();
-            if (!courseAttributeCode.isEmpty()) {
-                int courseAttributeCodeStart, courseAttributeCodeEnd;
-                if ((courseAttributeCodeStart = courseAttributeCode.indexOf('[')) != -1 &&
-                        (courseAttributeCodeEnd = courseAttributeCode.lastIndexOf(']')) != -1)
-                    courseData_courseAttributeCode = courseAttributeCode.substring(courseAttributeCodeStart + 1, courseAttributeCodeEnd);
-                else
-                    courseData_courseAttributeCode = courseAttributeCode;
-            } else
-                logger.log(serialNumber + "AttributeCode not found");
+            String courseData_attributeCode = ((TextNode) section1.get(section1.size() - 1)).text().trim();
+            if (!courseData_attributeCode.isEmpty()) {
+                int start, end;
+                if ((start = courseData_attributeCode.indexOf('[')) != -1 &&
+                        (end = courseData_attributeCode.lastIndexOf(']')) != -1)
+                    courseData_attributeCode = courseData_attributeCode.substring(start + 1, end);
+            } else courseData_attributeCode = null;
 
             // Get department name
             String courseData_departmentName = section.get(sectionOffset).ownText();
@@ -1175,7 +1173,7 @@ public class Search implements Module {
             // Get forGrade & classInfo & group
             Integer courseData_forGrade = null;
             String courseData_forClass = null;
-            String courseData_group = null;
+            String courseData_forClassGroup = null;
             List<Node> section2 = section.get(sectionOffset + 2).childNodes();
             int section2c = 0;
             for (Node node : section2) {
@@ -1191,7 +1189,7 @@ public class Search implements Module {
                     else if (section2c == 1)
                         courseData_forClass = cache.replace("　", "");
                     else
-                        courseData_group = cache;
+                        courseData_forClassGroup = cache;
                 }
             }
 
@@ -1257,10 +1255,22 @@ public class Search implements Module {
 
             // Get instructor name
             String[] courseData_instructors = null;
-            String instructors = section.get(sectionOffset + 6).text();
-            if (!instructors.isEmpty() && !instructors.equals("未定")) {
-//                instructors = instructors.replace("*", "");
-                courseData_instructors = simpleSplit(instructors, ' ');
+            List<Node> instructorNodes = section.get(sectionOffset + 6).childNodes();
+            if (!instructorNodes.isEmpty() &&
+                    (instructorNodes.size() > 1 || !(instructorNodes.get(0) instanceof TextNode) || !"未定".equals(((TextNode) instructorNodes.get(0)).text()))) {
+                List<String> instructors = new ArrayList<>();
+                for (Node node : instructorNodes) {
+                    if (node instanceof TextNode) {
+                        String instructorName = ((TextNode) node).text().trim();
+                        // Main instructor
+                        if (instructorName.endsWith("*"))
+                            instructors.add(0, instructorName.substring(0, instructorName.length() - 1));
+                        else
+                            instructors.add(instructorName);
+                    }
+                }
+                if (!instructors.isEmpty())
+                    courseData_instructors = instructors.toArray(new String[0]);
             }
 
             // Get time list
@@ -1281,10 +1291,24 @@ public class Search implements Module {
                             timeCacheDayOfWeek = (byte) (text.charAt(1) - '1');
                             // Get section
                             if (text.length() > 3) {
-                                timeCacheSection = sectionCharToByte(text.charAt(3));
+                                // Missing section start
+                                if (text.charAt(3) == '~') {
+                                    logger.err("Course " + courseData_semester + " " + courseData_serialNumber + " " + courseData_courseName +
+                                            " missing time section start: '" + text + "', using section end");
+                                    if (text.length() > 4) {
+                                        text = text.substring(0, 3) + text.charAt(4) + "~" + text.charAt(4);
+                                    } else
+                                        text = text.substring(0, 3);
+                                }
+
+                                if (text.length() > 3)
+                                    timeCacheSection = sectionCharToByte(text.charAt(3));
                                 // Get section end
-                                if (text.length() > 5 && text.charAt(4) == '~') {
+                                if (text.length() > 5) {
                                     timeCacheSectionTo = sectionCharToByte(text.charAt(5));
+                                    if (text.length() > 6 || text.charAt(4) != '~')
+                                        logger.err("Course " + courseData_semester + " " + courseData_serialNumber + " " + courseData_courseName +
+                                                " wrong format: '" + text + "'");
                                 }
                             }
                             continue;
@@ -1342,7 +1366,6 @@ public class Search implements Module {
                 courseData_timeList = timeDataList.toArray(new CourseData.TimeData[0]);
 
             // Get selected & available
-            String[] count;
             StringBuilder countBuilder = new StringBuilder();
             for (Node n : section.get(sectionOffset + 7).childNodes()) {
                 // Check style
@@ -1358,25 +1381,13 @@ public class Search implements Module {
                 } else if (n instanceof TextNode)
                     countBuilder.append(((TextNode) n).text());
             }
-            count = countBuilder.toString().split("/");
+            String[] count = countBuilder.toString().split("/");
             Integer courseData_selected = count[0].isEmpty() ? null : Integer.parseInt(count[0]);
             Integer courseData_available = count.length < 2 ? null :
                     (count[1].equals("額滿") || count[1].equals("full")) ? 0 :
                             (count[1].equals("不限") || count[1].equals("unlimited")) ? -1 :
                                     (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -2 :
                                             Integer.parseInt(count[1]);
-
-            // Get moodle, outline
-            String courseData_moodle = null;
-            Elements linkEle = section.get(sectionOffset + 9).getElementsByAttribute("href");
-            if (!linkEle.isEmpty()) {
-                for (Element ele : linkEle) {
-                    String href = ele.attr("href");
-                    if (href.startsWith("javascript"))
-                        // moodle link
-                        courseData_moodle = href.substring(19, href.length() - 3).replace("','", ",");
-                }
-            }
 
             // Get function buttons
             String courseData_btnPreferenceEnter = null;
@@ -1409,15 +1420,14 @@ public class Search implements Module {
 
             CourseData courseData = new CourseData(courseData_semester,
                     courseData_departmentName,
-                    courseData_serialNumber, courseData_courseAttributeCode, courseData_courseSystemNumber,
-                    courseData_forGrade, courseData_forClass, courseData_group,
+                    courseData_serialNumber, courseData_systemNumber, courseData_attributeCode,
+                    courseData_forGrade, courseData_forClass, courseData_forClassGroup,
                     courseData_category,
                     courseData_courseName, courseData_courseNote, courseData_courseLimit, courseData_tags,
                     courseData_credits, courseData_required,
                     courseData_instructors,
                     courseData_selected, courseData_available,
                     courseData_timeList,
-                    courseData_moodle,
                     courseData_btnPreferenceEnter, courseData_btnAddCourse, courseData_btnPreRegister, courseData_btnAddRequest);
             result.courseDataList.add(courseData);
         }

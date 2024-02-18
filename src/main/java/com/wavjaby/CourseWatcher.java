@@ -292,7 +292,7 @@ public class CourseWatcher implements Runnable, Module {
                             .put("type", "rich")
                             .put("color", embedColor)
                             .put("title", cosData.getSerialNumber() + " " + cosData.getCourseName())
-                            .put("description", cosData.getGroup())
+                            .put("description", cosData.getForClassGroup())
                             .put("url", url)
                             .put("fields", new JsonArray()
                                     .add(new JsonObject()

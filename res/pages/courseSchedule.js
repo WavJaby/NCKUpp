@@ -708,7 +708,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 			h2(data.serialNumber + ' ' + data.courseName),
 			data.instructors.map(i => span(i + ' ')),
 			p(data.courseNote),
-			button(null, 'moodle', openCourseMoodle, {moodleQuery: data.moodle}),
+			button(null, 'moodle', openCourseMoodle, {moodleQuery: data.semester + ',' + data.attributeCode}),
 			locationButtons,
 		));
 		courseInfoWindow.windowOpen();

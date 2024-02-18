@@ -237,7 +237,6 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 		available: rawCourseData.a,
 		time: null,
 		timeString: null,
-		moodle: rawCourseData.m,
 		preferenceEnter: rawCourseData.pe,
 		addCourse: rawCourseData.ac,
 		preRegister: rawCourseData.pr,
@@ -292,7 +291,7 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 	// Parse tags
 	if (rawCourseData.tg !== null) {
 		courseData.tags = rawCourseData.tg.map(i => {
-			i = i.split(',');
+			i = i.split('|');
 			return {
 				name: i[0],
 				color: i[1].charCodeAt(0) === 0x23 ? i[1] : courseDataTagColor[i[1]],
