@@ -88,7 +88,7 @@ public class Main {
         addModule(proxyManager);
         String mainDatabasePath = "./database.db";
         SQLDriver SQLDriver = new SQLDriver(mainDatabasePath,"jdbc:sqlite:" + mainDatabasePath,
-                "./sqlite-jdbc-3.40.0.0.jar", "org.sqlite.JDBC", null, null);
+                "./sqlite-jdbc-3.42.0.1.jar", "org.sqlite.JDBC", null, null);
         addModule(SQLDriver);
         addModule(new WebSocket());
         addModule(new IP());
@@ -130,7 +130,7 @@ public class Main {
             addModule(new CourseWatcher(search, allDept, watchDog, serverSettings));
 
 
-//        logger.log("Server started, " + server.hostname + ':' + server.port);
+        logger.log("Server started, " + server.hostname + ':' + server.port);
 
         long start = System.currentTimeMillis();
         Runtime.getRuntime().addShutdownHook(new Thread(this::stopModules));

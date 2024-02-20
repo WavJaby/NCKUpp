@@ -6,6 +6,10 @@ import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.api.search.RobotCheck;
 import com.wavjaby.api.search.Search;
+import com.wavjaby.json.JsonArray;
+import com.wavjaby.json.JsonArrayStringBuilder;
+import com.wavjaby.json.JsonObject;
+import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
@@ -23,10 +27,7 @@ import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookieStore;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.wavjaby.Main.courseNckuOrg;
 import static com.wavjaby.Main.courseNckuOrgUri;
@@ -36,7 +37,8 @@ import static com.wavjaby.lib.Lib.*;
 public class AllDept implements Module {
     private static final String TAG = "AllDept";
     private static final Logger logger = new Logger(TAG);
-    private static final String ALLDEPT_FILE_PATH = "./api_file/alldept.json";
+    private static final String ALL_DEPT_FILE_PATH = "./api_file/allDept.json";
+    public static final Map<String, String> deptIdMap = new HashMap<>();
     private final RobotCheck robotCheck;
     private final ProxyManager proxyManager;
     private File allDeptFile;
@@ -50,25 +52,80 @@ public class AllDept implements Module {
     @Override
     public void start() {
         // Read cache
-        allDeptFile = getFileFromPath(ALLDEPT_FILE_PATH, true, true);
+        allDeptFile = getFileFromPath(ALL_DEPT_FILE_PATH, true, true);
         if (allDeptFile.exists()) {
             deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
+            assert deptGroup != null;
+            JsonObject jsonObject = new JsonObject(deptGroup);
+            for (Object i : jsonObject.getArray("deptGroup")) {
+                for (Object j : ((JsonObject) i).getArray("dept")) {
+                    deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
+                    deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
+                }
+            }
         }
 
         // Get new dept data
         CookieStore cookieStore = new CookieManager().getCookieStore();
         Cookie.addCookie("PHPSESSID", "NCKUpp", courseNckuOrgUri, cookieStore);
-        Search.AllDeptGroupData allDept = getAllDeptGroupData(cookieStore);
-        if (allDept != null && allDept.getDeptCount() > 0) {
-            logger.log("Get " + allDept.getDeptCount() + " dept");
-            deptGroup = allDept.toString();
-            try {
-                FileWriter fileWriter = new FileWriter(allDeptFile);
-                fileWriter.write(deptGroup);
-                fileWriter.close();
-            } catch (IOException e) {
-                logger.errTrace(e);
+        Cookie.addCookie("cos_lang", "cht", courseNckuOrgUri, cookieStore);
+        Search.AllDeptGroupData allDeptTW = getAllDeptGroupData(cookieStore);
+        Cookie.addCookie("cos_lang", "eng", courseNckuOrgUri, cookieStore);
+        Search.AllDeptGroupData allDeptEN = getAllDeptGroupData(cookieStore);
+        if (allDeptTW == null || allDeptTW.getDeptCount() == 0 ||
+                allDeptEN == null || allDeptEN.getDeptCount() == 0) {
+            logger.err("Failed to get all departments data");
+            return;
+        }
+        if (allDeptTW.getDeptCount() != allDeptEN.getDeptCount()) {
+            logger.err("Failed to get all departments data, department count not match");
+            return;
+        }
+
+        int count = allDeptTW.getDeptCount();
+        logger.log("Get " + count + " departments");
+
+
+        JsonObjectStringBuilder builder = new JsonObjectStringBuilder();
+        JsonArrayStringBuilder outDeptGroup = new JsonArrayStringBuilder();
+        List<Search.AllDeptGroupData.Group> groupsTW = allDeptTW.getGroups();
+        List<Search.AllDeptGroupData.Group> groupsEN = allDeptEN.getGroups();
+
+        for (int i = 0; i < groupsTW.size(); i++) {
+            Search.AllDeptGroupData.Group groupTW = groupsTW.get(i);
+            Search.AllDeptGroupData.Group groupEN = groupsEN.get(i);
+            JsonObjectStringBuilder groupOut = new JsonObjectStringBuilder();
+            groupOut.append("nameTW", groupTW.name);
+            boolean emptyNameEN = true;
+            for (int j = 0; j < groupEN.name.length(); j++)
+                if (groupEN.name.charAt(j) != '*') {
+                    emptyNameEN = false;
+                    break;
+                }
+            groupOut.append("nameEN", emptyNameEN ? groupTW.name : groupEN.name);
+
+            JsonArrayStringBuilder outDeptData = new JsonArrayStringBuilder();
+            for (int j = 0; j < groupTW.dept.size(); j++) {
+                Search.AllDeptGroupData.DeptData deptTW = groupTW.dept.get(j);
+                Search.AllDeptGroupData.DeptData deptEN = groupEN.dept.get(j);
+                outDeptData.append(new JsonArrayStringBuilder()
+                        .append(deptTW.id).append(deptTW.name).append(deptEN.name));
+                deptIdMap.put(deptTW.name, deptTW.id);
+                deptIdMap.put(deptEN.name, deptTW.id);
             }
+            groupOut.append("dept", outDeptData);
+            outDeptGroup.append(groupOut);
+        }
+
+        builder.append("deptGroup", outDeptGroup);
+        builder.append("deptCount", count);
+        deptGroup = builder.toString();
+        try {
+            FileWriter fileWriter = new FileWriter(allDeptFile);
+            fileWriter.write(deptGroup);
+            fileWriter.close();
+        } catch (IOException e) {
+            logger.errTrace(e);
         }
     }
 

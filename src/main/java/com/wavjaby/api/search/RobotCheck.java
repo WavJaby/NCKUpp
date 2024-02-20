@@ -9,6 +9,8 @@ import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.CookieStore;
@@ -31,9 +33,9 @@ public class RobotCheck {
     public HttpResponseData sendRequest(String urlOriginUri, Connection request, CookieStore cookieStore) {
         boolean networkError = false;
         for (int i = 0; i < MAX_ROBOT_CHECK_REQUEST_TRY; i++) {
-            String response;
+            String responseBody;
             try {
-                response = request.execute().body();
+                responseBody = request.execute().body();
                 networkError = false;
             } catch (UncheckedIOException | IOException e) {
                 networkError = true;
@@ -46,10 +48,10 @@ public class RobotCheck {
             }
 
             // Check if no robot
-            String codeTicket = findStringBetween(response, "index.php?c=portal&m=robot", "code_ticket=", "&");
+            String codeTicket = findStringBetween(responseBody, "index.php?c=portal&m=robot", "code_ticket=", "&");
             if (codeTicket == null) {
-                String baseUrl = findStringBetween(response, "<base", "href=\"", "\"");
-                return new HttpResponseData(HttpResponseData.ResponseState.SUCCESS, response, baseUrl);
+                String baseUrl = findStringBetween(responseBody, "<base", "href=\"", "\"");
+                return new HttpResponseData(HttpResponseData.ResponseState.SUCCESS, responseBody, baseUrl);
             }
 
             // Crack robot

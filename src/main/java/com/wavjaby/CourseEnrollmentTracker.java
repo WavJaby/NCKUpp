@@ -199,7 +199,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                     for (CourseData courseData : newCourseDataList) {
                         if (courseData.getSerialNumber() == null)
                             continue;
-                        tableIndex.put(courseData.getSerialNumber(), 0);
+                        tableIndex.put(courseData.getDepartmentId() + '-' + courseData.getSerialNumber(), 0);
                     }
                     int i = 0;
                     for (Map.Entry<String, Integer> entry : tableIndex.entrySet())

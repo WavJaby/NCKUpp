@@ -18,7 +18,7 @@ public class PropertiesReader extends Properties {
         try {
             if (!file.exists()) {
                 logger.log("Properties: \"" + filePath + "\" not found, create default");
-                InputStream stream = Main.class.getResourceAsStream(filePath);
+                InputStream stream = PropertiesReader.class.getClassLoader().getResourceAsStream(filePath);
                 if (stream == null) {
                     logger.log("Default properties: \"" + filePath + "\" not found");
                     return;

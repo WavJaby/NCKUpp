@@ -349,11 +349,11 @@ public class CourseWatcher implements Runnable, Module {
         return integer > 0 ? "+" + integer : String.valueOf(integer);
     }
 
-    public static List<CourseDataDifference> getDifferent(@NotNull List<CourseData> last, @NotNull List<CourseData> now) {
+    public static List<CourseDataDifference> getDifferent(List<CourseData> last, @NotNull List<CourseData> now) {
         HashMap<String, CourseData> lastCourseDataMap = new HashMap<>();
         for (CourseData i : last)
             if (i.getSerialNumber() != null)
-                lastCourseDataMap.put(i.getSerialNumber(), i);
+                lastCourseDataMap.put(i.getDepartmentId() + '-' + i.getSerialNumber(), i);
 
         List<CourseDataDifference> diff = new ArrayList<>();
 

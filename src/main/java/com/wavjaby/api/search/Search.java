@@ -6,10 +6,8 @@ import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.api.AllDept;
 import com.wavjaby.api.UrSchool;
-import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
-import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
@@ -500,8 +498,8 @@ public class Search implements Module {
 
     public static class AllDeptGroupData {
         public static class Group {
-            final String name;
-            final List<DeptData> dept;
+            public final String name;
+            public final List<DeptData> dept;
 
             public Group(String name, List<DeptData> dept) {
                 this.name = name;
@@ -510,7 +508,7 @@ public class Search implements Module {
         }
 
         public static class DeptData {
-            final String id, name;
+            public final String id, name;
 
             public DeptData(String id, String name) {
                 this.id = id;
@@ -530,25 +528,8 @@ public class Search implements Module {
             return deptCount;
         }
 
-        @Override
-        public String toString() {
-            JsonObjectStringBuilder outJson = new JsonObjectStringBuilder();
-            JsonArrayStringBuilder outDeptGroup = new JsonArrayStringBuilder();
-            for (Group group : deptGroup) {
-                JsonObjectStringBuilder outGroup = new JsonObjectStringBuilder();
-                outGroup.append("name", group.name);
-                JsonArrayStringBuilder outDeptData = new JsonArrayStringBuilder();
-                for (DeptData deptData : group.dept) {
-                    outDeptData.append(new JsonArrayStringBuilder()
-                            .append(deptData.id).append(deptData.name));
-                }
-                outGroup.append("dept", outDeptData);
-                outDeptGroup.append(outGroup);
-            }
-
-            outJson.append("deptGroup", outDeptGroup);
-            outJson.append("deptCount", deptCount);
-            return outJson.toString();
+        public List<Group> getGroups() {
+            return deptGroup;
         }
     }
 
@@ -1137,16 +1118,28 @@ public class Search implements Module {
             } else
                 courseData_semester = allSemester;
 
-            // get serial number
             List<Node> section1 = section.get(sectionOffset + 1).childNodes();
             // Get serial number
-            String courseData_serialNumber = ((Element) section1.get(0)).ownText().trim();
-            if (courseData_serialNumber.isEmpty()) courseData_serialNumber = null;
+            String serialNumberRaw = ((Element) section1.get(0)).ownText().trim();
+            Integer courseData_serialNumber = null;
+            if (!serialNumberRaw.isEmpty()) {
+                int start = serialNumberRaw.indexOf('-') + 1;
+                for (int i = start; i < serialNumberRaw.length(); i++) {
+                    if (serialNumberRaw.charAt(i) != '0') {
+                        start = i;
+                        break;
+                    }
+                }
+                try {
+                    courseData_serialNumber = Integer.parseInt(serialNumberRaw.substring(start));
+                } catch (NumberFormatException e) {
+                    logger.err("SerialNumber parse error, " + e.getMessage());
+                }
+            }
             if (serialNumberFilter != null) {
-                if (courseData_serialNumber == null) continue;
-                String serialNumberStr = courseData_serialNumber.substring(courseData_serialNumber.indexOf('-') + 1);
                 // Skip if we don't want
-                if (!serialNumberFilter.contains(serialNumberStr))
+                if (courseData_serialNumber == null ||
+                        !serialNumberFilter.contains(leftPad(courseData_serialNumber.toString(), 3, '0')))
                     continue;
             }
 
@@ -1163,9 +1156,25 @@ public class Search implements Module {
                     courseData_attributeCode = courseData_attributeCode.substring(start + 1, end);
             } else courseData_attributeCode = null;
 
-            // Get department name
-            String courseData_departmentName = section.get(sectionOffset).ownText();
-            if (courseData_departmentName.isEmpty()) courseData_departmentName = null;
+            // Get department id
+            String departmentName = section.get(sectionOffset).ownText();
+            String courseData_departmentId = null;
+            if (serialNumberRaw.length() > 2)
+                courseData_departmentId = serialNumberRaw.substring(0, 2);
+            else if (!departmentName.isEmpty())
+                courseData_departmentId = AllDept.deptIdMap.get(departmentName);
+            if (courseData_departmentId == null) {
+                if (courseData_systemNumber != null && courseData_systemNumber.length() > 2) {
+                    if (!departmentName.isEmpty())
+                        logger.warn("Failed to get department id: '" + departmentName +
+                                "' not found, use SystemNumber: " + courseData_systemNumber);
+                    courseData_departmentId = courseData_systemNumber.substring(0, 2);
+                } else {
+                    logger.err("Failed to get department id: '" + departmentName + "' not found");
+                    courseData_departmentId = "";
+                }
+            }
+
 
             // Get course type
             String courseData_category = section.get(sectionOffset + 3).text();
@@ -1419,7 +1428,7 @@ public class Search implements Module {
             }
 
             CourseData courseData = new CourseData(courseData_semester,
-                    courseData_departmentName,
+                    courseData_departmentId,
                     courseData_serialNumber, courseData_systemNumber, courseData_attributeCode,
                     courseData_forGrade, courseData_forClass, courseData_forClassGroup,
                     courseData_category,

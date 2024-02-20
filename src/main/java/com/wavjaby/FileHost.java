@@ -19,7 +19,7 @@ import static com.wavjaby.lib.Lib.setAllowOrigin;
 public class FileHost implements Module {
     private static final String TAG = "FileHost";
     private static final Logger logger = new Logger(TAG);
-    private final File fileRoot, quizletFileRot;
+    private final File fileRoot;
     private final FileNameMap fileNameMap = URLConnection.getFileNameMap();
 
     @Override
@@ -29,13 +29,9 @@ public class FileHost implements Module {
 
     public FileHost(PropertiesReader serverSettings) {
         String frontendFilePath = serverSettings.getProperty("frontendFilePath", "./");
-        String quizletFilePath = serverSettings.getProperty("quizletFilePath", "./quizlet");
         fileRoot = new File(frontendFilePath);
-        quizletFileRot = new File(quizletFilePath);
         if (!fileRoot.exists())
             logger.err("Frontend file path not found");
-        if (!quizletFileRot.exists())
-            logger.err("Quizlet file path not found");
     }
 
     @SuppressWarnings("unused")
@@ -45,7 +41,6 @@ public class FileHost implements Module {
         String path = req.getRequestURI().getPath();
         try {
             boolean filePass = false;
-            boolean quizlet = false;
             if (path.startsWith("/NCKUpp")) {
                 path = path.substring(7);
                 if (path.equals("/")) {
@@ -55,11 +50,6 @@ public class FileHost implements Module {
                         path.startsWith("/index") ||
                         path.equals("/web_manifest.json"))
                     filePass = true;
-                else if (path.startsWith("/quizlet")) {
-                    path = path.substring(8);
-                    quizlet = true;
-                    filePass = true;
-                }
             }
             if (!filePass) {
                 req.sendResponseHeaders(404, 0);
@@ -74,7 +64,7 @@ public class FileHost implements Module {
             if (path.lastIndexOf('.') < path.lastIndexOf('/'))
                 path += ".html";
 
-            File file = new File(quizlet ? quizletFileRot : fileRoot, path);
+            File file = new File(fileRoot, path);
 
             // File not found
             if (!file.isFile()) {

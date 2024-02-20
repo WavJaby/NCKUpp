@@ -4,38 +4,42 @@ import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 
+import java.util.Objects;
+
 public class CourseData {
     final String semester;
-    final String departmentName; // Can be null
-    final String serialNumber; // Can be null
+    final String departmentId;
+    final Integer serialNumber; // Nullable
     final String attributeCode;
     final String systemNumber;
-    final Integer forGrade;  // Can be null
-    final String forClass; // Can be null
-    final String forClassGroup;  // Can be null
-    final String category;  // Can be null
-    final String courseName;
-    final String courseNote; // Can be null
-    final String courseLimit; // Can be null
-    final TagData[] tags; // Can be null
-    final Float credits; // Can be null
-    final Boolean required; // Can be null
-    final String[] instructors; // Can be null
-    final Integer selected; // Can be null
-    final Integer available; // Can be null
-    final TimeData[] timeList; // Can be null
-    final String btnPreferenceEnter; // Can be null
-    final String btnAddCourse; // Can be null
-    final String btnPreRegister; // Can be null
-    final String btnAddRequest; // Can be null
+    final Integer forGrade;  // Nullable
+    final String forClass; // Nullable
+    final String forClassGroup;  // Nullable
+    final String category;  // Nullable
+    final String courseName; // Maybe empty
+    final String courseNote; // Nullable
+    final String courseLimit; // Nullable
+    final TagData[] tags; // Nullable
+    final Float credits; // Nullable
+    final Boolean required; // Nullable
+    final String[] instructors; // Nullable
+    final Integer selected; // Nullable
+    final Integer available; // Nullable
+    final TimeData[] timeList; // Nullable
+
+    // User action token(require login)
+    final String btnPreferenceEnter; // Nullable
+    final String btnAddCourse; // Nullable
+    final String btnPreRegister; // Nullable
+    final String btnAddRequest; // Nullable
 
 
     public CourseData(JsonObject jsonObject) {
         // output
         this.semester = jsonObject.getString("y");
-        this.departmentName = jsonObject.getString("dn");
+        this.departmentId = jsonObject.getString("dn");
 
-        this.serialNumber = jsonObject.getString("sn");
+        this.serialNumber = (Integer) jsonObject.getObject("sn");
         this.attributeCode = jsonObject.getString("ca");
         this.systemNumber = jsonObject.getString("cs");
 
@@ -84,8 +88,8 @@ public class CourseData {
     }
 
     public CourseData(String semester,
-                      String departmentName,
-                      String serialNumber, String systemNumber, String attributeCode,
+                      String departmentId,
+                      Integer serialNumber, String systemNumber, String attributeCode,
                       Integer forGrade, String forClass, String forClassGroup,
                       String category,
                       String courseName, String courseNote, String courseLimit, TagData[] tags,
@@ -95,7 +99,7 @@ public class CourseData {
                       TimeData[] timeList,
                       String btnPreferenceEnter, String btnAddCourse, String btnPreRegister, String btnAddRequest) {
         this.semester = semester;
-        this.departmentName = departmentName;
+        this.departmentId = departmentId;
         this.serialNumber = serialNumber;
         this.systemNumber = systemNumber;
         this.attributeCode = attributeCode;
@@ -140,6 +144,17 @@ public class CourseData {
             if (url == null)
                 return name + '|' + colorID + '|';
             return name + '|' + colorID + '|' + url;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof TagData) {
+                TagData other = (TagData) obj;
+                return Objects.equals(other.name, name) &&
+                        Objects.equals(other.colorID, colorID) &&
+                        Objects.equals(other.url, url);
+            }
+            return false;
         }
     }
 
@@ -236,7 +251,7 @@ public class CourseData {
         // output
         JsonObjectStringBuilder jsonBuilder = new JsonObjectStringBuilder();
         jsonBuilder.append("y", semester);
-        jsonBuilder.append("dn", departmentName);
+        jsonBuilder.append("dn", departmentId);
 
         jsonBuilder.append("sn", serialNumber);
         jsonBuilder.append("ca", attributeCode);
@@ -267,14 +282,23 @@ public class CourseData {
         else jsonBuilder.append("a", available);
 
         jsonBuilder.append("t", toJsonArray(timeList));
-        jsonBuilder.append("pe", btnPreferenceEnter);
-        jsonBuilder.append("ac", btnAddCourse);
-        jsonBuilder.append("pr", btnPreRegister);
-        jsonBuilder.append("ar", btnAddRequest);
+
+        if (btnPreferenceEnter != null)
+            jsonBuilder.append("pe", btnPreferenceEnter);
+        if (btnAddCourse != null)
+            jsonBuilder.append("ac", btnAddCourse);
+        if (btnPreRegister != null)
+            jsonBuilder.append("pr", btnPreRegister);
+        if (btnAddRequest != null)
+            jsonBuilder.append("ar", btnAddRequest);
         return jsonBuilder.toString();
     }
 
-    public String getSerialNumber() {
+    public String getDepartmentId() {
+        return departmentId;
+    }
+
+    public Integer getSerialNumber() {
         return serialNumber;
     }
 

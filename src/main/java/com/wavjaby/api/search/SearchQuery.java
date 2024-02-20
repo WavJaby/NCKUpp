@@ -47,9 +47,7 @@ public class SearchQuery {
     }
 
     public SearchQuery(CourseData courseData) {
-        this.deptNo = courseData.serialNumber == null
-                ? null
-                : courseData.serialNumber.substring(0, courseData.serialNumber.indexOf('-'));
+        this.deptNo = courseData.departmentId;
         // TODO: Get search ID
         this.searchID = null;
         this.courseName = courseData.courseName;
