@@ -3,7 +3,7 @@
 /**
  * @typedef {Object} RawCourseData
  * @property {string} y - semester
- * @property {string} dn - departmentName
+ * @property {string} dn - departmentId
  * @property {string} sn - serialNumber
  * @property {string} ca - attributeCode
  * @property {string} cs - systemNumber
@@ -29,7 +29,7 @@
 /**
  * @typedef {Object} CourseData
  * @property {string} semester
- * @property {string} departmentName
+ * @property {string} departmentId
  * @property {string} serialNumber
  * @property {string} attributeCode
  * @property {string} systemNumber
@@ -149,8 +149,9 @@
  * @property {int} deptCount
  * @property {AllDeptGroup[]} deptGroup
  * @typedef {Object} AllDeptGroup
- * @property {string} name
- * @property {[string, string][]} dept
+ * @property {string} nameTW
+ * @property {string} nameEN
+ * @property {[string, string, string][]} dept
  */
 /**
  * @typedef {Object} FlexTimeData
@@ -284,7 +285,7 @@ export default function (router, loginState, userGuideTool) {
 		fetchApi('/alldept').then(response => {
 			if (response == null || !response.success || !response.data)
 				return;
-			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.name, i.dept]));
+			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.nameTW, i.dept]));
 			if (!externalSearch)
 				loadLastSearch(false);
 		});

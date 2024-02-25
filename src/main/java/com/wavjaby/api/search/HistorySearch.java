@@ -15,7 +15,6 @@ import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLDriver;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
-import org.jsoup.nodes.Element;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -23,9 +22,7 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -111,58 +108,7 @@ public class HistorySearch {
 
         HistorySearch historySearch = new HistorySearch(proxyManager, robotCheck);
         historySearch.writeDatabase();
-//        historySearch.search();
-
-//        CookieStore[] cookieCache = readCookieCache(4);
-//        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
-////        for (int year = 112; year >= 95; year--) {
-//        for (int year = 100; year >= 95; year--) {
-//            long startYearTime = System.currentTimeMillis();
-//            logger.log("########## Fetch course: " + year);
-//            CountDownLatch tasks = new CountDownLatch(4);
-//            CourseHistorySearchQuery history = new CourseHistorySearchQuery(year, 1, year, 1);
-//            pool.execute(() -> {
-//                historySearch.search2(Language.TW, history, cookieCache[0]);
-//                tasks.countDown();
-//            });
-//            try {
-//                Thread.sleep(5000);
-//            } catch (InterruptedException e) {
-//                break;
-//            }
-//            pool.execute(() -> {
-//                historySearch.search2(Language.EN, history, cookieCache[1]);
-//                tasks.countDown();
-//            });
-//            CourseHistorySearchQuery history2 = new CourseHistorySearchQuery(year, 0, year, 0);
-//            try {
-//                Thread.sleep(5000);
-//            } catch (InterruptedException e) {
-//                break;
-//            }
-//            pool.execute(() -> {
-//                historySearch.search2(Language.TW, history2, cookieCache[2]);
-//                tasks.countDown();
-//            });
-//            try {
-//                Thread.sleep(5000);
-//            } catch (InterruptedException e) {
-//                break;
-//            }
-//            pool.execute(() -> {
-//                historySearch.search2(Language.EN, history2, cookieCache[3]);
-//                tasks.countDown();
-//            });
-//            try {
-//                tasks.await();
-//            } catch (InterruptedException e) {
-//                break;
-//            }
-//            logger.log("########## Fetch course: " + year + ", use " + ((System.currentTimeMillis() - startYearTime) / 1000) + "s");
-//        }
-//        executorShutdown(pool, 1000, "HistorySearch");
-//        saveCookieCache(cookieCache);
-
+//        historySearch.fetchCourse(historySearch, 112, 112);
 
         if (historySearch.sqlDriver != null)
             historySearch.sqlDriver.stop();
@@ -172,8 +118,9 @@ public class HistorySearch {
 
     private SQLDriver sqlDriver;
     private PreparedStatement getRoomStat, addRoomStat, editRoomStat,
-            getTagStat, addTagStat,
-            getInstructorStat, addInstructorStat;
+            getTagIdStat, addTagStat,
+            getInstructorIdStat, addInstructorStat,
+            addCourseStat;
 
     private RoomData roomGet(String location, String roomId) {
         try {
@@ -227,21 +174,22 @@ public class HistorySearch {
         }
     }
 
-    private boolean tagGet(String nameTW, String nameEN) {
+    private int tagGetId(String nameTW, String nameEN) {
         try {
-            getTagStat.setNString(1, nameTW);
-            getTagStat.setString(2, nameEN);
-            ResultSet resultSet = getTagStat.executeQuery();
-            getTagStat.clearParameters();
+            getTagIdStat.setNString(1, nameTW);
+            getTagIdStat.setString(2, nameEN);
+            ResultSet resultSet = getTagIdStat.executeQuery();
+            getTagIdStat.clearParameters();
             if (!resultSet.next()) {
                 resultSet.close();
-                return false;
+                return -1;
             }
+            int id = resultSet.getInt(1);
             resultSet.close();
-            return true;
+            return id;
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
-            return false;
+            return -1;
         }
     }
 
@@ -258,21 +206,22 @@ public class HistorySearch {
         }
     }
 
-    private boolean instructorGet(String nameTW, String nameEN) {
+    private int instructorGetId(String nameTW, String nameEN) {
         try {
-            getInstructorStat.setNString(1, nameTW);
-            getInstructorStat.setString(2, nameEN);
-            ResultSet resultSet = getInstructorStat.executeQuery();
-            getInstructorStat.clearParameters();
+            getInstructorIdStat.setNString(1, nameTW);
+            getInstructorIdStat.setString(2, nameEN);
+            ResultSet resultSet = getInstructorIdStat.executeQuery();
+            getInstructorIdStat.clearParameters();
             if (!resultSet.next()) {
                 resultSet.close();
-                return false;
+                return -1;
             }
+            int id = resultSet.getInt(1);
             resultSet.close();
-            return true;
+            return id;
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
-            return false;
+            return -1;
         }
     }
 
@@ -283,6 +232,85 @@ public class HistorySearch {
             addInstructorStat.setString(3, urschoolId);
             addInstructorStat.executeUpdate();
             addInstructorStat.clearParameters();
+        } catch (SQLException e) {
+            sqlDriver.printStackTrace(e);
+        }
+    }
+
+    private void courseAdd(CourseData courseDataTW, CourseData courseDataEN) {
+        try {
+            java.sql.Connection connection = addCourseStat.getConnection();
+            // Parse tags
+            Object[] tagIds = new Object[courseDataTW.tags == null ? 0 : courseDataTW.tags.length];
+            if (tagIds.length > 0 && courseDataEN != null && (courseDataEN.tags == null || courseDataEN.tags.length != tagIds.length)) {
+                logger.err("Course: " + getCourseKey(courseDataTW) + ", tag count not match");
+                return;
+            }
+            for (int i = 0; i < tagIds.length; i++) {
+                int id = tagGetId(courseDataTW.tags[i].name, null);
+                if (id == -1) {
+                    logger.err("Course: " + getCourseKey(courseDataTW) + ", tag: '" +
+                            courseDataTW.tags[i].name + "' id not found");
+                    return;
+                }
+                tagIds[i] = id;
+            }
+
+            // Parse instructors
+            Object[] instructorIds = new Object[courseDataTW.instructors == null ? 0 : courseDataTW.instructors.length];
+            for (int i = 0; i < instructorIds.length; i++) {
+                int id = instructorGetId(courseDataTW.instructors[i], null);
+                if (id == -1) {
+                    logger.err("Course: " + getCourseKey(courseDataTW) + ", instructor: '" +
+                            courseDataTW.instructors[i] + "' id not found");
+                    return;
+                }
+                instructorIds[i] = id;
+            }
+
+            Object[] timeArray = new Object[courseDataTW.timeList == null ? 0 : courseDataTW.timeList.length];
+            if (timeArray.length > 0 && courseDataEN != null && (courseDataEN.timeList == null || courseDataEN.timeList.length != timeArray.length)) {
+                logger.err("Course: " + getCourseKey(courseDataTW) + ", timeList count not match");
+                return;
+            }
+            for (int i = 0; i < timeArray.length; i++) {
+                timeArray[i] = courseDataTW.timeList[i].toStringShort();
+            }
+
+            addCourseStat.setString(1, courseDataTW.departmentId); // department_id
+            if (courseDataTW.serialNumber == null) addCourseStat.setNull(2, Types.INTEGER);
+            else addCourseStat.setInt(2, courseDataTW.serialNumber); // serial_id
+            addCourseStat.setString(3, courseDataTW.attributeCode); // attribute_code
+            addCourseStat.setString(4, courseDataTW.systemNumber); // system_id
+            if (courseDataTW.forGrade == null) addCourseStat.setNull(5, Types.INTEGER);
+            else addCourseStat.setInt(5, courseDataTW.forGrade); // for_grade
+
+            addCourseStat.setNString(8, courseDataTW.category); // category_tw
+            addCourseStat.setNString(10, courseDataTW.courseName); // name_tw
+            addCourseStat.setNString(12, courseDataTW.courseNote); // note_tw
+            addCourseStat.setNString(14, courseDataTW.courseLimit); // limit_tw
+            if (courseDataEN != null) {
+                addCourseStat.setString(9, courseDataEN.category); // category_en
+                addCourseStat.setString(11, courseDataEN.courseName); // name_en
+                addCourseStat.setString(13, courseDataEN.courseNote); // note_en
+                addCourseStat.setString(15, courseDataEN.courseLimit); // limit_en
+            }
+
+            addCourseStat.setString(6, courseDataTW.forClass); // for_class
+            addCourseStat.setString(7, courseDataTW.forClassGroup); // for_class_group
+            addCourseStat.setArray(16, connection.createArrayOf("INTEGER", tagIds)); // tags
+            if (courseDataTW.credits == null) addCourseStat.setNull(17, Types.FLOAT);
+            else addCourseStat.setFloat(17, courseDataTW.credits); // credits
+            if (courseDataTW.required == null) addCourseStat.setNull(18, Types.BOOLEAN);
+            else addCourseStat.setBoolean(18, courseDataTW.required); // required
+            addCourseStat.setArray(19, connection.createArrayOf("INTEGER", instructorIds)); // instructors
+            if (courseDataTW.selected == null) addCourseStat.setNull(20, Types.INTEGER);
+            else addCourseStat.setInt(20, courseDataTW.selected); // selected
+            if (courseDataTW.available == null) addCourseStat.setNull(21, Types.INTEGER);
+            else addCourseStat.setInt(21, courseDataTW.available); // available
+            addCourseStat.setArray(22, connection.createArrayOf("TEXT", timeArray)); // time
+            addCourseStat.executeUpdate();
+            addCourseStat.clearParameters();
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
         }
@@ -300,11 +328,43 @@ public class HistorySearch {
             addRoomStat = connection.prepareStatement("INSERT INTO \"room\" VALUES (?,?,?,?)");
             editRoomStat = connection.prepareStatement("UPDATE \"room\" SET \"name_tw\"=?,\"name_en\"=? WHERE \"building_id\"=? AND \"room_id\"=?");
 
-            getTagStat = connection.prepareStatement("SELECT * FROM \"tags\" WHERE \"name_tw\"=? OR \"name_en\"=?");
+            getTagIdStat = connection.prepareStatement("SELECT \"id\" FROM \"tags\" WHERE \"name_tw\"=? OR \"name_en\"=?");
             addTagStat = connection.prepareStatement("INSERT INTO \"tags\" (\"name_tw\",\"name_en\",\"color\",\"url\") VALUES (?,?,?,?)");
 
-            getInstructorStat = connection.prepareStatement("SELECT * FROM \"instructor\" WHERE \"name_tw\"=? OR \"name_en\"=?");
+            getInstructorIdStat = connection.prepareStatement("SELECT \"id\" FROM \"instructor\" WHERE \"name_tw\"=? OR \"name_en\"=?");
             addInstructorStat = connection.prepareStatement("INSERT INTO \"instructor\" (\"name_tw\",\"name_en\",\"urschool_id\") VALUES (?,?,?)");
+            /* (
+                department_id   CHAR(2)     not null,
+                serial_id       INTEGER,
+                attribute_code  VARCHAR(16) not null,
+                system_id       VARCHAR(16) not null,
+                for_grade       INTEGER,
+                for_class       VARCHAR(16),
+                for_class_group VARCHAR(16),
+                category_tw     NVARCHAR(16),
+                category_en     VARCHAR(64),
+                name_tw         NVARCHAR(64),
+                name_en         VARCHAR(128),
+                note_tw         NVARCHAR(128),
+                note_en         VARCHAR(256),
+                limit_tw        NVARCHAR(192),
+                limit_en        VARCHAR(1024),
+                tags            INTEGER ARRAY,
+                credits         FLOAT(1),
+                required        BOOLEAN,
+                instructors     INTEGER ARRAY,
+                selected        INTEGER,
+                available       INTEGER,
+                time            VARCHAR(64)
+            ) */
+            addCourseStat = connection.prepareStatement("INSERT INTO \"course_112_1\" (" +
+                    "\"department_id\",\"serial_id\",\"attribute_code\",\"system_id\"," +
+                    "\"for_grade\",\"for_class\",\"for_class_group\"," +
+                    "\"category_tw\",\"category_en\",\"name_tw\",\"name_en\",\"note_tw\",\"note_en\",\"limit_tw\",\"limit_en\"," +
+                    "\"tags\",\"credits\",\"required\",\"instructors\",\"selected\",\"available\",\"time\") " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+
+
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
             sqlDriver.stop();
@@ -357,59 +417,60 @@ public class HistorySearch {
                     rooms.add(roomData);
             }
         }
-//        for (RoomData room : rooms) {
-//            RoomData roomData = roomGet(room.buildingId, room.roomId);
-//            if (roomData == null)
-//                roomAdd(room);
-//            else
-//                roomEdit(room);
-//        }
-//
-//        // Add tag
-//        for (CourseData courseDataTW : allCourseDataListTW) {
-//            if (courseDataTW.tags == null) continue;
-//            String key = getCourseKey(courseDataTW);
-//            CourseData courseDataEN = courseSerialMapEN.get(key);
-//            assert courseDataEN.tags != null;
-//            for (int i = 0; i < courseDataTW.tags.length; i++) {
-//                CourseData.TagData tagTW = courseDataTW.tags[i];
-//                CourseData.TagData tagEN = courseDataEN.tags[i];
-//                if (!tagGet(tagTW.name, tagEN.name))
-//                    tagAdd(tagTW.name, tagEN.name, tagTW.colorID, tagTW.url == null ? tagEN.url : tagTW.url);
-//            }
-//        }
-//
-//        // Add instructor
-//        Set<String> names = new HashSet<>();
-//        Set<String> namesRestore = new HashSet<>();
-//        for (CourseData courseDataTW : allCourseDataListTW) {
-//            if (courseDataTW.instructors == null) continue;
-//
-//            String key = getCourseKey(courseDataTW);
-//            CourseData courseDataEN = courseSerialMapEN.get(key);
-//            if (courseDataEN.instructors == null || courseDataEN.instructors.length != courseDataTW.instructors.length) {
-//                names.addAll(Arrays.asList(courseDataTW.instructors));
-//            } else
-//                for (int i = 0; i < courseDataTW.instructors.length; i++) {
-//                    String nameTW = courseDataTW.instructors[i];
-//                    String nameEN = courseDataEN.instructors[i];
-//                    // name EN too short
-//                    if (nameEN.length() < 4)
-//                        names.add(nameTW);
-//                    else {
-//                        namesRestore.add(nameTW);
-//                        if (!instructorGet(nameTW, nameEN))
-//                            instructorAdd(nameTW, nameEN, null);
-//                    }
-//                }
-//        }
-//        names.removeAll(namesRestore);
-//        if (!names.isEmpty())
-//            logger.warn("Instructor english name not found: " + names.size());
-//        for (String name : names) {
-//            if (!instructorGet(name, name))
-//                instructorAdd(name, name, null);
-//        }
+        for (RoomData room : rooms) {
+            RoomData roomData = roomGet(room.buildingId, room.roomId);
+            if (roomData == null)
+                roomAdd(room);
+            else
+                roomEdit(room);
+        }
+        logger.log(courseSerialMapEN.size());
+
+        // Add tag
+        for (CourseData courseDataTW : allCourseDataListTW) {
+            if (courseDataTW.tags == null) continue;
+            String key = getCourseKey(courseDataTW);
+            CourseData courseDataEN = courseSerialMapEN.get(key);
+            assert courseDataEN.tags != null;
+            for (int i = 0; i < courseDataTW.tags.length; i++) {
+                CourseData.TagData tagTW = courseDataTW.tags[i];
+                CourseData.TagData tagEN = courseDataEN.tags[i];
+                if (tagGetId(tagTW.name, tagEN.name) == -1)
+                    tagAdd(tagTW.name, tagEN.name, tagTW.colorID, tagTW.url == null ? tagEN.url : tagTW.url);
+            }
+        }
+
+        // Add instructor
+        Set<String> names = new HashSet<>();
+        Set<String> namesRestore = new HashSet<>();
+        for (CourseData courseDataTW : allCourseDataListTW) {
+            if (courseDataTW.instructors == null) continue;
+
+            String key = getCourseKey(courseDataTW);
+            CourseData courseDataEN = courseSerialMapEN.get(key);
+            if (courseDataEN.instructors == null || courseDataEN.instructors.length != courseDataTW.instructors.length) {
+                names.addAll(Arrays.asList(courseDataTW.instructors));
+            } else
+                for (int i = 0; i < courseDataTW.instructors.length; i++) {
+                    String nameTW = courseDataTW.instructors[i];
+                    String nameEN = courseDataEN.instructors[i];
+                    // name EN too short
+                    if (nameEN.length() < 4)
+                        names.add(nameTW);
+                    else {
+                        namesRestore.add(nameTW);
+                        if (instructorGetId(nameTW, nameEN) == -1)
+                            instructorAdd(nameTW, nameEN, null);
+                    }
+                }
+        }
+        names.removeAll(namesRestore);
+        if (!names.isEmpty())
+            logger.warn("Instructor english name not found: " + names.size());
+        for (String name : names) {
+            if (instructorGetId(name, name) == -1)
+                instructorAdd(name, name, null);
+        }
 
 
         // Add course
@@ -417,8 +478,9 @@ public class HistorySearch {
         int count = 0;
         HashMap<String, CourseData> systemNumberCourseData = new HashMap<>();
         for (CourseData courseDataTW : allCourseDataListTW) {
-            if (courseDataTW.courseName == null || courseDataTW.courseName.isEmpty())
-                logger.log(courseDataTW);
+            CourseData courseDataEN = courseSerialMapEN.get(getCourseKey(courseDataTW));
+            courseAdd(courseDataTW, courseDataEN);
+
 //            CourseData sameSystemNumber = systemNumberCourseData.get(courseDataTW.systemNumber);
 //            if (sameSystemNumber == null)
 //                systemNumberCourseData.put(courseDataTW.systemNumber, courseDataTW);
@@ -437,8 +499,6 @@ public class HistorySearch {
 //            }
         }
         logger.log(count);
-
-
         logger.log(allCourseDataListTW.size());
         logger.log(allCourseDataListEN.size());
     }
@@ -480,8 +540,59 @@ public class HistorySearch {
     }
 
     private String getCourseKey(CourseData courseData) {
-        return courseData.departmentId + "_" + courseData.serialNumber + "_" + courseData.systemNumber + "_" + courseData.attributeCode +
-                "_" + courseData.forGrade + "_" + courseData.forClassGroup;
+        return courseData.departmentId + "-" + courseData.serialNumber + "," + courseData.systemNumber + "," + courseData.attributeCode +
+                "," + courseData.forGrade + "," + courseData.forClassGroup;
+    }
+
+    private void fetchCourse(HistorySearch historySearch, int from, int to) {
+        CookieStore[] cookieCache = readCookieCache(4);
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        for (int year = from; year >= to; year--) {
+            long startYearTime = System.currentTimeMillis();
+            logger.log("########## Fetch course: " + year);
+            CountDownLatch tasks = new CountDownLatch(4);
+            CourseHistorySearchQuery history = new CourseHistorySearchQuery(year, 1, year, 1);
+            pool.execute(() -> {
+                historySearch.search2(Language.TW, history, cookieCache[0]);
+                tasks.countDown();
+            });
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                break;
+            }
+            pool.execute(() -> {
+                historySearch.search2(Language.EN, history, cookieCache[1]);
+                tasks.countDown();
+            });
+            CourseHistorySearchQuery history2 = new CourseHistorySearchQuery(year, 0, year, 0);
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                break;
+            }
+            pool.execute(() -> {
+                historySearch.search2(Language.TW, history2, cookieCache[2]);
+                tasks.countDown();
+            });
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                break;
+            }
+            pool.execute(() -> {
+                historySearch.search2(Language.EN, history2, cookieCache[3]);
+                tasks.countDown();
+            });
+            try {
+                tasks.await();
+            } catch (InterruptedException e) {
+                break;
+            }
+            logger.log("########## Fetch course: " + year + ", use " + ((System.currentTimeMillis() - startYearTime) / 1000) + "s");
+        }
+        executorShutdown(pool, 1000, "HistorySearch");
+        saveCookieCache(cookieCache);
     }
 
     private void search2(Language language, CourseHistorySearchQuery historySearch, CookieStore cookieStore) {
@@ -489,7 +600,7 @@ public class HistorySearch {
 
         Cookie.addCookie("cos_lang", language.code, courseQueryNckuOrgUri, cookieStore);
         logger.log("Getting SearchPage");
-        String page = initSearchPage(cookieStore);
+        String page = initSearchPage(cookieStore, 60 * 1000);
         if (page == null) {
             logger.err("Failed to get page");
             return;
@@ -567,7 +678,7 @@ public class HistorySearch {
         // Get all dept
         logger.log("Getting all department");
         List<String> allDeptNo;
-        String homePage = initSearchPage(cookieCache[0]);
+        String homePage = initSearchPage(cookieCache[0], 20 * 1000);
         if (homePage == null) {
             logger.err("Failed to init search page");
             return;
@@ -598,7 +709,7 @@ public class HistorySearch {
         for (int i = 0; i < cookieCache.length; i++) {
             final int finalI = i;
             queryPool.submit(() -> {
-                String page = initSearchPage(cookieCache[finalI]);
+                String page = initSearchPage(cookieCache[finalI], 20 * 1000);
                 if (page == null) {
                     logger.err("Failed to get page");
                     resourceFailed.set(true);
@@ -757,11 +868,12 @@ public class HistorySearch {
         }
     }
 
-    private String initSearchPage(CookieStore cookieStore) {
+    private String initSearchPage(CookieStore cookieStore, int timeout) {
         Connection pageRequest = HttpConnection.connect(courseQueryNckuOrg + "/index.php?c=qry11215&m=en_query")
                 .header("Connection", "keep-alive")
                 .cookieStore(cookieStore)
                 .ignoreContentType(true)
+                .timeout(timeout)
                 .proxy(proxyManager.getProxy());
         HttpResponseData responseData = robotCheck.sendRequest(courseQueryNckuOrg, pageRequest, cookieStore);
         if (responseData.isSuccess() && responseData.data != null)
@@ -837,19 +949,15 @@ public class HistorySearch {
 
             cosPreCheck(courseQueryNckuOrg, searchResultBody, cookieStore, null, proxyManager);
 
-            Element table = Search.findCourseTable(searchResultBody, "Dept " + deptNo, result);
-            if (table == null)
-                return result;
-
             String searchId = Search.getSearchID(searchResultBody, result);
             if (searchId == null)
                 return result;
 
             result.setSearchID(searchId);
 
+            logger.log("Parsing result");
             try {
                 Search.parseCourseTable(
-                        table,
                         searchResultBody,
                         null,
                         true,
@@ -864,6 +972,10 @@ public class HistorySearch {
                     wrongDept = true;
                     break;
                 }
+            }
+            if (!result.isSuccess()) {
+                logger.log(result.getErrorString());
+                continue;
             }
             if (result.getCourseDataList().isEmpty() && --empty > 0)
                 continue;
@@ -906,6 +1018,7 @@ public class HistorySearch {
                             .ignoreContentType(true)
                             .proxy(proxyManager.getProxy())
                             .userAgent(Main.USER_AGENT)
+                            .timeout(30 * 1000)
                             .execute();
                 } catch (IOException e) {
                     logger.errTrace(e);

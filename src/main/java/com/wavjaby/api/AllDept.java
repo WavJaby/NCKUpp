@@ -53,17 +53,17 @@ public class AllDept implements Module {
     public void start() {
         // Read cache
         allDeptFile = getFileFromPath(ALL_DEPT_FILE_PATH, true, true);
-        if (allDeptFile.exists()) {
-            deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
-            assert deptGroup != null;
-            JsonObject jsonObject = new JsonObject(deptGroup);
-            for (Object i : jsonObject.getArray("deptGroup")) {
-                for (Object j : ((JsonObject) i).getArray("dept")) {
-                    deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
-                    deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
-                }
-            }
-        }
+//        if (allDeptFile.exists()) {
+//            deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
+//            assert deptGroup != null;
+//            JsonObject jsonObject = new JsonObject(deptGroup);
+//            for (Object i : jsonObject.getArray("deptGroup")) {
+//                for (Object j : ((JsonObject) i).getArray("dept")) {
+//                    deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
+//                    deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
+//                }
+//            }
+//        }
 
         // Get new dept data
         CookieStore cookieStore = new CookieManager().getCookieStore();
@@ -90,6 +90,7 @@ public class AllDept implements Module {
         JsonArrayStringBuilder outDeptGroup = new JsonArrayStringBuilder();
         List<Search.AllDeptGroupData.Group> groupsTW = allDeptTW.getGroups();
         List<Search.AllDeptGroupData.Group> groupsEN = allDeptEN.getGroups();
+        List<String> conflictName = new ArrayList<>();
 
         for (int i = 0; i < groupsTW.size(); i++) {
             Search.AllDeptGroupData.Group groupTW = groupsTW.get(i);
@@ -110,11 +111,19 @@ public class AllDept implements Module {
                 Search.AllDeptGroupData.DeptData deptEN = groupEN.dept.get(j);
                 outDeptData.append(new JsonArrayStringBuilder()
                         .append(deptTW.id).append(deptTW.name).append(deptEN.name));
-                deptIdMap.put(deptTW.name, deptTW.id);
-                deptIdMap.put(deptEN.name, deptTW.id);
+                if (deptIdMap.containsKey(deptTW.name)) conflictName.add(deptTW.name);
+                else deptIdMap.put(deptTW.name, deptTW.id);
+
+                if (deptIdMap.containsKey(deptEN.name)) conflictName.add(deptEN.name);
+                else deptIdMap.put(deptEN.name, deptEN.id);
             }
             groupOut.append("dept", outDeptData);
             outDeptGroup.append(groupOut);
+        }
+        if (!conflictName.isEmpty()) {
+            logger.warn("Conflict name: " + (conflictName.size() / 2));
+            for (String s : conflictName)
+                deptIdMap.remove(s);
         }
 
         builder.append("deptGroup", outDeptGroup);
@@ -163,11 +172,13 @@ public class AllDept implements Module {
                 .userAgent(Main.USER_AGENT)
                 .timeout(5000);
         HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, cookieStore);
-        if (!httpResponseData.isSuccess())
+        if (!httpResponseData.isSuccess() || httpResponseData.data == null)
             return null;
         String body = httpResponseData.data;
-
         cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
+        if (!httpResponseData.isSuccess())
+            return null;
+        body = processIframe(httpResponseData.data, cookieStore, proxyManager, robotCheck);
 
         return body;
     }

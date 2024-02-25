@@ -218,8 +218,8 @@ export function courseDataTimeToString(time) {
 export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 	const courseData = /**@type CourseData*/ {
 		semester: rawCourseData.y,
-		departmentName: rawCourseData.dn,
-		serialNumber: rawCourseData.sn,
+		departmentId: rawCourseData.dn,
+		serialNumber: null,
 		attributeCode: rawCourseData.ca,
 		systemNumber: rawCourseData.cs,
 		courseGrade: rawCourseData.g,
@@ -243,6 +243,10 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 		addRequest: rawCourseData.ar,
 		nckuHub: null
 	};
+
+    // Serial number
+    if (!rawCourseData.sn != null)
+        courseData.serialNumber = rawCourseData.dn + '-' + rawCourseData.sn.toString().padStart(3, '0');
 
 	// Parse time
 	if (rawCourseData.t != null) {

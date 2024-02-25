@@ -217,6 +217,23 @@ public class CourseData {
                     this.roomName != null;
         }
 
+        public String toStringShort() {
+            if (detailedTimeData != null)
+                return detailedTimeData;
+
+            StringBuilder builder = new StringBuilder();
+            if (dayOfWeek != null) builder.append(dayOfWeek);
+            builder.append(',');
+            if (sectionStart != null) builder.append(sectionStart);
+            builder.append(',');
+            if (sectionEnd != null) builder.append(sectionEnd);
+            builder.append(',');
+            if (buildingId != null) builder.append(buildingId);
+            builder.append(',');
+            if (roomId != null) builder.append(roomId);
+            return builder.toString();
+        }
+
         @Override
         public String toString() {
             if (detailedTimeData != null)

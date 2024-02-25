@@ -4,6 +4,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Main;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.api.search.RobotCheck;
 import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
@@ -24,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.wavjaby.Main.accessControlAllowOrigin;
+import static com.wavjaby.Main.courseQueryNckuOrg;
 
 public class Lib {
     private static final String TAG = "Lib";
@@ -102,6 +104,25 @@ public class Lib {
             response.addWarn(TAG + "CosPreCheck Network error");
             logger.warn("CosPreCheck Network error");
         }
+    }
+
+    public static String processIframe(String html, CookieStore cookieStore, ProxyManager proxyManager, RobotCheck robotCheck){
+        String url = findStringBetween(html, "iframe", "src=\"", "\"");
+        if (url != null) {
+            String baseUrl = courseQueryNckuOrg + "/query";
+            Connection requestCookie = HttpConnection.connect(url)
+                    .header("Connection", "keep-alive")
+                    .cookieStore(cookieStore)
+                    .ignoreContentType(true)
+                    .proxy(proxyManager.getProxy());
+            HttpResponseData res = robotCheck.sendRequest(baseUrl, requestCookie, cookieStore);
+            if (res.state != HttpResponseData.ResponseState.SUCCESS) {
+                return null;
+            }
+            cosPreCheck(courseQueryNckuOrg, res.data, cookieStore, null, proxyManager);
+            return res.data;
+        }
+        return html;
     }
 
     public static Element checkCourseNckuLoginRequiredPage(Connection connection, ApiResponse response, boolean useWarn) {
@@ -400,6 +421,15 @@ public class Lib {
         } catch (IOException e) {
             logger.errTrace(e);
         }
+    }
+
+    public static String findStringBetween(String input, String where, String from, String end, boolean includeFromEnd) {
+        int startIndex = input.indexOf(where), endIndex = -1;
+        if (startIndex != -1) startIndex = input.indexOf(from, startIndex + where.length());
+        if (startIndex != -1) endIndex = input.indexOf(end, startIndex + from.length());
+        return startIndex == -1 || endIndex == -1 ? null : includeFromEnd
+                ? input.substring(startIndex, endIndex + end.length())
+                : input.substring(startIndex + from.length(), endIndex);
     }
 
     public static String findStringBetween(String input, String where, String from, String end) {

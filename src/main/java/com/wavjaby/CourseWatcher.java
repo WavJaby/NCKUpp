@@ -217,8 +217,9 @@ public class CourseWatcher implements Runnable, Module {
                 if (deptToken != null) {
                     // Get dept course data
                     Search.SearchResult searchResult = new Search.SearchResult();
-                    if (!search.getDeptCourseData(deptToken, searchResult)) {
-                        logger.log("Dept " + dept + " failed");
+                    search.getDeptCourseData(deptToken, searchResult);
+                    if (!searchResult.isSuccess()) {
+                        logger.log("Dept " + dept + " failed, " + searchResult.getErrorString());
                         if (!done.get())
                             deptTokenMap.put(dept, null);
                     } else if (!done.get()) {

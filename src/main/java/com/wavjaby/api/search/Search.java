@@ -151,7 +151,7 @@ public class Search implements Module {
 
     public SearchQuery getSearchQueryFromRequest(Map<String, String> query, String[] cookieIn, ApiResponse response) {
         // Get search ID
-        String searchID = Cookie.getCookie("searchID", cookieIn);
+        String searchID = getCookie("searchID", cookieIn);
 
         // Get with serial
         String rawSerial = query.get("serial");
@@ -659,13 +659,13 @@ public class Search implements Module {
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
-                    .userAgent(Main.USER_AGENT)
+                    .userAgent(USER_AGENT)
                     .execute();
         } catch (IOException e) {
             logger.errTrace(e);
             byte[] array = new byte[16];
             new Random().nextBytes(array);
-            Cookie.addCookie("PHPSESSID", Base64.getEncoder().encodeToString(array), courseNckuOrgUri, cookieStore);
+            addCookie("PHPSESSID", Base64.getEncoder().encodeToString(array), courseNckuOrgUri, cookieStore);
         }
 
 //        logger.log(cookieStore.getCookies().toString());
@@ -679,31 +679,22 @@ public class Search implements Module {
             result.setSuccess(false);
             return result;
         }
-        result.setSuccess(getDeptCourseData(deptToken, result));
+        getDeptCourseData(deptToken, result);
         return result;
     }
 
-    public boolean getDeptCourseData(DeptToken deptToken, SearchResult result) {
+    public void getDeptCourseData(DeptToken deptToken, SearchResult result) {
         HttpResponseData searchResult = getDeptNCKU(deptToken);
         if (!searchResult.isSuccess()) {
             result.errorFetch("Failed to fetch dept search result: " + deptToken.deptNo);
-            return false;
+            return;
         }
-        String searchResultBody = searchResult.data;
-
-        Element table = findCourseTable(searchResultBody, "Dept " + deptToken.deptNo, result);
-        if (table == null) {
-            return false;
-        }
-
         parseCourseTable(
-                table,
-                searchResultBody,
+                searchResult.data,
                 null,
                 false,
                 result
         );
-        return true;
     }
 
     public DeptToken createDeptToken(String deptNo, AllDeptData allDeptData, SearchResult result) {
@@ -713,7 +704,7 @@ public class Search implements Module {
                     .cookieStore(allDeptData.cookieStore)
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy())
-                    .userAgent(Main.USER_AGENT)
+                    .userAgent(USER_AGENT)
                     .method(Connection.Method.POST)
                     .requestBody("dept_no=" + deptNo + "&crypt=" + URLEncoder.encode(allDeptData.crypt, "UTF-8"))
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
@@ -758,7 +749,7 @@ public class Search implements Module {
                 .cookieStore(deptToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .userAgent(Main.USER_AGENT)
+                .userAgent(USER_AGENT)
                 .timeout(9000)
                 .maxBodySize(20 * 1024 * 1024);
         HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, deptToken.cookieStore);
@@ -781,8 +772,7 @@ public class Search implements Module {
         return result;
     }
 
-    public void getQueryCourseData(CourseSearchQuery searchQuery, SaveQueryToken saveQueryToken,
-                                   SearchResult result) {
+    public void getQueryCourseData(CourseSearchQuery searchQuery, SaveQueryToken saveQueryToken, SearchResult result) {
         // Get search result
         HttpResponseData searchResult = getCourseNCKU(saveQueryToken);
         if (!searchResult.isSuccess()) {
@@ -799,13 +789,7 @@ public class Search implements Module {
 
         result.setSearchID(searchID);
 
-        Element table = findCourseTable(searchResultBody, "Query", result);
-        if (table == null) {
-            return;
-        }
-
         parseCourseTable(
-                table,
                 searchResultBody,
                 searchQuery.serialFilter,
                 searchQuery.historySearch(),
@@ -871,20 +855,10 @@ public class Search implements Module {
                 result.errorFetch("Failed to renew search id");
                 return null;
             }
-            String url = findStringBetween(httpResponseData.data, "iframe", "src=\"", "\"");
-            if (url != null) {
-                baseUrl = courseQueryNckuOrg + "/query";
-                Connection requestCookie = HttpConnection.connect(url)
-                        .header("Connection", "keep-alive")
-                        .cookieStore(cookieStore)
-                        .ignoreContentType(true)
-                        .proxy(proxyManager.getProxy());
-                HttpResponseData res = robotCheck.sendRequest(baseUrl, requestCookie, cookieStore);
-                if (res.state != ResponseState.SUCCESS) {
-                    result.errorFetch("Failed to get renew cookie");
-                    return null;
-                }
-                cosPreCheck(courseNckuOrg, res.data, cookieStore, null, proxyManager);
+            String resultHtml = processIframe(httpResponseData.data, cookieStore, proxyManager, robotCheck);
+            if (resultHtml == null) {
+                result.errorFetch("Failed to get renew cookie");
+                return null;
             }
 
             // Write post data
@@ -918,7 +892,7 @@ public class Search implements Module {
                 .cookieStore(postCookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .userAgent(Main.USER_AGENT)
+                .userAgent(USER_AGENT)
                 .method(Connection.Method.POST)
                 .requestBody(postData.toString())
                 .timeout(9000)
@@ -976,7 +950,7 @@ public class Search implements Module {
                 .cookieStore(saveQueryToken.cookieStore)
                 .ignoreContentType(true)
                 .proxy(proxyManager.getProxy())
-                .userAgent(Main.USER_AGENT)
+                .userAgent(USER_AGENT)
                 .timeout(9000)
                 .maxBodySize(20 * 1024 * 1024);
         HttpResponseData httpResponseData = robotCheck.sendRequest(saveQueryToken.urlOrigin.toString(), request, saveQueryToken.cookieStore);
@@ -989,7 +963,7 @@ public class Search implements Module {
 
     private void cosPreCheckCookie(URI originUrl, String pageBody, CookieStore cookieStore) {
         // Get cookie lock
-        String PHPSESSID = Cookie.getCookie("PHPSESSID", originUrl, cookieStore);
+        String PHPSESSID = getCookie("PHPSESSID", originUrl, cookieStore);
 
         // Get cookie lock
         CookieLock cookieLock = cosPreCheckCookieLock.get(PHPSESSID);
@@ -1029,58 +1003,32 @@ public class Search implements Module {
         });
     }
 
-    public static Element findCourseTable(String html, String errorPrefix, SearchResult result) {
-        int resultTableStart;
-        if ((resultTableStart = html.indexOf("<table")) == -1) {
-            result.errorParse(errorPrefix + " result table not found");
+    private static Element findCourseTable(String html, boolean smallTable) {
+        String resultBody = smallTable
+                ? findStringBetween(html, "<div class=\"visible-sm\"", "<tbody>", "</tbody>", true)
+                : findStringBetween(html, "<div class=\"hidden-xs hidden-sm\"", "<tbody>", "</tbody>", true);
+        if (resultBody == null)
             return null;
-        }
-        // get table body
-        int resultTableBodyStart, resultTableBodyEnd;
-        if ((resultTableBodyStart = html.indexOf("<tbody>", resultTableStart + 7)) == -1 ||
-                (resultTableBodyEnd = html.indexOf("</tbody>", resultTableBodyStart + 7)) == -1
-        ) {
-            result.errorParse(errorPrefix + " result table body not found");
-            return null;
-        }
-
-        // parse table
-//            logger.log(TAG + "Parse course table");
-        String resultBody = html.substring(resultTableBodyStart, resultTableBodyEnd + 8);
         return (Element) Parser.parseFragment(resultBody, new Element("tbody"), "").get(0);
     }
 
     /**
-     * @param tbody              Input: Course data table
      * @param searchResultBody   Input: Full document for finding style
      * @param serialNumberFilter Serial number filter
      * @param historySearch      Add col offset if search course history
      * @param result             Output: Search result
      */
-    public static void parseCourseTable(Element tbody, String searchResultBody,
+    public static void parseCourseTable(String searchResultBody,
                                         Set<String> serialNumberFilter, boolean historySearch, SearchResult result) {
-        List<Map.Entry<String, Boolean>> styles = new ArrayList<>();
-        // Find style section
-        int styleStart, styleEnd = 0;
-        while ((styleStart = searchResultBody.indexOf("<style", styleEnd)) != -1) {
-            styleStart = searchResultBody.indexOf(">", styleStart + 6);
-            if (styleStart == -1) continue;
-            styleStart += 1;
-            styleEnd = searchResultBody.indexOf("</style>", styleStart);
-            if (styleEnd == -1) continue;
-            // Get style section inner text
-            String style = searchResultBody.substring(styleStart, styleEnd);
-            styleEnd += 8;
 
-            // Parse style display state
-            Matcher matcher = displayRegex.matcher(style);
-            while (matcher.find()) {
-                if (matcher.groupCount() < 2) continue;
-                // Set selector display state
-                // key: selector, value: show or not
-                styles.add(new AbstractMap.SimpleEntry<>(matcher.group(1), !matcher.group(2).equals("none")));
-            }
+        Element tbody = findCourseTable(searchResultBody, false);
+        if (tbody == null) {
+            result.errorParse("Query result table not found");
+            return;
         }
+        Element smallTbody = null;
+
+        List<Map.Entry<String, Boolean>> styles = getStylesheet(searchResultBody);
 
         // Parse semester
         String allSemester = null;
@@ -1101,10 +1049,10 @@ public class Search implements Module {
         }
 
         int sectionOffset = historySearch ? 1 : 0;
-
         // get course list
         Elements courseList = tbody.getElementsByTag("tr");
-        for (Element element : courseList) {
+        for (int courseIndex = 0; courseIndex < courseList.size(); courseIndex++) {
+            Element element = courseList.get(courseIndex);
             Elements section = element.getElementsByTag("td");
 
             // Parse semester if history search
@@ -1163,14 +1111,30 @@ public class Search implements Module {
                 courseData_departmentId = serialNumberRaw.substring(0, 2);
             else if (!departmentName.isEmpty())
                 courseData_departmentId = AllDept.deptIdMap.get(departmentName);
+            else {
+                // Use department name from small table
+                if (smallTbody == null)
+                    smallTbody = findCourseTable(searchResultBody, true);
+                if (smallTbody == null) {
+                    result.errorParse("Failed to get small tbody");
+                    return;
+                }
+                Element detailRoot = smallTbody.child(courseIndex * 4 + 3).firstElementChild();
+                Elements detailElement;
+                if (detailRoot != null && (detailElement = detailRoot.getElementsByTag("tr")).size() > 1) {
+                    Element departmentNameElement = detailElement.get(1).firstElementChild();
+                    if (departmentNameElement != null) {
+                        departmentName = departmentNameElement.ownText();
+                        courseData_departmentId = AllDept.deptIdMap.get(departmentName);
+                    }
+                }
+            }
             if (courseData_departmentId == null) {
                 if (courseData_systemNumber != null && courseData_systemNumber.length() > 2) {
-                    if (!departmentName.isEmpty())
-                        logger.warn("Failed to get department id: '" + departmentName +
-                                "' not found, use SystemNumber: " + courseData_systemNumber);
+                    logger.warn("Failed get dept id: '" + departmentName + "', " + courseData_systemNumber);
                     courseData_departmentId = courseData_systemNumber.substring(0, 2);
                 } else {
-                    logger.err("Failed to get department id: '" + departmentName + "' not found");
+                    result.errorParse("Failed get dept id: '" + departmentName + "'");
                     courseData_departmentId = "";
                 }
             }
@@ -1375,28 +1339,23 @@ public class Search implements Module {
                 courseData_timeList = timeDataList.toArray(new CourseData.TimeData[0]);
 
             // Get selected & available
-            StringBuilder countBuilder = new StringBuilder();
-            for (Node n : section.get(sectionOffset + 7).childNodes()) {
-                // Check style
-                if (n instanceof Element) {
-                    String nc = ((Element) n).className();
-                    boolean display = true;
-                    for (Map.Entry<String, Boolean> style : styles) {
-                        if (nc.equals(style.getKey()))
-                            display = style.getValue();
-                    }
-                    if (display)
-                        countBuilder.append(((Element) n).text());
-                } else if (n instanceof TextNode)
-                    countBuilder.append(((TextNode) n).text());
-            }
-            String[] count = countBuilder.toString().split("/");
+            String[] count = getAvailableCount(section.get(sectionOffset + 7).childNodes(), styles);
             Integer courseData_selected = count[0].isEmpty() ? null : Integer.parseInt(count[0]);
-            Integer courseData_available = count.length < 2 ? null :
-                    (count[1].equals("額滿") || count[1].equals("full")) ? 0 :
-                            (count[1].equals("不限") || count[1].equals("unlimited")) ? -1 :
-                                    (count[1].startsWith("洽") || count[1].startsWith("please connect")) ? -2 :
-                                            Integer.parseInt(count[1]);
+            Integer courseData_available;
+            if (count.length < 2) courseData_available = null;
+            else switch (count[1]) {
+                case "額滿":
+                case "full":
+                    courseData_available = 0;
+                    break;
+                case "不限":
+                case "unlimited":
+                    courseData_available = -1;
+                    break;
+                default:
+                    courseData_available = (count[1].startsWith("洽") || count[1].startsWith("please connect"))
+                            ? -2 : Integer.parseInt(count[1]);
+            }
 
             // Get function buttons
             String courseData_btnPreferenceEnter = null;
@@ -1440,6 +1399,51 @@ public class Search implements Module {
                     courseData_btnPreferenceEnter, courseData_btnAddCourse, courseData_btnPreRegister, courseData_btnAddRequest);
             result.courseDataList.add(courseData);
         }
+    }
+
+    private static List<Map.Entry<String, Boolean>> getStylesheet(String body) {
+        List<Map.Entry<String, Boolean>> styles = new ArrayList<>();
+        // Find style section
+        int styleStart, styleEnd = 0;
+        while ((styleStart = body.indexOf("<style", styleEnd)) != -1) {
+            styleStart = body.indexOf(">", styleStart + 6);
+            if (styleStart == -1) continue;
+            styleStart += 1;
+            styleEnd = body.indexOf("</style>", styleStart);
+            if (styleEnd == -1) continue;
+            // Get style section inner text
+            String style = body.substring(styleStart, styleEnd);
+            styleEnd += 8;
+
+            // Parse style display state
+            Matcher matcher = displayRegex.matcher(style);
+            while (matcher.find()) {
+                if (matcher.groupCount() < 2) continue;
+                // Set selector display state
+                // key: selector, value: show or not
+                styles.add(new AbstractMap.SimpleEntry<>(matcher.group(1), !matcher.group(2).equals("none")));
+            }
+        }
+        return styles;
+    }
+
+    private static String[] getAvailableCount(List<Node> nodes, List<Map.Entry<String, Boolean>> styles) {
+        StringBuilder countBuilder = new StringBuilder();
+        for (Node n : nodes) {
+            // Check style
+            if (n instanceof Element) {
+                String className = ((Element) n).className();
+                boolean display = true;
+                for (Map.Entry<String, Boolean> style : styles) {
+                    if (className.equals(style.getKey()))
+                        display = style.getValue();
+                }
+                if (display)
+                    countBuilder.append(((Element) n).text());
+            } else if (n instanceof TextNode)
+                countBuilder.append(((TextNode) n).text());
+        }
+        return countBuilder.toString().split("/");
     }
 
     public static String getSearchID(String body, SearchResult result) {
