@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "NCKU++",
+  "description": "解鎖NCKU++的更多功能",
+  "version": "1.0",
+  "permissions": ["activeTab"],
+  "icons": {
+    "64": "images/icon_64.png",
+    "128": "images/icon_128.png"
+  },
+  "action": {
+    "default_icon": {
+      "64": "images/icon_64.png",
+      "128": "images/icon_128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

@@ -292,13 +292,13 @@ public class PreferenceAdjust implements Module {
                 }
 
                 String itemKey = item.attr("data_item");
-                String serialNumber = rawCourseName.substring(1, split);
+                String deptWithSerial = rawCourseName.substring(1, split);
                 String courseName = rawCourseName.substring(split + 1);
                 boolean require = requireText.equals("必修") || requireText.equals("REQUIRED");
                 float credits = Float.parseFloat(creditsText);
                 items.append(new JsonObjectStringBuilder()
                         .append("key", itemKey)
-                        .append("sn", serialNumber)
+                        .append("sn", deptWithSerial)
                         .append("name", courseName)
                         .append("require", require)
                         .append("credits", credits)

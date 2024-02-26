@@ -1,12 +1,12 @@
 package com.wavjaby.logger;
 
-import static com.wavjaby.logger.AnsiText.*;
+import static org.fusesource.jansi.Ansi.Color.*;
 
 public enum LogLevel {
-    INFO(GREEN),
-    WARN(YELLOW),
-    ERROR(RED),
-    DEBUG(CYAN);
+    INFO("\33[" + GREEN.fg() + "m"),
+    WARN("\33[" + YELLOW.fg() + "m"),
+    ERROR("\33[" + RED.fg() + "m"),
+    DEBUG("\33[" + CYAN.fg() + "m");
 
     public final String nameWithColor;
 

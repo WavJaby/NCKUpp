@@ -261,8 +261,10 @@ export default function (router, loginState) {
 
 	function parseCourseDetail(courseDataRaw) {
 		const courseDetail = {};
-		for (const course of courseDataRaw)
-			courseDetail[course.sn] = parseRawCourseData(course, null);
+		for (const course of courseDataRaw) {
+			const parsedCourse = parseRawCourseData(course, null);
+			courseDetail[parsedCourse.deptWithSerial] = parsedCourse;
+		}
 		return courseDetail;
 	}
 
@@ -326,7 +328,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 	this.element = table('courseTable',
 		thead(null, tr(null,
 			// th('系所', 'departmentName'),
-			th('系-序號', 'serialNumber'),
+			th('系-序號', 'deptWithSerial'),
 			// th('類別', 'category'),
 			// th('年級', 'grade'),
 			// th('班別', 'classInfo'),
@@ -360,7 +362,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 		regAction = data.action;
 		genCourseData = {};
 		for (let i of data.courseList) {
-			genCourseData[i.serialNumber] = i;
+			genCourseData[i.deptWithSerial] = i;
 		}
 	};
 
@@ -369,7 +371,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 		preRegPreSkip = data.preSkip;
 		genEduCourseData = {};
 		for (let i of data.courseList) {
-			genEduCourseData[i.serialNumber] = i;
+			genEduCourseData[i.deptWithSerial] = i;
 		}
 	};
 
@@ -445,9 +447,9 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 			courseListBody.appendChild(tr('pre margin'));
 			courseListBody.appendChild(
 				renderCourseBlock(preSchedule,
-					genCourseData && genCourseData[preSchedule.serialNumber] || genEduCourseData && genEduCourseData[preSchedule.serialNumber] || {},
-					courseDetail[preSchedule.serialNumber] || {},
-					a9Registered && a9Registered[preSchedule.serialNumber],
+					genCourseData && genCourseData[preSchedule.deptWithSerial] || genEduCourseData && genEduCourseData[preSchedule.deptWithSerial] || {},
+					courseDetail[preSchedule.deptWithSerial] || {},
+					a9Registered && a9Registered[preSchedule.deptWithSerial],
 					preSchedule.delete,
 					true)
 			);
@@ -457,9 +459,9 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 			courseListBody.appendChild(tr('margin'));
 			courseListBody.appendChild(
 				renderCourseBlock(preSchedule,
-					genCourseData && genCourseData[preSchedule.serialNumber] || genEduCourseData && genEduCourseData[preSchedule.serialNumber] || {},
-					courseDetail[preSchedule.serialNumber] || {},
-					a9Registered && a9Registered[preSchedule.serialNumber],
+					genCourseData && genCourseData[preSchedule.deptWithSerial] || genEduCourseData && genEduCourseData[preSchedule.deptWithSerial] || {},
+					courseDetail[preSchedule.deptWithSerial] || {},
+					a9Registered && a9Registered[preSchedule.deptWithSerial],
 					preSchedule.delete,
 					false)
 			);
@@ -468,18 +470,18 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 
 	function renderCourseBlock(preSchedule, regCourseData, detail, a9Registered, removeKey, pre) {
 		const courseName = detail.courseName || preSchedule.courseName;
-		const serialNumber = detail.serialNumber || preSchedule.serialNumber;
+		const deptWithSerial = detail.deptWithSerial || preSchedule.deptWithSerial;
 		const credits = detail.credits || preSchedule.credits;
-		const nckuHub = nckuHubData[serialNumber] || {};
+		const nckuHub = nckuHubData[deptWithSerial] || {};
 		const nckuHubEle = [
 			div(null, nckuHub.rate_count > 0 && nckuHub.got && nckuHubScoreToSpan(nckuHub.got)),
 			div(null, nckuHub.rate_count > 0 && nckuHub.sweet && nckuHubScoreToSpan(nckuHub.sweet)),
 			div(null, nckuHub.rate_count > 0 && nckuHub.cold && nckuHubScoreToSpan(nckuHub.cold)),
 		];
-		nckuHubElements[serialNumber] = nckuHubEle;
+		nckuHubElements[deptWithSerial] = nckuHubEle;
 		return tr(pre ? 'pre courseBlock' : 'courseBlock',
 			// td(detail.departmentName, 'departmentName'),
-			td(serialNumber, 'serialNumber'),
+			td(deptWithSerial, 'deptWithSerial'),
 			// td(null, 'category', detail.category && text(detail.category)),
 			// td(null, 'grade', detail.courseGrade && text(detail.courseGrade.toString())),
 			// td(null, 'classInfo', detail.classInfo && text(detail.classInfo)),
@@ -499,7 +501,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 			td(null, 'registerCount', a9Registered == null ? null : text(a9Registered.count.toString())),
 			td(null, 'selected', detail.selected == null ? null : span(detail.selected)),
 			td(null, 'available', detail.available == null ? null : createSelectAvailableStr(detail)),
-			td(null, 'nckuHub', nckuHubEle, {colSpan: 3, onclick: openNckuHubWindow, serialNumber, courseData: preSchedule}),
+			td(null, 'nckuHub', nckuHubEle, {colSpan: 3, onclick: openNckuHubWindow, deptWithSerial, courseData: preSchedule}),
 			td(null, 'functionBtn', regCourseData.cosdata && (regCourseData.prechk == null
 				? button('functionBtn', '單科加選', addCourse, {courseData: preSchedule, key: regCourseData.cosdata, preKey: detail.preRegister})
 				: button('functionBtn', '加入志願', addPreferenceEnter, {
@@ -514,7 +516,7 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 	}
 
 	function openNckuHubWindow() {
-		const nckuHub = nckuHubData[this.serialNumber];
+		const nckuHub = nckuHubData[this.deptWithSerial];
 		if (!nckuHub)
 			return;
 		this.courseData.nckuHub = nckuHub;
@@ -630,7 +632,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 
 		for (const course of preScheduleData.schedule)
 			if (course.delete)
-				preCourseRemoveKey[course.serialNumber] = course.delete;
+				preCourseRemoveKey[course.deptWithSerial] = course.delete;
 	};
 
 	this.setAndRenderPreScheduleData = function (data) {
@@ -654,8 +656,8 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	this.getSearchQuery = function () {
 		// // get course info
 		// const courseDept = {};
-		// for (const serialNumber in courseDetail) {
-		// 	const dept = serialNumber.split('-');
+		// for (const deptWithSerial in courseDetail) {
+		// 	const dept = deptWithSerial.split('-');
 		// 	let deptData = courseDept[dept[0]];
 		// 	if (deptData)
 		// 		deptData.push(dept[1]);
@@ -663,8 +665,8 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 		// 		courseDept[dept[0]] = [dept[1]];
 		// }
 		// const courseFetchArr = [];
-		// for (const serialNumber in courseDept)
-		// 	courseFetchArr.push(serialNumber + '=' + courseDept[serialNumber].join(','));
+		// for (const deptWithSerial in courseDept)
+		// 	courseFetchArr.push(deptWithSerial + '=' + courseDept[deptWithSerial].join(','));
 		// return encodeURIComponent(courseFetchArr.join('&'));
 		return Object.keys(courseDetail).join(',');
 	};
@@ -693,7 +695,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	}
 
 	function cellClick() {
-		const data = courseDetail[this.serialNumber];
+		const data = courseDetail[this.deptWithSerial];
 		if (!data)
 			return;
 
@@ -704,8 +706,8 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
 			}
 		courseInfoWindow.windowSet(div('courseInfo',
-			preCourseRemoveKey[this.serialNumber] && button('delete', '刪除', removePreScheduleButtonClick, {serialNumber: this.serialNumber}),
-			h2(data.serialNumber + ' ' + data.courseName),
+			preCourseRemoveKey[this.deptWithSerial] && button('delete', '刪除', removePreScheduleButtonClick, {deptWithSerial: this.deptWithSerial}),
+			h2(data.deptWithSerial + ' ' + data.courseName),
 			data.instructors.map(i => span(i + ' ')),
 			p(data.courseNote),
 			button(null, 'moodle', openCourseMoodle, {moodleQuery: data.semester + ',' + data.attributeCode}),
@@ -728,10 +730,10 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 		});
 	}
 
-	/**@this{{serialNumber: string}}*/
+	/**@this{{deptWithSerial: string}}*/
 	function removePreScheduleButtonClick() {
-		const removeKey = preCourseRemoveKey[this.serialNumber];
-		const courseData = courseDetail[this.serialNumber];
+		const removeKey = preCourseRemoveKey[this.deptWithSerial];
+		const courseData = courseDetail[this.deptWithSerial];
 
 		const deleteConform = confirm('是否要刪除 ' + courseData.courseName);
 		if (!deleteConform)
@@ -801,7 +803,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	}
 
 	function courseCellHoverStart() {
-		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialNumber];
+		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.deptWithSerial];
 		if (!cells)
 			return;
 		for (let cell of cells) {
@@ -810,7 +812,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	}
 
 	function courseCellHoverEnd() {
-		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.serialNumber];
+		const /**@type{HTMLDivElement[]}*/ cells = courseSameCell[this.deptWithSerial];
 		if (!cells)
 			return;
 		for (let cell of cells) {
@@ -864,9 +866,9 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 			dayTableOut[i] = new Array(tableHeight);
 		}
 		for (const eachCourse of scheduleData.schedule) {
-			const serialNumber = eachCourse.serialNumber;
-			if (courseDetail[serialNumber] === undefined)
-				courseDetail[serialNumber] = null;
+			const deptWithSerial = eachCourse.deptWithSerial;
+			if (courseDetail[deptWithSerial] === undefined)
+				courseDetail[deptWithSerial] = null;
 			for (const timeLocInfo of eachCourse.time) {
 				// Time undecided
 				if (timeLocInfo.dayOfWeek === null || timeLocInfo.sectionStart === null) {
@@ -879,9 +881,9 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 				if (!section)
 					section = dayTable[timeLocInfo.dayOfWeek][timeLocInfo.sectionStart] = {};
 
-				let sectionCourse = section[eachCourse.serialNumber];
+				let sectionCourse = section[eachCourse.deptWithSerial];
 				if (!sectionCourse)
-					sectionCourse = section[eachCourse.serialNumber] = [eachCourse, timeLocInfo];
+					sectionCourse = section[eachCourse.deptWithSerial] = [eachCourse, timeLocInfo];
 				else
 					sectionCourse.push(timeLocInfo);
 			}
@@ -1011,14 +1013,14 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	function createCourseCell(parentCell, courseWithTime, showSerialNumber) {
 		parentCell.className = 'activate';
 		const courseInfo = courseWithTime[0];
-		const serialNumber = courseInfo.serialNumber;
+		const deptWithSerial = courseInfo.deptWithSerial;
 
-		const courseCell = div(courseInfo.pre ? 'pre' : 'sure', {serialNumber: serialNumber, onclick: cellClick},
-			showSerialNumber ? span(courseInfo.serialNumber + ' ') : null,
+		const courseCell = div(courseInfo.pre ? 'pre' : 'sure', {deptWithSerial: deptWithSerial, onclick: cellClick},
+			showSerialNumber ? span(courseInfo.deptWithSerial + ' ') : null,
 			span(courseInfo.courseName),
 		);
 		if (showSerialNumber) {
-			(courseSameCell[serialNumber] || (courseSameCell[serialNumber] = [])).push(courseCell);
+			(courseSameCell[deptWithSerial] || (courseSameCell[deptWithSerial] = [])).push(courseCell);
 			courseCell.onmouseenter = courseCellHoverStart;
 			courseCell.onmouseleave = courseCellHoverEnd;
 		}

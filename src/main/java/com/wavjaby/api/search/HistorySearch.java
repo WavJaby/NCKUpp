@@ -1,6 +1,7 @@
 package com.wavjaby.api.search;
 
 import com.wavjaby.Main;
+import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.api.AllDept;
 import com.wavjaby.api.RobotCode;
@@ -11,6 +12,7 @@ import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.PropertiesReader;
+import com.wavjaby.lib.restapi.RequestMapping;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLDriver;
 import org.jsoup.Connection;
@@ -22,7 +24,10 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -33,11 +38,22 @@ import static com.wavjaby.Main.courseQueryNckuOrg;
 import static com.wavjaby.Main.courseQueryNckuOrgUri;
 import static com.wavjaby.lib.Lib.*;
 
-public class HistorySearch {
+@RequestMapping("/api/v0")
+public class HistorySearch implements Module {
     private static final String FILE_PATH = "api_file/CourseHistory";
     private static final Logger logger = new Logger("History");
     private final ProxyManager proxyManager;
     private final RobotCheck robotCheck;
+
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public String getTag() {
+        return null;
+    }
 
     private enum Language {
         TW("cht"),
@@ -107,7 +123,8 @@ public class HistorySearch {
         allDept.start();
 
         HistorySearch historySearch = new HistorySearch(proxyManager, robotCheck);
-        historySearch.writeDatabase();
+//        historySearch.writeDatabase();
+        historySearch.readDatabase();
 //        historySearch.fetchCourse(historySearch, 112, 112);
 
         if (historySearch.sqlDriver != null)
@@ -120,7 +137,7 @@ public class HistorySearch {
     private PreparedStatement getRoomStat, addRoomStat, editRoomStat,
             getTagIdStat, addTagStat,
             getInstructorIdStat, addInstructorStat,
-            addCourseStat;
+            addCourseStat, getCourseStat;
 
     private RoomData roomGet(String location, String roomId) {
         try {
@@ -294,6 +311,11 @@ public class HistorySearch {
                 addCourseStat.setString(11, courseDataEN.courseName); // name_en
                 addCourseStat.setString(13, courseDataEN.courseNote); // note_en
                 addCourseStat.setString(15, courseDataEN.courseLimit); // limit_en
+            } else {
+                addCourseStat.setString(9, null); // category_en
+                addCourseStat.setString(11, null); // name_en
+                addCourseStat.setString(13, null); // note_en
+                addCourseStat.setString(15, null); // limit_en
             }
 
             addCourseStat.setString(6, courseDataTW.forClass); // for_class
@@ -316,9 +338,25 @@ public class HistorySearch {
         }
     }
 
-    public void writeDatabase() {
+    private void courseGet(String deptId, int serialNumber) {
+        try {
+            getCourseStat.setString(1, deptId);
+            getCourseStat.setInt(2, serialNumber);
+            ResultSet result = getCourseStat.executeQuery();
+            while (result.next()) {
+                String name = result.getNString("name_tw");
+                logger.log(name);
+            }
+            result.close();
+            getCourseStat.clearParameters();
+        } catch (SQLException e) {
+            sqlDriver.printStackTrace(e);
+        }
+    }
+
+    public void initDatabase() {
         PropertiesReader properties = new PropertiesReader("database.properties");
-        sqlDriver = new SQLDriver("course_data.mv.db", "jdbc:h2:file:./course_data;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE",
+        sqlDriver = new SQLDriver("course_data.mv.db", "jdbc:h2:./course_data;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE;TRACE_LEVEL_SYSTEM_OUT=0",
                 properties.getProperty("driverPath"), properties.getProperty("driverClass"),
                 properties.getProperty("user"), properties.getProperty("password"));
         sqlDriver.start();
@@ -347,15 +385,15 @@ public class HistorySearch {
                 name_en         VARCHAR(128),
                 note_tw         NVARCHAR(128),
                 note_en         VARCHAR(256),
-                limit_tw        NVARCHAR(192),
-                limit_en        VARCHAR(1024),
+                limit_tw        NVARCHAR(2048),
+                limit_en        VARCHAR(3072),
                 tags            INTEGER ARRAY,
                 credits         FLOAT(1),
                 required        BOOLEAN,
                 instructors     INTEGER ARRAY,
                 selected        INTEGER,
                 available       INTEGER,
-                time            VARCHAR(64)
+                time            VARCHAR(64) ARRAY
             ) */
             addCourseStat = connection.prepareStatement("INSERT INTO \"course_112_1\" (" +
                     "\"department_id\",\"serial_id\",\"attribute_code\",\"system_id\"," +
@@ -364,14 +402,31 @@ public class HistorySearch {
                     "\"tags\",\"credits\",\"required\",\"instructors\",\"selected\",\"available\",\"time\") " +
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
+            getCourseStat = connection.prepareStatement("SELECT" +
+                    "\"department_id\",\"serial_id\",\"attribute_code\",\"system_id\"," +
+                    "\"for_grade\",\"for_class\",\"for_class_group\"," +
+                    "\"category_tw\",\"category_en\",\"name_tw\",\"name_en\",\"note_tw\",\"note_en\",\"limit_tw\",\"limit_en\"," +
+                    "\"tags\",\"credits\",\"required\",\"instructors\",\"selected\",\"available\",\"time\"" +
+                    "FROM \"course_112_1\" WHERE \"department_id\"=? AND \"serial_id\"=?");
+
 
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
             sqlDriver.stop();
             return;
         }
+    }
 
-        logger.log("writeDatabase");
+    public void readDatabase() {
+        initDatabase();
+
+        courseGet("F7", 6);
+    }
+
+    public void writeDatabase() {
+        initDatabase();
+
+        logger.log("Write Database");
         CourseHistorySearchQuery historySearch = new CourseHistorySearchQuery(
                 112, 1, 112, 1
         );
@@ -448,7 +503,7 @@ public class HistorySearch {
 
             String key = getCourseKey(courseDataTW);
             CourseData courseDataEN = courseSerialMapEN.get(key);
-            if (courseDataEN.instructors == null || courseDataEN.instructors.length != courseDataTW.instructors.length) {
+            if (courseDataEN == null || courseDataEN.instructors == null || courseDataEN.instructors.length != courseDataTW.instructors.length) {
                 names.addAll(Arrays.asList(courseDataTW.instructors));
             } else
                 for (int i = 0; i < courseDataTW.instructors.length; i++) {
@@ -546,7 +601,7 @@ public class HistorySearch {
 
     private void fetchCourse(HistorySearch historySearch, int from, int to) {
         CookieStore[] cookieCache = readCookieCache(4);
-        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         for (int year = from; year >= to; year--) {
             long startYearTime = System.currentTimeMillis();
             logger.log("########## Fetch course: " + year);
@@ -631,19 +686,19 @@ public class HistorySearch {
         List<CourseData> allCourseData = result.getCourseDataList();
 
         int conflictCount = 0, nonSerialCount = 0;
-        Map<String, CourseData> serialNumber = new HashMap<>();
+        Map<String, CourseData> deptWithSerial = new HashMap<>();
         for (CourseData courseData : allCourseData) {
             if (courseData.serialNumber == null) {
                 nonSerialCount++;
                 continue;
             }
-            if (serialNumber.containsKey(courseData.departmentId + '-' + courseData.serialNumber)) {
+            if (deptWithSerial.containsKey(courseData.getDeptWithSerial())) {
                 conflictCount++;
-                logger.log("\n" + courseData + "\n" + serialNumber.get(courseData.departmentId + '-' + courseData.serialNumber));
+                logger.log("\n" + courseData + "\n" + deptWithSerial.get(courseData.getDeptWithSerial()));
             } else
-                serialNumber.put(courseData.departmentId + '-' + courseData.serialNumber, courseData);
+                deptWithSerial.put(courseData.getDeptWithSerial(), courseData);
         }
-        logger.log("serial number count: " + serialNumber.size());
+        logger.log("serial number count: " + deptWithSerial.size());
         logger.log("conflict count: " + conflictCount);
         logger.log("non-serial count: " + nonSerialCount);
         logger.log("Get " + allCourseData.size() + " course, use " + ((System.currentTimeMillis() - start) / 1000) + "s");
@@ -834,19 +889,19 @@ public class HistorySearch {
         }
 
         int conflictCount = 0, nonSerialCount = 0;
-        Set<String> serialNumber = new HashSet<>();
+        Set<String> deptWithSerial = new HashSet<>();
         for (CourseData courseData : courseDataList) {
             if (courseData.serialNumber == null) {
                 nonSerialCount++;
                 continue;
             }
-            if (serialNumber.contains(courseData.departmentId + '-' + courseData.serialNumber))
+            if (deptWithSerial.contains(courseData.getDeptWithSerial()))
                 conflictCount++;
             else
-                serialNumber.add(courseData.departmentId + '-' + courseData.serialNumber);
+                deptWithSerial.add(courseData.getDeptWithSerial());
         }
 
-        logger.log("serial number count: " + serialNumber.size());
+        logger.log("serial number count: " + deptWithSerial.size());
         logger.log("conflict count: " + conflictCount);
         logger.log("non-serial count: " + nonSerialCount);
         logger.log("Get " + courseDataList.size() + " course, use " + ((System.currentTimeMillis() - start) / 1000) + "s");

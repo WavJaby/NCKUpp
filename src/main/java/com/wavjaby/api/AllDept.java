@@ -53,17 +53,17 @@ public class AllDept implements Module {
     public void start() {
         // Read cache
         allDeptFile = getFileFromPath(ALL_DEPT_FILE_PATH, true, true);
-//        if (allDeptFile.exists()) {
-//            deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
-//            assert deptGroup != null;
-//            JsonObject jsonObject = new JsonObject(deptGroup);
-//            for (Object i : jsonObject.getArray("deptGroup")) {
-//                for (Object j : ((JsonObject) i).getArray("dept")) {
-//                    deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
-//                    deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
-//                }
-//            }
-//        }
+        if (allDeptFile.exists()) {
+            deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
+            assert deptGroup != null;
+            JsonObject jsonObject = new JsonObject(deptGroup);
+            for (Object i : jsonObject.getArray("deptGroup")) {
+                for (Object j : ((JsonObject) i).getArray("dept")) {
+                    deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
+                    deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
+                }
+            }
+        }
 
         // Get new dept data
         CookieStore cookieStore = new CookieManager().getCookieStore();
@@ -91,6 +91,7 @@ public class AllDept implements Module {
         List<Search.AllDeptGroupData.Group> groupsTW = allDeptTW.getGroups();
         List<Search.AllDeptGroupData.Group> groupsEN = allDeptEN.getGroups();
         List<String> conflictName = new ArrayList<>();
+        Map<String, String> newDeptIdMap = new HashMap<>();
 
         for (int i = 0; i < groupsTW.size(); i++) {
             Search.AllDeptGroupData.Group groupTW = groupsTW.get(i);
@@ -111,11 +112,11 @@ public class AllDept implements Module {
                 Search.AllDeptGroupData.DeptData deptEN = groupEN.dept.get(j);
                 outDeptData.append(new JsonArrayStringBuilder()
                         .append(deptTW.id).append(deptTW.name).append(deptEN.name));
-                if (deptIdMap.containsKey(deptTW.name)) conflictName.add(deptTW.name);
-                else deptIdMap.put(deptTW.name, deptTW.id);
+                if (newDeptIdMap.containsKey(deptTW.name)) conflictName.add(deptTW.name);
+                else newDeptIdMap.put(deptTW.name, deptTW.id);
 
-                if (deptIdMap.containsKey(deptEN.name)) conflictName.add(deptEN.name);
-                else deptIdMap.put(deptEN.name, deptEN.id);
+                if (newDeptIdMap.containsKey(deptEN.name)) conflictName.add(deptEN.name);
+                else newDeptIdMap.put(deptEN.name, deptEN.id);
             }
             groupOut.append("dept", outDeptData);
             outDeptGroup.append(groupOut);
@@ -123,8 +124,10 @@ public class AllDept implements Module {
         if (!conflictName.isEmpty()) {
             logger.warn("Conflict name: " + (conflictName.size() / 2));
             for (String s : conflictName)
-                deptIdMap.remove(s);
+                newDeptIdMap.remove(s);
         }
+        deptIdMap.clear();
+        deptIdMap.putAll(newDeptIdMap);
 
         builder.append("deptGroup", outDeptGroup);
         builder.append("deptCount", count);
@@ -174,11 +177,15 @@ public class AllDept implements Module {
         HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, cookieStore);
         if (!httpResponseData.isSuccess() || httpResponseData.data == null)
             return null;
-        String body = httpResponseData.data;
-        cosPreCheck(courseNckuOrg, body, cookieStore, null, proxyManager);
-        if (!httpResponseData.isSuccess())
-            return null;
-        body = processIframe(httpResponseData.data, cookieStore, proxyManager, robotCheck);
+        String body = processIframe(httpResponseData.data, cookieStore, proxyManager, robotCheck);
+        if (body != null) {
+            String baseUrl = findStringBetween(body, "<base", "href=\"", "\"");
+            if (baseUrl == null) {
+                logger.err("Base url not found");
+                return null;
+            }
+            cosPreCheck(baseUrl, body, cookieStore, null, proxyManager);
+        }
 
         return body;
     }

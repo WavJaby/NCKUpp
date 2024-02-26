@@ -187,15 +187,15 @@ public class StudentIdSys implements Module {
         final String normalDistImgQuery;
 
         public CourseGrade(Elements row, int year, byte semester) {
-            String serialNumber = row.get(1).text().trim();
-            if (!serialNumber.isEmpty()) {
-                int split = serialNumber.indexOf(' ');
+            String deptWithSerial = row.get(1).text().trim();
+            if (!deptWithSerial.isEmpty()) {
+                int split = deptWithSerial.indexOf(' ');
                 if (split != -1) {
-                    String dept = serialNumber.substring(0, split);
-                    String num = serialNumber.substring(split + 1);
-                    serialNumber = dept + '-' + leftPad(num, 3, '0');
-                } else serialNumber = null;
-            } else serialNumber = null;
+                    String dept = deptWithSerial.substring(0, split);
+                    String num = deptWithSerial.substring(split + 1);
+                    deptWithSerial = dept + '-' + leftPad(num, 3, '0');
+                } else deptWithSerial = null;
+            } else deptWithSerial = null;
 
             String courseName = row.get(3).text().trim();
             // 課程別
@@ -249,7 +249,7 @@ public class StudentIdSys implements Module {
                 classCode = link_[8];
             }
             normalDistImgQuery = yearRaw + ',' + semRaw + ',' + systemNumber + ',' + classCode;
-            courseInfo = new CourseGradeInfo(serialNumber, systemNumber, classCode, courseName, year, semester);
+            courseInfo = new CourseGradeInfo(deptWithSerial, systemNumber, classCode, courseName, year, semester);
         }
 
         // Current semester data
@@ -260,7 +260,7 @@ public class StudentIdSys implements Module {
 
             String dept = row.get(1).text().trim();
             String num = row.get(2).text().trim();
-            String serialNumber = dept + '-' + leftPad(num, 3, '0');
+            String deptWithSerial = dept + '-' + leftPad(num, 3, '0');
 
             String courseName = row.get(4).text().trim();
             credits = Float.parseFloat(row.get(5).text().trim());
@@ -288,13 +288,13 @@ public class StudentIdSys implements Module {
             }
             normalDistImgQuery = String.valueOf(year) + ',' + (semester == 0 ? '1' : '2') + ',' +
                     systemNumber + (classCode == null ? ',' : ',' + classCode);
-            courseInfo = new CourseGradeInfo(serialNumber, systemNumber, classCode, courseName, year, semester);
+            courseInfo = new CourseGradeInfo(deptWithSerial, systemNumber, classCode, courseName, year, semester);
         }
 
         @Override
         public String toString() {
             return new JsonObjectStringBuilder()
-                    .append("serialNumber", courseInfo.serialNumber)
+                    .append("deptWithSerial", courseInfo.deptWithSerial)
                     .append("systemNumber", courseInfo.systemNumber)
                     .append("classCode", courseInfo.classCode)
                     .append("courseName", courseInfo.courseName)
@@ -309,13 +309,13 @@ public class StudentIdSys implements Module {
     }
 
     public static class CourseGradeInfo {
-        final String serialNumber, systemNumber, classCode;
+        final String deptWithSerial, systemNumber, classCode;
         final String courseName;
         final int year;
         final byte semester;
 
-        public CourseGradeInfo(String serialNumber, String systemNumber, String classCode, String courseName, int year, byte semester) {
-            this.serialNumber = serialNumber;
+        public CourseGradeInfo(String deptWithSerial, String systemNumber, String classCode, String courseName, int year, byte semester) {
+            this.deptWithSerial = deptWithSerial;
             this.systemNumber = systemNumber;
             this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
             this.courseName = courseName;
@@ -338,7 +338,7 @@ public class StudentIdSys implements Module {
         public final byte semester;
         public final String systemNumber, classCode;
         private String courseName;
-        private String[] serialNumbers;
+        private String[] deptWithSerialArr;
         private int[] studentCount;
 
         public DistributionImage(int year, byte semester, String systemNumber, String classCode) {
@@ -356,7 +356,7 @@ public class StudentIdSys implements Module {
             for (int i = 0; i < dist.length; i++) {
                 studentCount[i] = Integer.parseInt(dist[i]);
             }
-            serialNumbers = Lib.simpleSplit(serialNumbersStr, ',');
+            deptWithSerialArr = Lib.simpleSplit(serialNumbersStr, ',');
         }
 
         public String getQuery() {
@@ -398,13 +398,13 @@ public class StudentIdSys implements Module {
         }
 
         public String serialNumbersToString() {
-            return String.join(",", serialNumbers);
+            return String.join(",", deptWithSerialArr);
         }
 
         public void AddSerialNumber(CourseGradeInfo courseInfo) {
             boolean find = false;
-            for (String serialNumber : serialNumbers) {
-                if (serialNumber.equals(courseInfo.serialNumber)) {
+            for (String deptWithSerial : deptWithSerialArr) {
+                if (deptWithSerial.equals(courseInfo.deptWithSerial)) {
                     find = true;
                     break;
                 }
@@ -412,10 +412,10 @@ public class StudentIdSys implements Module {
             if (find)
                 return;
             // Append
-            String[] serialNumbers = new String[this.serialNumbers.length + 1];
-            System.arraycopy(this.serialNumbers, 0, serialNumbers, 0, this.serialNumbers.length);
-            serialNumbers[this.serialNumbers.length] = courseInfo.serialNumber;
-            this.serialNumbers = serialNumbers;
+            String[] serialNumbers = new String[this.deptWithSerialArr.length + 1];
+            System.arraycopy(this.deptWithSerialArr, 0, serialNumbers, 0, this.deptWithSerialArr.length);
+            serialNumbers[this.deptWithSerialArr.length] = courseInfo.deptWithSerial;
+            this.deptWithSerialArr = serialNumbers;
         }
     }
 
@@ -618,7 +618,7 @@ public class StudentIdSys implements Module {
             sqlAddDistribution.setInt(2, courseInfo.semester);
             sqlAddDistribution.setString(3, courseInfo.systemNumber);
             sqlAddDistribution.setString(4, courseInfo.classCode);
-            sqlAddDistribution.setString(5, courseInfo.serialNumber);
+            sqlAddDistribution.setString(5, courseInfo.deptWithSerial);
             sqlAddDistribution.setString(6, courseInfo.courseName);
             sqlAddDistribution.setString(7, studentId);
             sqlAddDistribution.setTimestamp(8, Timestamp.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));

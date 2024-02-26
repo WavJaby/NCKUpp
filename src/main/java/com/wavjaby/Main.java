@@ -253,10 +253,10 @@ public class Main {
             module.start();
             if (module.api())
                 server.addEndpoint(module);
-            logger.log("##### " + module.getTag() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
+            logger.log("##### " + module.getClass().getName() + " Ready " + (System.currentTimeMillis() - start) + "ms #####");
         } catch (Exception e) {
             logger.errTrace(e);
-            logger.err("##### " + module.getTag() + " ERROR " + (System.currentTimeMillis() - start) + "ms #####");
+            logger.err("##### " + module.getClass().getName() + " ERROR " + (System.currentTimeMillis() - start) + "ms #####");
         }
     }
 

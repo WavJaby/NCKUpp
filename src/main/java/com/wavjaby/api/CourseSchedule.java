@@ -197,7 +197,7 @@ public class CourseSchedule implements Module {
             }
 
             JsonObject course = new JsonObject();
-            course.put("serialNumber", col.get(0).text() + '-' + col.get(1).text());
+            course.put("deptWithSerial", col.get(0).text() + '-' + col.get(1).text());
             course.put("courseName", col.get(2).text());
             course.put("credits", Float.parseFloat(col.get(3).text()));
 
@@ -346,7 +346,7 @@ public class CourseSchedule implements Module {
             if (!sn.equals(lastSN)) {
                 lastSN = sn;
                 JsonObject course = new JsonObject();
-                course.put("serialNumber", rowElements.get(1).text() + '-' + rowElements.get(2).text());
+                course.put("deptWithSerial", rowElements.get(1).text() + '-' + rowElements.get(2).text());
                 course.put("courseName", rowElements.get(3).text());
                 String requiredStr = rowElements.get(4).text();
                 course.put("required", requiredStr.equals("必修") || requiredStr.equals("REQUIRED"));

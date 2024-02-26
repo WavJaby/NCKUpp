@@ -54,29 +54,21 @@ public class Lib {
     }
 
     public static void cosPreCheck(String urlOrigin, String body, CookieStore cookieStore, ApiResponse response, ProxyManager proxyManager) {
-        String cosPreCheckKey = null;
-        int cosPreCheckStart = body.indexOf("m=cosprecheck");
-        if (cosPreCheckStart == -1) {
+        String cosPreCheckKey = findStringBetween(body, "m=cosprecheck", "&ref=", "\"");
+        if (cosPreCheckKey == null) {
             if (response != null)
                 response.addWarn(TAG + "CosPreCheck not found");
             logger.warn("CosPreCheck not found");
             return;
         }
-        if ((cosPreCheckStart = body.indexOf("&ref=", cosPreCheckStart + 13)) != -1) {
-            cosPreCheckStart += 5;
-            int cosPreCheckEnd = body.indexOf('"', cosPreCheckStart);
-            if (cosPreCheckEnd != -1)
-                cosPreCheckKey = body.substring(cosPreCheckStart, cosPreCheckEnd);
-        }
 //        logger.log("Make CosPreCheck " + cookieStore.getCookies().toString());
         long now = System.currentTimeMillis() / 1000;
-        String postData = "time=" + now;
-        if (cosPreCheckKey != null) {
-            try {
-                postData += "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                logger.errTrace(e);
-            }
+        String postData;
+        try {
+            postData = "time=" + now + "&ref=" + URLEncoder.encode(cosPreCheckKey, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            logger.errTrace(e);
+            return;
         }
 
         for (int i = 0; i < 2; i++) {
@@ -116,10 +108,8 @@ public class Lib {
                     .ignoreContentType(true)
                     .proxy(proxyManager.getProxy());
             HttpResponseData res = robotCheck.sendRequest(baseUrl, requestCookie, cookieStore);
-            if (res.state != HttpResponseData.ResponseState.SUCCESS) {
+            if (res.state != HttpResponseData.ResponseState.SUCCESS)
                 return null;
-            }
-            cosPreCheck(courseQueryNckuOrg, res.data, cookieStore, null, proxyManager);
             return res.data;
         }
         return html;
@@ -435,13 +425,6 @@ public class Lib {
     public static String findStringBetween(String input, String where, String from, String end) {
         int startIndex = input.indexOf(where), endIndex = -1;
         if (startIndex != -1) startIndex = input.indexOf(from, startIndex + where.length());
-        if (startIndex != -1) endIndex = input.indexOf(end, startIndex + from.length());
-        return startIndex == -1 || endIndex == -1 ? null : input.substring(startIndex + from.length(), endIndex);
-    }
-
-    public static String findStringBetween(String input, int beginIndex, String from, String end) {
-        int startIndex = beginIndex, endIndex = -1;
-        if (startIndex != -1) startIndex = input.indexOf(from, startIndex);
         if (startIndex != -1) endIndex = input.indexOf(end, startIndex + from.length());
         return startIndex == -1 || endIndex == -1 ? null : input.substring(startIndex + from.length(), endIndex);
     }

@@ -125,7 +125,7 @@ export function fetchApi(endpoint, showState, option) {
 
 /**
  * @typedef ScheduleCourse
- * @property {string} serialNumber
+ * @property {string} deptWithSerial
  * @property {string} courseName
  * @property {boolean} required
  * @property {float} credits
@@ -141,7 +141,7 @@ export function fetchApi(endpoint, showState, option) {
  * @param {function(message: string, courseName: string)} [onFailed]
  */
 export function removePreSchedule(courseData, removeKey, onSuccess, onFailed) {
-	const courseName = '[' + courseData.serialNumber + '] ' + courseData.courseName;
+	const courseName = '[' + courseData.deptWithSerial + '] ' + courseData.courseName;
 	fetchApi('/courseSchedule?pre=true', 'Delete pre schedule',
 		{method: 'post', body: {action: 'delete', info: removeKey}}
 	).then(response => {
@@ -159,7 +159,7 @@ export function removePreSchedule(courseData, removeKey, onSuccess, onFailed) {
  * @param {function(message: string, courseName: string)} [onFailed]
  */
 export function addPreSchedule(courseData, preScheduleKey, onSuccess, onFailed) {
-	const courseName = '[' + courseData.serialNumber + '] ' + courseData.courseName;
+	const courseName = '[' + courseData.deptWithSerial + '] ' + courseData.courseName;
 	fetchApi('/courseFuncBtn?prekey=' + encodeURIComponent(preScheduleKey), 'Add pre-schedule').then(response => {
 		if (response.success)
 			onSuccess && onSuccess(response.msg, courseName);
@@ -219,7 +219,7 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 	const courseData = /**@type CourseData*/ {
 		semester: rawCourseData.y,
 		departmentId: rawCourseData.dn,
-		serialNumber: null,
+		deptWithSerial: null,
 		attributeCode: rawCourseData.ca,
 		systemNumber: rawCourseData.cs,
 		courseGrade: rawCourseData.g,
@@ -245,8 +245,8 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 	};
 
     // Serial number
-    if (!rawCourseData.sn != null)
-        courseData.serialNumber = rawCourseData.dn + '-' + rawCourseData.sn.toString().padStart(3, '0');
+    if (rawCourseData.sn != null)
+        courseData.deptWithSerial = rawCourseData.dn + '-' + rawCourseData.sn.toString().padStart(3, '0');
 
 	// Parse time
 	if (rawCourseData.t != null) {

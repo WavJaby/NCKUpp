@@ -226,7 +226,7 @@ $instructor-info-fade-time: 200ms;
                     }
                 }
 
-                &.serialNumber {
+                &.deptWithSerial {
                     width: 0;
                 }
             }
@@ -585,7 +585,7 @@ $instructor-info-fade-time: 200ms;
                             }
                         }
 
-                        &.serialNumber, &.courseName {
+                        &.deptWithSerial, &.courseName {
                             display: none;
                         }
 

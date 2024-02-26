@@ -860,6 +860,12 @@ public class Search implements Module {
                 result.errorFetch("Failed to get renew cookie");
                 return null;
             }
+            baseUrl = findStringBetween(resultHtml, "<base", "href=\"", "\"");
+            if (baseUrl == null) {
+                result.errorFetch("Base url not found");
+                return null;
+            }
+            cosPreCheck(baseUrl, resultHtml, cookieStore, null, proxyManager);
 
             // Write post data
             if (searchQuery.searchID != null)

@@ -390,7 +390,7 @@ public class CourseRegister implements Module {
     }
 
     private void parseCourseData(Elements cols, JsonObjectStringBuilder courseData) {
-        courseData.append("serialNumber", cols.get(1).ownText().trim() + '-' + cols.get(2).ownText().trim());
+        courseData.append("deptWithSerial", cols.get(1).ownText().trim() + '-' + cols.get(2).ownText().trim());
         courseData.append("courseName", cols.get(3).ownText().trim());
 
         String require = cols.get(4).ownText().trim();

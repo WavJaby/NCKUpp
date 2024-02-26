@@ -319,6 +319,12 @@ public class CourseData {
         return serialNumber;
     }
 
+    public String getDeptWithSerial() {
+        if (departmentId == null || serialNumber == null)
+            return null;
+        return departmentId + "-" + serialNumber;
+    }
+
     public String getSystemNumber() {
         return systemNumber;
     }

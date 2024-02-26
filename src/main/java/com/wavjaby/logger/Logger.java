@@ -17,14 +17,18 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static com.wavjaby.logger.AnsiText.*;
 import static com.wavjaby.logger.LogLevel.*;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.time.temporal.ChronoField.*;
 
 public class Logger {
+    public static final String RESET = "\33[0m";
+    public static final String RED = "\33[31m";
+    public static final String MAGENTA = "\33[35m";
     private static final List<Progressbar> PROGRESSBAR = new ArrayList<>();
     private static final DecimalFormat format = new DecimalFormat("#.##");
     private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
@@ -48,6 +52,7 @@ public class Logger {
     private final String tag;
     private static OutputStream logFileOut;
     private static ByteArrayOutputStream logFileOutBuff;
+    private static ReadWriteLock logFileOutLock;
     private static String[] traceClassFilter = null;
     private static ScheduledExecutorService scheduledExecutor;
     private static File logFile;
@@ -67,6 +72,7 @@ public class Logger {
                     writeLog(ERROR, "Logger", "Failed to create log file", true);
             logFileOut = Files.newOutputStream(logFile.toPath(), CREATE, APPEND);
             logFileOutBuff = new ByteArrayOutputStream();
+            logFileOutLock = new ReentrantReadWriteLock();
             if (scheduledExecutor == null) {
                 scheduledExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory("Logger"));
                 scheduledExecutor.scheduleWithFixedDelay(Logger::flushLog, 100, 100, TimeUnit.MILLISECONDS);
@@ -81,14 +87,18 @@ public class Logger {
     }
 
     public static void flushLog() {
+        logFileOutLock.readLock().lock();
         try {
             logFileOut.write(logFileOutBuff.toByteArray());
             logFileOutBuff.reset();
         } catch (IOException ignore) {
+        } finally {
+            logFileOutLock.readLock().unlock();
         }
     }
 
     public static void stopAndFlushLog() {
+        logFileOutLock.readLock().lock();
         try {
             logFileOut.write(logFileOutBuff.toByteArray());
             logFileOutBuff.close();
@@ -97,6 +107,8 @@ public class Logger {
             if (!scheduledExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS))
                 scheduledExecutor.shutdownNow();
         } catch (InterruptedException | IOException ignore) {
+        } finally {
+            logFileOutLock.readLock().unlock();
         }
     }
 
@@ -108,16 +120,12 @@ public class Logger {
         writeLog(INFO, tag, String.valueOf(message), true);
     }
 
-    public <T> void log(final T message, final boolean inputPrefix) {
-        writeLog(INFO, tag, String.valueOf(message), inputPrefix);
-    }
-
     public <T> void warn(final T message) {
         writeLog(WARN, tag, String.valueOf(message), true);
     }
 
     public <T> void err(final T message) {
-        writeErr(tag, String.valueOf(message), true);
+        writeLog(ERROR, tag, String.valueOf(message), true);
     }
 
     public void errTrace(final Throwable e) {
@@ -147,7 +155,7 @@ public class Logger {
             builder.append("\tat ").append(traceElement).append('\n');
         }
 
-        writeErr(tag, builder.toString(), true);
+        writeLog(ERROR, tag, builder.toString(), true);
     }
 
     public static Progressbar addProgressbar(final String tag) {
@@ -169,26 +177,21 @@ public class Logger {
 
     private static void writeLog(LogLevel level, String tag, String message, boolean inputPrefix) {
         String time = getTimeStamp() + ' ';
-        System.out.print("\33[2K\r" + time + level.nameWithColor + ' ' + MAGENTA + tag + RESET + ' ' + message +
-                (inputPrefix ? "\n> " : '\n'));
+        if (level == ERROR) {
+            System.err.print("\33[2K\r" + time + level.nameWithColor + ' ' + MAGENTA + tag + RESET + ' ' + message + '\n');
+            if (inputPrefix)
+                System.out.print("> ");
+        } else
+            System.out.print("\33[2K\r" + time + level.nameWithColor + ' ' + MAGENTA + tag + RESET + ' ' + message +
+                    (inputPrefix ? "\n> " : '\n'));
 
         if (logFileOutBuff != null) {
+            logFileOutLock.writeLock().lock();
             try {
                 logFileOutBuff.write((time + level.name() + ' ' + tag + ' ' + message + '\n').getBytes(StandardCharsets.UTF_8));
             } catch (IOException ignore) {
-            }
-        }
-    }
-
-    private static void writeErr(String tag, String message, boolean inputPrefix) {
-        String time = getTimeStamp() + ' ';
-        System.err.print("\33[2K\r" + time + ERROR.nameWithColor + ' ' + MAGENTA + tag + RED + ' ' + message + RESET +
-                (inputPrefix ? "\n> " : '\n'));
-
-        if (logFileOutBuff != null) {
-            try {
-                logFileOutBuff.write((time + ERROR.name() + ' ' + tag + ' ' + message + '\n').getBytes(StandardCharsets.UTF_8));
-            } catch (IOException ignore) {
+            } finally {
+                logFileOutLock.writeLock().unlock();
             }
         }
     }

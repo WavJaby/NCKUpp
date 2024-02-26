@@ -199,7 +199,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                     for (CourseData courseData : newCourseDataList) {
                         if (courseData.getSerialNumber() == null)
                             continue;
-                        tableIndex.put(courseData.getDepartmentId() + '-' + courseData.getSerialNumber(), 0);
+                        tableIndex.put(courseData.getDeptWithSerial(), 0);
                     }
                     int i = 0;
                     for (Map.Entry<String, Integer> entry : tableIndex.entrySet())
@@ -216,9 +216,9 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                         continue;
                     courseJsonArray.appendRaw(courseData.toString());
 
-                    Integer index = tableIndex.get(courseData.getSerialNumber());
+                    Integer index = tableIndex.get(courseData.getDeptWithSerial());
                     if (index == null) {
-                        logger.err("Unknown SerialNumber: " + courseData.getSerialNumber());
+                        logger.err("Unknown SerialNumber: " + courseData.getDeptWithSerial());
                         return;
                     }
                     selected[index] = courseData.getSelected();

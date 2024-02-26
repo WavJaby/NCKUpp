@@ -7,7 +7,7 @@ import SelectMenu from '../selectMenu.js';
 
 /**
  * @typedef CourseGrade
- * @property {string} serialNumber
+ * @property {string} deptWithSerial
  * @property {string} systemNumber
  * @property {string | null} classCode
  * @property {string} courseName
@@ -204,7 +204,7 @@ function MyGrades(router) {
 			semesterGradesElement.removeChild(semesterGradesElement.firstChild);
 		for (const course of courseGrades) {
 			semesterGradesElement.appendChild(div(null, {courseInfo: course, onclick: createDistWindow},
-					span(course.serialNumber, 'serialNumber', {title: 'Serial Number'}),
+					span(course.deptWithSerial, 'deptWithSerial', {title: 'Serial Number'}),
 					h1(course.courseName),
 					// span(null, 'info', span('System Number'), text(': ' + course.systemNumber)),
 					// span(null, 'info', span('Credits'), text(': ' + course.credits)),

@@ -104,9 +104,9 @@ public class DeptWatchdog implements Module {
         }
     }
 
-    public List<String> getWatchedUserDiscordID(String serialNumber) {
+    public List<String> getWatchedUserDiscordID(String deptWithSerial) {
         try {
-            getWatchedUser.setString(1, serialNumber);
+            getWatchedUser.setString(1, deptWithSerial);
             ResultSet result = getWatchedUser.executeQuery();
             List<String> discordIDs = new ArrayList<>();
             while (result.next()) {

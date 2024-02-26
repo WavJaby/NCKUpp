@@ -30,7 +30,7 @@
  * @typedef {Object} CourseData
  * @property {string} semester
  * @property {string} departmentId
- * @property {string} serialNumber
+ * @property {string} deptWithSerial
  * @property {string} attributeCode
  * @property {string} systemNumber
  * @property {int} courseGrade
@@ -473,14 +473,14 @@ export default function (router, loginState, userGuideTool) {
 			const courseData = parseRawCourseData(rawCourseData, urSchoolData);
 
 			// Add register count if available
-			const registerCount = registerCountA9 ? registerCountA9[courseData.serialNumber] || null : undefined;
+			const registerCount = registerCountA9 ? registerCountA9[courseData.deptWithSerial] || null : undefined;
 			courseData.registerCount = registerCount && registerCount.count;
 			courseResult.push(courseData);
 
 			// Prepare nckuHub if available
-			if (courseData.serialNumber != null) {
-				if (availableNckuHubCourseID.indexOf(courseData.serialNumber) !== -1)
-					nckuHubResult[courseData.serialNumber] = {courseData, signal: new Signal()};
+			if (courseData.deptWithSerial != null) {
+				if (availableNckuHubCourseID.indexOf(courseData.deptWithSerial) !== -1)
+					nckuHubResult[courseData.deptWithSerial] = {courseData, signal: new Signal()};
 			}
 		}
 
@@ -567,19 +567,19 @@ export default function (router, loginState, userGuideTool) {
 
 		const courseData = this.courseData;
 		let serialIndex, result;
-		if ((serialIndex = watchList.indexOf(courseData.serialNumber)) === -1) {
+		if ((serialIndex = watchList.indexOf(courseData.deptWithSerial)) === -1) {
 			console.log('add watch');
 			result = fetchApi('/watchdog', 'add course to watch list', {
 				method: 'POST',
-				body: {studentID: loginState.state.studentID, courseSerial: courseData.serialNumber}
+				body: {studentID: loginState.state.studentID, courseSerial: courseData.deptWithSerial}
 			});
 			this.textContent = '移除關注';
-			watchList.push(courseData.serialNumber);
+			watchList.push(courseData.deptWithSerial);
 		} else {
 			console.log('remove watch');
 			result = fetchApi('/watchdog', 'remove course from watch list', {
 				method: 'POST',
-				body: {studentID: loginState.state.studentID, removeCourseSerial: courseData.serialNumber}
+				body: {studentID: loginState.state.studentID, removeCourseSerial: courseData.deptWithSerial}
 			});
 			this.textContent = '加入關注';
 			watchList.splice(serialIndex, 1);
@@ -619,7 +619,7 @@ export default function (router, loginState, userGuideTool) {
 	/**@this{{courseData: CourseData, key: string}}*/
 	function addPreferenceEnter() {
 		const courseData = this.courseData;
-		const serialNumber = courseData.serialNumber;
+		const deptWithSerial = courseData.deptWithSerial;
 		const preferenceEnterKey = this.key;
 
 		const title = this.courseData.courseName + ' 加入志願';
@@ -633,7 +633,7 @@ export default function (router, loginState, userGuideTool) {
 					window.messageAlert.addError(title + '失敗', '請再嘗試一次', 5000);
 					return;
 				}
-				const course = data.courseList.find(i => i.serialNumber === serialNumber);
+				const course = data.courseList.find(i => i.deptWithSerial === deptWithSerial);
 				// Course not in pre-register list
 				if (!course) {
 					window.messageAlert.addError(title + '失敗', preScheduleNormal ? '該課程已在志願登記中' : '請重新整理再嘗試一次', 5000);
@@ -641,7 +641,7 @@ export default function (router, loginState, userGuideTool) {
 					if (addPreResponse.code === 1000) {
 						getPreSchedule(function (data) {
 							if (!data.schedule) return;
-							const course = data.schedule.find(i => i.serialNumber === serialNumber);
+							const course = data.schedule.find(i => i.deptWithSerial === deptWithSerial);
 							if (course && course.delete) removePreSchedule(courseData, course.delete);
 						});
 					}
@@ -876,7 +876,7 @@ export default function (router, loginState, userGuideTool) {
 			// Render result elements
 			for (/**@type{CourseData}*/const data of state.courseResult) {
 				const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
-				const nckuHubResultData = state.nckuHubResult[data.serialNumber];
+				const nckuHubResultData = state.nckuHubResult[data.deptWithSerial];
 				const expandButton = expandArrowImage.cloneNode();
 				expandButtons.push(toggleCourseInfo);
 
@@ -982,10 +982,10 @@ export default function (router, loginState, userGuideTool) {
 						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
 						td(null, 'detailedCourseName',
 							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'},
-								span((data.serialNumber ? data.serialNumber + ' ' : '') + data.courseName))
+								span((data.deptWithSerial ? data.deptWithSerial + ' ' : '') + data.courseName))
 						),
-						td(data.departmentName, 'departmentName', {title: data.departmentName}),
-						td(data.serialNumber, 'serialNumber'),
+						td(data.departmentId, 'departmentName', {title: data.departmentId}),
+						td(data.deptWithSerial, 'deptWithSerial'),
 						td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
 						td(null, 'grade', span('年級:', 'label'), data.courseGrade && text(data.courseGrade.toString())),
 						td(null, 'classInfo', span('班別:', 'label'), data.classInfo && text(data.classInfo)),
@@ -1008,8 +1008,8 @@ export default function (router, loginState, userGuideTool) {
 						nckuHubInfo,
 						// Title sections
 						td(null, 'options', {rowSpan: 2},
-							!data.serialNumber || !loginState.state || !loginState.state.login ? null :
-								button(null, watchList && watchList.indexOf(data.serialNumber) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
+							!data.deptWithSerial || !loginState.state || !loginState.state.login ? null :
+								button(null, watchList && watchList.indexOf(data.deptWithSerial) !== -1 ? '移除關注' : '加入關注', watchedCourseAddRemove, {courseData: data}),
 							!data.preRegister ? null :
 								button(null, '加入預排', addPreScheduleButtonClick, {courseData: data, key: data.preRegister}),
 							!data.preferenceEnter ? null :
@@ -1089,7 +1089,7 @@ export default function (router, loginState, userGuideTool) {
 		tr(null,
 			expandAllButton,
 			// th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
-			// th('Serial', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
+			// th('Serial', 'deptWithSerial', {key: 'deptWithSerial', onclick: sortStringKey}),
 			// th('Category', 'category', {key: 'category', onclick: sortStringKey}),
 			// th('Grade', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
 			// th('Class', 'classInfo', {key: 'classInfo', onclick: sortStringKey}),
@@ -1105,7 +1105,7 @@ export default function (router, loginState, userGuideTool) {
 			// // Function buttons
 			// th('Options', 'options'),
 			th('系所', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
-			th('系-序號', 'serialNumber', {key: 'serialNumber', onclick: sortStringKey}),
+			th('系-序號', 'deptWithSerial', {key: 'deptWithSerial', onclick: sortStringKey}),
 			th('類別', 'category', {key: 'category', onclick: sortStringKey}),
 			th('年級', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
 			th('班別', 'classInfo', {key: 'classInfo', onclick: sortStringKey}),
@@ -1278,7 +1278,7 @@ export function NckuHubDetailWindow(courseSearch, userGuideTrigger) {
 		const nckuHub = courseData.nckuHub;
 		popupWindow.windowSet(div('nckuHubDetailWindow',
 			div('courseInfoPanel',
-				span(courseData.serialNumber),
+				span(courseData.deptWithSerial),
 				span(courseData.courseName),
 				span(courseData.timeString),
 			),
@@ -1323,7 +1323,7 @@ function FlexTimeWindow(courseSearch) {
 	this.set = function ([courseData, timeData]) {
 		popupWindow.windowSet(div('flexTimeWindow',
 			div('courseInfoPanel',
-				span(courseData.serialNumber),
+				span(courseData.deptWithSerial),
 				span(courseData.courseName),
 				span(courseData.timeString),
 			),
