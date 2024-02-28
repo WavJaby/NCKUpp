@@ -818,10 +818,9 @@ public class Search implements Module {
         CookieStore postCookieStore;
         // Build query
         try {
-            baseUrl = courseNckuOrg;
             postCookieStore = cookieStore;
             // Get searchID if it's null
-//                if (searchQuery.searchID == null || searchQuery.searchID.searchID == null) {
+//                if (searchQuery.searchID == null) {
 //                    logger.log("Renew search id");
 //
 //                    Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
@@ -849,6 +848,7 @@ public class Search implements Module {
                     .header("Connection", "keep-alive")
                     .cookieStore(cookieStore)
                     .ignoreContentType(true)
+                    .userAgent(USER_AGENT)
                     .proxy(proxyManager.getProxy());
             HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, cookieStore);
             if (httpResponseData.state != ResponseState.SUCCESS) {
@@ -866,10 +866,11 @@ public class Search implements Module {
                 return null;
             }
             cosPreCheck(baseUrl, resultHtml, cookieStore, null, proxyManager);
+//            baseUrl = courseNckuOrg;
 
             // Write post data
             if (searchQuery.searchID != null)
-                postData.append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
+                postData.append("&id=").append(URLEncoder.encode(searchQuery.searchID, "UTF-8"));
             if (searchQuery.courseName != null)
                 postData.append("&cosname=").append(URLEncoder.encode(searchQuery.courseName, "UTF-8"));
             if (searchQuery.instructor != null)
@@ -892,6 +893,7 @@ public class Search implements Module {
             return null;
         }
 
+
         // Post save query
         Connection request = HttpConnection.connect(baseUrl + "/index.php?c=qry11215&m=save_qry")
                 .header("Connection", "keep-alive")
@@ -900,7 +902,7 @@ public class Search implements Module {
                 .proxy(proxyManager.getProxy())
                 .userAgent(USER_AGENT)
                 .method(Connection.Method.POST)
-                .requestBody(postData.toString())
+                .requestBody(postData.substring(1))
                 .timeout(9000)
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .header("X-Requested-With", "XMLHttpRequest");

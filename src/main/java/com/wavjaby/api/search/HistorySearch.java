@@ -24,10 +24,7 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -345,7 +342,9 @@ public class HistorySearch implements Module {
             ResultSet result = getCourseStat.executeQuery();
             while (result.next()) {
                 String name = result.getNString("name_tw");
+                Array time = result.getArray("time");
                 logger.log(name);
+                logger.log(time.getArray(1,1).toString());
             }
             result.close();
             getCourseStat.clearParameters();

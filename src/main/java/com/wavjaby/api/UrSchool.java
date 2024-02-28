@@ -472,19 +472,26 @@ public class UrSchool implements Module {
                     .ignoreContentType(true)
                     .cookieStore(urSchoolCookie)
                     .userAgent(Main.USER_AGENT)
-                    .timeout(10000);
-            String resultBody;
-            while (true) {
+                    .timeout(20000);
+            int maxTry = 10;
+            String resultBody = null;
+            for (int i = 0; i < maxTry; i++) {
                 try {
                     resultBody = pageFetch.execute().body();
                     break;
                 } catch (IOException | UncheckedIOException e) {
-                    logger.warn("UrSchool fetch failed: " + e.getMessage());
-                    Thread.sleep(100);
+                    // Retry
+                    if (i < maxTry - 1) {
+                        logger.warn("UrSchool fetch failed: " + e.getMessage());
+                        Thread.sleep(100);
+                    }
                 }
-                if (pool.isShutdown()) {
+                if (pool.isShutdown())
                     return null;
-                }
+            }
+            if (resultBody == null) {
+                logger.err("Failed to get UrSchool page");
+                return null;
             }
 
             if (maxPage != null) {
