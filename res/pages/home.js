@@ -60,8 +60,7 @@ export default function (router) {
 
 		// Get home info
 		fetchApi('/homeInfo').then(response => {
-			if (response == null || !response.success || !response.data)
-				return;
+			if (!response.success || !response.data) return;
 			renderHomeInfo(response.data);
 		});
 	}

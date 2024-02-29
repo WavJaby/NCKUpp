@@ -6,10 +6,10 @@
  * @property {string} dn - departmentId
  * @property {string} sn - serialNumber
  * @property {string} ca - attributeCode
- * @property {string} cs - systemNumber
- * @property {int} g - courseGrade 年級
- * @property {string} co - classInfo 班別
- * @property {string} cg - classGroup 組別
+ * @property {string} sc - systemCode
+ * @property {int} g - forGrade 年級
+ * @property {string} fc - forClass 班別
+ * @property {string} fg - forClassGroup 組別
  * @property {string} ct - category
  * @property {string} cn - courseName
  * @property {string} ci - courseNote
@@ -22,7 +22,7 @@
  * @property {int} a - available
  * @property {string[]} t - time
  * @property {string} pe - preferenceEnter
- * @property {string} ac - addCourse
+ * @property {string} cr - courseRegister
  * @property {string} pr - preRegister
  * @property {string} ar - addRequest
  */
@@ -33,9 +33,9 @@
  * @property {string} deptWithSerial
  * @property {string} attributeCode
  * @property {string} systemNumber
- * @property {int} courseGrade
- * @property {string} classInfo
- * @property {string} classGroup
+ * @property {int} forGrade
+ * @property {string} forClass
+ * @property {string} forClassGroup
  * @property {string} category
  * @property {string} courseName
  * @property {string|null} courseNote
@@ -271,8 +271,8 @@ export default function (router, loginState, userGuideTool) {
 	// Element
 	const courseSearchResultInfo = span();
 	// Static data
-	let availableNckuHubCourseID = null;
-	let urSchoolData = null;
+	const /**@type{Object.<String,String>}*/deptIdMap = {};
+	let availableNckuHubCourseID = null, urSchoolData = null;
 
 	// query string
 	let lastQueryString;
@@ -281,14 +281,6 @@ export default function (router, loginState, userGuideTool) {
 	function onRender() {
 		console.log('Course search Render');
 		styles.mount();
-
-		fetchApi('/alldept').then(response => {
-			if (response == null || !response.success || !response.data)
-				return;
-			deptNameSelectMenu.setItems(response.data.deptGroup.map(i => [i.nameTW, i.dept]));
-			if (!externalSearch)
-				loadLastSearch(false);
-		});
 		// Search from other page
 		if (!externalSearch)
 			loadLastSearch(true);
@@ -299,6 +291,20 @@ export default function (router, loginState, userGuideTool) {
 		styles.enable();
 		if (isHistory)
 			loadLastSearch(true);
+
+		if (deptNameSelectMenu.isEmpty())
+			fetchApi('/alldept').then(response => {
+				if (!response.success || !response.data) return;
+				const deptGroup = [];
+				for (let i of response.data.deptGroup) {
+					for (let deptIdName of i.dept)
+						deptIdMap[deptIdName[0]] = deptIdName[1];
+					deptGroup.push([i.nameTW, i.dept]);
+				}
+				deptNameSelectMenu.setItems(deptGroup);
+				if (!externalSearch) loadLastSearch(false);
+				console.log(deptIdMap)
+			});
 
 		loginState.addListener(onLoginState);
 	}
@@ -393,10 +399,14 @@ export default function (router, loginState, userGuideTool) {
 		const getAvailableNckuHubID = availableNckuHubCourseID === null ? fetchApi('/nckuhub', 'Get NCKU Hub id') : null;
 		// get urSchool data
 		const getUrSchoolData = urSchoolData === null ? fetchApi('/urschool', 'Get UrSchool data') : null;
-		if (getAvailableNckuHubID)
-			availableNckuHubCourseID = (await getAvailableNckuHubID).data;
-		if (getUrSchoolData)
-			urSchoolData = (await getUrSchoolData).data;
+		if (getAvailableNckuHubID) {
+			const result = await getAvailableNckuHubID;
+			if (result.success) availableNckuHubCourseID = result.data;
+		}
+		if (getUrSchoolData) {
+			const result = await getUrSchoolData;
+			if (result.success) urSchoolData = result.data;
+		}
 
 		// Get queryData
 		let queryData = rawQuery;
@@ -875,6 +885,7 @@ export default function (router, loginState, userGuideTool) {
 			waitingResult = false;
 			// Render result elements
 			for (/**@type{CourseData}*/const data of state.courseResult) {
+				const departmentName = deptIdMap[data.departmentId] || data.departmentId;
 				const expandArrowStateClass = new ClassList('expandDownArrow', 'expand');
 				const nckuHubResultData = state.nckuHubResult[data.deptWithSerial];
 				const expandButton = expandArrowImage.cloneNode();
@@ -984,12 +995,12 @@ export default function (router, loginState, userGuideTool) {
 							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'},
 								span((data.deptWithSerial ? data.deptWithSerial + ' ' : '') + data.courseName))
 						),
-						td(data.departmentId, 'departmentName', {title: data.departmentId}),
+						td(departmentName, 'departmentName', {title: departmentName}),
 						td(data.deptWithSerial, 'deptWithSerial'),
 						td(null, 'category', span('類別:', 'label'), data.category && text(data.category)),
-						td(null, 'grade', span('年級:', 'label'), data.courseGrade && text(data.courseGrade.toString())),
-						td(null, 'classInfo', span('班別:', 'label'), data.classInfo && text(data.classInfo)),
-						td(null, 'classGroup', span('組別:', 'label'), data.classGroup && text(data.classGroup)),
+						td(null, 'grade', span('年級:', 'label'), data.forGrade && text(data.forGrade.toString())),
+						td(null, 'forClass', span('班別:', 'label'), data.forClass && text(data.forClass)),
+						td(null, 'forClassGroup', span('組別:', 'label'), data.forClassGroup && text(data.forClassGroup)),
 						td(null, 'courseTime', span('時間:', 'label'),
 							data.time && data.time.map(i =>
 								i.flexTimeDataKey
@@ -1091,9 +1102,9 @@ export default function (router, loginState, userGuideTool) {
 			// th('Dept', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 			// th('Serial', 'deptWithSerial', {key: 'deptWithSerial', onclick: sortStringKey}),
 			// th('Category', 'category', {key: 'category', onclick: sortStringKey}),
-			// th('Grade', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
-			// th('Class', 'classInfo', {key: 'classInfo', onclick: sortStringKey}),
-			// th('Time', 'classGroup', {key: 'classGroup', onclick: sortStringKey}),
+			// th('Grade', 'grade', {key: 'forGrade', onclick: sortIntKey}),
+			// th('Class', 'forClass', {key: 'forClass', onclick: sortStringKey}),
+			// th('Time', 'forClassGroup', {key: 'forClassGroup', onclick: sortStringKey}),
 			// th('Course name', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
 			// th('Required', 'courseName', {key: 'courseName', onclick: sortStringKey}),
 			// th('Credits', 'required', {key: 'required', onclick: sortIntKey}),
@@ -1107,9 +1118,9 @@ export default function (router, loginState, userGuideTool) {
 			th('系所', 'departmentName', {key: 'departmentName', onclick: sortStringKey}),
 			th('系-序號', 'deptWithSerial', {key: 'deptWithSerial', onclick: sortStringKey}),
 			th('類別', 'category', {key: 'category', onclick: sortStringKey}),
-			th('年級', 'grade', {key: 'courseGrade', onclick: sortIntKey}),
-			th('班別', 'classInfo', {key: 'classInfo', onclick: sortStringKey}),
-			th('組別', 'classGroup', {key: 'classGroup', onclick: sortStringKey}),
+			th('年級', 'grade', {key: 'forGrade', onclick: sortIntKey}),
+			th('班別', 'forClass', {key: 'forClass', onclick: sortStringKey}),
+			th('組別', 'forClassGroup', {key: 'forClassGroup', onclick: sortStringKey}),
 			th('時間', 'courseTime', {key: 'timeString', onclick: sortStringKey}),
 			th('課程名稱', 'courseName', {key: 'courseName', onclick: sortStringKey}),
 			th('選必修', 'required', {key: 'required', onclick: sortIntKey}),
@@ -1433,8 +1444,8 @@ function textSearchFilter(onFilterUpdate) {
 		if (textSearchFilterKeys.length === 0)
 			return true;
 		return findIfContains(courseData.courseName, textSearchFilterKeys) ||
-			findIfContains(courseData.serialNumber, textSearchFilterKeys) ||
-			findIfContains(courseData.classInfo, textSearchFilterKeys) ||
+			findIfContains(courseData.deptWithSerial, textSearchFilterKeys) ||
+			findIfContains(courseData.forClass, textSearchFilterKeys) ||
 			courseData.instructors && courseData.instructors.find(i =>
 				findIfContains(i instanceof Object ? i.name : i, textSearchFilterKeys))
 	}
@@ -1627,7 +1638,7 @@ function hidePracticeFilter(onFilterUpdate) {
 			return true;
 		return courseData.category !== '實習' && courseData.category !== 'Practice' ||
 			courseData.courseName.length > 0 ||
-			courseData.serialNumber;
+			courseData.deptWithSerial;
 	}
 
 	return {
@@ -1663,10 +1674,10 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 		let classCategory = [];
 		let courseNoClassInfo = false;
 		for (const [i] of courseRenderResult) {
-			if (!i.classInfo)
+			if (!i.forClass)
 				courseNoClassInfo = true;
-			else if (classCategory.indexOf(i.classInfo) === -1)
-				classCategory.push(i.classInfo);
+			else if (classCategory.indexOf(i.forClass) === -1)
+				classCategory.push(i.forClass);
 		}
 		classCategory = classCategory.map(i => [i, i]);
 		if (classCategory.length > 0 && courseNoClassInfo)
@@ -1685,10 +1696,10 @@ function classFilter(onFilterUpdate, courseRenderResult) {
 			return true;
 		if (selectValue.length === 0)
 			return false;
-		if (!courseData.classInfo)
+		if (!courseData.forClass)
 			return selectValue.indexOf('') !== -1;
 
-		return selectValue.indexOf(courseData.classInfo) !== -1;
+		return selectValue.indexOf(courseData.forClass) !== -1;
 	}
 
 	return {

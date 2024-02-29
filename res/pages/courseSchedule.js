@@ -331,8 +331,8 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 			th('系-序號', 'deptWithSerial'),
 			// th('類別', 'category'),
 			// th('年級', 'grade'),
-			// th('班別', 'classInfo'),
-			// th('組別', 'classGroup'),
+			// th('班別', 'forClass'),
+			// th('組別', 'forClassGroup'),
 			th('時間', 'courseTime'),
 			th('課程名稱', 'courseName'),
 			th('選必修', 'required'),
@@ -483,9 +483,9 @@ function CourseTable(windowRoot, updatePreScheduleData) {
 			// td(detail.departmentName, 'departmentName'),
 			td(deptWithSerial, 'deptWithSerial'),
 			// td(null, 'category', detail.category && text(detail.category)),
-			// td(null, 'grade', detail.courseGrade && text(detail.courseGrade.toString())),
-			// td(null, 'classInfo', detail.classInfo && text(detail.classInfo)),
-			// td(null, 'classGroup', detail.classGroup && text(detail.classGroup)),
+			// td(null, 'grade', detail.forGrade && text(detail.forGrade.toString())),
+			// td(null, 'forClass', detail.forClass && text(detail.forClass)),
+			// td(null, 'forClassGroup', detail.forClassGroup && text(detail.forClassGroup)),
 			td(null, 'courseTime',
 				detail.time && detail.time.map(i =>
 					i.flexTimeDataKey

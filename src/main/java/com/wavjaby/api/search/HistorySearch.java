@@ -44,9 +44,9 @@ public class HistorySearch implements Module {
     private final RobotCheck robotCheck;
 
     private SQLDriver sqlDriver;
-    private PreparedStatement getRoomStat, addRoomStat, editRoomStat,
-            getTagIdStat, addTagStat,
-            getInstructorIdStat, addInstructorStat,
+    private PreparedStatement getRoomByIdsStat, getRoomStat, addRoomStat, editRoomStat,
+            getTagByIdsStat, getTagIdStat, addTagStat,
+            getInstructorByIdsStat, getInstructorIdStat, addInstructorStat,
             addCourseStat, getCourseStat;
 
     @Override
@@ -58,20 +58,41 @@ public class HistorySearch implements Module {
         sqlDriver.start();
         try {
             java.sql.Connection connection = sqlDriver.getDatabase();
+            try {
+                String arrayContains = getMethodFullPath(HistorySearch.class.getMethod("arrayContains", Integer.class, Integer[].class));
+                connection.createStatement().execute(
+                        "CREATE ALIAS IF NOT EXISTS arrayContains FOR \"" + arrayContains + "\"");
+                String roomArrayContains = getMethodFullPath(HistorySearch.class.getMethod("roomArrayContains", String.class, String.class, String[].class));
+                connection.createStatement().execute(
+                        "CREATE ALIAS IF NOT EXISTS roomArrayContains FOR \"" + roomArrayContains + "\"");
+                String timeContains = getMethodFullPath(HistorySearch.class.getMethod("timeContains", String.class, Integer[].class, Array[].class));
+                connection.createStatement().execute(
+                        "CREATE ALIAS IF NOT EXISTS timeContains FOR \"" + timeContains + "\"");
+            } catch (NoSuchMethodException e) {
+                logger.errTrace(e);
+            }
+
+            // noinspection ALL
+            getRoomByIdsStat = connection.prepareStatement("SELECT * FROM \"room\" WHERE roomArrayContains(\"building_id\",\"room_id\",?)");
             getRoomStat = connection.prepareStatement("SELECT * FROM \"room\" WHERE \"building_id\"=? AND \"room_id\"=?");
             addRoomStat = connection.prepareStatement("INSERT INTO \"room\" VALUES (?,?,?,?)");
             editRoomStat = connection.prepareStatement("UPDATE \"room\" SET \"name_tw\"=?,\"name_en\"=? WHERE \"building_id\"=? AND \"room_id\"=?");
 
+            // noinspection ALL
+            getTagByIdsStat = connection.prepareStatement("SELECT * FROM \"tags\" WHERE arrayContains(\"id\",?)");
             getTagIdStat = connection.prepareStatement("SELECT \"id\" FROM \"tags\" WHERE \"name_tw\"=? OR \"name_en\"=?");
             addTagStat = connection.prepareStatement("INSERT INTO \"tags\" (\"name_tw\",\"name_en\",\"color\",\"url\") VALUES (?,?,?,?)");
 
+            // noinspection ALL
+            getInstructorByIdsStat = connection.prepareStatement("SELECT * FROM \"instructor\" WHERE arrayContains(\"id\",?)");
             getInstructorIdStat = connection.prepareStatement("SELECT \"id\" FROM \"instructor\" WHERE \"name_tw\"=? OR \"name_en\"=?");
             addInstructorStat = connection.prepareStatement("INSERT INTO \"instructor\" (\"name_tw\",\"name_en\",\"urschool_id\") VALUES (?,?,?)");
+
             /* (
                 department_id   CHAR(2)     not null,
-                serial_id       INTEGER,
+                serial_number   INTEGER,
                 attribute_code  VARCHAR(16) not null,
-                system_id       VARCHAR(16) not null,
+                system_code     VARCHAR(16) not null,
                 for_grade       INTEGER,
                 for_class       VARCHAR(16),
                 for_class_group VARCHAR(16),
@@ -92,31 +113,21 @@ public class HistorySearch implements Module {
                 time            VARCHAR(64) ARRAY ARRAY
             ) */
             addCourseStat = connection.prepareStatement("INSERT INTO \"course_112_1\" (" +
-                    "\"department_id\",\"serial_id\",\"attribute_code\",\"system_id\"," +
+                    "\"department_id\",\"serial_number\",\"attribute_code\",\"system_code\"," +
                     "\"for_grade\",\"for_class\",\"for_class_group\"," +
                     "\"category_tw\",\"category_en\",\"name_tw\",\"name_en\",\"note_tw\",\"note_en\",\"limit_tw\",\"limit_en\"," +
                     "\"tags\",\"credits\",\"required\",\"instructors\",\"selected\",\"available\",\"time\") " +
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
-            try {
-                String arrayContains = getMethodFullPath(HistorySearch.class.getMethod("arrayContains", Integer.class, Integer[].class));
-                connection.createStatement().execute(
-                        "CREATE ALIAS IF NOT EXISTS arrayContains FOR \"" + arrayContains + "\"");
-                String timeContains = getMethodFullPath(HistorySearch.class.getMethod("timeContains", String.class, Integer[].class, Array[].class));
-                connection.createStatement().execute(
-                        "CREATE ALIAS IF NOT EXISTS timeContains FOR \"" + timeContains + "\"");
-            } catch (NoSuchMethodException e) {
-                logger.errTrace(e);
-            }
-
+            // noinspection ALL
             getCourseStat = connection.prepareStatement("SELECT" +
-                    "\"department_id\",\"serial_id\",\"attribute_code\",\"system_id\"," +
+                    "\"department_id\",\"serial_number\",\"attribute_code\",\"system_code\"," +
                     "\"for_grade\",\"for_class\",\"for_class_group\"," +
                     "\"category_tw\",\"category_en\",\"name_tw\",\"name_en\",\"note_tw\",\"note_en\",\"limit_tw\",\"limit_en\"," +
                     "\"tags\",\"credits\",\"required\",\"instructors\",\"selected\",\"available\",\"time\"" +
                     "FROM \"course_112_1\" WHERE" +
                     "(? IS NULL OR \"department_id\"=?) AND" +
-                    "(? IS NULL OR \"serial_id\"=?) AND" +
+                    "(? IS NULL OR \"serial_number\"=?) AND" +
                     "(? IS NULL OR \"name_tw\" LIKE ? OR \"name_en\" LIKE ?) AND" +
                     "(? IS NULL OR arrayContains(?,\"tags\")) AND" +
                     "(? IS NULL OR arrayContains(?,\"instructors\")) AND" +
@@ -202,7 +213,25 @@ public class HistorySearch implements Module {
         proxyManager.stop();
     }
 
-    private RoomData roomGet(String location, String roomId) {
+    private Map<String, String> getRoomById(String[] ids) {
+        try {
+            getRoomByIdsStat.setArray(1, sqlDriver.getDatabase().createArrayOf("TEXT", ids));
+            ResultSet resultSet = getRoomByIdsStat.executeQuery();
+            getRoomByIdsStat.clearParameters();
+            Map<String, String> result = new HashMap<>();
+            while (resultSet.next()) {
+                result.put(resultSet.getString("building_id") + '_' + resultSet.getString("room_id"),
+                        resultSet.getString("name_tw")
+                );
+            }
+            return result.isEmpty() ? null : result;
+        } catch (SQLException e) {
+            sqlDriver.printStackTrace(e);
+            return null;
+        }
+    }
+
+    private RoomData getRoom(String location, String roomId) {
         try {
             getRoomStat.setString(1, location);
             getRoomStat.setString(2, roomId);
@@ -226,7 +255,7 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void roomAdd(RoomData roomData) {
+    private void addRoom(RoomData roomData) {
         try {
             addRoomStat.setString(1, roomData.buildingId);
             addRoomStat.setString(2, roomData.roomId);
@@ -239,7 +268,7 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void roomEdit(RoomData roomData) {
+    private void UpdateRoom(RoomData roomData) {
         try {
             editRoomStat.setString(3, roomData.buildingId);
             editRoomStat.setString(4, roomData.roomId);
@@ -254,7 +283,7 @@ public class HistorySearch implements Module {
         }
     }
 
-    private Integer tagGetId(String nameTW, String nameEN) {
+    private Integer getTagIdByName(String nameTW, String nameEN) {
         try {
             getTagIdStat.setNString(1, nameTW);
             getTagIdStat.setString(2, nameEN);
@@ -273,7 +302,27 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void tagAdd(String nameTW, String nameEN, String color, String url) {
+    private Map<Integer, CourseData.TagData> getTagById(Integer[] ids) {
+        try {
+            getTagByIdsStat.setArray(1, sqlDriver.getDatabase().createArrayOf("INTEGER", ids));
+            ResultSet resultSet = getTagByIdsStat.executeQuery();
+            getTagByIdsStat.clearParameters();
+            Map<Integer, CourseData.TagData> result = new HashMap<>();
+            while (resultSet.next()) {
+                result.put(resultSet.getInt("id"), new CourseData.TagData(
+                        resultSet.getString("name_tw"),
+                        resultSet.getString("color"),
+                        resultSet.getString("url")
+                ));
+            }
+            return result.isEmpty() ? null : result;
+        } catch (SQLException e) {
+            sqlDriver.printStackTrace(e);
+            return null;
+        }
+    }
+
+    private void addTag(String nameTW, String nameEN, String color, String url) {
         try {
             addTagStat.setNString(1, nameTW);
             addTagStat.setNString(2, nameEN);
@@ -286,7 +335,7 @@ public class HistorySearch implements Module {
         }
     }
 
-    private Integer instructorGetId(String nameTW, String nameEN) {
+    private Integer getInstructorIdByName(String nameTW, String nameEN) {
         try {
             getInstructorIdStat.setNString(1, nameTW);
             getInstructorIdStat.setString(2, nameEN);
@@ -305,7 +354,23 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void instructorAdd(String nameTW, String nameEN, String urschoolId) {
+    private Map<Integer, String> getInstructorById(Integer[] ids) {
+        try {
+            getInstructorByIdsStat.setArray(1, sqlDriver.getDatabase().createArrayOf("INTEGER", ids));
+            ResultSet resultSet = getInstructorByIdsStat.executeQuery();
+            getInstructorByIdsStat.clearParameters();
+            Map<Integer, String> result = new HashMap<>();
+            while (resultSet.next()) {
+                result.put(resultSet.getInt("id"), resultSet.getString("name_tw"));
+            }
+            return result.isEmpty() ? null : result;
+        } catch (SQLException e) {
+            sqlDriver.printStackTrace(e);
+            return null;
+        }
+    }
+
+    private void addInstructor(String nameTW, String nameEN, String urschoolId) {
         try {
             addInstructorStat.setNString(1, nameTW);
             addInstructorStat.setNString(2, nameEN);
@@ -317,7 +382,7 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void courseAdd(CourseData courseDataTW, CourseData courseDataEN) {
+    private void addCourse(CourseData courseDataTW, CourseData courseDataEN) {
         try {
             java.sql.Connection connection = addCourseStat.getConnection();
             // Parse tags
@@ -327,7 +392,7 @@ public class HistorySearch implements Module {
                 return;
             }
             for (int i = 0; i < tagIds.length; i++) {
-                Integer id = tagGetId(courseDataTW.tags[i].name, null);
+                Integer id = getTagIdByName(courseDataTW.tags[i].name, null);
                 if (id == null) {
                     logger.err("Course: " + getCourseKey(courseDataTW) + ", tag: '" +
                             courseDataTW.tags[i].name + "' id not found");
@@ -339,7 +404,7 @@ public class HistorySearch implements Module {
             // Parse instructors
             Object[] instructorIds = new Object[courseDataTW.instructors == null ? 0 : courseDataTW.instructors.length];
             for (int i = 0; i < instructorIds.length; i++) {
-                Integer id = instructorGetId(courseDataTW.instructors[i], null);
+                Integer id = getInstructorIdByName(courseDataTW.instructors[i], null);
                 if (id == null) {
                     logger.err("Course: " + getCourseKey(courseDataTW) + ", instructor: '" +
                             courseDataTW.instructors[i] + "' id not found");
@@ -366,9 +431,9 @@ public class HistorySearch implements Module {
             }
 
             addCourseStat.setString(1, courseDataTW.departmentId); // department_id
-            addCourseStat.setObject(2, courseDataTW.serialNumber, Types.INTEGER); // serial_id
+            addCourseStat.setObject(2, courseDataTW.serialNumber, Types.INTEGER); // serial_number
             addCourseStat.setString(3, courseDataTW.attributeCode); // attribute_code
-            addCourseStat.setString(4, courseDataTW.systemNumber); // system_id
+            addCourseStat.setString(4, courseDataTW.systemCode); // system_code
             addCourseStat.setObject(5, courseDataTW.forGrade, Types.INTEGER); // for_grade
 
             addCourseStat.setNString(8, courseDataTW.category); // category_tw
@@ -403,7 +468,7 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void courseGet(String deptId, Integer serialNumber,
+    private void getCourse(String deptId, Integer serialNumber,
                            String courseName, String tagName, String instructorName, Integer grade,
                            Integer dayOfWeek, Integer[] sections) {
         try {
@@ -425,13 +490,13 @@ public class HistorySearch implements Module {
             // TAG name
             Integer tageId;
             if (tagName == null) tageId = null;
-            else tageId = tagGetId(tagName, tagName);
+            else tageId = getTagIdByName(tagName, tagName);
             getCourseStat.setObject(8, tageId, Types.INTEGER);
             getCourseStat.setObject(9, tageId, Types.INTEGER);
             // Instructor name
             Integer instructorId;
             if (instructorName == null) instructorId = null;
-            else instructorId = instructorGetId(instructorName, instructorName);
+            else instructorId = getInstructorIdByName(instructorName, instructorName);
             getCourseStat.setObject(10, instructorId, Types.INTEGER);
             getCourseStat.setObject(11, instructorId, Types.INTEGER);
             // For grade
@@ -444,22 +509,52 @@ public class HistorySearch implements Module {
             getCourseStat.setObject(16, grade, Types.INTEGER);
 
             ResultSet result = getCourseStat.executeQuery();
-            int count = 0;
+            logger.log("Parse database result");
+            HashSet<Integer> tagQueryIds = new HashSet<>(), instructorQueryIds = new HashSet<>();
+            HashSet<String> roomQueryIds = new HashSet<>();
+            List<HistoryCourseData> historyCourseDataList = new ArrayList<>();
             while (result.next()) {
-                String name = result.getNString("name_tw");
                 Object[] times = (Object[]) result.getArray("time").getArray();
-                Object[] instructors = (Object[]) result.getArray("instructors").getArray();
-                Object[] tags = (Object[]) result.getArray("tags").getArray();
-                logger.log(name);
-//                logger.log(Arrays.toString(instructors));
-//                logger.log(Arrays.toString(tags));
-                for (Object time : times) {
-                    logger.log(Arrays.toString((Object[]) ((Array) time).getArray()));
+                Object[] instructorIds = (Object[]) result.getArray("instructors").getArray();
+                Object[] tagIds = (Object[]) result.getArray("tags").getArray();
+                String[][] finalTimes = new String[times.length][];
+                for (int i = 0; i < times.length; i++) {
+                    Object[] arr = (Object[]) ((Array) times[i]).getArray();
+                    finalTimes[i] = new String[arr.length];
+                    for (int j = 0; j < arr.length; j++) {
+                        finalTimes[i][j] = (String) arr[j];
+                    }
                 }
-                count++;
+
+                HistoryCourseData historyCourseData = new HistoryCourseData("1121", tagIds, instructorIds, finalTimes, result);
+                historyCourseDataList.add(historyCourseData);
+                // Add id to query
+                if (historyCourseData.tagIds != null)
+                    for (Object tagId : historyCourseData.tagIds)
+                        tagQueryIds.add((Integer) tagId);
+                if (historyCourseData.instructorIds != null)
+                    for (Object tagId : historyCourseData.instructorIds)
+                        instructorQueryIds.add((Integer) tagId);
+                if (historyCourseData.timeList != null)
+                    for (String[] time : historyCourseData.timeList) {
+                        if (time.length == 1 || time[3] == null) continue;
+                        roomQueryIds.add(time[3] + '_' + time[4]);
+                    }
             }
-            logger.log(count);
             result.close();
+
+            // Parse ids
+            Map<Integer, CourseData.TagData> tags = getTagById(tagQueryIds.toArray(new Integer[0]));
+            Map<Integer, String> instructors = getInstructorById(instructorQueryIds.toArray(new Integer[0]));
+            Map<String, String> roomName = getRoomById(roomQueryIds.toArray(new String[0]));
+            // Build CourseData list
+            List<CourseData> courseDataList = new ArrayList<>();
+            for (HistoryCourseData historyCourseData : historyCourseDataList) {
+                courseDataList.add(historyCourseData.toCourseData(tags, instructors, roomName));
+            }
+
+            logger.log(courseDataList);
+            logger.log(courseDataList.size());
             getCourseStat.clearParameters();
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
@@ -468,8 +563,8 @@ public class HistorySearch implements Module {
 
     public void readDatabase() {
         logger.log("Read database");
-//        courseGet("F7", 6, null, null, null, null);
-        courseGet(null, null, null, null, null, null, null, new Integer[]{1});
+        getCourse("F7", null, null, null, null, null, null, null);
+//        courseGet(null, null, null, null, null, null, 1, null);
     }
 
     public void writeDatabase() {
@@ -518,11 +613,11 @@ public class HistorySearch implements Module {
             }
         }
         for (RoomData room : rooms.values()) {
-            RoomData roomData = roomGet(room.buildingId, room.roomId);
+            RoomData roomData = getRoom(room.buildingId, room.roomId);
             if (roomData == null)
-                roomAdd(room);
+                addRoom(room);
             else
-                roomEdit(room);
+                UpdateRoom(room);
         }
 
         // Add tag
@@ -537,8 +632,8 @@ public class HistorySearch implements Module {
             for (int i = 0; i < courseDataTW.tags.length; i++) {
                 CourseData.TagData tagTW = courseDataTW.tags[i];
                 String tagNameEN = tagENNotFound ? null : courseDataEN.tags[i].name;
-                if (tagGetId(tagTW.name, tagNameEN) == null)
-                    tagAdd(tagTW.name, tagNameEN, tagTW.colorID, tagTW.url);
+                if (getTagIdByName(tagTW.name, tagNameEN) == null)
+                    addTag(tagTW.name, tagNameEN, tagTW.colorID, tagTW.url);
             }
         }
 
@@ -561,8 +656,8 @@ public class HistorySearch implements Module {
                         names.add(nameTW);
                     else {
                         namesRestore.add(nameTW);
-                        if (instructorGetId(nameTW, nameEN) == null)
-                            instructorAdd(nameTW, nameEN, null);
+                        if (getInstructorIdByName(nameTW, nameEN) == null)
+                            addInstructor(nameTW, nameEN, null);
                     }
                 }
         }
@@ -570,8 +665,8 @@ public class HistorySearch implements Module {
         if (!names.isEmpty())
             logger.warn("Instructor english name not found: " + names.size());
         for (String name : names) {
-            if (instructorGetId(name, name) == null)
-                instructorAdd(name, name, null);
+            if (getInstructorIdByName(name, name) == null)
+                addInstructor(name, name, null);
         }
 
         // Add course
@@ -595,7 +690,7 @@ public class HistorySearch implements Module {
                 logger.err("Course key not match: " + keyTW + ", " + keyEN);
                 continue;
             }
-            courseAdd(courseDataTW, courseDataEN);
+            addCourse(courseDataTW, courseDataEN);
         }
 
         logger.log("Mapped course TW size: " + courseSerialMapTW.size());
@@ -641,7 +736,7 @@ public class HistorySearch implements Module {
     }
 
     private String getCourseKey(CourseData courseData) {
-        return courseData.departmentId + "-" + courseData.serialNumber + "," + courseData.systemNumber + "," + courseData.attributeCode +
+        return courseData.departmentId + "-" + courseData.serialNumber + "," + courseData.systemCode + "," + courseData.attributeCode +
                 "," + courseData.forGrade + "," + courseData.forClassGroup;
     }
 
@@ -1202,6 +1297,16 @@ public class HistorySearch implements Module {
         if (integer == null || array == null) return false;
         for (Integer i : array) {
             if (integer.equals(i))
+                return true;
+        }
+        return false;
+    }
+
+    public static boolean roomArrayContains(String locationId, String roomId, String[] queryArray) {
+        if (locationId == null || roomId == null) return false;
+        String key = locationId + '_' + roomId;
+        for (String roomKeu : queryArray) {
+            if (key.equals(roomKeu))
                 return true;
         }
         return false;

@@ -54,7 +54,7 @@ public class CourseEnrollmentTracker implements Runnable, Module {
     private List<CourseData> lastCourseDataList;
     // Serial, index
     private Map<String, Integer> tableIndex;
-    private Map<String, SharedCourse> systemNumberMap;
+    private Map<String, SharedCourse> systemCodeMap;
 
     public static class SharedCourse {
         public final String[] serialIds;
@@ -86,23 +86,23 @@ public class CourseEnrollmentTracker implements Runnable, Module {
                 lastCourseDataList.add(courseData);
             }
 
-//            systemNumberMap = new HashMap<>();
+//            systemCodeMap = new HashMap<>();
 //            // Parse all course
-//            Map<String, List<String>> systemNumberMapBuilder = new HashMap<>();
-//            Map<String, CourseData> systemNumberMapBuilderCourse = new HashMap<>();
+//            Map<String, List<String>> systemCodeMapBuilder = new HashMap<>();
+//            Map<String, CourseData> systemCodeMapBuilderCourse = new HashMap<>();
 //            for (Object o : cache.getArray("data")) {
 //                CourseData courseData = new CourseData((JsonObject) o);
 //                lastCourseDataList.add(courseData);
 //                // Add course, check shared system number
-//                systemNumberMapBuilder.computeIfAbsent(courseData.getSystemNumber(), (i) -> new ArrayList<>())
+//                systemCodeMapBuilder.computeIfAbsent(courseData.getsystemCode(), (i) -> new ArrayList<>())
 //                        .add(courseData.getSerialNumber());
-//                systemNumberMapBuilderCourse.putIfAbsent(courseData.getSystemNumber(), courseData);
+//                systemCodeMapBuilderCourse.putIfAbsent(courseData.getsystemCode(), courseData);
 //            }
-//            // Add to systemNumberMap
-//            for (Map.Entry<String, List<String>> entry : systemNumberMapBuilder.entrySet()) {
-//                systemNumberMap.put(entry.getKey(), new SharedCourse(
+//            // Add to systemCodeMap
+//            for (Map.Entry<String, List<String>> entry : systemCodeMapBuilder.entrySet()) {
+//                systemCodeMap.put(entry.getKey(), new SharedCourse(
 //                        entry.getValue().toArray(new String[0]),
-//                        systemNumberMapBuilderCourse.get(entry.getKey())
+//                        systemCodeMapBuilderCourse.get(entry.getKey())
 //                ));
 //            }
         }
@@ -114,8 +114,8 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         }
     }
 
-//    public SharedCourse getCourseDataBySystemNumber(String systemNumber) {
-//        return systemNumberMap.get(systemNumber);
+//    public SharedCourse getCourseDataBysystemCode(String systemCode) {
+//        return systemCodeMap.get(systemCode);
 //    }
 
     @Override

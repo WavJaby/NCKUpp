@@ -224,15 +224,15 @@ public class StudentIdSys implements Module {
             gpa = row.get(8).text().trim();
 
             String[] link_ = row.get(2).children().attr("href").split("[?&=]", 9);
-            String systemNumber, classCode, yearRaw, semRaw;
+            String systemCode, classCode, yearRaw, semRaw;
             if (link_.length < 9) {
-                String systemNumberRaw = row.get(2).text().trim();
-                if (systemNumberRaw.length() < 7) {
-                    systemNumber = systemNumberRaw;
+                String systemCodeRaw = row.get(2).text().trim();
+                if (systemCodeRaw.length() < 7) {
+                    systemCode = systemCodeRaw;
                     classCode = null;
                 } else {
-                    systemNumber = systemNumberRaw.substring(0, 7);
-                    classCode = systemNumberRaw.length() == 7 ? null : systemNumberRaw.substring(7);
+                    systemCode = systemCodeRaw.substring(0, 7);
+                    classCode = systemCodeRaw.length() == 7 ? null : systemCodeRaw.substring(7);
                 }
                 yearRaw = String.valueOf(year);
                 semRaw = String.valueOf(semester);
@@ -245,11 +245,11 @@ public class StudentIdSys implements Module {
                 }
                 yearRaw = yearRaw.substring(yStart);
                 semRaw = link_[4].equals("1") ? "0" : "1";
-                systemNumber = link_[6];
+                systemCode = link_[6];
                 classCode = link_[8];
             }
-            normalDistImgQuery = yearRaw + ',' + semRaw + ',' + systemNumber + ',' + classCode;
-            courseInfo = new CourseGradeInfo(deptWithSerial, systemNumber, classCode, courseName, year, semester);
+            normalDistImgQuery = yearRaw + ',' + semRaw + ',' + systemCode + ',' + classCode;
+            courseInfo = new CourseGradeInfo(deptWithSerial, systemCode, classCode, courseName, year, semester);
         }
 
         // Current semester data
@@ -279,23 +279,23 @@ public class StudentIdSys implements Module {
 
             gpa = null;
 
-            String systemNumber = row.get(3).text().trim(), classCode;
-            if (systemNumber.length() < 7) {
+            String systemCode = row.get(3).text().trim(), classCode;
+            if (systemCode.length() < 7) {
                 classCode = null;
             } else {
-                classCode = systemNumber.length() == 7 ? null : systemNumber.substring(7);
-                systemNumber = systemNumber.substring(0, 7);
+                classCode = systemCode.length() == 7 ? null : systemCode.substring(7);
+                systemCode = systemCode.substring(0, 7);
             }
             normalDistImgQuery = String.valueOf(year) + ',' + (semester == 0 ? '1' : '2') + ',' +
-                    systemNumber + (classCode == null ? ',' : ',' + classCode);
-            courseInfo = new CourseGradeInfo(deptWithSerial, systemNumber, classCode, courseName, year, semester);
+                    systemCode + (classCode == null ? ',' : ',' + classCode);
+            courseInfo = new CourseGradeInfo(deptWithSerial, systemCode, classCode, courseName, year, semester);
         }
 
         @Override
         public String toString() {
             return new JsonObjectStringBuilder()
                     .append("deptWithSerial", courseInfo.deptWithSerial)
-                    .append("systemNumber", courseInfo.systemNumber)
+                    .append("systemCode", courseInfo.systemCode)
                     .append("classCode", courseInfo.classCode)
                     .append("courseName", courseInfo.courseName)
                     .append("remark", remark)
@@ -309,14 +309,14 @@ public class StudentIdSys implements Module {
     }
 
     public static class CourseGradeInfo {
-        final String deptWithSerial, systemNumber, classCode;
+        final String deptWithSerial, systemCode, classCode;
         final String courseName;
         final int year;
         final byte semester;
 
-        public CourseGradeInfo(String deptWithSerial, String systemNumber, String classCode, String courseName, int year, byte semester) {
+        public CourseGradeInfo(String deptWithSerial, String systemCode, String classCode, String courseName, int year, byte semester) {
             this.deptWithSerial = deptWithSerial;
-            this.systemNumber = systemNumber;
+            this.systemCode = systemCode;
             this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
             this.courseName = courseName;
             this.year = year;
@@ -324,11 +324,11 @@ public class StudentIdSys implements Module {
         }
 
         public String toKey() {
-            return toKey(year, semester, systemNumber, classCode);
+            return toKey(year, semester, systemCode, classCode);
         }
 
-        public static String toKey(int year, byte semester, String systemNumber, @Nullable String classCode) {
-            return String.valueOf(year) + '_' + semester + '_' + systemNumber +
+        public static String toKey(int year, byte semester, String systemCode, @Nullable String classCode) {
+            return String.valueOf(year) + '_' + semester + '_' + systemCode +
                     (classCode == null ? '_' : '_' + classCode);
         }
     }
@@ -336,20 +336,20 @@ public class StudentIdSys implements Module {
     public static class DistributionImage {
         public final int year;
         public final byte semester;
-        public final String systemNumber, classCode;
+        public final String systemCode, classCode;
         private String courseName;
         private String[] deptWithSerialArr;
         private int[] studentCount;
 
-        public DistributionImage(int year, byte semester, String systemNumber, String classCode) {
+        public DistributionImage(int year, byte semester, String systemCode, String classCode) {
             this.year = year;
             this.semester = semester;
-            this.systemNumber = systemNumber;
+            this.systemCode = systemCode;
             this.classCode = classCode == null || classCode.isEmpty() ? null : classCode;
         }
 
-        public DistributionImage(int year, byte semester, String systemNumber, String classCode, String serialNumbersStr, String courseName, String distStr) {
-            this(year, semester, systemNumber, classCode);
+        public DistributionImage(int year, byte semester, String systemCode, String classCode, String serialNumbersStr, String courseName, String distStr) {
+            this(year, semester, systemCode, classCode);
             this.courseName = courseName;
             String[] dist = Lib.simpleSplit(distStr, ',');
             studentCount = new int[dist.length];
@@ -360,7 +360,7 @@ public class StudentIdSys implements Module {
         }
 
         public String getQuery() {
-            return "syear=" + leftPad(String.valueOf(year), 4, '0') + "&sem=" + (semester == 0 ? '1' : '2') + "&co_no=" + systemNumber +
+            return "syear=" + leftPad(String.valueOf(year), 4, '0') + "&sem=" + (semester == 0 ? '1' : '2') + "&co_no=" + systemCode +
                     (classCode == null ? "&class_code=" : "&class_code=" + classCode);
         }
 
@@ -380,7 +380,7 @@ public class StudentIdSys implements Module {
 
             return new JsonObjectStringBuilder()
                     .append("courseName", courseName)
-                    .append("systemNumber", systemNumber)
+                    .append("systemCode", systemCode)
                     .append("classCode", classCode)
                     .append("year", year)
                     .append("semester", semester)
@@ -570,7 +570,7 @@ public class StudentIdSys implements Module {
         try {
             sqlGetDistribution.setInt(1, courseInfo.year);
             sqlGetDistribution.setInt(2, courseInfo.semester);
-            sqlGetDistribution.setString(3, courseInfo.systemNumber);
+            sqlGetDistribution.setString(3, courseInfo.systemCode);
             sqlGetDistribution.setString(4, courseInfo.classCode);
             sqlGetDistribution.setString(5, distImageInfo.studentCountToString());
             ResultSet result = sqlGetDistribution.executeQuery();
@@ -601,7 +601,7 @@ public class StudentIdSys implements Module {
             sqlSetDistributionSerialNumber.setString(2, courseInfo.courseName);
             sqlSetDistributionSerialNumber.setInt(3, courseInfo.year);
             sqlSetDistributionSerialNumber.setInt(4, courseInfo.semester);
-            sqlSetDistributionSerialNumber.setString(5, courseInfo.systemNumber);
+            sqlSetDistributionSerialNumber.setString(5, courseInfo.systemCode);
             sqlSetDistributionSerialNumber.setString(6, courseInfo.classCode);
             int result = sqlSetDistributionSerialNumber.executeUpdate();
             sqlSetDistributionSerialNumber.clearParameters();
@@ -616,7 +616,7 @@ public class StudentIdSys implements Module {
         try {
             sqlAddDistribution.setInt(1, courseInfo.year);
             sqlAddDistribution.setInt(2, courseInfo.semester);
-            sqlAddDistribution.setString(3, courseInfo.systemNumber);
+            sqlAddDistribution.setString(3, courseInfo.systemCode);
             sqlAddDistribution.setString(4, courseInfo.classCode);
             sqlAddDistribution.setString(5, courseInfo.deptWithSerial);
             sqlAddDistribution.setString(6, courseInfo.courseName);
@@ -878,7 +878,7 @@ public class StudentIdSys implements Module {
         distImageInfo.setDistData(studentCount);
 
         // Add distribution to database if 'addToDatabase' parameter is true
-        String key = CourseGradeInfo.toKey(distImageInfo.year, distImageInfo.semester, distImageInfo.systemNumber, distImageInfo.classCode);
+        String key = CourseGradeInfo.toKey(distImageInfo.year, distImageInfo.semester, distImageInfo.systemCode, distImageInfo.classCode);
         CourseGradeInfo courseInfo = courseInfoCache.get(key);
         if (courseInfo != null && addToDatabase) {
             logger.log(courseInfo.toKey());
@@ -922,7 +922,7 @@ public class StudentIdSys implements Module {
 
             for (CourseGrade grade : courseGrades) {
                 CourseGradeInfo info = grade.courseInfo;
-                getDistributionGraph(new DistributionImage(info.year, info.semester, info.systemNumber, info.classCode), true, cookieStore, response);
+                getDistributionGraph(new DistributionImage(info.year, info.semester, info.systemCode, info.classCode), true, cookieStore, response);
             }
         }
     }

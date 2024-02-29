@@ -11,7 +11,7 @@ public class CourseData {
     final String departmentId;
     final Integer serialNumber; // Nullable
     final String attributeCode;
-    final String systemNumber;
+    final String systemCode;
     final Integer forGrade;  // Nullable
     final String forClass; // Nullable
     final String forClassGroup;  // Nullable
@@ -29,7 +29,7 @@ public class CourseData {
 
     // User action token(require login)
     final String btnPreferenceEnter; // Nullable
-    final String btnAddCourse; // Nullable
+    final String btnCourseRegister; // Nullable
     final String btnPreRegister; // Nullable
     final String btnAddRequest; // Nullable
 
@@ -41,14 +41,14 @@ public class CourseData {
 
         this.serialNumber = (Integer) jsonObject.getObject("sn");
         this.attributeCode = jsonObject.getString("ca");
-        this.systemNumber = jsonObject.getString("cs");
+        this.systemCode = jsonObject.getString("sc");
 
         if (jsonObject.getObject("g") != null)
             this.forGrade = jsonObject.getInt("g");
         else
             this.forGrade = null;
-        this.forClass = jsonObject.getString("co");
-        this.forClassGroup = jsonObject.getString("cg");
+        this.forClass = jsonObject.getString("fc");
+        this.forClassGroup = jsonObject.getString("fg");
 
         this.category = jsonObject.getString("ct");
 
@@ -82,14 +82,14 @@ public class CourseData {
         else this.timeList = null;
 
         this.btnPreferenceEnter = jsonObject.getString("pe");
-        this.btnAddCourse = jsonObject.getString("ac");
+        this.btnCourseRegister = jsonObject.getString("cr");
         this.btnPreRegister = jsonObject.getString("pr");
         this.btnAddRequest = jsonObject.getString("ar");
     }
 
     public CourseData(String semester,
                       String departmentId,
-                      Integer serialNumber, String systemNumber, String attributeCode,
+                      Integer serialNumber, String systemCode, String attributeCode,
                       Integer forGrade, String forClass, String forClassGroup,
                       String category,
                       String courseName, String courseNote, String courseLimit, TagData[] tags,
@@ -97,11 +97,11 @@ public class CourseData {
                       String[] instructors,
                       Integer selected, Integer available,
                       TimeData[] timeList,
-                      String btnPreferenceEnter, String btnAddCourse, String btnPreRegister, String btnAddRequest) {
+                      String btnPreferenceEnter, String btnCourseRegister, String btnPreRegister, String btnAddRequest) {
         this.semester = semester;
         this.departmentId = departmentId;
         this.serialNumber = serialNumber;
-        this.systemNumber = systemNumber;
+        this.systemCode = systemCode;
         this.attributeCode = attributeCode;
         this.forGrade = forGrade;
         this.forClass = forClass;
@@ -118,7 +118,7 @@ public class CourseData {
         this.available = available;
         this.timeList = timeList;
         this.btnPreferenceEnter = btnPreferenceEnter;
-        this.btnAddCourse = btnAddCourse;
+        this.btnCourseRegister = btnCourseRegister;
         this.btnPreRegister = btnPreRegister;
         this.btnAddRequest = btnAddRequest;
     }
@@ -272,12 +272,12 @@ public class CourseData {
 
         jsonBuilder.append("sn", serialNumber);
         jsonBuilder.append("ca", attributeCode);
-        jsonBuilder.append("cs", systemNumber);
+        jsonBuilder.append("sc", systemCode);
 
         if (forGrade == null) jsonBuilder.append("g");
         else jsonBuilder.append("g", forGrade);
-        jsonBuilder.append("co", forClass);
-        jsonBuilder.append("cg", forClassGroup);
+        jsonBuilder.append("fc", forClass);
+        jsonBuilder.append("fg", forClassGroup);
 
         jsonBuilder.append("ct", category);
 
@@ -302,8 +302,8 @@ public class CourseData {
 
         if (btnPreferenceEnter != null)
             jsonBuilder.append("pe", btnPreferenceEnter);
-        if (btnAddCourse != null)
-            jsonBuilder.append("ac", btnAddCourse);
+        if (btnCourseRegister != null)
+            jsonBuilder.append("cr", btnCourseRegister);
         if (btnPreRegister != null)
             jsonBuilder.append("pr", btnPreRegister);
         if (btnAddRequest != null)
@@ -325,8 +325,8 @@ public class CourseData {
         return departmentId + "-" + serialNumber;
     }
 
-    public String getSystemNumber() {
-        return systemNumber;
+    public String getsystemCode() {
+        return systemCode;
     }
 
     public String[] getInstructors() {
@@ -341,8 +341,8 @@ public class CourseData {
         return forClass;
     }
 
-    public String getBtnAddCourse() {
-        return btnAddCourse;
+    public String getBtnCourseRegister() {
+        return btnCourseRegister;
     }
 
     public String getBtnPreRegister() {

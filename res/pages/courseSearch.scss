@@ -278,8 +278,8 @@ $instructor-info-fade-time: 200ms;
                 }
 
                 > .departmentName {
-                    text-overflow: ellipsis;
-                    max-width: 3vw;
+                    text-overflow: clip;
+                    max-width: 5vw;
                     overflow: hidden;
                 }
 

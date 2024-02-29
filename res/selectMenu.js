@@ -59,6 +59,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 	// Init select menu
 	const selectedItems = [];
 	let menuOpen = false;
+	let isEmpty = true;
 	selectItem(null);
 	if (items)
 		createItemsElement(itemsContainer, items, false);
@@ -84,6 +85,8 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		clearItems();
 		createItemsElement(itemsContainer, itemsData, !!defaultSelected);
 	};
+
+	this.isEmpty = () => isEmpty;
 
 	this.clearItems = clearItems;
 
@@ -113,6 +116,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 		resultBox.value = valueOut.value = '';
 		while (itemsContainer.firstChild)
 			itemsContainer.removeChild(itemsContainer.firstChild);
+		isEmpty = true;
 	}
 
 	function setClearButtonState(state) {
@@ -305,6 +309,7 @@ export default function SelectMenu(placeholder, inputId, className, items, optio
 					if (defaultSelected)
 						selectedItems[0] = [item[0], item[1]];
 				}
+				isEmpty = false;
 			}
 		}
 		if (defaultSelected)

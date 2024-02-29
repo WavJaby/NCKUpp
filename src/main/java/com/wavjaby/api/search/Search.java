@@ -1100,8 +1100,8 @@ public class Search implements Module {
             }
 
             // Get system number
-            String courseData_systemNumber = ((TextNode) section1.get(section1.size() - 3)).text().trim();
-            if (courseData_systemNumber.isEmpty()) courseData_systemNumber = null;
+            String courseData_systemCode = ((TextNode) section1.get(section1.size() - 3)).text().trim();
+            if (courseData_systemCode.isEmpty()) courseData_systemCode = null;
 
             // Get attribute code
             String courseData_attributeCode = ((TextNode) section1.get(section1.size() - 1)).text().trim();
@@ -1138,9 +1138,9 @@ public class Search implements Module {
                 }
             }
             if (courseData_departmentId == null) {
-                if (courseData_systemNumber != null && courseData_systemNumber.length() > 2) {
-                    logger.warn("Failed get dept id: '" + departmentName + "', " + courseData_systemNumber);
-                    courseData_departmentId = courseData_systemNumber.substring(0, 2);
+                if (courseData_systemCode != null && courseData_systemCode.length() > 2) {
+                    logger.warn("Failed get dept id: '" + departmentName + "', " + courseData_systemCode);
+                    courseData_departmentId = courseData_systemCode.substring(0, 2);
                 } else {
                     result.errorParse("Failed get dept id: '" + departmentName + "'");
                     courseData_departmentId = "";
@@ -1151,7 +1151,7 @@ public class Search implements Module {
             // Get course type
             String courseData_category = section.get(sectionOffset + 3).text();
 
-            // Get forGrade & classInfo & group
+            // Get forGrade & forClass & group
             Integer courseData_forGrade = null;
             String courseData_forClass = null;
             String courseData_forClassGroup = null;
@@ -1396,7 +1396,7 @@ public class Search implements Module {
 
             CourseData courseData = new CourseData(courseData_semester,
                     courseData_departmentId,
-                    courseData_serialNumber, courseData_systemNumber, courseData_attributeCode,
+                    courseData_serialNumber, courseData_systemCode, courseData_attributeCode,
                     courseData_forGrade, courseData_forClass, courseData_forClassGroup,
                     courseData_category,
                     courseData_courseName, courseData_courseNote, courseData_courseLimit, courseData_tags,
