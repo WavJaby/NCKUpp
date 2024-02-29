@@ -2,7 +2,7 @@ package com.wavjaby;
 
 import com.wavjaby.api.search.CourseData;
 import com.wavjaby.api.search.Search;
-import com.wavjaby.api.search.SearchQuery;
+import com.wavjaby.api.search.ClientSearchQuery;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
@@ -161,12 +161,12 @@ public class CourseEnrollmentTracker implements Runnable, Module {
         // Start fetch course update
         Map<String, String> map = new HashMap<>();
         map.put("dept", "ALL");
-        SearchQuery searchQuery = search.getSearchQueryFromRequest(map, new String[0], null);
+        ClientSearchQuery clientSearchQuery = ClientSearchQuery.fromRequest(map, new String[0], null);
         Search.SearchResult searchResult = null;
         for (int i = 0; i < 4; i++) {
             start = System.currentTimeMillis();
             try {
-                searchResult = search.querySearch(searchQuery, baseCookieStore);
+                searchResult = search.querySearch(clientSearchQuery, baseCookieStore);
             } catch (Exception e) {
                 logger.errTrace(e);
                 continue;

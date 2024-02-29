@@ -2,6 +2,7 @@ package com.wavjaby;
 
 import com.wavjaby.api.*;
 import com.wavjaby.api.login.Login;
+import com.wavjaby.api.search.HistorySearch;
 import com.wavjaby.api.search.RobotCheck;
 import com.wavjaby.api.search.Search;
 import com.wavjaby.lib.Lib;
@@ -109,6 +110,7 @@ public class Main {
         addModule(allDept);
         Search search = new Search(urSchool, allDept, robotCheck, proxyManager);
         addModule(search);
+        addModule(new HistorySearch(null, null));
         Login login = new Login(search, courseFunctionButton, courseSchedule, SQLDriver, proxyManager);
         addModule(login);
         DeptWatchdog watchDog = new DeptWatchdog(login, SQLDriver);

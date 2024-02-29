@@ -461,7 +461,7 @@ export default function (router, loginState, userGuideTool) {
 
 		// Fetch data
 		const searchA9Fetch = isSearchA9 ? fetchApi('/A9Registered', 'Get A9 register count', {timeout: 10000}) : null;
-		const result = (await fetchApi('/search?' + queryString, 'Searching', {timeout: 10000}));
+		const result = (await fetchApi('/historySearch?' + queryString, 'Searching', {timeout: 10000}));
 		let registerCountA9 = isSearchA9 ? await searchA9Fetch : null;
 		registerCountA9 = registerCountA9 && registerCountA9.data && registerCountA9.data.list;
 

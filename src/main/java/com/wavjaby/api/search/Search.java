@@ -1,7 +1,6 @@
 package com.wavjaby.api.search;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.wavjaby.Main;
 import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.api.AllDept;
@@ -9,7 +8,6 @@ import com.wavjaby.api.UrSchool;
 import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.lib.ApiResponse;
-import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
 import com.wavjaby.lib.ThreadFactory;
 import com.wavjaby.lib.restapi.RequestMapping;
@@ -37,7 +35,6 @@ import static com.wavjaby.Main.*;
 import static com.wavjaby.api.IP.getClientIP;
 import static com.wavjaby.lib.ApiThrottle.*;
 import static com.wavjaby.lib.Cookie.*;
-import static com.wavjaby.lib.HttpResponseData.ResponseState;
 import static com.wavjaby.lib.Lib.*;
 
 @RequestMapping("/api/v0")
@@ -115,12 +112,9 @@ public class Search implements Module {
         // Parse query
         Map<String, String> query = parseUrlEncodedForm(rawQuery);
         ApiResponse response = new ApiResponse();
-        SearchQuery searchQuery = getSearchQueryFromRequest(query, cookieIn, response);
-        String errorMessage = searchQuery.getError();
-        if (errorMessage != null)
-            response.errorBadQuery(errorMessage);
-        else if (searchQuery.noQuery())
-            response.errorBadQuery("Empty query");
+        ClientSearchQuery clientSearchQuery = ClientSearchQuery.fromRequest(query, cookieIn, response);
+        if (clientSearchQuery == null)
+            return response;
         else {
             // Check throttle
             if (!checkIpThrottle(ip)) {
@@ -129,7 +123,7 @@ public class Search implements Module {
                 return response;
             }
 
-            SearchResult searchResult = querySearch(searchQuery, cookieStore);
+            SearchResult searchResult = querySearch(clientSearchQuery, cookieStore);
             searchResult.passDataTo(response);
 
             // set cookie
@@ -149,181 +143,11 @@ public class Search implements Module {
         return response;
     }
 
-    public SearchQuery getSearchQueryFromRequest(Map<String, String> query, String[] cookieIn, ApiResponse response) {
-        // Get search ID
-        String searchID = getCookie("searchID", cookieIn);
-
-        // Get with serial
-        String rawSerial = query.get("serial");
-        Map<String, Set<String>> serialIdNumber = null;
-        if (rawSerial != null) {
-            serialIdNumber = new HashMap<>();
-            // Text type
-            String[] deptSerialArr = simpleSplit(rawSerial, ',');
-            for (String i : deptSerialArr) {
-                int index = i.indexOf('-');
-                if (index == -1) {
-                    return SearchQuery.newError("'serial' Format error: '" + i + "', use '-' to separate dept id and serial number, EX: F7-001.");
-                }
-                Set<String> serial = serialIdNumber.computeIfAbsent(i.substring(0, index), k -> new HashSet<>());
-                String serialId = i.substring(index + 1);
-                // TODO: Check dept id and serial number
-                serial.add(serialId);
-            }
-        }
-
-        // History search
-        String queryTimeBegin = query.get("semBegin"), queryTimeEnd = query.get("semEnd");
-        CourseHistorySearchQuery historySearch = null;
-        if (queryTimeBegin != null || queryTimeEnd != null) {
-            int yearBegin = -1, semBegin = -1, yearEnd = -1, semEnd = -1;
-            if (queryTimeBegin == null) {
-                return SearchQuery.newError("History search missing 'timeBegin' key in query.");
-            } else if (queryTimeEnd == null) {
-                return SearchQuery.newError("History search missing 'timeEnd' key in query.");
-            } else {
-                int startSplit = queryTimeBegin.indexOf('-');
-                if (startSplit == -1) {
-                    return SearchQuery.newError("'semBegin' Format error: use '-' to separate year and semester, EX: 111-1.");
-                } else {
-                    try {
-                        yearBegin = Integer.parseInt(queryTimeBegin.substring(0, startSplit));
-                        semBegin = Integer.parseInt(queryTimeBegin.substring(startSplit + 1));
-                    } catch (NumberFormatException e) {
-                        return SearchQuery.newError("'semBegin' Format error: " + e.getMessage() + '.');
-                    }
-                }
-
-                int endSplit = queryTimeEnd.indexOf('-');
-                if (endSplit == -1) {
-                    return SearchQuery.newError("'semEnd' Format error: use '-' to separate year and semester, EX: 111-1.");
-                } else {
-                    try {
-                        yearEnd = Integer.parseInt(queryTimeEnd.substring(0, endSplit));
-                        semEnd = Integer.parseInt(queryTimeEnd.substring(endSplit + 1));
-                    } catch (NumberFormatException e) {
-                        return SearchQuery.newError("'semEnd' Format error: " + e.getMessage() + '.');
-                    }
-                }
-            }
-            historySearch = new CourseHistorySearchQuery(yearBegin, semBegin, yearEnd, semEnd);
-        }
-
-        // Parse time query
-        String timeRaw = query.get("time");                   // 時間 [星期)節次~節次_節次_節次...] (星期: 0~6, 節次: 0~15)
-        CourseSearchQuery.TimeQuery[] timeQueries = null;
-        if (timeRaw != null) {
-            List<CourseSearchQuery.TimeQuery> timeQuerieList = new ArrayList<>();
-            boolean[][] timeTable = new boolean[7][];
-            String[] timeArr = simpleSplit(timeRaw, ',');
-            for (String time : timeArr) {
-                int dayOfWeekIndex = time.indexOf(')');
-
-                byte dayOfWeek;
-                boolean allDay = false;
-                boolean noSection = false;
-                if (dayOfWeekIndex != -1 || (noSection = time.indexOf('~') == -1 && time.indexOf('_') == -1)) {
-                    if (noSection)
-                        dayOfWeekIndex = time.length();
-                    try {
-                        int d = Integer.parseInt(time.substring(0, dayOfWeekIndex));
-                        if (d < 0 || d > 6) {
-                            return SearchQuery.newError("'time' Format error: day of week should >= 0 and <= 6.");
-                        }
-                        dayOfWeek = (byte) d;
-                    } catch (NumberFormatException e) {
-                        return SearchQuery.newError("'time' Format error: day of week '" + time.substring(0, dayOfWeekIndex) + "' is not a number.");
-                    }
-                    if (noSection)
-                        Arrays.fill(timeTable[dayOfWeek] = new boolean[16], true);
-                } else {
-                    dayOfWeek = 6;
-                    allDay = true;
-                }
-                if (!noSection) {
-                    // Parse section
-                    String sectionOfDayRaw = time.substring(dayOfWeekIndex + 1);
-                    for (int i = allDay ? 0 : dayOfWeek; i <= dayOfWeek; i++) {
-                        boolean[] sections = timeTable[i];
-                        if (sections == null)
-                            sections = timeTable[i] = new boolean[16];
-                        String[] sectionOfDays = simpleSplit(sectionOfDayRaw, '_');
-                        // [section~section, section, section]
-                        for (String section : sectionOfDays) {
-                            int index = section.indexOf('~');
-                            byte sectionStart, sectionEnd;
-                            // Parse section end
-                            try {
-                                int s = Integer.parseInt(section.substring(index + 1));
-                                if (s < 0 || s > 15) {
-                                    return SearchQuery.newError("'time' Format error: section start should >= 0 and <= 15.");
-                                }
-                                sectionEnd = (byte) s;
-                            } catch (NumberFormatException e) {
-                                return SearchQuery.newError("'time' Format error: section start '" + section + "' is not a number.");
-                            }
-                            // Parse section start
-                            if (index == -1) {
-                                sectionStart = sectionEnd;
-                            } else {
-                                try {
-                                    int s = Integer.parseInt(section.substring(0, index));
-                                    if (s < 0 || s > 15) {
-                                        return SearchQuery.newError("'time' Format error: section end should >= 0 and <= 15.");
-                                    }
-                                    sectionStart = (byte) s;
-                                } catch (NumberFormatException e) {
-                                    return SearchQuery.newError("'time' Format error: section end '" + section + "' is not a number.");
-                                }
-                            }
-                            for (int j = sectionStart; j <= sectionEnd; j++)
-                                sections[j] = true;
-                        }
-                    }
-                }
-            }
-            List<Byte> selectedSections = new ArrayList<>();
-            for (byte i = 0; i < timeTable.length; i++) {
-                boolean[] sections = timeTable[i];
-                if (sections == null)
-                    continue;
-                selectedSections.clear();
-                for (byte j = 0; j < sections.length; j++) {
-                    if (!sections[j])
-                        continue;
-                    selectedSections.add(j);
-                }
-                byte[] b = new byte[selectedSections.size()];
-                for (int j = 0; j < selectedSections.size(); j++)
-                    b[j] = selectedSections.get(j);
-                timeQuerieList.add(new CourseSearchQuery.TimeQuery(i, b));
-            }
-            if (!timeQuerieList.isEmpty())
-                timeQueries = timeQuerieList.toArray(new CourseSearchQuery.TimeQuery[0]);
-        }
-
-        // Normal parameters
-        String courseName = query.get("courseName");          // 課程名稱
-        String instructor = query.get("instructor");          // 教師姓名
-        String grade = query.get("grade");                    // 年級 1 ~ 4
-        // TODO: Check grade valid
-        String dept = query.get("dept");
-
-        return new SearchQuery(searchID,
-                serialIdNumber,
-                historySearch,
-                dept, timeQueries,
-                courseName,
-                instructor,
-                grade
-        );
-    }
-
-    public SearchResult querySearch(SearchQuery searchQuery, CookieStore cookieStore) {
+    public SearchResult querySearch(ClientSearchQuery clientSearchQuery, CookieStore cookieStore) {
         // TODO: Support history when get all and serial
         boolean success;
         // get all course
-        if (searchQuery.getAll()) {
+        if (clientSearchQuery.getAll()) {
             SearchResult result = new SearchResult();
             AllDeptData allDeptData = allDept.getAllDeptData(cookieStore, result);
             if (!result.success)
@@ -422,16 +246,16 @@ public class Search implements Module {
             return result;
         }
         // Get listed serial or multiple time
-        else if (searchQuery.getSerial() || searchQuery.multipleTime()) {
+        else if (clientSearchQuery.getSerial() || clientSearchQuery.multipleTime()) {
             SearchResult result = new SearchResult();
             List<CourseData> courseDataList = new ArrayList<>();
             ThreadPoolExecutor fetchPool = (ThreadPoolExecutor)
                     Executors.newFixedThreadPool(MULTI_QUERY_SEARCH_THREAD_COUNT, new ThreadFactory(TAG + "-Multi"));
             Semaphore fetchPoolLock = new Semaphore(MULTI_QUERY_SEARCH_THREAD_COUNT, true);
             AtomicBoolean allSuccess = new AtomicBoolean(true);
-            CourseSearchQuery[] courseSearchQuery = searchQuery.getSerial()
-                    ? searchQuery.toCourseQueriesSerial()
-                    : searchQuery.toCourseQueriesMultiTime();
+            CourseSearchQuery[] courseSearchQuery = clientSearchQuery.getSerial()
+                    ? clientSearchQuery.toCourseQueriesSerial()
+                    : clientSearchQuery.toCourseQueriesMultiTime();
             CountDownLatch taskLeft = new CountDownLatch(courseSearchQuery.length);
             try {
                 for (CourseSearchQuery query : courseSearchQuery) {
@@ -478,7 +302,7 @@ public class Search implements Module {
         }
         // Normal Search
         else {
-            return getQueryCourseData(searchQuery.toCourseQuery(), cookieStore);
+            return getQueryCourseData(clientSearchQuery.toCourseQuery(), cookieStore);
         }
     }
 

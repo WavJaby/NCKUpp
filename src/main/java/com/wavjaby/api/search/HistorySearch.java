@@ -1,18 +1,19 @@
 package com.wavjaby.api.search;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Main;
 import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.api.AllDept;
-import com.wavjaby.api.RobotCode;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonArrayStringBuilder;
 import com.wavjaby.json.JsonObject;
+import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
-import com.wavjaby.lib.Lib;
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.restapi.RequestMapping;
+import com.wavjaby.lib.restapi.RestApiResponse;
 import com.wavjaby.logger.Logger;
 import com.wavjaby.sql.SQLDriver;
 import org.jsoup.Connection;
@@ -48,6 +49,11 @@ public class HistorySearch implements Module {
             getTagByIdsStat, getTagIdStat, addTagStat,
             getInstructorByIdsStat, getInstructorIdStat, addInstructorStat,
             addCourseStat, getCourseStat;
+
+    public HistorySearch(ProxyManager proxyManager, RobotCheck robotCheck) {
+        this.proxyManager = proxyManager;
+        this.robotCheck = robotCheck;
+    }
 
     @Override
     public void start() {
@@ -150,6 +156,66 @@ public class HistorySearch implements Module {
         return null;
     }
 
+
+    @SuppressWarnings("unused")
+    @RequestMapping("/historySearch")
+    public RestApiResponse search(HttpExchange req) {
+        // search
+        String rawQuery = req.getRequestURI().getRawQuery();
+        // Parse query
+        Map<String, String> query = parseUrlEncodedForm(rawQuery);
+        ApiResponse response = new ApiResponse();
+
+        ClientSearchQuery clientSearchQuery = ClientSearchQuery.fromRequest(query, null, response);
+        if (clientSearchQuery == null)
+            return response;
+
+        List<CourseData> result = null;
+        if (clientSearchQuery.getAll())
+            result = getCourse(null, null, null, null, null, null, null, null);
+        else if (clientSearchQuery.getSerial()) {
+            assert clientSearchQuery.serialIdNumber != null;
+            for (Map.Entry<String, Set<String>> stringSetEntry : clientSearchQuery.serialIdNumber.entrySet()) {
+                String[] serialNumbers = stringSetEntry.getValue().toArray(new String[0]);
+                String serialNumberRaw = serialNumbers[0];
+                int start = serialNumberRaw.indexOf('-') + 1;
+                for (int i = start; i < serialNumberRaw.length(); i++) {
+                    if (serialNumberRaw.charAt(i) != '0') {
+                        start = i;
+                        break;
+                    }
+                }
+
+                result = getCourse(stringSetEntry.getKey(), Integer.parseInt(serialNumberRaw.substring(start)),
+                        null, null, null, null,
+                        null, null);
+                break;
+            }
+        } else if (clientSearchQuery.time != null) {
+            result = new ArrayList<>();
+            for (CourseSearchQuery.TimeQuery timeQuery : clientSearchQuery.time) {
+                List<CourseData> slice = getCourse(clientSearchQuery.departmentId, null,
+                        clientSearchQuery.courseName, null, clientSearchQuery.instructor, clientSearchQuery.grade,
+                        timeQuery.dayOfWeek, timeQuery.sectionOfDay);
+                if (slice == null) {
+                    result = null;
+                    break;
+                } else
+                    result.addAll(slice);
+            }
+        } else
+            result = getCourse(clientSearchQuery.departmentId, null,
+                    clientSearchQuery.courseName, null, clientSearchQuery.instructor, clientSearchQuery.grade,
+                    null, null);
+
+        if (result == null)
+            response.errorServerDatabase("Internal error");
+        else
+            response.setData(result.toString());
+        return response;
+    }
+
+
     private enum Language {
         TW("cht"),
         EN("eng"),
@@ -186,31 +252,6 @@ public class HistorySearch implements Module {
         public void setRoomNameEN(String roomNameEN) {
             this.roomNameEN = roomNameEN;
         }
-    }
-
-    public HistorySearch(ProxyManager proxyManager, RobotCheck robotCheck) {
-        this.proxyManager = proxyManager;
-        this.robotCheck = robotCheck;
-    }
-
-    public static void main(String[] args) {
-        PropertiesReader serverSettings = new PropertiesReader("./server.properties");
-        ProxyManager proxyManager = new ProxyManager(serverSettings);
-        proxyManager.start();
-        RobotCode robotCode = new RobotCode(serverSettings, proxyManager);
-        robotCode.start();
-        RobotCheck robotCheck = new RobotCheck(robotCode, proxyManager);
-
-        HistorySearch historySearch = new HistorySearch(proxyManager, robotCheck);
-        historySearch.start();
-
-//        historySearch.fetchCourse(historySearch, 112, 112);
-//        historySearch.writeDatabase();
-        historySearch.readDatabase();
-        historySearch.stop();
-
-        robotCode.stop();
-        proxyManager.stop();
     }
 
     private Map<String, String> getRoomById(String[] ids) {
@@ -468,15 +509,14 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void getCourse(String deptId, Integer serialNumber,
-                           String courseName, String tagName, String instructorName, Integer grade,
-                           Integer dayOfWeek, Integer[] sections) {
+    private synchronized List<CourseData> getCourse(String deptId, Integer serialNumber,
+                                                    String courseName, String tagName, String instructorName, Integer grade,
+                                                    Byte dayOfWeek, byte[] sections) {
         try {
             if (deptId != null && deptId.isEmpty()) deptId = null;
             if (courseName != null && courseName.isEmpty()) courseName = null;
             if (tagName != null && tagName.isEmpty()) tagName = null;
             if (instructorName != null && instructorName.isEmpty()) instructorName = null;
-            if (sections != null && sections.length == 0) sections = null;
             // Department id
             getCourseStat.setString(1, deptId);
             getCourseStat.setString(2, deptId);
@@ -490,25 +530,41 @@ public class HistorySearch implements Module {
             // TAG name
             Integer tageId;
             if (tagName == null) tageId = null;
-            else tageId = getTagIdByName(tagName, tagName);
+            else {
+                tageId = getTagIdByName(tagName, tagName);
+                if (tageId == null)
+                    return new ArrayList<>();
+            }
             getCourseStat.setObject(8, tageId, Types.INTEGER);
             getCourseStat.setObject(9, tageId, Types.INTEGER);
             // Instructor name
             Integer instructorId;
             if (instructorName == null) instructorId = null;
-            else instructorId = getInstructorIdByName(instructorName, instructorName);
+            else {
+                instructorId = getInstructorIdByName(instructorName, instructorName);
+                if (instructorId == null)
+                    return new ArrayList<>();
+            }
             getCourseStat.setObject(10, instructorId, Types.INTEGER);
             getCourseStat.setObject(11, instructorId, Types.INTEGER);
             // For grade
             String dayOfWeekStr = dayOfWeek == null ? null : dayOfWeek.toString();
             getCourseStat.setBoolean(12, dayOfWeekStr == null && sections == null);
             getCourseStat.setString(13, dayOfWeekStr);
-            getCourseStat.setObject(14, sections, Types.ARRAY);
+            Integer[] sectionsInt = null;
+            if (sections != null && sections.length > 0) {
+                sectionsInt = new Integer[sections.length];
+                for (int i = 0; i < sections.length; i++) {
+                    sectionsInt[i] = (int) sections[i];
+                }
+            }
+            getCourseStat.setObject(14, sectionsInt, Types.ARRAY);
             // For grade
             getCourseStat.setObject(15, grade, Types.INTEGER);
             getCourseStat.setObject(16, grade, Types.INTEGER);
 
             ResultSet result = getCourseStat.executeQuery();
+            getCourseStat.clearParameters();
             logger.log("Parse database result");
             HashSet<Integer> tagQueryIds = new HashSet<>(), instructorQueryIds = new HashSet<>();
             HashSet<String> roomQueryIds = new HashSet<>();
@@ -552,13 +608,11 @@ public class HistorySearch implements Module {
             for (HistoryCourseData historyCourseData : historyCourseDataList) {
                 courseDataList.add(historyCourseData.toCourseData(tags, instructors, roomName));
             }
-
-            logger.log(courseDataList);
-            logger.log(courseDataList.size());
-            getCourseStat.clearParameters();
+            return courseDataList;
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
         }
+        return null;
     }
 
     public void readDatabase() {
@@ -847,7 +901,7 @@ public class HistorySearch implements Module {
         logger.log("non-serial count: " + nonSerialCount);
         logger.log("Get " + allCourseData.size() + " course, use " + ((System.currentTimeMillis() - start) / 1000) + "s");
 
-        File rawHistoryFileFolder = Lib.getDirectoryFromPath(FILE_PATH, true);
+        File rawHistoryFileFolder = getDirectoryFromPath(FILE_PATH, true);
         if (!rawHistoryFileFolder.isDirectory())
             return;
         try {
@@ -1022,8 +1076,8 @@ public class HistorySearch implements Module {
 
         try {
             tasks.await();
-            Lib.executorShutdown(queryPool, 1000, "Query pool");
-            Lib.executorShutdown(resultPool, 1000, "Result pool");
+            executorShutdown(queryPool, 1000, "Query pool");
+            executorShutdown(resultPool, 1000, "Result pool");
         } catch (InterruptedException e) {
             logger.errTrace(e);
             return;
@@ -1053,7 +1107,7 @@ public class HistorySearch implements Module {
 
         saveCookieCache(cookieCache);
 
-        File rawHistoryFileFolder = Lib.getDirectoryFromPath(FILE_PATH, true);
+        File rawHistoryFileFolder = getDirectoryFromPath(FILE_PATH, true);
         if (!rawHistoryFileFolder.isDirectory())
             return;
         try {

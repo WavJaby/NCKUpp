@@ -5,7 +5,7 @@ import com.wavjaby.api.AllDept;
 import com.wavjaby.api.DeptWatchdog;
 import com.wavjaby.api.search.CourseData;
 import com.wavjaby.api.search.Search;
-import com.wavjaby.api.search.SearchQuery;
+import com.wavjaby.api.search.ClientSearchQuery;
 import com.wavjaby.json.JsonArray;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.lib.Cookie;
@@ -276,8 +276,8 @@ public class CourseWatcher implements Runnable, Module {
 
                     String url = null;
                     try {
-                        SearchQuery searchQuery = new SearchQuery(cosData);
-                        Search.SaveQueryToken token = search.createSaveQueryToken(searchQuery.toCourseQuery(), baseCookieStore, null);
+                        ClientSearchQuery clientSearchQuery = new ClientSearchQuery(cosData);
+                        Search.SaveQueryToken token = search.createSaveQueryToken(clientSearchQuery.toCourseQuery(), baseCookieStore, null);
                         if (token != null)
                             url = token.getUrl();
                     } catch (Exception e) {
