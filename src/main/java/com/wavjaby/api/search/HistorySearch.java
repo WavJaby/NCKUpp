@@ -25,10 +25,7 @@ import java.lang.reflect.Method;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -92,7 +89,7 @@ public class HistorySearch implements Module {
                 instructors     INTEGER ARRAY,
                 selected        INTEGER,
                 available       INTEGER,
-                time            VARCHAR(64) ARRAY
+                time            VARCHAR(64) ARRAY ARRAY
             ) */
             addCourseStat = connection.prepareStatement("INSERT INTO \"course_112_1\" (" +
                     "\"department_id\",\"serial_id\",\"attribute_code\",\"system_id\"," +
@@ -105,6 +102,9 @@ public class HistorySearch implements Module {
                 String arrayContains = getMethodFullPath(HistorySearch.class.getMethod("arrayContains", Integer.class, Integer[].class));
                 connection.createStatement().execute(
                         "CREATE ALIAS IF NOT EXISTS arrayContains FOR \"" + arrayContains + "\"");
+                String timeContains = getMethodFullPath(HistorySearch.class.getMethod("timeContains", String.class, Integer[].class, Array[].class));
+                connection.createStatement().execute(
+                        "CREATE ALIAS IF NOT EXISTS timeContains FOR \"" + timeContains + "\"");
             } catch (NoSuchMethodException e) {
                 logger.errTrace(e);
             }
@@ -120,6 +120,7 @@ public class HistorySearch implements Module {
                     "(? IS NULL OR \"name_tw\" LIKE ? OR \"name_en\" LIKE ?) AND" +
                     "(? IS NULL OR arrayContains(?,\"tags\")) AND" +
                     "(? IS NULL OR arrayContains(?,\"instructors\")) AND" +
+                    "(? OR timeContains(?,?,\"time\")) AND" +
                     "(? IS NULL OR \"for_grade\"=?)");
 
         } catch (SQLException e) {
@@ -192,9 +193,9 @@ public class HistorySearch implements Module {
         HistorySearch historySearch = new HistorySearch(proxyManager, robotCheck);
         historySearch.start();
 
+//        historySearch.fetchCourse(historySearch, 112, 112);
 //        historySearch.writeDatabase();
         historySearch.readDatabase();
-//        historySearch.fetchCourse(historySearch, 112, 112);
         historySearch.stop();
 
         robotCode.stop();
@@ -353,7 +354,15 @@ public class HistorySearch implements Module {
                 return;
             }
             for (int i = 0; i < timeArray.length; i++) {
-                timeArray[i] = courseDataTW.timeList[i].toStringShort();
+                CourseData.TimeData tim = courseDataTW.timeList[i];
+                if (tim.detailedTimeData != null)
+                    timeArray[i] = new Object[]{tim.detailedTimeData};
+                else
+                    timeArray[i] = new Object[]{
+                            tim.dayOfWeek == null ? null : tim.dayOfWeek.toString(),
+                            tim.sectionStart == null ? null : tim.sectionStart.toString(),
+                            tim.sectionEnd == null ? null : tim.sectionEnd.toString(),
+                            tim.buildingId, tim.roomId};
             }
 
             addCourseStat.setString(1, courseDataTW.departmentId); // department_id
@@ -386,7 +395,7 @@ public class HistorySearch implements Module {
             addCourseStat.setArray(19, connection.createArrayOf("INTEGER", instructorIds)); // instructors
             addCourseStat.setObject(20, courseDataTW.selected, Types.INTEGER); // selected
             addCourseStat.setObject(21, courseDataTW.available, Types.INTEGER); // available
-            addCourseStat.setArray(22, connection.createArrayOf("TEXT", timeArray)); // time
+            addCourseStat.setArray(22, connection.createArrayOf("ARRAY", timeArray)); // time
             addCourseStat.executeUpdate();
             addCourseStat.clearParameters();
         } catch (SQLException e) {
@@ -394,13 +403,15 @@ public class HistorySearch implements Module {
         }
     }
 
-    private void courseGet(String deptId, Integer serialNumber, String courseName, String tagName, String instructorName, Integer grade) {
+    private void courseGet(String deptId, Integer serialNumber,
+                           String courseName, String tagName, String instructorName, Integer grade,
+                           Integer dayOfWeek, Integer[] sections) {
         try {
             if (deptId != null && deptId.isEmpty()) deptId = null;
             if (courseName != null && courseName.isEmpty()) courseName = null;
             if (tagName != null && tagName.isEmpty()) tagName = null;
             if (instructorName != null && instructorName.isEmpty()) instructorName = null;
-            boolean withSerial = serialNumber != null;
+            if (sections != null && sections.length == 0) sections = null;
             // Department id
             getCourseStat.setString(1, deptId);
             getCourseStat.setString(2, deptId);
@@ -424,20 +435,27 @@ public class HistorySearch implements Module {
             getCourseStat.setObject(10, instructorId, Types.INTEGER);
             getCourseStat.setObject(11, instructorId, Types.INTEGER);
             // For grade
-            getCourseStat.setObject(12, grade, Types.INTEGER);
-            getCourseStat.setObject(13, grade, Types.INTEGER);
+            String dayOfWeekStr = dayOfWeek == null ? null : dayOfWeek.toString();
+            getCourseStat.setBoolean(12, dayOfWeekStr == null && sections == null);
+            getCourseStat.setString(13, dayOfWeekStr);
+            getCourseStat.setObject(14, sections, Types.ARRAY);
+            // For grade
+            getCourseStat.setObject(15, grade, Types.INTEGER);
+            getCourseStat.setObject(16, grade, Types.INTEGER);
 
             ResultSet result = getCourseStat.executeQuery();
             int count = 0;
             while (result.next()) {
                 String name = result.getNString("name_tw");
-                Object[] time = (Object[]) result.getArray("time").getArray();
+                Object[] times = (Object[]) result.getArray("time").getArray();
                 Object[] instructors = (Object[]) result.getArray("instructors").getArray();
                 Object[] tags = (Object[]) result.getArray("tags").getArray();
                 logger.log(name);
-                logger.log(Arrays.toString(time));
-                logger.log(Arrays.toString(instructors));
-                logger.log(Arrays.toString(tags));
+//                logger.log(Arrays.toString(instructors));
+//                logger.log(Arrays.toString(tags));
+                for (Object time : times) {
+                    logger.log(Arrays.toString((Object[]) ((Array) time).getArray()));
+                }
                 count++;
             }
             logger.log(count);
@@ -451,7 +469,7 @@ public class HistorySearch implements Module {
     public void readDatabase() {
         logger.log("Read database");
 //        courseGet("F7", 6, null, null, null, null);
-        courseGet(null, null, null, "英語授課", null, null);
+        courseGet(null, null, null, null, null, null, null, new Integer[]{1});
     }
 
     public void writeDatabase() {
@@ -1107,7 +1125,7 @@ public class HistorySearch implements Module {
                             .timeout(30 * 1000)
                             .execute();
                 } catch (IOException e) {
-                    logger.errTrace(e);
+                    logger.warn(e);
                 }
 //                logger.log("get: " + url.substring(courseQueryNckuOrg.length()));
             });
@@ -1184,6 +1202,41 @@ public class HistorySearch implements Module {
         if (integer == null || array == null) return false;
         for (Integer i : array) {
             if (integer.equals(i))
+                return true;
+        }
+        return false;
+    }
+
+    public static boolean timeContains(String dayOfWeek, Integer[] sections, Array[] array) {
+        for (Array time : array) {
+            Object[] timeArr;
+            try {
+                timeArr = (Object[]) time.getArray();
+            } catch (SQLException e) {
+                logger.errTrace(e);
+                break;
+            }
+            if (timeArr.length == 1)
+                continue;
+
+            boolean find = true;
+            if (dayOfWeek != null)
+                find = dayOfWeek.equals(timeArr[0]);
+            if (find && sections != null) {
+                find = false;
+                if (timeArr[1] != null) {
+                    int start = Integer.parseInt((String) timeArr[1]);
+                    int end = timeArr[2] == null ? start : Integer.parseInt((String) timeArr[2]);
+                    // Check course section in range
+                    for (int section : sections) {
+                        if (section >= start && section <= end) {
+                            find = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (find)
                 return true;
         }
         return false;

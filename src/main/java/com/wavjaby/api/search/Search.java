@@ -814,7 +814,7 @@ public class Search implements Module {
 
     public SaveQueryToken createSaveQueryToken(CourseSearchQuery searchQuery, CookieStore cookieStore, SearchResult result) {
         StringBuilder postData = new StringBuilder();
-        String baseUrl;
+        String baseUrl = courseNckuOrg;
         CookieStore postCookieStore;
         // Build query
         try {
@@ -843,29 +843,29 @@ public class Search implements Module {
 //                    postData.append("id=").append(URLEncoder.encode(searchID, "UTF-8"));
 //                }
 
-            // Maybe temporary
-            Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
-                    .header("Connection", "keep-alive")
-                    .cookieStore(cookieStore)
-                    .ignoreContentType(true)
-                    .userAgent(USER_AGENT)
-                    .proxy(proxyManager.getProxy());
-            HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, cookieStore);
-            if (httpResponseData.state != ResponseState.SUCCESS) {
-                result.errorFetch("Failed to renew search id");
-                return null;
-            }
-            String resultHtml = processIframe(httpResponseData.data, cookieStore, proxyManager, robotCheck);
-            if (resultHtml == null) {
-                result.errorFetch("Failed to get renew cookie");
-                return null;
-            }
-            baseUrl = findStringBetween(resultHtml, "<base", "href=\"", "\"");
-            if (baseUrl == null) {
-                result.errorFetch("Base url not found");
-                return null;
-            }
-            cosPreCheck(baseUrl, resultHtml, cookieStore, null, proxyManager);
+//            // Maybe temporary
+//            Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry11215&m=en_query")
+//                    .header("Connection", "keep-alive")
+//                    .cookieStore(cookieStore)
+//                    .ignoreContentType(true)
+//                    .userAgent(USER_AGENT)
+//                    .proxy(proxyManager.getProxy());
+//            HttpResponseData httpResponseData = robotCheck.sendRequest(courseNckuOrg, request, cookieStore);
+//            if (httpResponseData.state != ResponseState.SUCCESS) {
+//                result.errorFetch("Failed to renew search id");
+//                return null;
+//            }
+//            String resultHtml = processIframe(httpResponseData.data, cookieStore, proxyManager, robotCheck);
+//            if (resultHtml == null) {
+//                result.errorFetch("Failed to get renew cookie");
+//                return null;
+//            }
+//            baseUrl = findStringBetween(resultHtml, "<base", "href=\"", "\"");
+//            if (baseUrl == null) {
+//                result.errorFetch("Base url not found");
+//                return null;
+//            }
+//            cosPreCheck(baseUrl, resultHtml, cookieStore, null, proxyManager);
 //            baseUrl = courseNckuOrg;
 
             // Write post data
