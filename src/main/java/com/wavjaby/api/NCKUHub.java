@@ -40,8 +40,8 @@ public class NCKUHub implements Module {
     private int cacheSize = 0;
     private final Map<Integer, NckuHubCourseData> courseInfoCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor(new ThreadFactory(TAG + "-Cache"));
-    private final ThreadPoolExecutor courseInfoGetter = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, new ThreadFactory(TAG + "-Cos-Fetch"));
-    private final Semaphore courseInfoGetterLock = new Semaphore(courseInfoGetter.getCorePoolSize(), true);
+    private final ThreadPoolExecutor courseInfoGetter = (ThreadPoolExecutor) Executors.newFixedThreadPool(8, new ThreadFactory(TAG + "-Cos-Fetch"));
+    private final Semaphore courseInfoGetterLock = new Semaphore(courseInfoGetter.getMaximumPoolSize(), true);
 
     private static class NckuHubCourseData {
         int id;
@@ -142,19 +142,19 @@ public class NCKUHub implements Module {
                 continue;
             }
 
-            // Try get cached data
-            final NckuHubCourseData cached = courseInfoCache.get(nckuHubId);
-            if (cached != null && now - cached.lastUpdate < maxCacheTime) {
-                courses.appendRaw(serialId, cached.data);
-                taskLeft.countDown();
-                continue;
-            }
-
             // Fetch new data
             try {
                 courseInfoGetterLock.acquire();
             } catch (InterruptedException e) {
                 logger.errTrace(e);
+            }
+            // Try get cached data
+            final NckuHubCourseData cached = courseInfoCache.get(nckuHubId);
+            if (cached != null && now - cached.lastUpdate < maxCacheTime) {
+                courses.appendRaw(serialId, cached.data);
+                taskLeft.countDown();
+                courseInfoGetterLock.release();
+                continue;
             }
             courseInfoGetter.execute(() -> {
                 // No cache, fetch data
@@ -199,8 +199,8 @@ public class NCKUHub implements Module {
                 String resultData = json.toString();
                 synchronized (courses) {
                     courses.appendRaw(serialId, resultData);
+                    taskLeft.countDown();
                 }
-                taskLeft.countDown();
 
                 // Update cache
                 synchronized (courseInfoCache) {
@@ -231,7 +231,7 @@ public class NCKUHub implements Module {
         Connection.Response nckuHubCourse;
         try {
             nckuHubCourse = HttpConnection.connect("https://nckuhub.com/course/")
-                    .header("Accept-Encoding","gzip")
+                    .header("Accept-Encoding", "gzip")
                     .ignoreContentType(true)
                     .execute();
         } catch (IOException e) {

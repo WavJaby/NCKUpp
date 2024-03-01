@@ -381,7 +381,7 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	const searchTask = [];
-	let nckuHubLoadingTaskCount = 0;
+	let nckuHubLoadingTask = null;
 
 	/**
 	 * @param {Object.<String,any>} [rawQuery] [key, value][]
@@ -461,7 +461,8 @@ export default function (router, loginState, userGuideTool) {
 
 		// Fetch data
 		const searchA9Fetch = isSearchA9 ? fetchApi('/A9Registered', 'Get A9 register count', {timeout: 10000}) : null;
-		const result = (await fetchApi('/historySearch?' + queryString, 'Searching', {timeout: 10000}));
+		const searchUrl = (loginState.state && loginState.state.login) ? '/search' : '/historySearch';
+		const result = (await fetchApi(searchUrl + '?' + queryString, 'Searching', {timeout: 10000}));
 		let registerCountA9 = isSearchA9 ? await searchA9Fetch : null;
 		registerCountA9 = registerCountA9 && registerCountA9.data && registerCountA9.data.list;
 
@@ -495,38 +496,48 @@ export default function (router, loginState, userGuideTool) {
 		}
 
 		// Get NCKU hub data
-		const chunkSize = 20;
+		const chunkSize = 20, parallelCount = 3;
 		const courseSerialNumbers = Object.keys(nckuHubResult);
-		nckuHubLoadingTaskCount = Math.ceil(courseSerialNumbers.length / chunkSize);
-		if (courseSerialNumbers.length > 0)
+        let nckuHubLoadingTaskCount = Math.ceil(courseSerialNumbers.length / chunkSize);
+		let nckuHubLoadingTaskLoading = 0;
+		if (courseSerialNumbers.length > 0) {
 			nckuHubLoadingOverlayShow();
-		for (let i = 0; i < courseSerialNumbers.length; i += chunkSize) {
-			const chunk = courseSerialNumbers.slice(i, i + chunkSize);
-			fetchApi('/nckuhub?id=' + chunk.join(',')).then(response => {
-				// If success
-				if (response.success && response.data) for (let data of Object.entries(response.data)) {
-					const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubResult[data[0]];
-					const /**@type{NckuHub}*/ nckuHub = data[1];
-					courseData.nckuHub = /**@type NckuHub*/ {
-						noData: nckuHub.rate_count === 0 && nckuHub.comments.length === 0,
-						got: nckuHub.got,
-						sweet: nckuHub.sweet,
-						cold: nckuHub.cold,
-						rate_count: nckuHub.rate_count,
-						comments: nckuHub.comments,
-						parsedRates: nckuHub.rates.reduce((a, v) => {
-							a[v.post_id] = v;
-							return a;
-						}, {})
-					};
-					signal.update();
-				}
+			// Slice chunks
+			const chunks = [];
+			for (let i = 0; i < courseSerialNumbers.length; i += chunkSize)
+				chunks.push(courseSerialNumbers.slice(i, i + chunkSize));
+			// Start task
+			clearInterval(nckuHubLoadingTask);
+			nckuHubLoadingTask = setInterval(() => {
+                // Skip of pool full
+				if (nckuHubLoadingTaskLoading >= parallelCount) return;
+				nckuHubLoadingTaskLoading++;
+                fetchApi('/nckuhub?id=' + chunks.shift().join(',')).then(response => {
+                    if (response.success) for (let data of Object.entries(response.data)) {
+                        const {/**@type CourseData*/courseData, /**@type Signal*/signal} = nckuHubResult[data[0]];
+                        const /**@type{NckuHub}*/ nckuHub = data[1];
+                        courseData.nckuHub = /**@type NckuHub*/ {
+                            noData: nckuHub.rate_count === 0 && nckuHub.comments.length === 0,
+                            got: nckuHub.got,
+                            sweet: nckuHub.sweet,
+                            cold: nckuHub.cold,
+                            rate_count: nckuHub.rate_count,
+                            comments: nckuHub.comments,
+                            parsedRates: nckuHub.rates.reduce((a, v) => {
+                                a[v.post_id] = v;
+                                return a;
+                            }, {})
+                        };
+                        signal.update();
+                    }
 
-				// Task done
-				if (--nckuHubLoadingTaskCount === 0) {
-					nckuHubLoadingOverlayHide();
-				}
-			});
+                    // Task done
+                    if (--nckuHubLoadingTaskCount === 0) {
+                        nckuHubLoadingOverlayHide();
+                    }
+					nckuHubLoadingTaskLoading--;
+                });
+			}, 1000);
 		}
 
 		console.log(courseResult);
@@ -603,7 +614,6 @@ export default function (router, loginState, userGuideTool) {
 		}
 		fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
 			const eql = encodeURIComponent('&');
-			console.log(i)
 			watchList = [];
 			for (const entry of Object.entries(i.data)) {
 				for (const num of entry[1])
@@ -766,8 +776,6 @@ export default function (router, loginState, userGuideTool) {
 	}
 
 	function sortNckuHubKey() {
-		if (nckuHubLoadingTaskCount !== 0)
-			return;
 		if (courseRenderResult.length > 0) {
 			const key = this.key;
 			const keys = ['sweet', 'cold', 'got'];

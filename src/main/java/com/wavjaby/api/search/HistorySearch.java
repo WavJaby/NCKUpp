@@ -43,6 +43,7 @@ public class HistorySearch implements Module {
     private static final Logger logger = new Logger("History");
     private final ProxyManager proxyManager;
     private final RobotCheck robotCheck;
+    private final AllDept allDept;
 
     private SQLDriver sqlDriver;
     private PreparedStatement getRoomByIdsStat, getRoomStat, addRoomStat, editRoomStat,
@@ -50,9 +51,10 @@ public class HistorySearch implements Module {
             getInstructorByIdsStat, getInstructorIdStat, addInstructorStat,
             addCourseStat, getCourseStat;
 
-    public HistorySearch(ProxyManager proxyManager, RobotCheck robotCheck) {
+    public HistorySearch(ProxyManager proxyManager, RobotCheck robotCheck, AllDept allDept) {
         this.proxyManager = proxyManager;
         this.robotCheck = robotCheck;
+        this.allDept = allDept;
     }
 
     @Override
@@ -615,12 +617,6 @@ public class HistorySearch implements Module {
         return null;
     }
 
-    public void readDatabase() {
-        logger.log("Read database");
-        getCourse("F7", null, null, null, null, null, null, null);
-//        courseGet(null, null, null, null, null, null, 1, null);
-    }
-
     public void writeDatabase() {
         logger.log("Write Database");
         CourseHistorySearchQuery historySearch = new CourseHistorySearchQuery(
@@ -794,10 +790,7 @@ public class HistorySearch implements Module {
                 "," + courseData.forGrade + "," + courseData.forClassGroup;
     }
 
-    private void fetchCourse(HistorySearch historySearch, int from, int to) {
-        AllDept allDept = new AllDept(robotCheck, proxyManager);
-        allDept.start();
-
+    public void fetchCourse(int from, int to) {
         CookieStore[] cookieCache = readCookieCache(4);
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         for (int year = from; year >= to; year--) {
@@ -806,7 +799,7 @@ public class HistorySearch implements Module {
             CountDownLatch tasks = new CountDownLatch(4);
             CourseHistorySearchQuery history = new CourseHistorySearchQuery(year, 1, year, 1);
             pool.execute(() -> {
-                historySearch.search2(Language.TW, history, cookieCache[0]);
+                search2(Language.TW, history, cookieCache[0]);
                 tasks.countDown();
             });
             try {
@@ -815,7 +808,7 @@ public class HistorySearch implements Module {
                 break;
             }
             pool.execute(() -> {
-                historySearch.search2(Language.EN, history, cookieCache[1]);
+                search2(Language.EN, history, cookieCache[1]);
                 tasks.countDown();
             });
             CourseHistorySearchQuery history2 = new CourseHistorySearchQuery(year, 0, year, 0);
@@ -825,7 +818,7 @@ public class HistorySearch implements Module {
                 break;
             }
             pool.execute(() -> {
-                historySearch.search2(Language.TW, history2, cookieCache[2]);
+                search2(Language.TW, history2, cookieCache[2]);
                 tasks.countDown();
             });
             try {
@@ -834,7 +827,7 @@ public class HistorySearch implements Module {
                 break;
             }
             pool.execute(() -> {
-                historySearch.search2(Language.EN, history2, cookieCache[3]);
+                search2(Language.EN, history2, cookieCache[3]);
                 tasks.countDown();
             });
             try {

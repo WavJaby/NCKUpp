@@ -110,7 +110,8 @@ public class Main {
         addModule(allDept);
         Search search = new Search(urSchool, allDept, robotCheck, proxyManager);
         addModule(search);
-        addModule(new HistorySearch(null, null));
+        HistorySearch historySearch = new HistorySearch(proxyManager, robotCheck, allDept);
+        addModule(historySearch);
         Login login = new Login(search, courseFunctionButton, courseSchedule, SQLDriver, proxyManager);
         addModule(login);
         DeptWatchdog watchDog = new DeptWatchdog(login, SQLDriver);
@@ -140,6 +141,7 @@ public class Main {
         logger.log("Ready in " + (System.currentTimeMillis() - start) + "ms");
         server.printStructure();
 
+        historySearch.fetchCourse(112, 112);
 
         // Stop
         Scanner scanner = new Scanner(System.in);
