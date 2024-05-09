@@ -18,5 +18,6 @@
     <orderEntry type="library" name="WebSocket" level="project" />
     <orderEntry type="library" name="SVGBuilder" level="project" />
     <orderEntry type="library" name="@types/chrome" level="application" />
+    <orderEntry type="library" name="@types/chrome" level="application" />
   </component>
 </module>

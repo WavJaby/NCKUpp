@@ -12,7 +12,7 @@
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
     <data-source source="LOCAL" name="H2 - course_data" uuid="2e8f11c8-4376-4b49-9fc5-e2f9e67a345b">
-      <driver-ref>579d50ff-0ad1-4544-b4da-a026d2e8da6e</driver-ref>
+      <driver-ref>9048c4a8-7a06-4164-8b4c-df7886165c19</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.h2.Driver</jdbc-driver>
       <jdbc-url>jdbc:h2:./out/course_data;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE;TRACE_LEVEL_SYSTEM_OUT=0</jdbc-url>

@@ -141,7 +141,7 @@ public class Main {
         logger.log("Ready in " + (System.currentTimeMillis() - start) + "ms");
         server.printStructure();
 
-        historySearch.fetchCourse(112, 112);
+//        historySearch.fetchCourse(112, 112);
 
         // Stop
         Scanner scanner = new Scanner(System.in);
