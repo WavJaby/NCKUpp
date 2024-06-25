@@ -6,10 +6,7 @@ import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
 import com.wavjaby.api.search.RobotCheck;
 import com.wavjaby.api.search.Search;
-import com.wavjaby.json.JsonArray;
-import com.wavjaby.json.JsonArrayStringBuilder;
-import com.wavjaby.json.JsonObject;
-import com.wavjaby.json.JsonObjectStringBuilder;
+import com.wavjaby.json.*;
 import com.wavjaby.lib.ApiResponse;
 import com.wavjaby.lib.Cookie;
 import com.wavjaby.lib.HttpResponseData;
@@ -56,12 +53,16 @@ public class AllDept implements Module {
         if (allDeptFile.exists()) {
             deptGroup = readFileToString(allDeptFile, false, StandardCharsets.UTF_8);
             assert deptGroup != null;
-            JsonObject jsonObject = new JsonObject(deptGroup);
-            for (Object i : jsonObject.getArray("deptGroup")) {
-                for (Object j : ((JsonObject) i).getArray("dept")) {
-                    deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
-                    deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
+            try {
+                JsonObject jsonObject = new JsonObject(deptGroup);
+                for (Object i : jsonObject.getArray("deptGroup")) {
+                    for (Object j : ((JsonObject) i).getArray("dept")) {
+                        deptIdMap.put(((JsonArray) j).getString(1), ((JsonArray) j).getString(0));
+                        deptIdMap.put(((JsonArray) j).getString(2), ((JsonArray) j).getString(0));
+                    }
                 }
+            } catch (JsonException e) {
+                logger.warn("Api file " + allDeptFile.getName() + " parse error");
             }
         }
 

@@ -1,6 +1,5 @@
 package com.wavjaby;
 
-import com.sun.istack.internal.NotNull;
 import com.wavjaby.api.AllDept;
 import com.wavjaby.api.DeptWatchdog;
 import com.wavjaby.api.search.CourseData;
@@ -350,7 +349,7 @@ public class CourseWatcher implements Runnable, Module {
         return integer > 0 ? "+" + integer : String.valueOf(integer);
     }
 
-    public static List<CourseDataDifference> getDifferent(List<CourseData> last, @NotNull List<CourseData> now) {
+    public static List<CourseDataDifference> getDifferent(List<CourseData> last, List<CourseData> now) {
         HashMap<String, CourseData> lastCourseDataMap = new HashMap<>();
         for (CourseData i : last)
             if (i.getSerialNumber() != null)

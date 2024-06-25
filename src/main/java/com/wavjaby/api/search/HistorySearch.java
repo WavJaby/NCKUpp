@@ -120,7 +120,7 @@ public class HistorySearch implements Module {
                 available       INTEGER,
                 time            VARCHAR(64) ARRAY ARRAY
             ) */
-            addCourseStat = connection.prepareStatement("INSERT INTO \"course_112_1\" (" +
+            addCourseStat = connection.prepareStatement("INSERT INTO \"course_113_0\" (" +
                     "\"department_id\",\"serial_number\",\"attribute_code\",\"system_code\"," +
                     "\"for_grade\",\"for_class\",\"for_class_group\"," +
                     "\"category_tw\",\"category_en\",\"name_tw\",\"name_en\",\"note_tw\",\"note_en\",\"limit_tw\",\"limit_en\"," +
@@ -133,7 +133,7 @@ public class HistorySearch implements Module {
                     "\"for_grade\",\"for_class\",\"for_class_group\"," +
                     "\"category_tw\",\"category_en\",\"name_tw\",\"name_en\",\"note_tw\",\"note_en\",\"limit_tw\",\"limit_en\"," +
                     "\"tags\",\"credits\",\"required\",\"instructors\",\"selected\",\"available\",\"time\"" +
-                    "FROM \"course_112_1\" WHERE" +
+                    "FROM \"course_113_0\" WHERE" +
                     "(? IS NULL OR \"department_id\"=?) AND" +
                     "(? IS NULL OR \"serial_number\"=?) AND" +
                     "(? IS NULL OR \"name_tw\" LIKE ? OR \"name_en\" LIKE ?) AND" +
@@ -620,7 +620,7 @@ public class HistorySearch implements Module {
     public void writeDatabase() {
         logger.log("Write Database");
         CourseHistorySearchQuery historySearch = new CourseHistorySearchQuery(
-                112, 1, 112, 1
+                113, 0, 113, 0
         );
         List<CourseData> allCourseDataListTW = loadCourseList(FILE_PATH, Language.TW, historySearch);
         if (allCourseDataListTW == null)
@@ -911,7 +911,7 @@ public class HistorySearch implements Module {
     private void search() {
         Language language = Language.EN;
         CourseHistorySearchQuery historySearch = new CourseHistorySearchQuery(
-                112, 2, 112, 2
+                113, 0, 113, 0
         );
 
         // Load cookies

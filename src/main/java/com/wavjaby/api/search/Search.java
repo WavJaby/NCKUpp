@@ -1185,8 +1185,13 @@ public class Search implements Module {
                     courseData_available = -1;
                     break;
                 default:
-                    courseData_available = (count[1].startsWith("洽") || count[1].startsWith("please connect"))
-                            ? -2 : Integer.parseInt(count[1]);
+                    try {
+                        courseData_available = (count[1].startsWith("洽") || count[1].startsWith("please connect"))
+                                ? -2 : Integer.parseInt(count[1]);
+                    } catch (NumberFormatException e) {
+                        courseData_available = -3;
+                        logger.warn(courseData_departmentId + " have unknown format of available count: '" + count[1] + "'");
+                    }
             }
 
             // Get function buttons

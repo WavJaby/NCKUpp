@@ -1,6 +1,5 @@
 package com.wavjaby.api;
 
-import com.sun.istack.internal.Nullable;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.CourseEnrollmentTracker;
 import com.wavjaby.Module;
@@ -327,7 +326,7 @@ public class StudentIdSys implements Module {
             return toKey(year, semester, systemCode, classCode);
         }
 
-        public static String toKey(int year, byte semester, String systemCode, @Nullable String classCode) {
+        public static String toKey(int year, byte semester, String systemCode, String classCode) {
             return String.valueOf(year) + '_' + semester + '_' + systemCode +
                     (classCode == null ? '_' : '_' + classCode);
         }

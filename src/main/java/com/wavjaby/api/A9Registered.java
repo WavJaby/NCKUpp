@@ -3,6 +3,7 @@ package com.wavjaby.api;
 import com.sun.net.httpserver.HttpExchange;
 import com.wavjaby.Module;
 import com.wavjaby.ProxyManager;
+import com.wavjaby.json.JsonException;
 import com.wavjaby.json.JsonObject;
 import com.wavjaby.json.JsonObjectStringBuilder;
 import com.wavjaby.lib.ApiResponse;
@@ -77,9 +78,13 @@ public class A9Registered implements Module {
             logger.err("A9Registered cache file read error");
             return;
         }
-        JsonObject cacheData = new JsonObject(cacheDataStr);
-        lastUpdateTime = cacheData.getLong("lastUpdate");
-        courseCountData = cacheData.toString();
+        try {
+            JsonObject cacheData = new JsonObject(cacheDataStr);
+            lastUpdateTime = cacheData.getLong("lastUpdate");
+            courseCountData = cacheData.toString();
+        } catch (JsonException e) {
+            logger.warn("Api file " + cacheFile.getName() + " parse error");
+        }
     }
 
     @Override
