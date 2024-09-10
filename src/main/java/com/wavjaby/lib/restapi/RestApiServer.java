@@ -5,7 +5,6 @@ import com.wavjaby.lib.HttpServer;
 import com.wavjaby.lib.PropertiesReader;
 import com.wavjaby.lib.restapi.request.CustomResponse;
 import com.wavjaby.logger.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -49,19 +48,13 @@ public class RestApiServer extends HttpServer {
                 error = true;
             }
         }
-        if (handler == null || !handler.selfHandleResponse && !error) {
+        if (handler == null || !handler.selfHandleResponse) {
             response.sendResponse(exchange);
         }
     };
 
     public RestApiServer(PropertiesReader serverSettings) {
         super(serverSettings);
-    }
-
-    @Override
-    @Deprecated
-    public void createContext(String path, HttpHandler handler) {
-        throw new NotImplementedException();
     }
 
     @Override

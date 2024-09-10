@@ -9,12 +9,11 @@ import com.wavjaby.logger.Logger;
 import org.jsoup.Connection;
 import org.jsoup.helper.HttpConnection;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.CookieStore;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import static com.wavjaby.lib.Lib.findStringBetween;
 
@@ -70,13 +69,13 @@ public class RobotCheck {
                             .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                             .header("X-Requested-With", "XMLHttpRequest")
                             .requestBody("sid=&time=" + (System.currentTimeMillis() / 1000) +
-                                    "&code_ticket=" + URLEncoder.encode(codeTicket, "UTF-8") +
-                                    "&code=" + code)
+                                         "&code_ticket=" + URLEncoder.encode(codeTicket, StandardCharsets.UTF_8) +
+                                         "&code=" + code)
                             .execute().body();
 //                    logger.log(result);
                     boolean success = new JsonObject(result).getBoolean("status");
                     logger.warn("Crack code(" + j + "): " + code + ", " +
-                            (success ? "success" : "retry"));
+                                (success ? "success" : "retry"));
                     if (success)
                         break;
                 } catch (JsonException e) {
