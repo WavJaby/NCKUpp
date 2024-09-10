@@ -8,7 +8,7 @@ import SelectMenu from '../selectMenu.js';
 /**
  * @typedef CourseGrade
  * @property {string} deptWithSerial
- * @property {string} systemNumber
+ * @property {string} systemCode
  * @property {string | null} classCode
  * @property {string} courseName
  * @property {string} remark
@@ -212,7 +212,7 @@ function MyGrades(router) {
 					// span(null, 'info', span('Grade'), text(': ' + course.grade)),
 					// span(null, 'info', span('Remark'), text(': ' + course.remark)),
 					// span(null, 'info', span('Require'), text(': ' + course.require)),
-					span(course.systemNumber + (course.classCode ? '-' + course.classCode : ''), 'systemNumber'),
+					span(course.systemCode + (course.classCode ? '-' + course.classCode : ''), 'systemNumber'),
 					course.gpa === null ? null :
 						span(null, 'info', span('Gpa', null, {title: course.gpa}), text(': ' + gpaPointCalculate(course.gpa))),
 					span(null, 'info', span('分數'), text(': ' + gradeToText(course.grade))),
