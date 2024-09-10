@@ -134,7 +134,7 @@ public class A9Registered implements Module {
             Element updateTimeEle = updateTimeTable.getElementsByTag("p").first();
             if (updateTimeEle != null) {
                 String updateTime = updateTimeEle.text();
-                updateTime = updateTime.substring(updateTime.lastIndexOf(": ") + 1).trim();
+                updateTime = updateTime.substring(updateTime.lastIndexOf("： ") + 1).trim();
                 try {
                     parsedTimeSec = LocalDateTime.parse(updateTime, timeFormat).toEpochSecond(timeZoneOffset) * 1000;
                 } catch (DateTimeParseException e) {
