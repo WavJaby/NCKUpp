@@ -516,7 +516,6 @@ public class HistorySearch implements Module {
                                                     Byte dayOfWeek, byte[] sections) {
         try {
             if (deptId != null && deptId.isEmpty()) deptId = null;
-            if (courseName != null && courseName.isEmpty()) courseName = null;
             if (tagName != null && tagName.isEmpty()) tagName = null;
             if (instructorName != null && instructorName.isEmpty()) instructorName = null;
             // Department id
@@ -525,6 +524,12 @@ public class HistorySearch implements Module {
             // Department id with serial number
             getCourseStat.setObject(3, serialNumber, Types.INTEGER);
             getCourseStat.setObject(4, serialNumber, Types.INTEGER);
+            if (courseName != null) {
+                courseName = courseName.replace("%", "");
+                if (courseName.isEmpty())
+                    return new ArrayList<>();
+                courseName = '%' + courseName + '%';
+            }
             // Course name TW or EN
             getCourseStat.setNString(5, courseName);
             getCourseStat.setNString(6, courseName);
