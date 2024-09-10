@@ -186,7 +186,15 @@ import {
 } from '../minjs_v000/domHelper.min.js';
 
 import SelectMenu from '../selectMenu.js';
-import {addPreSchedule, courseDataTimeToString, fetchApi, getPreSchedule, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
+import {
+	addPreSchedule,
+	courseDataTimeToString,
+	fetchApi,
+	getPreSchedule,
+	openCourseLocation,
+	parseRawCourseData,
+	removePreSchedule
+} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 
 const textColor = {
@@ -613,7 +621,6 @@ export default function (router, loginState, userGuideTool) {
 			return;
 		}
 		fetchApi(`/watchdog?studentID=${loginState.state.studentID}`).then(i => {
-			const eql = encodeURIComponent('&');
 			watchList = [];
 			for (const entry of Object.entries(i.data)) {
 				for (const num of entry[1])
@@ -1000,8 +1007,8 @@ export default function (router, loginState, userGuideTool) {
 					tr('courseInfoBlock', {style: 'display:none'},
 						td(null, expandArrowStateClass, expandButton, {onclick: toggleCourseInfo}),
 						td(null, 'detailedCourseName',
-							a(null, createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'},
-								span((data.deptWithSerial ? data.deptWithSerial + ' ' : '') + data.courseName))
+							a((data.deptWithSerial ? data.deptWithSerial + ' ' : '') + data.courseName,
+								createSyllabusUrl(data.semester, data.systemNumber), null, null, {target: '_blank'})
 						),
 						td(departmentName, 'departmentName', {title: departmentName}),
 						td(data.deptWithSerial, 'deptWithSerial'),
@@ -1013,7 +1020,7 @@ export default function (router, loginState, userGuideTool) {
 							data.time && data.time.map(i =>
 								i.flexTimeDataKey
 									? button(null, '詳細時間', openFlexTimeWindow, {key: i.flexTimeDataKey, courseData: data})
-									: button(null, courseDataTimeToString(i))
+									: button(null, courseDataTimeToString(i), () => timeClassLocationWindow.set(data))
 							) || text(data.timeString)
 						),
 						td(null, 'courseName',
@@ -1181,6 +1188,7 @@ export default function (router, loginState, userGuideTool) {
 	const instructorDetailWindow = new InstructorDetailWindow(courseSearchPageElement, userGuideTrigger);
 	const nckuHubDetailWindow = new NckuHubDetailWindow(courseSearchPageElement, userGuideTrigger);
 	const flexTimeWindow = new FlexTimeWindow(courseSearchPageElement);
+	const timeClassLocationWindow = new TimeClassLocationWindow(courseSearchPageElement);
 
 	return courseSearchPageElement;
 };
@@ -1352,6 +1360,30 @@ function FlexTimeWindow(courseSearch) {
 					td(i.date),
 					td(i.timeStart),
 					td(i.timeEnd),
+				))
+			)
+		));
+		popupWindow.windowOpen();
+	};
+}
+
+function TimeClassLocationWindow(courseSearch) {
+	const popupWindow = new PopupWindow({root: courseSearch,windowType: PopupWindow.WIN_TYPE_DIALOG});
+
+	/**
+	 * @param {CourseData} courseData
+	 */
+	this.set = function (courseData) {
+		popupWindow.windowSet(div('flexTimeWindow',
+			div('courseInfoPanel',
+				span(courseData.deptWithSerial),
+				span(courseData.courseName),
+			),
+			table('timeTable',
+				tr(null, th('時間'), th('教室')),
+				courseData.time.map(time => tr(null,
+					td(courseDataTimeToString(time)),
+					td(null, null, button(null, time.classroomName, () => openCourseLocation(time))),
 				))
 			)
 		));

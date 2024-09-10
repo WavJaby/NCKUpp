@@ -301,10 +301,10 @@ $instructor-info-fade-time: 200ms;
                         @include box-sizing-border;
                         white-space: pre-wrap;
 
-                        > span {
-                            display: table-cell;
-                            vertical-align: middle;
-                        }
+                        //> span {
+                        //    display: table-cell;
+                        //    vertical-align: middle;
+                        //}
                     }
 
                     &:hover {

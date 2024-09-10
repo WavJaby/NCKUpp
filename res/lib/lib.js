@@ -14,7 +14,7 @@ const isSafari = navigator.userAgent &&
 	navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1;
 
 export function isMobile() {
-	return window.innerWidth <= mobileWidth
+	return window.innerWidth <= mobileWidth;
 }
 
 export function checkLocalStorage() {
@@ -212,6 +212,26 @@ export function courseDataTimeToString(time) {
 }
 
 /**
+ * @param {CourseDataTime} time
+ */
+export function openCourseLocation(time) {
+	fetchApi('/extract?location=' + time.deptID + ',' + time.classroomID).then(i => {
+		if (i.data && i.success)
+			window.open(i.data.url, '_blank');
+	});
+}
+
+/**
+ * @param {CourseData} courseData
+ */
+export function openCourseMoodle(courseData) {
+	fetchApi('/extract?moodle=' + courseData.semester + ',' + courseData.attributeCode).then(i => {
+		if (i.data && i.success)
+			window.open(i.data.url, '_blank');
+	});
+}
+
+/**
  * @param {RawCourseData} rawCourseData
  * @param {any[][]} rawUrSchoolData
  */
@@ -238,7 +258,7 @@ export function parseRawCourseData(rawCourseData, rawUrSchoolData) {
 		time: null,
 		timeString: null,
 		preferenceEnter: rawCourseData.pe,
-		addCourse: rawCourseData.ac,
+		addCourse: rawCourseData.cr,
 		preRegister: rawCourseData.pr,
 		addRequest: rawCourseData.ar,
 		nckuHub: null

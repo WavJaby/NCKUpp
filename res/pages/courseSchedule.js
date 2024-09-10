@@ -1,7 +1,7 @@
 'use strict';
 
 import {a, button, checkbox, div, h1, h2, mountableStylesheet, p, span, table, tbody, td, text, th, thead, tr} from '../minjs_v000/domHelper.min.js';
-import {addPreSchedule, checkLocalStorage, courseDataTimeToString, fetchApi, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
+import {addPreSchedule, checkLocalStorage, courseDataTimeToString, openCourseLocation, openCourseMoodle, fetchApi, parseRawCourseData, removePreSchedule} from '../lib/lib.js';
 import PopupWindow from '../popupWindow.js';
 import {createSelectAvailableStr, createSyllabusUrl, NckuHubDetailWindow, nckuHubScoreToSpan} from './courseSearch.js';
 
@@ -695,7 +695,7 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 	}
 
 	function cellClick() {
-		const data = courseDetail[this.deptWithSerial];
+		const /**@type{CourseData}*/data = courseDetail[this.deptWithSerial];
 		if (!data)
 			return;
 
@@ -703,31 +703,17 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 		if (data.time)
 			for (let time of data.time) {
 				let timeStr = courseDataTimeToString(time);
-				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, openCourseLocation, {locationQuery: time.deptID + ',' + time.classroomID}));
+				locationButtons.push(button(null, timeStr + ' ' + time.classroomName, () => openCourseLocation(time)));
 			}
 		courseInfoWindow.windowSet(div('courseInfo',
 			preCourseRemoveKey[this.deptWithSerial] && button('delete', '刪除', removePreScheduleButtonClick, {deptWithSerial: this.deptWithSerial}),
 			h2(data.deptWithSerial + ' ' + data.courseName),
 			data.instructors.map(i => span(i + ' ')),
 			p(data.courseNote),
-			button(null, 'moodle', openCourseMoodle, {moodleQuery: data.semester + ',' + data.attributeCode}),
+			button(null, 'moodle', () => openCourseMoodle(data)),
 			locationButtons,
 		));
 		courseInfoWindow.windowOpen();
-	}
-
-	function openCourseLocation() {
-		fetchApi('/extract?location=' + this.locationQuery).then(i => {
-			if (i.data && i.success)
-				window.open(i.data.url, '_blank');
-		});
-	}
-
-	function openCourseMoodle() {
-		fetchApi('/extract?moodle=' + this.moodleQuery).then(i => {
-			if (i.data && i.success)
-				window.open(i.data.url, '_blank');
-		});
 	}
 
 	/**@this{{deptWithSerial: string}}*/
