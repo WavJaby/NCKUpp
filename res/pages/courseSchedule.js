@@ -897,9 +897,10 @@ function ScheduleTable(windowRoot, updatePreScheduleData) {
 				// Course in section
 				for (const courseData of courseTimeData) {
 					const courseTime = courseData[1];
+					const sectionEnd = courseTime.sectionEnd || courseTime.sectionStart;
 					// if (j !== courseTime.sectionStart)
 					// 	continue;
-					const length = courseTime.sectionEnd - courseTime.sectionStart + 1;
+					const length = sectionEnd - courseTime.sectionStart + 1;
 					// Fill time, push room info
 					for (let k = 0; k < length; k++) {
 						let courseTimeDataNext = dayTableOut[i][j + k];
