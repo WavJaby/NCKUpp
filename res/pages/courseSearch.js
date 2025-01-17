@@ -246,7 +246,7 @@ export function createSyllabusUrl(yearSem, sysNumClassCode) {
 		classCode = sysNumClassCode.substring(index + 1);
 	}
 
-	return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display.php?syear=' + year + '&sem=' + sem +
+	return 'https://class-qry.acad.ncku.edu.tw/syllabus/online_display_remote.php?syear=' + year + '&sem=' + sem +
 		'&co_no=' + systemNumber +
 		'&class_code=' + classCode;
 }

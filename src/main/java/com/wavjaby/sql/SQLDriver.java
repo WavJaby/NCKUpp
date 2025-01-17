@@ -40,10 +40,10 @@ public class SQLDriver implements Module {
 
     public void printStackTrace(SQLException e) {
         logger.err(e.getClass().getName() + ": " + e.getMessage() + '\n' +
-                "\tat " + Arrays.stream(e.getStackTrace())
-                .filter(i -> !i.getClassName().startsWith(errorFilter))
-                .map(StackTraceElement::toString)
-                .collect(Collectors.joining("\n\tat "))
+                   "\tat " + Arrays.stream(e.getStackTrace())
+                           .filter(i -> !i.getClassName().startsWith(errorFilter))
+                           .map(StackTraceElement::toString)
+                           .collect(Collectors.joining("\n\tat "))
         );
     }
 
@@ -81,6 +81,8 @@ public class SQLDriver implements Module {
 
     @Override
     public void stop() {
+        if (connection == null)
+            return;
         try {
             connection.close();
         } catch (SQLException e) {

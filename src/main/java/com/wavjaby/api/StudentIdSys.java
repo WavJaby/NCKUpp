@@ -429,17 +429,17 @@ public class StudentIdSys implements Module {
     public void start() {
         courseInfoCache = new HashMap<>();
         try {
-            sqlGetAllDistribution = sqlDriver.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute");
-            sqlGetDistribution = sqlDriver.getDatabase().prepareStatement("SELECT * FROM grades_distribution_contribute " +
-                    "WHERE \"year\"=? AND semester=? AND system_code=? AND class_code is ? AND distribution=?"
+            sqlGetAllDistribution = sqlDriver.getDatabase().prepareStatement("select * from GRADES_DISTRIBUTION_CONTRIBUTE");
+            sqlGetDistribution = sqlDriver.getDatabase().prepareStatement("select * from GRADES_DISTRIBUTION_CONTRIBUTE " +
+                    "where YEAR=? and SEMESTER=? and SYSTEM_CODE=? and CLASS_CODE is ? and DISTRIBUTION=?"
             );
-            sqlAddDistribution = sqlDriver.getDatabase().prepareStatement("INSERT INTO grades_distribution_contribute " +
-                    "(\"year\", semester, system_code, class_code, serial_number, name, student_id, upload, distribution) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?)"
+            sqlAddDistribution = sqlDriver.getDatabase().prepareStatement("insert into GRADES_DISTRIBUTION_CONTRIBUTE " +
+                    "(YEAR, SEMESTER,SYSTEM_CODE,CLASS_CODE,SERIAL_NUMBER,NAME,STUDENT_ID,UPLOAD,DISTRIBUTION) " +
+                    "values (?,?,?,?,?,?,?,?,?)"
             );
-            sqlSetDistributionSerialNumber = sqlDriver.getDatabase().prepareStatement("UPDATE grades_distribution_contribute " +
-                    "SET serial_number=?, name=? " +
-                    "WHERE \"year\"=? AND semester=? AND system_code=? AND class_code is ?"
+            sqlSetDistributionSerialNumber = sqlDriver.getDatabase().prepareStatement("update GRADES_DISTRIBUTION_CONTRIBUTE " +
+                    "set serial_number=?, NAME=? " +
+                    "where YEAR=? and SEMESTER=? and SYSTEM_CODE=? and CLASS_CODE is ?"
             );
         } catch (SQLException e) {
             sqlDriver.printStackTrace(e);
