@@ -215,8 +215,7 @@ public class CourseWatcher implements Runnable, Module {
                 // Have dept token
                 if (deptToken != null) {
                     // Get dept course data
-                    Search.SearchResult searchResult = new Search.SearchResult();
-                    search.getDeptCourseData(deptToken, searchResult);
+                    Search.SearchResult searchResult = search.getDeptCourseData(deptToken);
                     if (!searchResult.isSuccess()) {
                         logger.log("Dept " + dept + " failed, " + searchResult.getErrorString());
                         if (!done.get())
@@ -276,7 +275,7 @@ public class CourseWatcher implements Runnable, Module {
                     String url = null;
                     try {
                         ClientSearchQuery clientSearchQuery = new ClientSearchQuery(cosData);
-                        Search.SaveQueryToken token = search.createSaveQueryToken(clientSearchQuery.toCourseQuery(), baseCookieStore, null);
+                        Search.QueryToken token = search.createQueryToken(clientSearchQuery.toCourseQuery(), baseCookieStore, null);
                         if (token != null)
                             url = token.getUrl();
                     } catch (Exception e) {

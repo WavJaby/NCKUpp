@@ -167,6 +167,9 @@ public class AllDept implements Module {
         return apiResponse;
     }
 
+    /**
+     * Get all dept page html from <a href="https://course.ncku.edu.tw/index.php?c=qry_all">NCKU all dept page</a>
+     */
     private String getAllDeptPage(CookieStore cookieStore) {
         Connection request = HttpConnection.connect(courseNckuOrg + "/index.php?c=qry_all")
                 .header("Connection", "keep-alive")
@@ -191,6 +194,10 @@ public class AllDept implements Module {
         return body;
     }
 
+    /**
+     * Parse <a href="https://course.ncku.edu.tw/index.php?c=qry_all">All Dept</a> page,
+     * get available department id and crypt for create query
+     */
     public Search.AllDeptData getAllDeptData(CookieStore cookieStore, Search.SearchResult result) {
         String allDeptPage = getAllDeptPage(cookieStore);
         if (allDeptPage == null) {
